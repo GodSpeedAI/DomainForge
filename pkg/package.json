@@ -1,0 +1,46 @@
+{
+  "name": "@domainforge/sea-wasm",
+  "version": "0.1.0",
+  "description": "SEA DSL WebAssembly bindings for browser and edge runtime",
+  "license": "MIT",
+  "author": "DomainForge Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GodSpeedAI/domainforge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GodSpeedAI/domainforge/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "main": "index.js",
+  "types": "sea_core.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.js",
+      "browser": "./index.js"
+    }
+  },
+  "files": [
+    "sea_core_bg.wasm",
+    "sea_core.js",
+    "sea_core.d.ts",
+    "index.js",
+    "README.md"
+  ],
+  "sideEffects": [
+    "./index.js"
+  ],
+  "keywords": [
+    "wasm",
+    "webassembly",
+    "dsl",
+    "domain-modeling",
+    "sea",
+    "domainforge",
+    "browser",
+    "edge"
+  ]
+}

@@ -1,0 +1,68 @@
+use sea_core::primitives::{Entity, Resource, Flow};
+use rust_decimal::Decimal;
+
+#[test]
+fn test_flow_new_stores_references() {
+    let warehouse = Entity::new("Warehouse");
+    let factory = Entity::new("Factory");
+    let product = Resource::new("Widget", "units");
+
+    let flow = Flow::new(
+        product.id().clone(),
+        warehouse.id().clone(),
+        factory.id().clone(),
+        Decimal::from(100)
+    );
+
+    assert_eq!(flow.quantity(), Decimal::from(100));
+    assert_eq!(flow.resource_id(), product.id());
+    assert_eq!(flow.from_id(), warehouse.id());
+    assert_eq!(flow.to_id(), factory.id());
+}
+
+#[test]
+fn test_flow_references_are_valid_uuids() {
+    let flow = Flow::new(
+        uuid::Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
+        Decimal::from(50)
+    );
+
+    assert!(flow.resource_id().to_string().len() > 0);
+    assert!(flow.from_id().to_string().len() > 0);
+    assert!(flow.to_id().to_string().len() > 0);
+    assert!(flow.id().to_string().len() > 0);
+}
+
+#[test]
+fn test_flow_attributes() {
+    let mut flow = Flow::new(
+        uuid::Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
+        Decimal::from(100)
+    );
+
+    flow.set_attribute("priority", serde_json::json!("high"));
+    flow.set_attribute("scheduled_date", serde_json::json!("2025-11-15"));
+
+    assert_eq!(flow.get_attribute("priority"), Some(&serde_json::json!("high")));
+    assert_eq!(flow.get_attribute("scheduled_date"), Some(&serde_json::json!("2025-11-15")));
+    assert_eq!(flow.get_attribute("nonexistent"), None);
+}
+
+#[test]
+fn test_flow_serialization() {
+    let flow = Flow::new(
+        uuid::Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
+        Decimal::from(250)
+    );
+
+    let json = serde_json::to_string(&flow).unwrap();
+    let deserialized: Flow = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(flow, deserialized);
+}

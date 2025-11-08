@@ -1,2 +1,72 @@
+# Temporary files
 tmp/
 tmp/*
+
+# Node.js / TypeScript
+node_modules/
+dist/
+build/
+*.node
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# napi / native module build outputs
+sea-core/target/
+target/
+**/target/
+*.so
+*.dylib
+*.dll
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+dist/
+build/
+eggs/
+*.egg-info/
+.maturin/
+venv/
+.venv/
+env/
+.env
+pip-wheel-metadata/
+target-wheels/
+wheels/
+*.whl
+
+# WASM build outputs (wasm-pack)
+pkg/*.wasm
+pkg/*.wasm.gz
+pkg/*.wasm.map
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary / cache
+.cache/
+npm-debug.log*
+
+# Misc
+coverage/
+.pytest_cache/
+

@@ -1,0 +1,54 @@
+{
+  "name": "@domainforge/sea",
+  "version": "0.1.0",
+  "description": "TypeScript bindings for the SEA (Semantic Enterprise Architecture) DSL",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "napi build --platform --release --cargo-cwd sea-core --features typescript",
+    "build:debug": "napi build --platform --cargo-cwd sea-core --features typescript",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "sea",
+    "dsl",
+    "domain-modeling",
+    "architecture",
+    "typescript",
+    "rust",
+    "napi"
+  ],
+  "author": "DomainForge Contributors",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GodSpeedAI/domainforge"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "sea-core/target/release/*.node"
+  ],
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "napi": {
+    "name": "sea-core",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ]
+    }
+  }
+}

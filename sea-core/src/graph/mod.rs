@@ -1,0 +1,251 @@
+use std::collections::HashMap;
+use uuid::Uuid;
+use crate::primitives::{Entity, Resource, Flow, Instance};
+
+#[derive(Debug, Clone, Default)]
+pub struct Graph {
+    entities: HashMap<Uuid, Entity>,
+    resources: HashMap<Uuid, Resource>,
+    flows: HashMap<Uuid, Flow>,
+    instances: HashMap<Uuid, Instance>,
+}
+
+impl Graph {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entities.is_empty()
+            && self.resources.is_empty()
+            && self.flows.is_empty()
+            && self.instances.is_empty()
+    }
+
+    pub fn entity_count(&self) -> usize {
+        self.entities.len()
+    }
+
+    pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
+        let id = *entity.id();
+        if self.entities.contains_key(&id) {
+            return Err(format!("Entity with ID {} already exists", id));
+        }
+        self.entities.insert(id, entity);
+        Ok(())
+    }
+
+    pub fn has_entity(&self, id: &Uuid) -> bool {
+        self.entities.contains_key(id)
+    }
+
+    pub fn get_entity(&self, id: &Uuid) -> Option<&Entity> {
+        self.entities.get(id)
+    }
+
+    pub fn remove_entity(&mut self, id: &Uuid) -> Result<Entity, String> {
+        // Check for references in flows
+        let referencing_flows: Vec<String> = self.flows.values()
+            .filter(|flow| flow.from_id() == id || flow.to_id() == id)
+            .map(|flow| flow.id().to_string())
+            .collect();
+
+        // Check for references in instances
+        let referencing_instances: Vec<String> = self.instances.values()
+            .filter(|instance| instance.entity_id() == id)
+            .map(|instance| instance.id().to_string())
+            .collect();
+
+        if !referencing_flows.is_empty() || !referencing_instances.is_empty() {
+            let mut error_msg = format!("Cannot remove entity {} because it is referenced", id);
+            if !referencing_flows.is_empty() {
+                error_msg.push_str(&format!(" by flows: {}", referencing_flows.join(", ")));
+            }
+            if !referencing_instances.is_empty() {
+                error_msg.push_str(&format!(" by instances: {}", referencing_instances.join(", ")));
+            }
+            return Err(error_msg);
+        }
+
+        self.entities
+            .remove(id)
+            .ok_or_else(|| format!("Entity with ID {} not found", id))
+    }
+
+    pub fn resource_count(&self) -> usize {
+        self.resources.len()
+    }
+
+    pub fn add_resource(&mut self, resource: Resource) -> Result<(), String> {
+        let id = *resource.id();
+        if self.resources.contains_key(&id) {
+            return Err(format!("Resource with ID {} already exists", id));
+        }
+        self.resources.insert(id, resource);
+        Ok(())
+    }
+
+    pub fn has_resource(&self, id: &Uuid) -> bool {
+        self.resources.contains_key(id)
+    }
+
+    pub fn get_resource(&self, id: &Uuid) -> Option<&Resource> {
+        self.resources.get(id)
+    }
+
+    pub fn remove_resource(&mut self, id: &Uuid) -> Result<Resource, String> {
+        // Check for references in flows
+        let referencing_flows: Vec<String> = self.flows.values()
+            .filter(|flow| flow.resource_id() == id)
+            .map(|flow| flow.id().to_string())
+            .collect();
+
+        // Check for references in instances
+        let referencing_instances: Vec<String> = self.instances.values()
+            .filter(|instance| instance.resource_id() == id)
+            .map(|instance| instance.id().to_string())
+            .collect();
+
+        if !referencing_flows.is_empty() || !referencing_instances.is_empty() {
+            let mut error_msg = format!("Cannot remove resource {} because it is referenced", id);
+            if !referencing_flows.is_empty() {
+                error_msg.push_str(&format!(" by flows: {}", referencing_flows.join(", ")));
+            }
+            if !referencing_instances.is_empty() {
+                error_msg.push_str(&format!(" by instances: {}", referencing_instances.join(", ")));
+            }
+            return Err(error_msg);
+        }
+
+        self.resources
+            .remove(id)
+            .ok_or_else(|| format!("Resource with ID {} not found", id))
+    }
+
+    pub fn flow_count(&self) -> usize {
+        self.flows.len()
+    }
+
+    pub fn add_flow(&mut self, flow: Flow) -> Result<(), String> {
+        let id = *flow.id();
+        if self.flows.contains_key(&id) {
+            return Err(format!("Flow with ID {} already exists", id));
+        }
+        if !self.entities.contains_key(flow.from_id()) {
+            return Err("Source entity not found".to_string());
+        }
+        if !self.entities.contains_key(flow.to_id()) {
+            return Err("Target entity not found".to_string());
+        }
+        if !self.resources.contains_key(flow.resource_id()) {
+            return Err("Resource not found".to_string());
+        }
+        self.flows.insert(id, flow);
+        Ok(())
+    }
+
+    pub fn has_flow(&self, id: &Uuid) -> bool {
+        self.flows.contains_key(id)
+    }
+
+    pub fn get_flow(&self, id: &Uuid) -> Option<&Flow> {
+        self.flows.get(id)
+    }
+
+    pub fn remove_flow(&mut self, id: &Uuid) -> Result<Flow, String> {
+        self.flows
+            .remove(id)
+            .ok_or_else(|| format!("Flow with ID {} not found", id))
+    }
+
+    pub fn instance_count(&self) -> usize {
+        self.instances.len()
+    }
+
+    pub fn add_instance(&mut self, instance: Instance) -> Result<(), String> {
+        let id = *instance.id();
+        if self.instances.contains_key(&id) {
+            return Err(format!("Instance with ID {} already exists", id));
+        }
+        if !self.entities.contains_key(instance.entity_id()) {
+            return Err("Entity not found".to_string());
+        }
+        if !self.resources.contains_key(instance.resource_id()) {
+            return Err("Resource not found".to_string());
+        }
+        self.instances.insert(id, instance);
+        Ok(())
+    }
+
+    pub fn has_instance(&self, id: &Uuid) -> bool {
+        self.instances.contains_key(id)
+    }
+
+    pub fn get_instance(&self, id: &Uuid) -> Option<&Instance> {
+        self.instances.get(id)
+    }
+
+    pub fn remove_instance(&mut self, id: &Uuid) -> Result<Instance, String> {
+        self.instances
+            .remove(id)
+            .ok_or_else(|| format!("Instance with ID {} not found", id))
+    }
+
+    pub fn flows_from(&self, entity_id: &Uuid) -> Vec<&Flow> {
+        self.flows
+            .values()
+            .filter(|flow| flow.from_id() == entity_id)
+            .collect()
+    }
+
+    pub fn flows_to(&self, entity_id: &Uuid) -> Vec<&Flow> {
+        self.flows
+            .values()
+            .filter(|flow| flow.to_id() == entity_id)
+            .collect()
+    }
+
+    pub fn upstream_entities(&self, entity_id: &Uuid) -> Vec<&Entity> {
+        self.flows_to(entity_id)
+            .iter()
+            .filter_map(|flow| self.get_entity(flow.from_id()))
+            .collect()
+    }
+
+    pub fn downstream_entities(&self, entity_id: &Uuid) -> Vec<&Entity> {
+        self.flows_from(entity_id)
+            .iter()
+            .filter_map(|flow| self.get_entity(flow.to_id()))
+            .collect()
+    }
+
+    pub fn find_entity_by_name(&self, name: &str) -> Option<Uuid> {
+        self.entities
+            .iter()
+            .find(|(_, entity)| entity.name() == name)
+            .map(|(id, _)| *id)
+    }
+
+    pub fn find_resource_by_name(&self, name: &str) -> Option<Uuid> {
+        self.resources
+            .iter()
+            .find(|(_, resource)| resource.name() == name)
+            .map(|(id, _)| *id)
+    }
+
+    pub fn all_entities(&self) -> Vec<&Entity> {
+        self.entities.values().collect()
+    }
+
+    pub fn all_resources(&self) -> Vec<&Resource> {
+        self.resources.values().collect()
+    }
+
+    pub fn all_flows(&self) -> Vec<&Flow> {
+        self.flows.values().collect()
+    }
+
+    pub fn all_instances(&self) -> Vec<&Instance> {
+        self.instances.values().collect()
+    }
+}

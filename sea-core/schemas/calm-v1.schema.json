@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CALM Model Schema (Simplified for SEA DSL)",
+  "description": "JSON Schema for FINOS CALM format exports from SEA DSL",
+  "type": "object",
+  "required": [
+    "version",
+    "metadata",
+    "nodes",
+    "relationships"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "CALM schema version"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Metadata about the model",
+      "properties": {
+        "sea:exported": {
+          "type": "boolean"
+        },
+        "sea:version": {
+          "type": "string"
+        },
+        "sea:timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "description": "Collection of nodes in the architecture",
+      "items": {
+        "$ref": "#/definitions/node"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "description": "Collection of relationships between nodes",
+      "items": {
+        "$ref": "#/definitions/relationship"
+      }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "required": [
+        "unique-id",
+        "node-type",
+        "name"
+      ],
+      "properties": {
+        "unique-id": {
+          "type": "string",
+          "description": "Unique identifier for the node"
+        },
+        "node-type": {
+          "type": "string",
+          "enum": [
+            "actor",
+            "location",
+            "resource",
+            "instance",
+            "constraint"
+          ],
+          "description": "Type of the node"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Optional namespace for organizational grouping"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional metadata and attributes"
+        }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "required": [
+        "unique-id",
+        "relationship-type",
+        "parties"
+      ],
+      "properties": {
+        "unique-id": {
+          "type": "string",
+          "description": "Unique identifier for the relationship"
+        },
+        "relationship-type": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Simple relationship type"
+            },
+            {
+              "type": "object",
+              "required": [
+                "flow"
+              ],
+              "properties": {
+                "flow": {
+                  "type": "object",
+                  "required": [
+                    "resource",
+                    "quantity"
+                  ],
+                  "properties": {
+                    "resource": {
+                      "type": "string",
+                      "description": "Resource being transferred"
+                    },
+                    "quantity": {
+                      "type": "string",
+                      "description": "Quantity of resource"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "parties": {
+          "type": "object",
+          "description": "Entities involved in the relationship",
+          "oneOf": [
+            {
+              "required": [
+                "source",
+                "destination"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "required": [
+                "owner",
+                "owned"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "owner": {
+                  "type": "string"
+                },
+                "owned": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

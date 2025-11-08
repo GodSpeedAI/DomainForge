@@ -1,0 +1,187 @@
+use serde::{Deserialize, Serialize};
+use std::fmt;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Expression {
+    Literal(serde_json::Value),
+
+    Variable(String),
+
+    Binary {
+        op: BinaryOp,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+
+    Unary {
+        op: UnaryOp,
+        operand: Box<Expression>,
+    },
+
+    Quantifier {
+        quantifier: Quantifier,
+        variable: String,
+        collection: Box<Expression>,
+        condition: Box<Expression>,
+    },
+
+    MemberAccess {
+        object: String,
+        member: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum BinaryOp {
+    And,
+    Or,
+
+    Equal,
+    NotEqual,
+    GreaterThan,
+    LessThan,
+    GreaterThanOrEqual,
+    LessThanOrEqual,
+
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+
+    Contains,
+    StartsWith,
+    EndsWith,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum UnaryOp {
+    Not,
+    Negate,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Quantifier {
+    ForAll,
+    Exists,
+    ExistsUnique,
+}
+
+impl Expression {
+    pub fn literal(value: impl Into<serde_json::Value>) -> Self {
+        Expression::Literal(value.into())
+    }
+
+    pub fn variable(name: &str) -> Self {
+        Expression::Variable(name.to_string())
+    }
+
+    pub fn binary(op: BinaryOp, left: Expression, right: Expression) -> Self {
+        Expression::Binary {
+            op,
+            left: Box::new(left),
+            right: Box::new(right),
+        }
+    }
+
+    pub fn unary(op: UnaryOp, operand: Expression) -> Self {
+        Expression::Unary {
+            op,
+            operand: Box::new(operand),
+        }
+    }
+
+    pub fn quantifier(
+        q: Quantifier,
+        var: &str,
+        collection: Expression,
+        condition: Expression,
+    ) -> Self {
+        Expression::Quantifier {
+            quantifier: q,
+            variable: var.to_string(),
+            collection: Box::new(collection),
+            condition: Box::new(condition),
+        }
+    }
+
+    pub fn comparison(var: &str, op: &str, value: impl Into<serde_json::Value>) -> Result<Self, String> {
+        let op = match op {
+            ">" => BinaryOp::GreaterThan,
+            "<" => BinaryOp::LessThan,
+            ">=" => BinaryOp::GreaterThanOrEqual,
+            "<=" => BinaryOp::LessThanOrEqual,
+            "==" => BinaryOp::Equal,
+            "!=" => BinaryOp::NotEqual,
+            _ => return Err(format!("Unknown operator: {}", op)),
+        };
+
+        Ok(Expression::binary(op, Expression::variable(var), Expression::literal(value)))
+    }
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Expression::Literal(v) => write!(f, "{}", v),
+            Expression::Variable(n) => write!(f, "{}", n),
+            Expression::Binary { op, left, right } => {
+                write!(f, "({} {} {})", left, op, right)
+            }
+            Expression::Unary { op, operand } => {
+                write!(f, "{} {}", op, operand)
+            }
+            Expression::Quantifier { quantifier, variable, collection, condition } => {
+                write!(f, "{}({} in {}: {})",
+                    quantifier,
+                    variable,
+                    collection,
+                    condition
+                )
+            }
+            Expression::MemberAccess { object, member } => {
+                write!(f, "{}.{}", object, member)
+            }
+        }
+    }
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BinaryOp::And => write!(f, "AND"),
+            BinaryOp::Or => write!(f, "OR"),
+            BinaryOp::Equal => write!(f, "=="),
+            BinaryOp::NotEqual => write!(f, "!="),
+            BinaryOp::GreaterThan => write!(f, ">"),
+            BinaryOp::LessThan => write!(f, "<"),
+            BinaryOp::GreaterThanOrEqual => write!(f, ">="),
+            BinaryOp::LessThanOrEqual => write!(f, "<="),
+            BinaryOp::Plus => write!(f, "+"),
+            BinaryOp::Minus => write!(f, "-"),
+            BinaryOp::Multiply => write!(f, "*"),
+            BinaryOp::Divide => write!(f, "/"),
+            BinaryOp::Contains => write!(f, "CONTAINS"),
+            BinaryOp::StartsWith => write!(f, "STARTS_WITH"),
+            BinaryOp::EndsWith => write!(f, "ENDS_WITH"),
+        }
+    }
+}
+
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            UnaryOp::Not => write!(f, "NOT"),
+            UnaryOp::Negate => write!(f, "-"),
+        }
+    }
+}
+
+impl fmt::Display for Quantifier {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Quantifier::ForAll => write!(f, "ForAll"),
+            Quantifier::Exists => write!(f, "Exists"),
+            Quantifier::ExistsUnique => write!(f, "ExistsUnique"),
+        }
+    }
+}

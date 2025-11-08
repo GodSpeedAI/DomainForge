@@ -37,17 +37,42 @@ Think of it as **Markdown for Business Models** — simple enough for business a
 Choose your language:
 
 ```bash
-# Python
-pip install sea-dsl
+# Python (requires Rust toolchain for building from source)
+pip install maturin
+git clone https://github.com/GodSpeedAI/DomainForge.git
+cd DomainForge
+maturin develop
+# or build wheel: maturin build --release --features python
 
 # TypeScript/Node.js
-npm install @domainforge/sea
+npm install
+npm run build
+# This produces native .node bindings
 
 # Rust
-cargo add sea-core
+cargo add sea-core --path ./sea-core
 
 # WebAssembly (browser/edge)
-npm install @domainforge/sea-wasm
+./scripts/build-wasm.sh
+# Output in pkg/ directory
+```
+
+**Note**: Pre-built packages for PyPI and npm are not yet published. Build from source as shown above.
+
+### ✅ Verify Installation
+
+```bash
+# Python
+python -c "import sea_dsl; print(sea_dsl.__version__)"
+
+# TypeScript
+node -e "const sea = require('.'); console.log(sea)"
+
+# Rust
+cargo test --package sea-core
+
+# WASM
+# Check pkg/ directory for sea_core_bg.wasm
 ```
 
 ### 💡 Your First Model (5 Minutes)
@@ -187,15 +212,43 @@ Models separate concerns cleanly:
 
 ### 🔗 **Standards-Based**
 
-- Aligned with SBVR (Semantics of Business Vocabulary and Rules)
-- Compatible with FINOS CALM (Architecture-as-Code)
-- Based on ERP5's Unified Business Model
+- **SBVR-Aligned**: Semantics of Business Vocabulary and Rules (OMG standard)
+- **CALM Integration**: Full bidirectional conversion to/from FINOS CALM format
+- **UBM Foundation**: Based on ERP5's Unified Business Model primitives
+- **JSON Schema Validation**: All CALM exports validated against schema
 
 ### 🔐 **Type-Safe Everywhere**
 
 - Full TypeScript type inference
 - Python type hints supported
 - Rust's compile-time guarantees
+
+### 🏛️ **CALM Integration (Architecture-as-Code)**
+
+SEA DSL provides **full bidirectional conversion** with FINOS CALM:
+
+```python
+# Export SEA model to CALM JSON
+graph = Graph()
+# ... build your model ...
+calm_json = graph.export_calm()
+
+# Import existing CALM architecture
+graph = Graph.import_calm(calm_json)
+```
+
+**Key Features:**
+- ✅ **Bidirectional**: SEA ↔ CALM with semantic preservation
+- ✅ **Schema Validated**: All exports validated against CALM JSON Schema v1
+- ✅ **Round-Trip Tested**: SEA → CALM → SEA preserves all primitives
+- ✅ **Metadata Preserved**: Namespaces, attributes maintained via `sea:` namespace
+- ✅ **Standard Compliant**: Follows FINOS CALM specification exactly
+
+**Use Cases:**
+- Export domain models for enterprise architecture governance
+- Import existing CALM architectures to add business rules
+- Sync between architecture tools and domain modeling
+- Maintain single source of truth across architecture/dev teams
 
 ---
 
@@ -365,45 +418,134 @@ warehouse = model.entity("Warehouse", attributes={
 })
 ```
 
+### 🌐 **CALM Architecture Export**
+
+Export your domain model to FINOS CALM for architecture governance:
+
+```python
+# Build your domain model
+graph = Graph()
+factory = Entity.new("Camera Factory")
+warehouse = Entity.new("Distribution Center")
+camera = Resource.new("Camera", "units")
+graph.add_entity(factory)
+graph.add_entity(warehouse)
+graph.add_resource(camera)
+
+flow = Flow.new(camera.id(), factory.id(), warehouse.id(), Decimal("1000"))
+graph.add_flow(flow)
+
+# Export to CALM JSON
+calm_json = graph.export_calm()
+with open('architecture.json', 'w') as f:
+    f.write(calm_json)
+
+# Import from CALM
+with open('existing-arch.json', 'r') as f:
+    calm_data = f.read()
+imported_graph = Graph.import_calm(calm_data)
+```
+
+**CALM Export Format:**
+```json
+{
+  "version": "2.0",
+  "metadata": {
+    "sea:exported": true,
+    "sea:version": "0.1.0",
+    "sea:timestamp": "2025-11-07T12:00:00Z"
+  },
+  "nodes": [
+    {
+      "unique-id": "uuid-123",
+      "node-type": "actor",
+      "name": "Camera Factory",
+      "metadata": {
+        "sea:primitive": "Entity"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "unique-id": "flow-456",
+      "relationship-type": {
+        "flow": {
+          "resource": "camera-uuid",
+          "quantity": "1000"
+        }
+      },
+      "parties": {
+        "source": "factory-uuid",
+        "destination": "warehouse-uuid"
+      }
+    }
+  ]
+}
+```
+
 ---
 
 ## 📖 Documentation
 
 | Resource | Description |
 |----------|-------------|
-| 📘 [**Getting Started Guide**](docs/tutorials/) | Step-by-step tutorials for your first model |
-| 📗 [**API Reference**](docs/reference/) | Complete API docs for all languages |
-| 📙 [**Pattern Library**](docs/explanations/) | Common modeling patterns and best practices |
-| 📕 [**Specification**](docs/specs/) | Technical specifications and architecture decisions |
-| 🎓 [**Examples**](examples/) | Real-world models across industries |
+| 📘 [**Copilot Instructions**](.github/copilot-instructions.md) | Essential guide for AI coding agents |
+| 📗 [**API Specification**](docs/specs/api_specification.md) | Complete API reference for all languages |
+| 📙 [**Product Requirements**](docs/specs/prd.md) | PRD with success metrics and requirements |
+| 📕 [**System Design**](docs/specs/sds.md) | Technical specifications and component design |
+| 🏛️ [**Architecture Decisions**](docs/specs/adr.md) | 8 ADRs documenting key architectural choices |
+| 📋 [**Implementation Plans**](docs/plans/) | Phase-by-phase TDD implementation guides |
+| 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md) | SEA ↔ CALM conversion specification |
+| 🎓 [**Examples**](examples/) | Browser demo and parser examples |
 
 ---
 
 ## 🏗️ Architecture
 
-SEA DSL uses a high-performance Rust core with idiomatic bindings:
+SEA DSL uses a high-performance Rust core with idiomatic language bindings:
 
 ```
-┌─────────────────────────────────────────┐
-│         Your Application                │
-├─────────────────────────────────────────┤
-│  Python API  │  TypeScript  │   WASM    │
-│   (PyO3)     │   (napi-rs)  │ (bindgen) │
-├─────────────────────────────────────────┤
-│          Rust Core Engine               │
-│  • Parser      • Validator              │
-│  • Graph DB    • Policy Engine          │
-│  • SBVR Logic  • CALM Integration       │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              Your Application                       │
+├─────────────────────────────────────────────────────┤
+│  Python API    │  TypeScript    │   WASM           │
+│  (PyO3)        │  (napi-rs)     │  (wasm-bindgen)  │
+│  maturin       │  .node binary  │  pkg/            │
+├─────────────────────────────────────────────────────┤
+│              Rust Core Engine (sea-core)            │
+│  ┌─────────────┬──────────────┬─────────────────┐  │
+│  │ Primitives  │ Graph Store  │ Policy Engine   │  │
+│  │ (5 types)   │ (HashMap)    │ (SBVR logic)    │  │
+│  ├─────────────┼──────────────┼─────────────────┤  │
+│  │ Parser      │ Validator    │ CALM Integration│  │
+│  │ (Pest)      │ (Ref check)  │ (export/import) │  │
+│  └─────────────┴──────────────┴─────────────────┘  │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### 🎯 Design Principles
 
-1. **🧱 Layered**: Vocabulary → Facts → Rules (no circular dependencies)
-2. **⚡ Fast**: <100ms validation for 10K nodes
-3. **🌍 Universal**: Identical semantics across all languages
-4. **📏 Standards-Based**: SBVR and CALM compatible
-5. **🔒 Type-Safe**: Compile-time guarantees where possible
+1. **🧱 Layered Architecture**: Vocabulary → Facts → Rules (ADR-001)
+   - No circular dependencies between layers
+   - Clear separation of concerns
+
+2. **⚡ Performance First**: <100ms validation for 10K nodes
+   - Rust's zero-cost abstractions
+   - HashMap-based graph storage for O(1) lookups
+
+3. **🌍 Cross-Language Parity**: 100% identical semantics
+   - All bindings wrap Rust core (never duplicate logic)
+   - Extensive parity testing ensures equivalence
+
+4. **📏 Standards Compliance**:
+   - SBVR-aligned policy expressions (OMG standard)
+   - FINOS CALM bidirectional conversion
+   - JSON Schema validated exports
+
+5. **🔒 Type Safety**: Maximum compile-time guarantees
+   - Rust's ownership system prevents invalid states
+   - TypeScript full type inference
+   - Python type hints for IDE support
 
 ---
 
@@ -443,40 +585,79 @@ SEA DSL uses a high-performance Rust core with idiomatic bindings:
 
 ---
 
-## 🚦 Roadmap
+## 🚦 Implementation Status
 
-### ✅ **Current (v1.0)**
+### ✅ **Completed (v0.1.0)**
 
-- [x] Core five primitives (Entity, Resource, Flow, Instance, Policy)
-- [x] SBVR-aligned expression language
-- [x] Python, TypeScript, Rust, WASM bindings
-- [x] Graph-based validation engine
-- [x] Performance <100ms for 10K nodes
+**Core Framework:**
+- [x] Five universal primitives (Entity, Resource, Flow, Instance, Policy)
+- [x] Graph storage with referential integrity enforcement
+- [x] Pest-based DSL parser with full grammar support
+- [x] SBVR-aligned policy expression engine
+- [x] UUID-based primitive identification (v4 + v7 support)
 
-### 🔄 **In Progress (v1.x)**
+**Language Bindings:**
+- [x] Rust core library (`sea-core`)
+- [x] Python bindings via PyO3 + maturin (`sea-dsl`)
+- [x] TypeScript bindings via napi-rs (`@domainforge/sea`)
+- [x] WebAssembly bindings via wasm-bindgen (`@domainforge/sea-wasm`)
+- [x] Cross-language parity testing (100% semantic equivalence)
 
-- [ ] Visual modeling UI
-- [ ] SQL storage adapter
-- [ ] Real-time collaboration
-- [ ] Advanced analytics dashboard
+**Standards Integration:**
+- [x] CALM (Common Architecture Language Model) bidirectional conversion
+- [x] CALM JSON Schema v1 validation
+- [x] Round-trip testing (SEA → CALM → SEA)
+- [x] Metadata preservation with `sea:` namespace
 
-### 🔮 **Planned (v2.0)**
+**Testing & Quality:**
+- [x] Comprehensive unit tests (100+ tests across primitives)
+- [x] Integration tests (parser, graph, cross-language)
+- [x] Property-based tests (proptest for invariants)
+- [x] CALM round-trip validation tests
+- [x] Performance benchmarks (<100ms for 10K nodes)
 
-- [ ] Machine learning-assisted modeling
-- [ ] Bi-directional CALM sync
-- [ ] Cloud-hosted validation service
-- [ ] Industry-specific template libraries
+**Documentation:**
+- [x] Complete API specifications (Rust, Python, TypeScript)
+- [x] Architecture Decision Records (8 ADRs)
+- [x] Phase-by-phase implementation plans
+- [x] C4 architecture diagrams
+- [x] SBVR/UBM design context documentation
 
----
+**Test Files:**
+```
+sea-core/tests/
+├── entity_tests.rs              # Entity primitive unit tests
+├── resource_tests.rs            # Resource primitive unit tests
+├── flow_tests.rs                # Flow primitive unit tests
+├── instance_tests.rs            # Instance primitive unit tests
+├── policy_tests.rs              # Policy engine unit tests
+├── graph_tests.rs               # Graph storage unit tests
+├── parser_tests.rs              # Parser unit tests
+├── graph_integration_tests.rs   # Graph integration tests
+├── parser_integration_tests.rs  # Parser integration tests
+├── primitives_integration_tests.rs
+├── calm_round_trip_tests.rs     # CALM round-trip validation (6 tests)
+├── calm_schema_validation_tests.rs  # JSON Schema validation (5 tests)
+└── wasm_tests.rs                # WASM-specific tests
+```
 
-## 💬 Community
+### 🔄 **Future Enhancements (v0.2+)**
 
-- 💬 [Discussions](https://github.com/domainforge/sea-dsl/discussions) - Ask questions, share models
-- 🐛 [Issues](https://github.com/domainforge/sea-dsl/issues) - Report bugs or request features
-- 📧 [Mailing List](mailto:sea-dsl@domainforge.org) - Announcements and updates
-- 🐦 [Twitter](https://twitter.com/domainforge) - News and tips
+- [ ] Visual modeling UI (drag-and-drop interface)
+- [ ] SQL/PostgreSQL storage adapter
+- [ ] Real-time collaborative editing
+- [ ] Advanced policy analytics dashboard
+- [ ] GraphQL API server
+- [ ] CLI tool for model manipulation
 
----
+### 🔮 **Research & Exploration**
+
+- [ ] Machine learning-assisted model validation
+- [ ] Streaming validation for infinite graphs
+- [ ] Cloud-hosted SaaS validation service
+- [ ] Industry-specific template libraries (finance, logistics, healthcare)
+- [ ] Integration with popular ERP systems
+
 
 ## 📄 License
 
@@ -495,33 +676,3 @@ Built on the shoulders of giants:
 
 ---
 
-## 🎓 Learn More
-
-### 📺 Video Tutorials
-
-- [Introduction to SEA DSL (10 min)](https://youtube.com/watch?v=example)
-- [Building Your First Model (20 min)](https://youtube.com/watch?v=example)
-- [Advanced Policy Patterns (30 min)](https://youtube.com/watch?v=example)
-
-### 📝 Blog Posts
-
-- [Why We Built SEA DSL](https://blog.domainforge.org/why-sea-dsl)
-- [From Word Docs to Executable Models](https://blog.domainforge.org/executable-models)
-- [Formal Methods for Business Users](https://blog.domainforge.org/formal-for-business)
-
-### 🎤 Talks
-
-- [DDD Europe 2024: "Domain Models that Execute"](https://dddeurope.com)
-- [QCon 2024: "Architecture as Code with SEA DSL"](https://qconferences.com)
-
----
-
-<div align="center">
-
-### Made with ❤️ by the DomainForge Team
-
-**Star ⭐ this repo if you find it useful!**
-
-[🏠 Homepage](https://domainforge.org) • [📚 Docs](https://docs.domainforge.org) • [💬 Community](https://community.domainforge.org)
-
-</div>

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "sea-dsl"
+version = "0.1.0"
+description = "SEA DSL - Semantic Enterprise Architecture Domain Specific Language"
+readme = "README_PYTHON.md"
+requires-python = ">=3.11"
+license = { text = "MIT OR Apache-2.0" }
+authors = [
+    { name = "DomainForge Contributors" }
+]
+keywords = ["enterprise-architecture", "dsl", "domain-modeling", "business-logic"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "mypy>=1.0",
+]
+
+[tool.maturin]
+python-source = "python"
+module-name = "sea_dsl"
+features = ["python"]
+manifest-path = "sea-core/Cargo.toml"

@@ -1,0 +1,51 @@
+[package]
+name = "sea-core"
+version = "0.0.1"
+authors = ["DomainForge Contributors"]
+edition = "2021"
+rust-version = "1.77"
+description = "Rust core library implementing the SEA DSL primitives and validation engine."
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/GodSpeedAI/DomainForge"
+repository = "https://github.com/GodSpeedAI/DomainForge"
+
+[dependencies]
+uuid = { version = "1.6", features = ["v4", "v7", "serde", "wasm-bindgen"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rust_decimal = { version = "1.33", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+pest = "2.7"
+pest_derive = "2.7"
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+pythonize = { version = "0.22", optional = true }
+napi = { version = "2.16", features = ["async"], optional = true }
+napi-derive = { version = "2.16", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+
+[dev-dependencies]
+proptest = "1.0"
+wasm-bindgen-test = "0.3"
+jsonschema = "0.18"
+
+[build-dependencies]
+napi-build = "2.1"
+
+[lib]
+name = "sea_core"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+python = ["pyo3", "pythonize"]
+typescript = ["napi", "napi-derive"]
+wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = 'abort'

@@ -1,0 +1,108 @@
+// SEA DSL Grammar Definition
+// Based on the TypeScript Ohm-JS reference implementation
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+
+// Program is the top-level entry point
+program = { SOI ~ declaration* ~ EOI }
+
+// Declarations
+declaration = { entity_decl | resource_decl | flow_decl | policy_decl }
+
+// Entity Declaration
+// Syntax: Entity "Name" in domain
+// Syntax: Entity "Name"
+entity_decl = {
+    ^"entity" ~ string_literal ~ (^"in" ~ identifier)?
+}
+
+// Resource Declaration
+// Syntax: Resource "Name" units in domain
+// Syntax: Resource "Name" in domain
+// Syntax: Resource "Name" units
+// Syntax: Resource "Name"
+in_keyword = { ^"in" }
+
+resource_decl = {
+    ^"resource" ~ string_literal ~ (
+        (identifier ~ in_keyword ~ identifier) |  // "units in domain" - most specific first
+        (in_keyword ~ identifier) |                // "in domain" - next most specific
+        identifier                                 // "units" only - least specific last
+    )?
+}
+
+// Flow Declaration
+// Syntax: Flow "ResourceName" from "EntityA" to "EntityB" quantity 100
+// Syntax: Flow "ResourceName" from "EntityA" to "EntityB"
+flow_decl = {
+    ^"flow" ~ string_literal ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number)?
+}
+
+// Policy Declaration
+// Syntax: Policy name as: expression
+policy_decl = {
+    ^"policy" ~ identifier ~ ^"as" ~ ":" ~ expression
+}
+
+// Expressions
+expression = { or_expr }
+
+or_expr = { and_expr ~ (^"or" ~ and_expr)* }
+
+and_expr = { not_expr ~ (^"and" ~ not_expr)* }
+
+not_expr = { (^"not" ~ not_expr) | comparison_expr }
+
+comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)? }
+
+comparison_op = {
+    ">=" | "<=" | "!=" | "=" | ">" | "<" |
+    ^"contains" | ^"startswith" | ^"endswith"
+}
+
+additive_expr = { multiplicative_expr ~ ((add_op ~ multiplicative_expr)*) }
+
+add_op = { "+" | "-" }
+
+multiplicative_expr = { unary_expr ~ ((mul_op ~ unary_expr)*) }
+
+mul_op = { "*" | "/" }
+
+unary_expr = { ("-" ~ unary_expr) | primary_expr }
+
+primary_expr = {
+    "(" ~ expression ~ ")" |
+    quantified_expr |
+    member_access |
+    literal |
+    identifier
+}
+
+// Quantified expressions
+// Syntax: forall x in Collection: (condition)
+// Syntax: exists x in Collection: (condition)
+quantified_expr = {
+    quantifier ~ identifier ~ ^"in" ~ collection ~ ":" ~ "(" ~ expression ~ ")"
+}
+
+quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }
+
+collection = {
+    ^"flows" | ^"entities" | ^"resources" | ^"instances"
+}
+
+// Member access (e.g., Flow.quantity, Entity.name)
+member_access = { identifier ~ "." ~ identifier }
+
+// Literals
+literal = { string_literal | number | boolean }
+
+string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
+number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+
+boolean = { ^"true" | ^"false" }
+
+// Identifier (alphanumeric + underscore, must start with letter or underscore)
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
