@@ -1,4 +1,4 @@
-use sea_core::{Graph, primitives::{Entity, Resource, Flow, Instance}};
+use sea_core::{Graph, primitives::{Entity, Resource, Flow, Instance}, units::unit_from_string};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -11,18 +11,18 @@ fn test_complete_supply_chain_graph() {
     let manufacturer = Entity::new("Camera Manufacturer");
     let retailer = Entity::new("Electronics Retailer");
 
-    let steel = Resource::new("Steel", "kg");
-    let camera_parts = Resource::new("Camera Parts", "units");
-    let cameras = Resource::new("Finished Cameras", "units");
+    let steel = Resource::new("Steel", unit_from_string("kg"));
+    let camera_parts = Resource::new("Camera Parts", unit_from_string("units"));
+    let cameras = Resource::new("Finished Cameras", unit_from_string("units"));
 
-    let supplier_id = *supplier.id();
-    let warehouse_id = *warehouse.id();
-    let manufacturer_id = *manufacturer.id();
-    let retailer_id = *retailer.id();
+    let supplier_id = supplier.id().clone();
+    let warehouse_id = warehouse.id().clone();
+    let manufacturer_id = manufacturer.id().clone();
+    let retailer_id = retailer.id().clone();
 
-    let steel_id = *steel.id();
-    let camera_parts_id = *camera_parts.id();
-    let cameras_id = *cameras.id();
+    let steel_id = steel.id().clone();
+    let camera_parts_id = camera_parts.id().clone();
+    let cameras_id = cameras.id().clone();
 
     graph.add_entity(supplier).unwrap();
     graph.add_entity(warehouse).unwrap();
@@ -34,21 +34,21 @@ fn test_complete_supply_chain_graph() {
     graph.add_resource(cameras).unwrap();
 
     let flow1 = Flow::new(
-        steel_id,
-        supplier_id,
-        warehouse_id,
+        steel_id.clone(),
+        supplier_id.clone(),
+        warehouse_id.clone(),
         Decimal::from_str("500").unwrap(),
     );
     let flow2 = Flow::new(
-        camera_parts_id,
-        warehouse_id,
-        manufacturer_id,
+        camera_parts_id.clone(),
+        warehouse_id.clone(),
+        manufacturer_id.clone(),
         Decimal::from_str("200").unwrap(),
     );
     let flow3 = Flow::new(
-        cameras_id,
-        manufacturer_id,
-        retailer_id,
+        cameras_id.clone(),
+        manufacturer_id.clone(),
+        retailer_id.clone(),
         Decimal::from_str("150").unwrap(),
     );
 
@@ -87,16 +87,16 @@ fn test_graph_with_instances() {
     let mut graph = Graph::new();
 
     let warehouse = Entity::new("Warehouse");
-    let cameras = Resource::new("Cameras", "units");
+    let cameras = Resource::new("Cameras", unit_from_string("units"));
 
-    let warehouse_id = *warehouse.id();
-    let cameras_id = *cameras.id();
+    let warehouse_id = warehouse.id().clone();
+    let cameras_id = cameras.id().clone();
 
     graph.add_entity(warehouse).unwrap();
     graph.add_resource(cameras).unwrap();
 
-    let instance1 = Instance::new(cameras_id, warehouse_id);
-    let instance2 = Instance::new(cameras_id, warehouse_id);
+    let instance1 = Instance::new(cameras_id.clone(), warehouse_id.clone());
+    let instance2 = Instance::new(cameras_id.clone(), warehouse_id.clone());
 
     graph.add_instance(instance1).unwrap();
     graph.add_instance(instance2).unwrap();
@@ -109,15 +109,15 @@ fn test_graph_validation_prevents_invalid_flows() {
     let mut graph = Graph::new();
 
     let warehouse = Entity::new("Warehouse");
-    let cameras = Resource::new("Cameras", "units");
+    let cameras = Resource::new("Cameras", unit_from_string("units"));
 
-    let warehouse_id = *warehouse.id();
-    let cameras_id = *cameras.id();
+    let warehouse_id = warehouse.id().clone();
+    let cameras_id = cameras.id().clone();
 
     graph.add_entity(warehouse).unwrap();
     graph.add_resource(cameras).unwrap();
 
-    let fake_entity_id = uuid::Uuid::new_v4();
+    let fake_entity_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
 
     let invalid_flow = Flow::new(
         cameras_id,
@@ -137,16 +137,16 @@ fn test_graph_multi_resource_flows() {
     let supplier = Entity::new("Supplier");
     let factory = Entity::new("Factory");
 
-    let steel = Resource::new("Steel", "kg");
-    let plastic = Resource::new("Plastic", "kg");
-    let electronics = Resource::new("Electronics", "units");
+    let steel = Resource::new("Steel", unit_from_string("kg"));
+    let plastic = Resource::new("Plastic", unit_from_string("kg"));
+    let electronics = Resource::new("Electronics", unit_from_string("units"));
 
-    let supplier_id = *supplier.id();
-    let factory_id = *factory.id();
+    let supplier_id = supplier.id().clone();
+    let factory_id = factory.id().clone();
 
-    let steel_id = *steel.id();
-    let plastic_id = *plastic.id();
-    let electronics_id = *electronics.id();
+    let steel_id = steel.id().clone();
+    let plastic_id = plastic.id().clone();
+    let electronics_id = electronics.id().clone();
 
     graph.add_entity(supplier).unwrap();
     graph.add_entity(factory).unwrap();
@@ -155,21 +155,21 @@ fn test_graph_multi_resource_flows() {
     graph.add_resource(electronics).unwrap();
 
     let flow1 = Flow::new(
-        steel_id,
-        supplier_id,
-        factory_id,
+        steel_id.clone(),
+        supplier_id.clone(),
+        factory_id.clone(),
         Decimal::from_str("1000").unwrap(),
     );
     let flow2 = Flow::new(
-        plastic_id,
-        supplier_id,
-        factory_id,
+        plastic_id.clone(),
+        supplier_id.clone(),
+        factory_id.clone(),
         Decimal::from_str("500").unwrap(),
     );
     let flow3 = Flow::new(
-        electronics_id,
-        supplier_id,
-        factory_id,
+        electronics_id.clone(),
+        supplier_id.clone(),
+        factory_id.clone(),
         Decimal::from_str("200").unwrap(),
     );
 
@@ -188,7 +188,7 @@ fn test_graph_multi_resource_flows() {
 fn test_empty_graph_queries() {
     let graph = Graph::new();
 
-    let fake_id = uuid::Uuid::new_v4();
+    let fake_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
 
     assert_eq!(graph.flows_from(&fake_id).len(), 0);
     assert_eq!(graph.flows_to(&fake_id).len(), 0);

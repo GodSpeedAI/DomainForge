@@ -8,7 +8,8 @@ use crate::primitives::{
 };
 use uuid::Uuid;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
+use crate::units::unit_from_string;
 use std::str::FromStr;
 
 #[pyclass]
@@ -41,7 +42,8 @@ impl Entity {
 
     #[getter]
     fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" { None } else { Some(ns.to_string()) }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -95,9 +97,11 @@ impl Resource {
     #[new]
     #[pyo3(signature = (name, unit, namespace=None))]
     fn new(name: String, unit: String, namespace: Option<String>) -> Self {
+        // Convert unit string to Unit using helper
+        let unit_obj = unit_from_string(unit);
         let inner = match namespace {
-            Some(ns) => RustResource::new_with_namespace(name, unit, ns),
-            None => RustResource::new(name, unit),
+            Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
+            None => RustResource::new(name, unit_obj),
         };
         Self { inner }
     }
@@ -114,12 +118,13 @@ impl Resource {
 
     #[getter]
     fn unit(&self) -> String {
-        self.inner.unit().to_string()
+        self.inner.unit().symbol().to_string()
     }
 
     #[getter]
     fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" { None } else { Some(ns.to_string()) }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -143,13 +148,13 @@ impl Resource {
             "Resource(id='{}', name='{}', unit='{}', namespace={:?})",
             self.inner.id(),
             self.inner.name(),
-            self.inner.unit(),
+            self.inner.unit().symbol(),
             self.inner.namespace()
         )
     }
 
     fn __str__(&self) -> String {
-        format!("{} ({})", self.inner.name(), self.inner.unit())
+        format!("{} ({})", self.inner.name(), self.inner.unit().symbol())
     }
 }
 
@@ -181,8 +186,13 @@ impl Flow {
             .map_err(|e| PyValueError::new_err(format!("Invalid to_id UUID: {}", e)))?;
         let decimal_quantity = Decimal::from_f64(quantity)
             .ok_or_else(|| PyValueError::new_err("Invalid quantity value"))?;
-
-        let inner = RustFlow::new(resource_uuid, from_uuid, to_uuid, decimal_quantity);
+        // Convert Uuid to ConceptId for Flow constructor
+        let inner = RustFlow::new(
+            crate::ConceptId::from(resource_uuid),
+            crate::ConceptId::from(from_uuid),
+            crate::ConceptId::from(to_uuid),
+            decimal_quantity,
+        );
         Ok(Self { inner })
     }
 
@@ -208,12 +218,13 @@ impl Flow {
 
     #[getter]
     fn quantity(&self) -> f64 {
-        self.inner.quantity().to_string().parse().expect("Failed to parse Decimal quantity to f64 in Python binding")
+        self.inner.quantity().to_f64().expect("Failed to convert Decimal quantity to f64 in Python binding")
     }
 
     #[getter]
     fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" { None } else { Some(ns.to_string()) }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -269,10 +280,17 @@ impl Instance {
             .map_err(|e| PyValueError::new_err(format!("Invalid resource_id UUID: {}", e)))?;
         let entity_uuid = Uuid::from_str(&entity_id)
             .map_err(|e| PyValueError::new_err(format!("Invalid entity_id UUID: {}", e)))?;
-
+        // Convert Uuid to ConceptId for Instance constructor
         let inner = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(resource_uuid, entity_uuid, ns),
-            None => RustInstance::new(resource_uuid, entity_uuid),
+            Some(ns) => RustInstance::new_with_namespace(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+                ns,
+            ),
+            None => RustInstance::new(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+            ),
         };
         Ok(Self { inner })
     }
@@ -294,7 +312,8 @@ impl Instance {
 
     #[getter]
     fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" { None } else { Some(ns.to_string()) }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {

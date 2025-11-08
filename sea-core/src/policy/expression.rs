@@ -29,6 +29,13 @@ pub enum Expression {
         object: String,
         member: String,
     },
+
+    Aggregation {
+        function: AggregateFunction,
+        collection: Box<Expression>,
+        field: Option<String>,
+        filter: Option<Box<Expression>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -64,6 +71,15 @@ pub enum Quantifier {
     ForAll,
     Exists,
     ExistsUnique,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AggregateFunction {
+    Count,
+    Sum,
+    Min,
+    Max,
+    Avg,
 }
 
 impl Expression {
@@ -117,6 +133,27 @@ impl Expression {
 
         Ok(Expression::binary(op, Expression::variable(var), Expression::literal(value)))
     }
+
+    pub fn aggregation(
+        function: AggregateFunction,
+        collection: Expression,
+        field: Option<impl Into<String>>,
+        filter: Option<Expression>,
+    ) -> Self {
+        Expression::Aggregation {
+            function,
+            collection: Box::new(collection),
+            field: field.map(|f| f.into()),
+            filter: filter.map(Box::new),
+        }
+    }
+
+    pub fn member_access(object: &str, member: &str) -> Self {
+        Expression::MemberAccess {
+            object: object.to_string(),
+            member: member.to_string(),
+        }
+    }
 }
 
 impl fmt::Display for Expression {
@@ -140,6 +177,16 @@ impl fmt::Display for Expression {
             }
             Expression::MemberAccess { object, member } => {
                 write!(f, "{}.{}", object, member)
+            }
+            Expression::Aggregation { function, collection, field, filter } => {
+                write!(f, "{}({}", function, collection)?;
+                if let Some(fld) = field {
+                    write!(f, ".{}", fld)?;
+                }
+                if let Some(flt) = filter {
+                    write!(f, " WHERE {}", flt)?;
+                }
+                write!(f, ")")
             }
         }
     }
@@ -182,6 +229,18 @@ impl fmt::Display for Quantifier {
             Quantifier::ForAll => write!(f, "ForAll"),
             Quantifier::Exists => write!(f, "Exists"),
             Quantifier::ExistsUnique => write!(f, "ExistsUnique"),
+        }
+    }
+}
+
+impl fmt::Display for AggregateFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AggregateFunction::Count => write!(f, "COUNT"),
+            AggregateFunction::Sum => write!(f, "SUM"),
+            AggregateFunction::Min => write!(f, "MIN"),
+            AggregateFunction::Max => write!(f, "MAX"),
+            AggregateFunction::Avg => write!(f, "AVG"),
         }
     }
 }

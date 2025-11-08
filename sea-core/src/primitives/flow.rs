@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 use serde_json::Value;
+use crate::ConceptId;
+use uuid;
+
+const DEFAULT_NAMESPACE: &str = "default";
 
 /// Represents a transfer of a resource between two entities.
 ///
@@ -13,11 +16,12 @@ use serde_json::Value;
 ///
 /// ```
 /// use sea_core::primitives::{Entity, Resource, Flow};
+/// use sea_core::units::unit_from_string;
 /// use rust_decimal::Decimal;
 ///
 /// let warehouse = Entity::new("Warehouse");
 /// let factory = Entity::new("Factory");
-/// let product = Resource::new("Widget", "units");
+/// let product = Resource::new("Widget", unit_from_string("units"));
 ///
 /// let flow = Flow::new(
 ///     product.id().clone(),
@@ -30,35 +34,62 @@ use serde_json::Value;
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Flow {
-    id: Uuid,
-    resource_id: Uuid,
-    from_id: Uuid,
-    to_id: Uuid,
+    id: ConceptId,
+    resource_id: ConceptId,
+    from_id: ConceptId,
+    to_id: ConceptId,
     quantity: Decimal,
-    namespace: Option<String>,
+    namespace: String,
     attributes: HashMap<String, Value>,
 }
 
 impl Flow {
-    /// Creates a new Flow with a generated UUID.
-    pub fn new(resource_id: Uuid, from_id: Uuid, to_id: Uuid, quantity: Decimal) -> Self {
+    /// Creates a new Flow (deprecated - namespace required).
+    #[deprecated(note = "use new_with_namespace instead")]
+    pub fn new(resource_id: ConceptId, from_id: ConceptId, to_id: ConceptId, quantity: Decimal) -> Self {
+        let namespace = DEFAULT_NAMESPACE.to_string();
+        // Use UUID v4 for flows to ensure uniqueness (flows are events, not concepts)
+        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
         Self {
-            id: Uuid::new_v4(),
+            id,
             resource_id,
             from_id,
             to_id,
             quantity,
-            namespace: None,
+            namespace,
             attributes: HashMap::new(),
         }
     }
 
-    pub fn id(&self) -> &Uuid { &self.id }
-    pub fn resource_id(&self) -> &Uuid { &self.resource_id }
-    pub fn from_id(&self) -> &Uuid { &self.from_id }
-    pub fn to_id(&self) -> &Uuid { &self.to_id }
+    /// Creates a new Flow with namespace.
+    pub fn new_with_namespace(
+        resource_id: ConceptId,
+        from_id: ConceptId,
+        to_id: ConceptId,
+        quantity: Decimal,
+        namespace: impl Into<String>,
+    ) -> Self {
+        let namespace = namespace.into();
+        // Use UUID v4 for flows to ensure uniqueness (flows are events, not concepts)
+        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
+
+        Self {
+            id,
+            resource_id,
+            from_id,
+            to_id,
+            quantity,
+            namespace,
+            attributes: HashMap::new(),
+        }
+    }
+
+    pub fn id(&self) -> &ConceptId { &self.id }
+    pub fn resource_id(&self) -> &ConceptId { &self.resource_id }
+    pub fn from_id(&self) -> &ConceptId { &self.from_id }
+    pub fn to_id(&self) -> &ConceptId { &self.to_id }
     pub fn quantity(&self) -> Decimal { self.quantity }
-    pub fn namespace(&self) -> Option<&str> { self.namespace.as_deref() }
+    pub fn namespace(&self) -> &str { &self.namespace }
 
     pub fn set_attribute(&mut self, key: impl Into<String>, value: Value) {
         self.attributes.insert(key.into(), value);

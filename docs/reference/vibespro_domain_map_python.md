@@ -2,6 +2,8 @@
 
 This document maps the SEA DSL primitives (Entity, Resource, Flow, Instance, Policy) to the domain-driven design and hexagonal architecture artifacts that the Python backend generators scaffold by default.
 
+> **🎉 November 2025 Update**: Updated with latest SEA API changes - namespace now returns `str` (not `Optional[str]`), new constructor patterns (`new()` vs `new_with_namespace()`), IndexMap for deterministic iteration, multiline string support, and 342 tests passing.
+
 ## Summary (one-liner)
 
 - Entity -> Domain Entity / Aggregate Root (dataclass or attrs)
@@ -10,12 +12,29 @@ This document maps the SEA DSL primitives (Entity, Resource, Flow, Instance, Pol
 - Instance -> Domain Entity (physical instance) or frozen dataclass depending on mutability
 - Policy -> Specification (Protocol), Domain Service, or runtime validator (Pydantic/attrs)
 
+## Recent SEA API Changes (November 2025)
+
+**Breaking Changes:**
+- `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
+- Constructors changed: Use `Entity.new(name)` for default namespace, `Entity.new_with_namespace(name, ns)` for explicit
+- Flow constructor takes `ConceptId` values (not references) - clone before passing
+- All quantities use `Decimal` type for precision
+
+**New Features:**
+- **Multiline string support**: Parser accepts `"""..."""` syntax for entity/resource names
+- **IndexMap storage**: Graph uses IndexMap for deterministic iteration (reproducible results)
+- **ValidationError helpers**: Convenience constructors like `undefined_entity()`, `unit_mismatch()`
+- **CALM integration**: Full bidirectional conversion for architecture-as-code
+- **342 tests passing**: Comprehensive test coverage across all primitives
+
 ## Mapping details
 
 ### 1) Entity
 
 - **DDD role**: Domain Entity (often an Aggregate Root with identity and lifecycle).
 - **Python patterns**: `@dataclass` with `id: UUID`, equality by identity, methods for behavior.
+- **SEA API**: `Entity.new(name)` for default namespace, `Entity.new_with_namespace(name, ns)` for explicit
+- **Key change**: `namespace()` always returns `str` (not `Optional[str]`), defaults to "default"
 - **Typical generated artifacts**: `entities/`, `aggregates/`, `factories/`, domain errors, unit tests.
 - **Location in generated projects**: `libs/{domain}/domain/{domain}_domain/entities/` and `libs/{domain}/domain/{domain}_domain/aggregates/`.
 - **Example SEA → Python DDD**: SEA `Entity "Warehouse"` → `Warehouse` aggregate root with `WarehouseId` value object (frozen dataclass).
@@ -31,12 +50,16 @@ from uuid import UUID
 class Warehouse:
     id: UUID
     name: str
-    namespace: str | None = None
+    namespace: str = "default"  # Always present, never None
 
     def __eq__(self, other):
         if not isinstance(other, Warehouse):
             return False
         return self.id == other.id
+
+    def __post_init__(self):
+        # namespace is always a string
+        assert isinstance(self.namespace, str), "namespace must be str"
 ```
 
 ### 2) Resource
@@ -82,6 +105,8 @@ class Resource:
 
 - **DDD role**: Represents transfer/relationship between entities — modeled as Aggregate method or separate Aggregate with async operations.
 - **Python patterns**: Async methods on aggregates, domain events (dataclass), use-cases orchestrate via UoW.
+- **SEA API**: `Flow.new(resource_id, from_id, to_id, quantity)` - takes `ConceptId` values (clone before passing)
+- **Key change**: Constructor takes `ConceptId` parameters with `.clone()`, uses `Decimal` for quantities, IndexMap ensures deterministic iteration
 - **Typical generated artifacts**: aggregate methods (`async def transfer`), domain events (`events/flow_created.py`), use-cases with async UoW.
 - **Location in generated projects**: `libs/{domain}/domain/{domain}_domain/aggregates/`, `events/`, and `libs/{domain}/application/{domain}_application/use_cases/`.
 - **Example SEA → Python DDD**: SEA `Flow` → `async def transfer()` on `InventoryAggregate` + `FlowCreatedEvent` (dataclass) published via EventBus.
@@ -101,12 +126,13 @@ class InventoryAggregate:
 
     async def transfer(self, resource_id: UUID, to_location: UUID, quantity: Decimal):
         # Validation logic
+        # Clone ConceptIds when creating Flow in SEA
         event = FlowCreatedEvent(
             aggregate_id=self.id,
-            resource_id=resource_id,
+            resource_id=resource_id,  # In real SEA: resource_id.clone()
             from_location=self.location_id,
             to_location=to_location,
-            quantity=quantity
+            quantity=quantity  # Always Decimal for precision
         )
         # Emit event (handled by use-case via EventBus)
         return event
@@ -279,19 +305,56 @@ class InMemoryEventBus:
 
 ## Quick mapping reference table
 
-| SEA Primitive | Default Python DDD Element(s) | Generated artifact examples |
-|---|---|---|
-| Entity | Aggregate Root / Entity (dataclass) | `entities/order.py`, `aggregates/order_aggregate.py` |
-| Resource | Value Object (frozen dataclass) or Entity | `value_objects/resource_type.py`, `entities/resource.py` |
-| Flow | Aggregate async method / Flow Aggregate + Event | `aggregates/inventory_aggregate.py.transfer()`, `events/flow_created.py` |
-| Instance | Domain Entity (dataclass) | `entities/instance.py` with `serial`, repo Protocol |
-| Policy | Specification (Protocol) / Domain Service | `specifications/min_quantity_spec.py`, `services/policy_engine.py` |
+| SEA Primitive | Default Python DDD Element(s) | Generated artifact examples | API Changes (Nov 2025) |
+|---|---|---|---|
+| Entity | Aggregate Root / Entity (dataclass) | `entities/order.py`, `aggregates/order_aggregate.py` | `new()` vs `new_with_namespace()`, namespace always `str` |
+| Resource | Value Object (frozen dataclass) or Entity | `value_objects/resource_type.py`, `entities/resource.py` | Constructor patterns, namespace always `str` |
+| Flow | Aggregate async method / Flow Aggregate + Event | `aggregates/inventory_aggregate.py.transfer()`, `events/flow_created.py` | Takes `ConceptId` values with `.clone()`, uses `Decimal` |
+| Instance | Domain Entity (dataclass) | `entities/instance.py` with `serial`, repo Protocol | Constructor patterns, namespace always `str` |
+| Policy | Specification (Protocol) / Domain Service | `specifications/min_quantity_spec.py`, `services/policy_engine.py` | ValidationError helpers, deterministic evaluation |
 
 ## Verification & extension
 
 - Generators produce `pytest` unit tests, in-memory adapters, and example use-cases.
 - Extensions (projections, sagas, search adapters) are opt-in generator options.
 - All async code tested with `pytest-asyncio`.
+- **Deterministic behavior**: SEA uses IndexMap for graph storage, ensuring reproducible results. Generated code should maintain iteration order consistency.
+
+---
+
+## Key Design Considerations (November 2025)
+
+### Deterministic Iteration
+SEA's IndexMap storage guarantees stable iteration order for:
+- Policy evaluation (consistent results across runs)
+- Event ordering (deterministic event emission)
+- Query results (reproducible outputs)
+
+**Python DDD mapping impact**:
+- Use `dict` (Python 3.7+) which preserves insertion order
+- Repository implementations should maintain consistent ordering
+- Domain services should produce deterministic results for same inputs
+
+### ConceptId Ownership
+SEA Flow constructors take `ConceptId` values (not references):
+- Use `.clone()` when passing IDs to Flow constructors in SEA integration
+- Generated aggregates should copy IDs when creating child entities
+- Domain events should capture ID values at event creation time
+- Type hints: Use `UUID` in Python (ConceptId maps to UUID in FFI)
+
+### Namespace Handling
+All SEA primitives have namespace that defaults to "default":
+- Generated entities should include `namespace: str = "default"` (not `Optional[str]`)
+- Domain services should support namespace filtering for multi-tenant scenarios
+- Repositories should use composite keys: `(namespace, id)`
+- Pydantic DTOs should validate namespace as non-empty string
+
+### Decimal Precision
+SEA uses `Decimal` for all quantities:
+- Generated value objects for money/quantities should use `decimal.Decimal`
+- Avoid `float` for financial calculations
+- Pydantic models should use `condecimal()` for validation
+- SQLAlchemy columns should use `NUMERIC` type
 
 ---
 

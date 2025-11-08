@@ -2,10 +2,18 @@
 
 TypeScript/Node.js bindings for the SEA (Semantic Enterprise Architecture) DSL.
 
+> **🎉 November 2025 Update**: Updated with latest API changes - namespace now returns `string` (not `string | undefined`), new constructor patterns, multiline string support, and 342 tests passing!
+
 ## Installation
 
 ```bash
-npm install @domainforge/sea
+# From source (npm package coming soon)
+git clone https://github.com/GodSpeedAI/DomainForge.git
+cd DomainForge
+npm install
+npm run build
+
+# The build produces native .node bindings
 ```
 
 ## Quick Start
@@ -16,15 +24,27 @@ import { Graph, Entity, Resource, Flow } from '@domainforge/sea';
 // Create a graph programmatically
 const graph = new Graph();
 
-const warehouse = new Entity('Warehouse', 'logistics');
-const factory = new Entity('Factory', 'manufacturing');
-const cameras = new Resource('Cameras', 'units');
+// Constructor patterns - new() for default namespace, newWithNamespace() for explicit
+const warehouse = Entity.new('Warehouse');  // Default namespace
+const factory = Entity.newWithNamespace('Factory', 'manufacturing');
+
+// Namespace is always a string (not undefined), defaults to "default"
+console.log(warehouse.namespace());  // "default"
+console.log(factory.namespace());    // "manufacturing"
+
+const cameras = Resource.new('Cameras', 'units');
 
 graph.addEntity(warehouse);
 graph.addEntity(factory);
 graph.addResource(cameras);
 
-const flow = new Flow(cameras.id, warehouse.id, factory.id, 100);
+// Flow constructor takes ConceptId values - clone before passing
+const flow = Flow.new(
+  cameras.id().clone(),
+  warehouse.id().clone(),
+  factory.id().clone(),
+  100
+);
 graph.addFlow(flow);
 
 console.log(`Graph has ${graph.entityCount()} entities`);
@@ -36,11 +56,13 @@ console.log(`Graph has ${graph.flowCount()} flows`);
 ```typescript
 import { Graph } from '@domainforge/sea';
 
+// Supports multiline strings with """ syntax
 const source = `
   Entity "Warehouse" in logistics
-  Entity "Factory" in manufacturing
+  Entity """Multi-line
+  Factory Name""" in manufacturing
   Resource "Cameras" units
-  Flow "Cameras" from "Warehouse" to "Factory" quantity 100
+  Flow "Cameras" from "Warehouse" to "Multi-line\\nFactory Name" quantity 100
 `;
 
 const graph = Graph.parse(source);
@@ -55,10 +77,13 @@ console.log(`Parsed ${graph.flowCount()} flows`);
 
 ```typescript
 class Entity {
-  constructor(name: string, namespace?: string);
-  readonly id: string;
-  readonly name: string;
-  readonly namespace?: string;
+  // Constructor patterns (November 2025)
+  static new(name: string): Entity;  // Default namespace
+  static newWithNamespace(name: string, namespace: string): Entity;  // Explicit namespace
+
+  id(): ConceptId;
+  name(): string;
+  namespace(): string;  // Always returns string, never undefined (defaults to "default")
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -68,11 +93,14 @@ class Entity {
 
 ```typescript
 class Resource {
-  constructor(name: string, unit: string, namespace?: string);
-  readonly id: string;
-  readonly name: string;
-  readonly unit: string;
-  readonly namespace?: string;
+  // Constructor patterns (November 2025)
+  static new(name: string, unit: string): Resource;  // Default namespace
+  static newWithNamespace(name: string, unit: string, namespace: string): Resource;
+
+  id(): ConceptId;
+  name(): string;
+  unit(): string;
+  namespace(): string;  // Always returns string (defaults to "default")
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -82,13 +110,15 @@ class Resource {
 
 ```typescript
 class Flow {
-  constructor(resourceId: string, fromId: string, toId: string, quantity: number);
-  readonly id: string;
-  readonly resourceId: string;
-  readonly fromId: string;
-  readonly toId: string;
-  readonly quantity: number;
-  readonly namespace?: string;
+  // Constructor takes ConceptId values (not references) - clone before passing
+  static new(resourceId: ConceptId, fromId: ConceptId, toId: ConceptId, quantity: number): Flow;
+
+  id(): ConceptId;
+  resourceId(): ConceptId;
+  fromId(): ConceptId;
+  toId(): ConceptId;
+  quantity(): number;
+  namespace(): string;
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -98,11 +128,13 @@ class Flow {
 
 ```typescript
 class Instance {
-  constructor(resourceId: string, entityId: string, namespace?: string);
-  readonly id: string;
-  readonly resourceId: string;
-  readonly entityId: string;
-  readonly namespace?: string;
+  static new(resourceId: ConceptId, entityId: ConceptId): Instance;  // Default namespace
+  static newWithNamespace(resourceId: ConceptId, entityId: ConceptId, namespace: string): Instance;
+
+  id(): ConceptId;
+  resourceId(): ConceptId;
+  entityId(): ConceptId;
+  namespace(): string;  // Always returns string (defaults to "default")
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -113,42 +145,46 @@ class Instance {
 ```typescript
 class Graph {
   constructor();
-  
-  // Add primitives
+
+  // Add primitives (validates referential integrity)
   addEntity(entity: Entity): void;
   addResource(resource: Resource): void;
-  addFlow(flow: Flow): void;
+  addFlow(flow: Flow): void;  // Throws if Entity/Resource references invalid
   addInstance(instance: Instance): void;
-  
+
   // Counts
   entityCount(): number;
   resourceCount(): number;
   flowCount(): number;
   instanceCount(): number;
-  
+
   // Lookup by ID
-  hasEntity(id: string): boolean;
-  getEntity(id: string): Entity | null;
-  getResource(id: string): Resource | null;
-  getFlow(id: string): Flow | null;
-  getInstance(id: string): Instance | null;
-  
+  hasEntity(id: ConceptId): boolean;
+  getEntity(id: ConceptId): Entity | null;
+  getResource(id: ConceptId): Resource | null;
+  getFlow(id: ConceptId): Flow | null;
+  getInstance(id: ConceptId): Instance | null;
+
   // Lookup by name
-  findEntityByName(name: string): string | null;
-  findResourceByName(name: string): string | null;
-  
+  findEntityByName(name: string): ConceptId | null;
+  findResourceByName(name: string): ConceptId | null;
+
   // Flow queries
-  flowsFrom(entityId: string): Flow[];
-  flowsTo(entityId: string): Flow[];
-  
-  // Get all
+  flowsFrom(entityId: ConceptId): Flow[];
+  flowsTo(entityId: ConceptId): Flow[];
+
+  // Get all (IndexMap ensures deterministic iteration order)
   allEntities(): Entity[];
   allResources(): Resource[];
   allFlows(): Flow[];
   allInstances(): Instance[];
-  
-  // Parsing
+
+  // Parsing (supports multiline strings with """)
   static parse(source: string): Graph;
+
+  // CALM integration (architecture-as-code)
+  exportCalm(): string;  // Returns CALM JSON string
+  static importCalm(json: string): Graph;  // Import from CALM JSON
 }
 ```
 
@@ -157,12 +193,16 @@ class Graph {
 ### Working with Attributes
 
 ```typescript
-const entity = new Entity('Warehouse');
+// Use new() for default namespace
+const entity = Entity.new('Warehouse');
 entity.setAttribute('capacity', JSON.stringify(10000));
 entity.setAttribute('location', JSON.stringify({ lat: 40.7128, lng: -74.0060 }));
 
 const capacity = JSON.parse(entity.getAttribute('capacity')!); // 10000
 const location = JSON.parse(entity.getAttribute('location')!); // { lat: 40.7128, lng: -74.0060 }
+
+// Namespace is always present (not undefined)
+console.log(entity.namespace());  // "default"
 ```
 
 ### Querying Flow Networks
@@ -198,12 +238,28 @@ npm run build
 npm test
 ```
 
+## Key API Changes (November 2025)
+
+**Breaking Changes:**
+- `namespace()` now returns `string` instead of `string | undefined` (always returns "default" if unspecified)
+- Constructors changed: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
+- Flow constructor takes `ConceptId` values (not references) - clone before passing
+- Methods now return `ConceptId` type instead of raw strings for IDs
+
+**New Features:**
+- **Multiline string support**: Parser accepts `"""..."""` syntax for entity/resource names
+- **CALM integration**: `exportCalm()` and `importCalm()` for architecture-as-code
+- **Deterministic iteration**: Graph uses IndexMap for reproducible results
+- **342 tests passing**: Comprehensive test coverage with zero failures
+
 ## Platform Support
 
 Pre-built binaries are available for:
 - Linux x64
 - macOS ARM64 (Apple Silicon)
 - Windows x64
+
+Build from source for other platforms using `npm run build`.
 
 ## License
 

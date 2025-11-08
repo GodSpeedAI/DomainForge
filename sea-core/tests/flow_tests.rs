@@ -1,11 +1,13 @@
 use sea_core::primitives::{Entity, Resource, Flow};
+use sea_core::units::unit_from_string;
+use sea_core::ConceptId;
 use rust_decimal::Decimal;
 
 #[test]
 fn test_flow_new_stores_references() {
     let warehouse = Entity::new("Warehouse");
     let factory = Entity::new("Factory");
-    let product = Resource::new("Widget", "units");
+    let product = Resource::new("Widget", unit_from_string("units"));
 
     let flow = Flow::new(
         product.id().clone(),
@@ -23,9 +25,9 @@ fn test_flow_new_stores_references() {
 #[test]
 fn test_flow_references_are_valid_uuids() {
     let flow = Flow::new(
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4(),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
         Decimal::from(50)
     );
 
@@ -38,9 +40,9 @@ fn test_flow_references_are_valid_uuids() {
 #[test]
 fn test_flow_attributes() {
     let mut flow = Flow::new(
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4(),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
         Decimal::from(100)
     );
 
@@ -55,9 +57,9 @@ fn test_flow_attributes() {
 #[test]
 fn test_flow_serialization() {
     let flow = Flow::new(
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4(),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
         Decimal::from(250)
     );
 

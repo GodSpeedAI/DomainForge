@@ -1,9 +1,11 @@
 use sea_core::primitives::{Entity, Resource, Instance};
+use sea_core::units::unit_from_string;
+use sea_core::ConceptId;
 
 #[test]
 fn test_instance_new_stores_references() {
     let warehouse = Entity::new("Warehouse");
-    let camera = Resource::new("Camera", "units");
+    let camera = Resource::new("Camera", unit_from_string("units"));
 
     let instance = Instance::new(
         camera.id().clone(),
@@ -17,8 +19,8 @@ fn test_instance_new_stores_references() {
 #[test]
 fn test_instance_references_are_valid_uuids() {
     let instance = Instance::new(
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4()
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4())
     );
 
     assert!(instance.id().to_string().len() > 0);
@@ -29,8 +31,8 @@ fn test_instance_references_are_valid_uuids() {
 #[test]
 fn test_instance_attributes() {
     let mut instance = Instance::new(
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4()
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4())
     );
 
     instance.set_attribute("serial_number", serde_json::json!("SN12345"));
@@ -44,8 +46,8 @@ fn test_instance_attributes() {
 #[test]
 fn test_instance_serialization() {
     let instance = Instance::new(
-        uuid::Uuid::new_v4(),
-        uuid::Uuid::new_v4()
+        ConceptId::from_uuid(uuid::Uuid::new_v4()),
+        ConceptId::from_uuid(uuid::Uuid::new_v4())
     );
 
     let json = serde_json::to_string(&instance).unwrap();

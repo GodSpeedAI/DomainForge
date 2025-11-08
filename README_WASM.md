@@ -2,6 +2,8 @@
 
 This document describes the WebAssembly (WASM) bindings for the SEA Core library, enabling browser and edge runtime usage.
 
+> **🎉 November 2025 Update**: Updated with latest API changes - namespace now returns `string` (not nullable), new constructor patterns, multiline string support, and 342 tests passing!
+
 ## Overview
 
 Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (<500KB gzipped) module for browser and Node.js environments.
@@ -17,10 +19,10 @@ Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (
    ```bash
    # macOS
    brew install binaryen
-   
+
    # Ubuntu/Debian
    sudo apt install binaryen
-   
+
    # Or download from https://github.com/WebAssembly/binaryen/releases
    ```
 
@@ -88,7 +90,41 @@ The WASM bindings expose the same API as the Rust core:
 - `Resource` - Quantifiable subjects of value
 - `Flow` - Transfers of resources between entities
 - `Instance` - Physical instances of resources at locations
-- `Graph` - Graph container with validation and traversal
+- `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
+
+### Constructor Patterns (November 2025)
+
+**Entities:**
+```javascript
+// Default namespace
+const entity = Entity.new("Warehouse");  // namespace() returns "default"
+
+// Explicit namespace
+const entity = Entity.newWithNamespace("Warehouse", "logistics");
+```
+
+**Resources:**
+```javascript
+const resource = Resource.new("Cameras", "units");  // Default namespace
+const resource = Resource.newWithNamespace("Cameras", "units", "inventory");
+```
+
+**Flows:**
+```javascript
+// Takes ConceptId values - clone before passing
+const flow = Flow.new(
+  resourceId.clone(),
+  fromId.clone(),
+  toId.clone(),
+  100
+);
+```
+
+### Key API Changes (November 2025)
+
+- `namespace()` now returns `string` (not nullable) - always returns "default" if unspecified
+- Constructors: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
+- Flow constructor takes `ConceptId` values (not references) - clone before passing
 
 See `pkg/README.md` for complete API documentation.
 
@@ -99,13 +135,18 @@ See `pkg/README.md` for complete API documentation.
 ```javascript
 import { Graph } from '@domainforge/sea-wasm';
 
+// Supports multiline strings with """ syntax
 const source = `
   Entity "Warehouse" in logistics
+  Entity """Multi-line
+  Factory Name""" in manufacturing
   Resource "Cameras" units
+  Flow "Cameras" from "Warehouse" to "Multi-line\\nFactory Name" quantity 100
 `;
 
 const graph = await Graph.parse(source);
 console.log('Entities:', graph.entityCount());
+console.log('Flows:', graph.flowCount());
 ```
 
 ### Build Programmatically
@@ -114,11 +155,28 @@ console.log('Entities:', graph.entityCount());
 import { Graph, Entity, Resource, Flow } from '@domainforge/sea-wasm';
 
 const graph = new Graph();
-const warehouse = new Entity('Warehouse', 'logistics');
-const cameras = new Resource('Cameras', 'units', null);
+
+// Use new() for default namespace, newWithNamespace() for explicit
+const warehouse = Entity.new('Warehouse');
+const factory = Entity.newWithNamespace('Factory', 'manufacturing');
+const cameras = Resource.new('Cameras', 'units');
 
 await graph.addEntity(warehouse);
+await graph.addEntity(factory);
 await graph.addResource(cameras);
+
+// Flow constructor takes ConceptId values - clone before passing
+const flow = Flow.new(
+  cameras.id().clone(),
+  warehouse.id().clone(),
+  factory.id().clone(),
+  100
+);
+await graph.addFlow(flow);
+
+// Namespace is always a string (not null)
+console.log(warehouse.namespace());  // "default"
+console.log(factory.namespace());    // "manufacturing"
 ```
 
 ## Size Optimization
@@ -205,6 +263,26 @@ Rust Core (primitives, graph, parser)
 - **Parse time**: ~1ms for typical models
 - **Memory**: ~2MB runtime overhead
 - **Initialization**: <50ms (lazy loaded)
+- **Deterministic**: IndexMap ensures reproducible results across runs
+
+## CALM Integration (Architecture-as-Code)
+
+Export/import graphs to/from FINOS CALM format:
+
+```javascript
+import { Graph } from '@domainforge/sea-wasm';
+
+// Build your model
+const graph = new Graph();
+// ... add entities, resources, flows ...
+
+// Export to CALM JSON
+const calmJson = await graph.exportCalm();
+console.log(calmJson);  // CALM JSON string
+
+// Import from CALM
+const importedGraph = await Graph.importCalm(calmJson);
+```
 
 ## Related Documentation
 

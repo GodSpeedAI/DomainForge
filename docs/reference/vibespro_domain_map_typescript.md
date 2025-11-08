@@ -1,6 +1,8 @@
-# SEA → DDD / Hexagonal Mapping
+# SEA → DDD / Hexagonal Mapping (TypeScript)
 
 This document maps the SEA DSL primitives (Entity, Resource, Flow, Instance, Policy) to the domain-driven design and hexagonal architecture artifacts that the project generators scaffold by default.
+
+> **🎉 November 2025 Update**: Updated with latest SEA API changes - namespace now returns `string` (not nullable), new constructor patterns (`new()` vs `newWithNamespace()`), IndexMap for deterministic iteration, and multiline string support in parser.
 
 ## Summary (one-liner)
 
@@ -10,28 +12,106 @@ This document maps the SEA DSL primitives (Entity, Resource, Flow, Instance, Pol
 - Instance -> Domain Entity (physical instance) or VO depending on identity and mutability
 - Policy -> Specification, Domain Service or Validation rule (policy engine)
 
+## Recent SEA API Changes (November 2025)
+
+**Breaking Changes:**
+- `namespace()` now returns `string` instead of `string | undefined` (always returns "default" if unspecified)
+- Constructors changed: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
+- Flow constructor takes `ConceptId` values (not references) - clone before passing
+- Methods now return `ConceptId` type instead of raw strings for IDs
+
+**New Features:**
+- **Multiline string support**: Parser accepts `"""..."""` syntax for entity/resource names
+- **IndexMap storage**: Graph uses IndexMap (not HashMap) for deterministic iteration
+- **ValidationError helpers**: Convenience constructors like `undefined_entity()`, `unit_mismatch()`
+- **CALM integration**: Full bidirectional conversion for architecture-as-code
+
 ## Mapping details
 
-1) Entity
+### 1) Entity
 
-- DDD role: Domain Entity (often an Aggregate Root where it carries identity and lifecycle).
-- Typical generated artifacts: `entities/`, `aggregates/`, `factories/`, domain-specific errors, unit tests.
-- Location in generated projects: `libs/{domain}/domain/src/entities/` and `libs/{domain}/domain/src/aggregates/`.
-- Example SEA → DDD: SEA `Entity "Warehouse"` → `Warehouse` aggregate root with `WarehouseId` value object.
+- **DDD role**: Domain Entity (often an Aggregate Root where it carries identity and lifecycle).
+- **SEA API**: `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
+- **Key change**: `namespace()` always returns `string` (not nullable), defaults to "default"
+- **Typical generated artifacts**: `entities/`, `aggregates/`, `factories/`, domain-specific errors, unit tests.
+- **Location in generated projects**: `libs/{domain}/domain/src/entities/` and `libs/{domain}/domain/src/aggregates/`.
+- **Example SEA → DDD**: SEA `Entity "Warehouse"` → `Warehouse` aggregate root with `WarehouseId` value object.
 
-2) Resource
+**Generated example:**
 
-- DDD role: Usually a Value Object (immutable description like a resource type, unit) but can be an Entity when it has identity or lifecycle (e.g., a tracked resource item).
-- Typical generated artifacts: value objects under `value-objects/` (e.g., `unit`, `resource-type`), or a light `entities/resource` with repo if identity required.
-- Location in generated projects: `libs/{domain}/domain/src/value-objects/` or `libs/{domain}/domain/src/entities/resource/`.
-- Example SEA → DDD: SEA `Resource "Camera"` → `CameraType` VO and optionally `Resource` entity for inventory instances.
+```typescript
+// entities/warehouse.entity.ts
+export class Warehouse {
+  constructor(
+    private readonly _id: WarehouseId,
+    private _name: string,
+    private readonly _namespace: string = 'default'  // Always present
+  ) {}
 
-3) Flow
+  get id(): WarehouseId { return this._id; }
+  get name(): string { return this._name; }
+  get namespace(): string { return this._namespace; }  // Never undefined
+}
+```
 
-- DDD role: Represents a transfer or relationship between entities — often modeled as part of an Aggregate or as its own Aggregate when it has significant behavior. Flows also drive Domain Events (emit when transfers occur).
-- Typical generated artifacts: aggregate behavior methods (e.g., `transfer`), domain events (`FlowCreated`, `FlowExecuted`), and application use-cases that orchestrate UoW + repos to perform flows.
-- Location in generated projects: `libs/{domain}/domain/src/aggregates/`, `events/` and `libs/{domain}/application/src/use-cases/`.
-- Example SEA → DDD: SEA `Flow` → `Flow` aggregate or `Transfer` operation on `InventoryAggregate` plus `FlowCreatedEvent` published to EventBus.
+### 2) Resource
+
+- **DDD role**: Usually a Value Object (immutable description like a resource type, unit) but can be an Entity when it has identity or lifecycle (e.g., a tracked resource item).
+- **SEA API**: `Resource.new(name, unit)` for default namespace, `Resource.newWithNamespace(name, unit, ns)` for explicit
+- **Key change**: Constructor pattern split, namespace always returns string
+- **Typical generated artifacts**: value objects under `value-objects/` (e.g., `unit`, `resource-type`), or a light `entities/resource` with repo if identity required.
+- **Location in generated projects**: `libs/{domain}/domain/src/value-objects/` or `libs/{domain}/domain/src/entities/resource/`.
+- **Example SEA → DDD**: SEA `Resource "Camera"` → `CameraType` VO and optionally `Resource` entity for inventory instances.
+
+**Generated example (Value Object):**
+
+```typescript
+// value-objects/camera-type.vo.ts
+export class CameraType {
+  constructor(
+    private readonly _name: string,
+    private readonly _unit: string = 'units'
+  ) {
+    if (!_name) throw new Error('Camera type name required');
+  }
+
+  get name(): string { return this._name; }
+  get unit(): string { return this._unit; }
+}
+```
+
+### 3) Flow
+
+- **DDD role**: Represents a transfer or relationship between entities — often modeled as part of an Aggregate or as its own Aggregate when it has significant behavior. Flows also drive Domain Events (emit when transfers occur).
+- **SEA API**: `Flow.new(resourceId, fromId, toId, quantity)` - takes `ConceptId` values (clone before passing)
+- **Key change**: Constructor takes ConceptId parameters (not references), deterministic iteration via IndexMap
+- **Typical generated artifacts**: aggregate behavior methods (e.g., `transfer`), domain events (`FlowCreated`, `FlowExecuted`), and application use-cases that orchestrate UoW + repos to perform flows.
+- **Location in generated projects**: `libs/{domain}/domain/src/aggregates/`, `events/` and `libs/{domain}/application/src/use-cases/`.
+- **Example SEA → DDD**: SEA `Flow` → `Flow` aggregate or `Transfer` operation on `InventoryAggregate` plus `FlowCreatedEvent` published to EventBus.
+
+**Generated example:**
+
+```typescript
+// aggregates/inventory.aggregate.ts
+export class InventoryAggregate {
+  constructor(
+    private readonly id: ConceptId,
+    private locationId: ConceptId
+  ) {}
+
+  transfer(resourceId: ConceptId, toLocation: ConceptId, quantity: number): FlowCreatedEvent {
+    // Clone ConceptIds when creating Flow
+    const event = new FlowCreatedEvent(
+      this.id.clone(),
+      resourceId.clone(),
+      this.locationId.clone(),
+      toLocation.clone(),
+      quantity
+    );
+    return event;
+  }
+}
+```
 
 4) Instance
 
@@ -80,6 +160,31 @@ This document maps the SEA DSL primitives (Entity, Resource, Flow, Instance, Pol
 ## Verification & extension
 
 - The generator produces unit tests, in-memory adapters, and example use cases for all the above so teams can validate behavior quickly. Extensions (projections, sagas/process-managers, search adapters) are opt-in generator options.
+- **Deterministic behavior**: SEA uses IndexMap (not HashMap) for graph storage, ensuring reproducible results across runs. Generated DDD code should maintain iteration order consistency for policy evaluation and event ordering.
+
+---
+
+## Key Design Considerations (November 2025)
+
+### Deterministic Iteration
+SEA's IndexMap storage guarantees stable iteration order for:
+- Policy evaluation (consistent results across runs)
+- Event ordering (deterministic event emission)
+- Query results (reproducible outputs)
+
+**DDD mapping impact**: Generated repositories should preserve insertion order where possible. Use `Map` with insertion order (ES6+) instead of plain objects for collections in generated TypeScript code.
+
+### ConceptId Ownership
+SEA Flow constructors take `ConceptId` values (not references):
+- Generated aggregates should clone IDs when passing to child entities
+- Value objects should use readonly ID fields
+- Domain events should capture ID values at event creation time
+
+### Namespace Handling
+All SEA primitives have a namespace that defaults to "default":
+- Generated entities should include namespace as required field (not optional)
+- Domain services should support namespace filtering for multi-tenant scenarios
+- Repositories should index by (namespace, id) composite keys
 
 ---
 

@@ -4,7 +4,16 @@
 
 **DomainForge** is a multi-language domain modeling framework implementing the **SEA (Semantic Enterprise Architecture) DSL**. It provides a Rust core with FFI bindings for Python, TypeScript, and WebAssembly.
 
-**Core Philosophy**: Five universal primitives (Entity, Resource, Flow, Instance, Policy) + Graph storage + SBVR-aligned policy expressions = complete enterprise modeling capability.
+**Core Philosophy**: Five universal primitives (Entity, Resource, Flow, Instance, Policy) + Graph storage (IndexMap for determinism) + SBVR-aligned policy expressions = complete enterprise modeling capability.
+
+**Recent Major Updates (Nov 2025)**:
+
+- Multiline string support (`"""..."""`) in parser for entity/resource names
+- Namespace API change: `namespace()` now returns `&str` (always present, "default" if unspecified) instead of `Option<&str>`
+- Constructor patterns: `new()` for default namespace, `new_with_namespace()` for explicit namespace
+- Flow API: Uses `ConceptId` parameters (not references) for resource_id, from_id, to_id
+- ValidationError convenience constructors: `undefined_entity()`, `undefined_resource()`, `unit_mismatch()`, etc.
+- IndexMap ensures deterministic iteration order for graph queries
 
 ## Architecture Pattern: Rust Core + FFI Bindings
 
@@ -109,7 +118,45 @@ graph.add_flow(flow)?;  // Returns Err if references invalid
 graph.remove_entity(id)?;  // Fails if Flows reference it
 ```
 
-**Pattern**: All primitives stored by UUID in HashMaps. Queries walk relationships via UUID lookups.
+**Pattern**: All primitives stored by UUID in IndexMaps. Queries walk relationships via UUID lookups.
+
+### IndexMap for Deterministic Iteration
+
+**Critical Decision**: Graph uses `IndexMap` instead of `HashMap` to guarantee stable iteration order.
+
+**Why This Matters**:
+
+- Policy evaluation iterates over `flows`, `entities`, `resources`, `instances` collections
+- Non-deterministic iteration can cause policy results to vary between runs
+- Test reproducibility requires consistent ordering
+- CALM export/import round-trips must preserve semantics
+
+**Implementation**:
+
+```rust
+// graph/mod.rs
+pub struct Graph {
+    entities: IndexMap<ConceptId, Entity>,
+    resources: IndexMap<ConceptId, Resource>,
+    flows: IndexMap<ConceptId, Flow>,
+    instances: IndexMap<ConceptId, Instance>,
+    // ... IndexMap maintains insertion order
+}
+```
+
+**Usage Pattern**:
+
+```rust
+// Iteration order is deterministic (insertion order)
+for (id, entity) in graph.entities() {
+    // Always same order across runs
+}
+
+// Policy evaluation gets consistent results
+let result = policy.evaluate(&graph)?;  // Reproducible
+```
+
+**Trade-off**: IndexMap has slightly higher memory overhead than HashMap (~40 bytes per entry) but guarantees O(1) access like HashMap. For typical graph sizes (<10K nodes), this is negligible compared to correctness benefits.
 
 ## DSL Parser (Pest Grammar)
 
@@ -125,6 +172,54 @@ Policy min_quantity as: forall f in flows: f.quantity >= 10
 ```
 
 **Critical**: Parser produces AST → Graph. When modifying grammar, update both parser logic and AST types.
+
+### Parser Extension Pattern (Adding New Syntax)
+
+When adding new DSL features, follow this workflow:
+
+1. **Update Grammar** (`sea.pest`):
+
+   ```pest
+   name = { multiline_string | string_literal }  // Add rule
+   entity = { "Entity" ~ name ~ ("in" ~ identifier)? }  // Use in production
+   ```
+
+2. **Update AST Parser** (`parser/ast.rs`):
+
+   ```rust
+   fn parse_name(pair: Pair<Rule>) -> Result<String, String> {
+       match pair.as_rule() {
+           Rule::multiline_string => parse_multiline_string(pair),
+           Rule::string_literal => Ok(pair.as_str().trim_matches('"').to_string()),
+           _ => Err(format!("Expected name, got {:?}", pair.as_rule()))
+       }
+   }
+   ```
+
+3. **Add Unit Tests** (`tests/parser_tests.rs` or new file):
+
+   ```rust
+   #[test]
+   fn test_multiline_entity_name() {
+       let input = r#"Entity """Complex
+       Name""" in namespace"#;
+       let graph = parse(input).unwrap();
+       assert_eq!(graph.entity_count(), 1);
+   }
+   ```
+
+4. **Add Integration Tests** (`tests/phase_X_*.rs`):
+
+   - Valid cases (accepted syntax)
+   - Invalid cases (rejected syntax)
+   - Edge cases (empty, unicode, escapes)
+
+5. **Update Documentation**:
+   - Grammar comments in `sea.pest`
+   - API docs in affected modules
+   - Examples in `examples/parser_demo.rs`
+
+**Recent Example**: Multiline string support required changes to grammar (added `name` rule), AST parser (added `parse_multiline_string()` and `parse_name()`), and tests (phase_16_unicode_tests.rs).
 
 ## TDD Workflow & Phase Plans
 
@@ -213,13 +308,26 @@ Models follow three-layer separation:
 
 **When adding features**: Update relevant SDS section, trace to PRD requirement, add ADR if architectural.
 
-## Common Pitfalls
+## Common Pitfalls & Recent API Changes
 
 1. **UUID Version**: Always use `Uuid::new_v4()` (random). Never hardcode UUIDs in tests.
 2. **Decimal Types**: Use `rust_decimal::Decimal` for quantities (not f64). Ensures precision in financial models.
 3. **Feature Flags**: Building Python? Add `--features python`. TypeScript? Add `--features typescript`. WASM? Add `--features wasm`.
-4. **Namespace Scoping**: Namespaces are optional but recommended for multi-domain models. Parser supports `in <namespace>` syntax.
-5. **Referential Integrity**: Graph validates all UUIDs. Add primitives in order: Entity/Resource → Flow/Instance → Policy.
+   - ⚠️ **Known Issue**: `uuid` crate in Cargo.toml incorrectly includes non-existent "wasm-bindgen" feature. Use only `["v4", "v5", "v7", "serde"]`.
+4. **Namespace API**: `namespace()` returns `&str`, not `Option<&str>`. Check for empty string, not None. Default is `"default"`.
+5. **Constructor Patterns**:
+   - `Entity::new(name)` → default namespace
+   - `Entity::new_with_namespace(name, ns)` → explicit namespace
+   - `Flow::new(resource_id, from_id, to_id, quantity)` → takes ConceptId values (clone IDs before passing)
+6. **Referential Integrity**: Graph validates all UUIDs. Add primitives in order: Entity/Resource → Flow/Instance → Policy.
+7. **IndexMap for Determinism**: Graph uses `IndexMap` (not `HashMap`) to ensure stable iteration order for policies.
+8. **Unit Handling**:
+   - Import from `sea_core::units::unit_from_string`, NOT from `primitives`
+   - Use `Unit::new()` with proper `Dimension` enum (Mass, Count, Currency, etc.)
+   - ⚠️ **TODO**: Add zero-check validation for `base_factor` in `Unit::new()` (currently unchecked)
+9. **Multiline Strings**: Parser supports `"""..."""` syntax for entity/resource names with newlines
+10. **Error Handling**: Use `ValidationError` convenience constructors: `undefined_entity()`, `unit_mismatch()`, `type_mismatch()`
+11. **Deprecation Markers**: Always add `#[deprecated(note = "use X instead")]` attribute when marking functions deprecated in docs
 
 ## Cross-Language Testing
 

@@ -7,9 +7,11 @@ pub struct SeaParser;
 
 pub mod ast;
 pub mod error;
+pub mod string_utils;
 
 pub use ast::{Ast, AstNode};
 pub use error::{ParseError, ParseResult};
+pub use string_utils::unescape_string;
 
 /// Parse SEA DSL source code into an AST
 pub fn parse(source: &str) -> ParseResult<Ast> {

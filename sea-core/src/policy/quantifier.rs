@@ -1,5 +1,7 @@
 use crate::graph::Graph;
-use super::expression::{Expression, BinaryOp, Quantifier};
+use super::expression::{Expression, BinaryOp, Quantifier, AggregateFunction};
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 impl Expression {
     pub fn expand(&self, graph: &Graph) -> Result<Expression, String> {
@@ -63,6 +65,14 @@ impl Expression {
             Expression::Unary { op, operand } => {
                 Ok(Expression::unary(op.clone(), operand.expand(graph)?))
             }
+            Expression::MemberAccess { .. } => {
+                Ok(self.clone())
+            }
+            Expression::Aggregation { function, collection, field, filter } => {
+                // Evaluate the aggregation and return a literal
+                let result = Self::evaluate_aggregation(function, collection, field, filter, graph)?;
+                Ok(Expression::Literal(result))
+            }
             _ => Ok(self.clone()),
         }
     }
@@ -115,6 +125,19 @@ impl Expression {
                         condition.substitute(var, value)?,
                     ))
                 }
+            }
+            Expression::MemberAccess { .. } => {
+                Ok(self.clone())
+            }
+            Expression::Aggregation { function, collection, field, filter } => {
+                Ok(Expression::aggregation(
+                    function.clone(),
+                    collection.substitute(var, value)?,
+                    field.clone(),
+                    filter.as_ref()
+                        .map(|f| f.substitute(var, value))
+                        .transpose()?,
+                ))
             }
             _ => Ok(self.clone()),
         }
@@ -180,5 +203,136 @@ impl Expression {
 
     fn is_true_literal(expr: &Expression) -> bool {
         matches!(expr, Expression::Literal(v) if v.as_bool() == Some(true))
+    }
+
+    fn evaluate_aggregation(
+        function: &AggregateFunction,
+        collection: &Expression,
+        field: &Option<String>,
+        filter: &Option<Box<Expression>>,
+        graph: &Graph,
+    ) -> Result<serde_json::Value, String> {
+        // Get the collection items
+        let items = Self::get_collection(collection, graph)?;
+
+        // Apply filter if present
+        let filtered_items = if let Some(filter_expr) = filter {
+            items.into_iter()
+                .filter(|item| {
+                    // Substitute flow variables in the filter
+                    let substituted = filter_expr.substitute("flow", item).unwrap_or_else(|_| filter_expr.as_ref().clone());
+                    // Expand and check if true
+                    if let Ok(expanded) = substituted.expand(graph) {
+                        Self::is_true_literal(&expanded)
+                    } else {
+                        false
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            items
+        };
+
+        // Apply aggregation function
+        match function {
+            AggregateFunction::Count => {
+                Ok(serde_json::json!(filtered_items.len()))
+            }
+
+            AggregateFunction::Sum => {
+                let field_name = field.as_ref()
+                    .ok_or("Sum requires a field specification")?;
+
+                let sum: Decimal = filtered_items.iter()
+                    .filter_map(|item| {
+                        item.get(field_name)
+                            .and_then(|v| {
+                                if let Some(num) = v.as_f64() {
+                                    Decimal::from_str(&num.to_string()).ok()
+                                } else if let Some(s) = v.as_str() {
+                                    Decimal::from_str(s).ok()
+                                } else {
+                                    None
+                                }
+                            })
+                    })
+                    .sum();
+
+                Ok(serde_json::json!(sum.to_string().parse::<f64>().unwrap_or(0.0)))
+            }
+
+            AggregateFunction::Avg => {
+                let field_name = field.as_ref()
+                    .ok_or("Avg requires a field specification")?;
+
+                let values: Vec<Decimal> = filtered_items.iter()
+                    .filter_map(|item| {
+                        item.get(field_name)
+                            .and_then(|v| {
+                                if let Some(num) = v.as_f64() {
+                                    Decimal::from_str(&num.to_string()).ok()
+                                } else if let Some(s) = v.as_str() {
+                                    Decimal::from_str(s).ok()
+                                } else {
+                                    None
+                                }
+                            })
+                    })
+                    .collect();
+
+                if values.is_empty() {
+                    return Ok(serde_json::json!(null));
+                }
+
+                let sum: Decimal = values.iter().copied().sum();
+                let avg = sum / Decimal::from(values.len());
+
+                Ok(serde_json::json!(avg.to_string().parse::<f64>().unwrap_or(0.0)))
+            }
+
+            AggregateFunction::Min => {
+                let field_name = field.as_ref()
+                    .ok_or("Min requires a field specification")?;
+
+                let min = filtered_items.iter()
+                    .filter_map(|item| {
+                        item.get(field_name)
+                            .and_then(|v| {
+                                if let Some(num) = v.as_f64() {
+                                    Decimal::from_str(&num.to_string()).ok()
+                                } else if let Some(s) = v.as_str() {
+                                    Decimal::from_str(s).ok()
+                                } else {
+                                    None
+                                }
+                            })
+                    })
+                    .min();
+
+                Ok(serde_json::json!(min.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))))
+            }
+
+            AggregateFunction::Max => {
+                let field_name = field.as_ref()
+                    .ok_or("Max requires a field specification")?;
+
+                let max = filtered_items.iter()
+                    .filter_map(|item| {
+                        item.get(field_name)
+                            .and_then(|v| {
+                                if let Some(num) = v.as_f64() {
+                                    Decimal::from_str(&num.to_string()).ok()
+                                } else if let Some(s) = v.as_str() {
+                                    Decimal::from_str(s).ok()
+                                } else {
+                                    None
+                                }
+                            })
+                    })
+                    .max();
+
+                Ok(serde_json::json!(max.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))))
+            }
+        }
     }
 }

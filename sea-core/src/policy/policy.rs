@@ -1,20 +1,33 @@
 use serde::{Deserialize, Serialize};
 use crate::graph::Graph;
+use crate::{ConceptId, SemanticVersion};
 use super::expression::{Expression, BinaryOp, UnaryOp};
 use super::violation::{Violation, Severity};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DeonticModality {
     Obligation,
     Prohibition,
     Permission,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum PolicyKind {
+    Constraint,
+    Derivation,
+    Obligation,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Policy {
+    pub id: ConceptId,
     pub name: String,
+    pub namespace: String,
+    pub version: SemanticVersion,
     pub expression: Expression,
     pub modality: DeonticModality,
+    pub kind: PolicyKind,
+    pub priority: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,16 +38,62 @@ pub struct EvaluationResult {
 
 impl Policy {
     pub fn new(name: impl Into<String>, expression: Expression) -> Self {
+        let name = name.into();
         Self {
-            name: name.into(),
+            id: ConceptId::from_concept("default", &name),
+            name,
+            namespace: "default".to_string(),
+            version: SemanticVersion::default(),
             expression,
             modality: DeonticModality::Obligation,
+            kind: PolicyKind::Constraint,
+            priority: 0,
+        }
+    }
+
+    pub fn new_with_namespace(
+        name: impl Into<String>,
+        namespace: impl Into<String>,
+        expression: Expression,
+    ) -> Self {
+        let namespace = namespace.into();
+        let name = name.into();
+        let id = ConceptId::from_concept(&namespace, &name);
+
+        Self {
+            id,
+            name,
+            namespace,
+            version: SemanticVersion::default(),
+            expression,
+            modality: DeonticModality::Obligation,
+            kind: PolicyKind::Constraint,
+            priority: 0,
         }
     }
 
     pub fn with_modality(mut self, modality: DeonticModality) -> Self {
         self.modality = modality;
         self
+    }
+
+    pub fn with_version(mut self, version: SemanticVersion) -> Self {
+        self.version = version;
+        self
+    }
+
+    pub fn with_kind(mut self, kind: PolicyKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
+    }
+
+    pub fn kind(&self) -> &PolicyKind {
+        &self.kind
     }
 
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
@@ -122,6 +181,9 @@ impl Policy {
             }
             Expression::MemberAccess { .. } => {
                 Err("Cannot evaluate non-expanded member access".to_string())
+            }
+            Expression::Aggregation { .. } => {
+                Err("Cannot evaluate non-expanded aggregation".to_string())
             }
         }
     }

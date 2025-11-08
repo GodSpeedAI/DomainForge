@@ -88,13 +88,13 @@ fn test_end_to_end_multi_domain_model() {
 
     // Verify namespace separation
     let finance_entities: Vec<_> = graph.all_entities().iter()
-        .filter(|e| e.namespace() == Some("finance"))
+        .filter(|e| e.namespace() == "finance")
         .map(|e| e.name())
         .collect();
     assert_eq!(finance_entities.len(), 2);
 
     let logistics_entities: Vec<_> = graph.all_entities().iter()
-        .filter(|e| e.namespace() == Some("logistics"))
+        .filter(|e| e.namespace() == "logistics")
         .map(|e| e.name())
         .collect();
     assert_eq!(logistics_entities.len(), 2);

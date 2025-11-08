@@ -1,5 +1,6 @@
 use sea_core::Graph;
 use sea_core::primitives::{Entity, Resource, Flow, Instance};
+use sea_core::units::unit_from_string;
 use sea_core::calm::export;
 use jsonschema::JSONSchema;
 use rust_decimal::Decimal;
@@ -40,11 +41,11 @@ fn test_complex_export_validates_against_schema() {
 
     let warehouse = Entity::new_with_namespace("Warehouse".to_string(), "logistics".to_string());
     let factory = Entity::new_with_namespace("Factory".to_string(), "manufacturing".to_string());
-    let cameras = Resource::new("Cameras".to_string(), "units".to_string());
+    let cameras = Resource::new("Cameras".to_string(), unit_from_string("units"));
 
-    let warehouse_id = *warehouse.id();
-    let factory_id = *factory.id();
-    let cameras_id = *cameras.id();
+    let warehouse_id = warehouse.id().clone();
+    let factory_id = factory.id().clone();
+    let cameras_id = cameras.id().clone();
 
     graph.add_entity(warehouse).unwrap();
     graph.add_entity(factory).unwrap();
@@ -99,22 +100,22 @@ fn test_all_node_types_validate() {
     graph.add_entity(entity).unwrap();
 
     // Add one resource
-    let resource = Resource::new("TestResource".to_string(), "units".to_string());
+    let resource = Resource::new("TestResource".to_string(), unit_from_string("units"));
     graph.add_resource(resource).unwrap();
 
     // Add one flow
     let flow = Flow::new(
-        *graph.all_resources()[0].id(),
-        *graph.all_entities()[0].id(),
-        *graph.all_entities()[0].id(),
+        graph.all_resources()[0].id().clone(),
+        graph.all_entities()[0].id().clone(),
+        graph.all_entities()[0].id().clone(),
         Decimal::from(100)
     );
     graph.add_flow(flow).unwrap();
 
     // Add one instance
     let instance = Instance::new(
-        *graph.all_resources()[0].id(),
-        *graph.all_entities()[0].id()
+        graph.all_resources()[0].id().clone(),
+        graph.all_entities()[0].id().clone()
     );
     graph.add_instance(instance).unwrap();    // Export and validate
     let calm_json = export(&graph).unwrap();

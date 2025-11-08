@@ -3,6 +3,7 @@ use pyo3::exceptions::PyValueError;
 use crate::graph::Graph as RustGraph;
 use crate::parser;
 use uuid::Uuid;
+use crate::ConceptId;
 use std::str::FromStr;
 
 use super::primitives::{Entity, Resource, Flow, Instance};
@@ -65,49 +66,57 @@ impl Graph {
     fn has_entity(&self, id: String) -> PyResult<bool> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_entity(&uuid))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.has_entity(&cid))
     }
 
     fn has_resource(&self, id: String) -> PyResult<bool> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_resource(&uuid))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.has_resource(&cid))
     }
 
     fn has_flow(&self, id: String) -> PyResult<bool> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_flow(&uuid))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.has_flow(&cid))
     }
 
     fn has_instance(&self, id: String) -> PyResult<bool> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_instance(&uuid))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.has_instance(&cid))
     }
 
     fn get_entity(&self, id: String) -> PyResult<Option<Entity>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_entity(&uuid).map(|e| Entity::from_rust(e.clone())))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.get_entity(&cid).map(|e| Entity::from_rust(e.clone())))
     }
 
     fn get_resource(&self, id: String) -> PyResult<Option<Resource>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_resource(&uuid).map(|r| Resource::from_rust(r.clone())))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.get_resource(&cid).map(|r| Resource::from_rust(r.clone())))
     }
 
     fn get_flow(&self, id: String) -> PyResult<Option<Flow>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_flow(&uuid).map(|f| Flow::from_rust(f.clone())))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.get_flow(&cid).map(|f| Flow::from_rust(f.clone())))
     }
 
     fn get_instance(&self, id: String) -> PyResult<Option<Instance>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_instance(&uuid).map(|i| Instance::from_rust(i.clone())))
+        let cid = ConceptId::from(uuid);
+        Ok(self.inner.get_instance(&cid).map(|i| Instance::from_rust(i.clone())))
     }
 
     fn find_entity_by_name(&self, name: String) -> Option<String> {
@@ -121,8 +130,9 @@ impl Graph {
     fn flows_from(&self, entity_id: String) -> PyResult<Vec<Flow>> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
+        let cid = ConceptId::from(uuid);
 
-        Ok(self.inner.flows_from(&uuid)
+        Ok(self.inner.flows_from(&cid)
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect())
@@ -131,8 +141,9 @@ impl Graph {
     fn flows_to(&self, entity_id: String) -> PyResult<Vec<Flow>> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
+        let cid = ConceptId::from(uuid);
 
-        Ok(self.inner.flows_to(&uuid)
+        Ok(self.inner.flows_to(&cid)
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect())

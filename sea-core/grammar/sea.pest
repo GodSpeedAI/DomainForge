@@ -14,7 +14,7 @@ declaration = { entity_decl | resource_decl | flow_decl | policy_decl }
 // Syntax: Entity "Name" in domain
 // Syntax: Entity "Name"
 entity_decl = {
-    ^"entity" ~ string_literal ~ (^"in" ~ identifier)?
+    ^"entity" ~ name ~ (^"in" ~ identifier)?
 }
 
 // Resource Declaration
@@ -25,7 +25,7 @@ entity_decl = {
 in_keyword = { ^"in" }
 
 resource_decl = {
-    ^"resource" ~ string_literal ~ (
+    ^"resource" ~ name ~ (
         (identifier ~ in_keyword ~ identifier) |  // "units in domain" - most specific first
         (in_keyword ~ identifier) |                // "in domain" - next most specific
         identifier                                 // "units" only - least specific last
@@ -41,9 +41,13 @@ flow_decl = {
 
 // Policy Declaration
 // Syntax: Policy name as: expression
+// Syntax: Policy name v1.0.0 as: expression
 policy_decl = {
-    ^"policy" ~ identifier ~ ^"as" ~ ":" ~ expression
+    ^"policy" ~ identifier ~ (^"v" ~ version)? ~ ^"as" ~ ":" ~ expression
 }
+
+// Semantic Version
+version = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
 
 // Expressions
 expression = { or_expr }
@@ -73,10 +77,27 @@ unary_expr = { ("-" ~ unary_expr) | primary_expr }
 
 primary_expr = {
     "(" ~ expression ~ ")" |
+    aggregation_expr |
     quantified_expr |
     member_access |
     literal |
     identifier
+}
+
+// Aggregation expressions
+// Syntax: count(flows)
+// Syntax: sum(flows.quantity)
+// Syntax: count(flows where resource = "Camera")
+aggregation_expr = {
+    aggregate_fn ~ "(" ~
+        collection ~
+        ("." ~ identifier)? ~
+        (^"where" ~ expression)? ~
+    ")"
+}
+
+aggregate_fn = {
+    ^"count" | ^"sum" | ^"min" | ^"max" | ^"avg"
 }
 
 // Quantified expressions
@@ -96,13 +117,35 @@ collection = {
 member_access = { identifier ~ "." ~ identifier }
 
 // Literals
-literal = { string_literal | number | boolean }
+literal = { multiline_string | string_literal | number | boolean }
 
-string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+// Name can be either a multiline string or regular string literal
+name = { multiline_string | string_literal }
+
+// Multi-line string with triple quotes
+multiline_string = @{ "\"\"\"" ~ (!"\"\"\"" ~ ANY)* ~ "\"\"\"" }
+
+// String literal with escape sequences
+string_literal = @{ "\"" ~ string_content* ~ "\"" }
+
+string_content = @{
+    escape_sequence |
+    (!"\"" ~ !"\\" ~ ANY)
+}
+
+escape_sequence = @{
+    "\\\\" |                                    // Backslash
+    "\\\"" |                                    // Quote
+    "\\n" |                                     // Newline
+    "\\r" |                                     // Carriage return
+    "\\t" |                                     // Tab
+    ("\\u{" ~ ASCII_HEX_DIGIT{1,6} ~ "}")      // Unicode codepoint
+}
 
 number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 
 boolean = { ^"true" | ^"false" }
 
-// Identifier (alphanumeric + underscore, must start with letter or underscore)
-identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+// Identifier (Unicode support - letters, numbers, underscore)
+// Must start with letter (including Unicode) or underscore
+identifier = @{ (LETTER | "_") ~ (LETTER | NUMBER | "_")* }

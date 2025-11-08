@@ -1,8 +1,9 @@
 use crate::Graph;
 use crate::primitives::{Entity, Resource, Flow, Instance};
+use crate::units::unit_from_string;
+use crate::ConceptId;
 use super::models::{CalmModel, NodeType, RelationshipType, Parties};
 use serde_json::Value;
-use uuid::Uuid;
 use std::collections::HashMap;
 use std::str::FromStr;
 use rust_decimal::Decimal;
@@ -12,7 +13,7 @@ pub fn import(calm_json: Value) -> Result<Graph, String> {
         .map_err(|e| format!("Failed to parse CALM model: {}", e))?;
 
     let mut graph = Graph::new();
-    let mut id_map: HashMap<String, Uuid> = HashMap::new();
+    let mut id_map: HashMap<String, ConceptId> = HashMap::new();
 
     // First pass: import entities and resources to populate id_map
     for node in &calm_model.nodes {
@@ -34,20 +35,20 @@ pub fn import(calm_json: Value) -> Result<Graph, String> {
 fn import_entity_or_resource_node(
     node: &super::models::CalmNode,
     graph: &mut Graph,
-    id_map: &mut HashMap<String, Uuid>,
+    id_map: &mut HashMap<String, ConceptId>,
 ) -> Result<(), String> {
     let calm_id = &node.unique_id;
 
     let sea_id = match &node.node_type {
         NodeType::Actor | NodeType::Location => {
             let entity = import_entity(node)?;
-            let id = *entity.id();
+            let id = entity.id().clone();
             graph.add_entity(entity)?;
             id
         }
         NodeType::Resource => {
             let resource = import_resource(node)?;
-            let id = *resource.id();
+            let id = resource.id().clone();
             graph.add_resource(resource)?;
             id
         }
@@ -61,14 +62,14 @@ fn import_entity_or_resource_node(
 fn import_instance_node(
     node: &super::models::CalmNode,
     graph: &mut Graph,
-    id_map: &mut HashMap<String, Uuid>,
+    id_map: &mut HashMap<String, ConceptId>,
 ) -> Result<(), String> {
     let calm_id = &node.unique_id;
 
     let sea_id = match &node.node_type {
         NodeType::Instance => {
             let instance = import_instance(node, id_map)?;
-            let id = *instance.id();
+            let id = instance.id().clone();
             graph.add_instance(instance)?;
             id
         }
@@ -94,11 +95,13 @@ fn import_resource(node: &super::models::CalmNode) -> Result<Resource, String> {
         .and_then(|v| v.as_str())
         .unwrap_or("units")
         .to_string();
+    
+    let unit_obj = unit_from_string(unit);
 
     let resource = if let Some(ns) = &node.namespace {
-        Resource::new_with_namespace(node.name.clone(), unit, ns.clone())
+        Resource::new_with_namespace(node.name.clone(), unit_obj, ns.clone())
     } else {
-        Resource::new(node.name.clone(), unit)
+        Resource::new(node.name.clone(), unit_obj)
     };
 
     Ok(resource)
@@ -106,7 +109,7 @@ fn import_resource(node: &super::models::CalmNode) -> Result<Resource, String> {
 
 fn import_instance(
     node: &super::models::CalmNode,
-    id_map: &HashMap<String, Uuid>,
+    id_map: &HashMap<String, ConceptId>,
 ) -> Result<Instance, String> {
     let entity_id_str = node.metadata.get("sea:entity_id")
         .and_then(|v| v.as_str())
@@ -123,9 +126,9 @@ fn import_instance(
         .ok_or_else(|| format!("Unknown resource ID: {}", resource_id_str))?;
 
     let instance = if let Some(ns) = &node.namespace {
-        Instance::new_with_namespace(*resource_id, *entity_id, ns.clone())
+        Instance::new_with_namespace(resource_id.clone(), entity_id.clone(), ns.clone())
     } else {
-        Instance::new(*resource_id, *entity_id)
+        Instance::new(resource_id.clone(), entity_id.clone())
     };
 
     Ok(instance)
@@ -134,7 +137,7 @@ fn import_instance(
 fn import_relationship(
     relationship: &super::models::CalmRelationship,
     graph: &mut Graph,
-    id_map: &HashMap<String, Uuid>,
+    id_map: &HashMap<String, ConceptId>,
 ) -> Result<(), String> {
     match &relationship.relationship_type {
         RelationshipType::Flow { flow } => {
@@ -155,7 +158,7 @@ fn import_relationship(
             let quantity = Decimal::from_str(&flow.quantity)
                 .map_err(|e| format!("Invalid quantity '{}': {}", flow.quantity, e))?;
 
-            let flow_obj = Flow::new(*resource_uuid, *source_uuid, *dest_uuid, quantity);
+            let flow_obj = Flow::new(resource_uuid.clone(), source_uuid.clone(), dest_uuid.clone(), quantity);
             graph.add_flow(flow_obj)?;
         }
         RelationshipType::Simple(rel_type) => {
@@ -229,7 +232,7 @@ mod tests {
 
         let entity = graph.all_entities()[0];
         assert_eq!(entity.name(), "Warehouse");
-        assert_eq!(entity.namespace(), Some("logistics"));
+        assert_eq!(entity.namespace(), "logistics");
     }
 
     #[test]
@@ -262,7 +265,7 @@ mod tests {
 
         let resource = graph.all_resources()[0];
         assert_eq!(resource.name(), "Cameras");
-        assert_eq!(resource.unit(), "units");
+        assert_eq!(resource.unit().symbol(), "units");
     }
 
     #[test]

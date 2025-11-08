@@ -26,10 +26,16 @@ pub const VERSION: &str = "0.0.1";
 
 pub mod primitives;
 pub mod uuid_module;
+pub mod concept_id;
+pub mod semantic_version;
 pub mod graph;
 pub mod policy;
 pub mod parser;
 pub mod calm;
+pub mod units;
+pub mod validation_error;
+pub mod sbvr;
+pub mod kg;
 
 #[cfg(feature = "python")]
 pub mod python;
@@ -47,8 +53,14 @@ pub use typescript::graph::Graph as TsGraph;
 pub mod wasm;
 
 pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};
+pub use concept_id::ConceptId;
+pub use semantic_version::SemanticVersion;
 pub use graph::Graph;
 pub use parser::{parse, parse_to_graph};
+pub use units::{Dimension, Unit, UnitRegistry, UnitError, unit_from_string};
+pub use validation_error::ValidationError;
+pub use sbvr::{SbvrModel, SbvrError};
+pub use kg::{KnowledgeGraph, KgError};
 
 #[cfg(test)]
 mod test_utils;

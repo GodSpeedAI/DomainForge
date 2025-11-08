@@ -1,4 +1,5 @@
 use sea_core::primitives::{Entity, Resource, Flow, Instance};
+use sea_core::units::unit_from_string;
 use rust_decimal::Decimal;
 
 #[test]
@@ -6,8 +7,8 @@ fn test_complete_supply_chain_model() {
     let supplier = Entity::new("Supplier");
     let warehouse = Entity::new("Warehouse");
 
-    let steel = Resource::new("Steel", "kg");
-    let camera = Resource::new("Camera", "units");
+    let steel = Resource::new("Steel", unit_from_string("kg"));
+    let camera = Resource::new("Camera", unit_from_string("units"));
 
     let steel_shipment = Flow::new(
         steel.id().clone(),
@@ -32,9 +33,9 @@ fn test_multi_stage_flow() {
     let manufacturer = Entity::new("Camera Manufacturer");
     let retailer = Entity::new("Retail Store");
 
-    let steel = Resource::new("Steel", "kg");
-    let camera_parts = Resource::new("Camera Parts", "units");
-    let finished_camera = Resource::new("Camera", "units");
+    let steel = Resource::new("Steel", unit_from_string("kg"));
+    let camera_parts = Resource::new("Camera Parts", unit_from_string("units"));
+    let finished_camera = Resource::new("Camera", unit_from_string("units"));
 
     let flow1 = Flow::new(
         steel.id().clone(),
@@ -69,7 +70,7 @@ fn test_multi_stage_flow() {
 fn test_instance_tracking_across_entities() {
     let warehouse_a = Entity::new("Warehouse A");
     let warehouse_b = Entity::new("Warehouse B");
-    let camera = Resource::new("Camera Model X", "units");
+    let camera = Resource::new("Camera Model X", unit_from_string("units"));
 
     let instance1 = Instance::new(
         camera.id().clone(),
@@ -91,7 +92,7 @@ fn test_instance_tracking_across_entities() {
 fn test_resource_flow_with_instances() {
     let origin = Entity::new("Manufacturing Plant");
     let destination = Entity::new("Distribution Center");
-    let product = Resource::new("Smartphone", "units");
+    let product = Resource::new("Smartphone", unit_from_string("units"));
 
     let transfer = Flow::new(
         product.id().clone(),
@@ -118,7 +119,7 @@ fn test_resource_flow_with_instances() {
 #[test]
 fn test_all_primitives_serialization() {
     let entity = Entity::new("Test Entity");
-    let resource = Resource::new("Test Resource", "units");
+    let resource = Resource::new("Test Resource", unit_from_string("units"));
     let flow = Flow::new(
         resource.id().clone(),
         entity.id().clone(),

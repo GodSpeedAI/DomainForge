@@ -44,7 +44,7 @@ fn export_entity(entity: &Entity) -> CalmNode {
         unique_id: entity.id().to_string(),
         node_type: NodeType::Actor,
         name: entity.name().to_string(),
-        namespace: entity.namespace().map(|s| s.to_string()),
+        namespace: Some(entity.namespace().to_string()),
         metadata,
     }
 }
@@ -52,13 +52,13 @@ fn export_entity(entity: &Entity) -> CalmNode {
 fn export_resource(resource: &Resource) -> CalmNode {
     let mut metadata = HashMap::new();
     metadata.insert("sea:primitive".to_string(), json!("Resource"));
-    metadata.insert("sea:unit".to_string(), json!(resource.unit()));
+    metadata.insert("sea:unit".to_string(), json!(resource.unit().symbol()));
     
     CalmNode {
         unique_id: resource.id().to_string(),
         node_type: NodeType::Resource,
         name: resource.name().to_string(),
-        namespace: resource.namespace().map(|s| s.to_string()),
+        namespace: Some(resource.namespace().to_string()),
         metadata,
     }
 }
@@ -73,7 +73,7 @@ fn export_instance(instance: &Instance) -> (CalmNode, CalmRelationship) {
         unique_id: instance.id().to_string(),
         node_type: NodeType::Instance,
         name: format!("Instance of {}", instance.id()),
-        namespace: instance.namespace().map(|s| s.to_string()),
+        namespace: Some(instance.namespace().to_string()),
         metadata,
     };
     
@@ -139,8 +139,10 @@ mod tests {
     
     #[test]
     fn test_export_resource() {
+        use crate::units::unit_from_string;
+        
         let mut graph = Graph::new();
-        let resource = Resource::new("Cameras".to_string(), "units".to_string());
+        let resource = Resource::new("Cameras".to_string(), unit_from_string("units"));
         graph.add_resource(resource).unwrap();
         
         let result = export(&graph).unwrap();
@@ -154,15 +156,17 @@ mod tests {
     
     #[test]
     fn test_export_flow() {
+        use crate::units::unit_from_string;
+        
         let mut graph = Graph::new();
         
         let entity1 = Entity::new("Warehouse".to_string());
         let entity2 = Entity::new("Factory".to_string());
-        let resource = Resource::new("Cameras".to_string(), "units".to_string());
+        let resource = Resource::new("Cameras".to_string(), unit_from_string("units"));
         
-        let e1_id = *entity1.id();
-        let e2_id = *entity2.id();
-        let r_id = *resource.id();
+        let e1_id = entity1.id().clone();
+        let e2_id = entity2.id().clone();
+        let r_id = resource.id().clone();
         
         graph.add_entity(entity1).unwrap();
         graph.add_entity(entity2).unwrap();

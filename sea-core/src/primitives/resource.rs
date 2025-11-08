@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use uuid::Uuid;
+use crate::units::Unit;
+use crate::ConceptId;
 
 /// Represents a quantifiable subject of value in enterprise models.
 ///
@@ -14,29 +16,38 @@ use uuid::Uuid;
 ///
 /// ```
 /// use sea_core::primitives::Resource;
+/// use sea_core::units::{Unit, Dimension};
+/// use rust_decimal::Decimal;
 ///
-/// let product = Resource::new("Camera", "units");
+/// let units = Unit::new("units", "units", Dimension::Count, Decimal::from(1)).unwrap();
+/// let product = Resource::new("Camera", units);
 /// assert_eq!(product.name(), "Camera");
-/// assert_eq!(product.unit(), "units");
-/// assert_eq!(product.namespace(), None);
+/// assert_eq!(product.unit().symbol(), "units");
+/// assert_eq!(product.namespace(), "default");
 /// ```
 ///
 /// With namespace:
 ///
 /// ```
 /// use sea_core::primitives::Resource;
+/// use sea_core::units::{Unit, Dimension};
+/// use rust_decimal::Decimal;
 ///
-/// let currency = Resource::new_with_namespace("USD", "currency", "finance");
-/// assert_eq!(currency.namespace(), Some("finance"));
+/// let currency = Unit::new("currency", "currency", Dimension::Currency, Decimal::from(1)).unwrap();
+/// let usd = Resource::new_with_namespace("USD", currency, "finance");
+/// assert_eq!(usd.namespace(), "finance");
 /// ```
 ///
 /// With custom attributes:
 ///
 /// ```
 /// use sea_core::primitives::Resource;
+/// use sea_core::units::{Unit, Dimension};
+/// use rust_decimal::Decimal;
 /// use serde_json::json;
 ///
-/// let mut gold = Resource::new("Gold", "kg");
+/// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+/// let mut gold = Resource::new("Gold", kg);
 /// gold.set_attribute("purity", json!(0.999));
 /// gold.set_attribute("origin", json!("South Africa"));
 ///
@@ -47,40 +58,48 @@ use uuid::Uuid;
 ///
 /// ```
 /// use sea_core::primitives::Resource;
+/// use sea_core::units::{Unit, Dimension};
+/// use rust_decimal::Decimal;
 ///
-/// let resource = Resource::new("Silver", "oz");
+/// let oz = Unit::new("oz", "ounce", Dimension::Mass, Decimal::new(28349523, 9)).unwrap();
+/// let resource = Resource::new("Silver", oz);
 /// let json = serde_json::to_string(&resource).unwrap();
 /// let deserialized: Resource = serde_json::from_str(&json).unwrap();
 /// assert_eq!(resource.name(), deserialized.name());
-/// assert_eq!(resource.unit(), deserialized.unit());
+/// assert_eq!(resource.unit().symbol(), deserialized.unit().symbol());
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
-    id: Uuid,
+    id: ConceptId,
     name: String,
-    unit: String,
-    namespace: Option<String>,
+    unit: Unit,
+    namespace: String,
     attributes: HashMap<String, Value>,
 }
 
 impl Resource {
-    /// Creates a new Resource with a generated UUID.
+    /// Creates a new Resource (deprecated - use new_with_namespace).
     ///
     /// # Examples
     ///
     /// ```
     /// use sea_core::primitives::Resource;
+    /// use sea_core::units::{Unit, Dimension};
+    /// use rust_decimal::Decimal;
     ///
-    /// let resource = Resource::new("Camera", "units");
+    /// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    /// let resource = Resource::new("Camera", kg);
     /// assert_eq!(resource.name(), "Camera");
-    /// assert_eq!(resource.unit(), "units");
+    /// assert_eq!(resource.unit().symbol(), "kg");
     /// ```
-    pub fn new(name: impl Into<String>, unit: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>, unit: Unit) -> Self {
+        let name = name.into();
+        let namespace = "default".to_string();
         Self {
-            id: Uuid::new_v4(),
-            name: name.into(),
-            unit: unit.into(),
-            namespace: None,
+            id: ConceptId::from_concept(&namespace, &name),
+            name,
+            unit,
+            namespace,
             attributes: HashMap::new(),
         }
     }
@@ -91,26 +110,49 @@ impl Resource {
     ///
     /// ```
     /// use sea_core::primitives::Resource;
+    /// use sea_core::units::{Unit, Dimension};
+    /// use rust_decimal::Decimal;
     ///
-    /// let resource = Resource::new_with_namespace("USD", "currency", "finance");
-    /// assert_eq!(resource.namespace(), Some("finance"));
+    /// let usd = Unit::new("USD", "US Dollar", Dimension::Currency, Decimal::from(1)).unwrap();
+    /// let resource = Resource::new_with_namespace("USD", usd, "finance");
+    /// assert_eq!(resource.namespace(), "finance");
     /// ```
     pub fn new_with_namespace(
         name: impl Into<String>,
-        unit: impl Into<String>,
+        unit: Unit,
+        namespace: impl Into<String>,
+    ) -> Self {
+        let namespace = namespace.into();
+        let name = name.into();
+        let id = ConceptId::from_concept(&namespace, &name);
+
+        Self {
+            id,
+            name,
+            unit,
+            namespace,
+            attributes: HashMap::new(),
+        }
+    }
+
+    /// Creates a Resource from a legacy UUID for backward compatibility.
+    pub fn from_legacy_uuid(
+        uuid: Uuid,
+        name: impl Into<String>,
+        unit: Unit,
         namespace: impl Into<String>,
     ) -> Self {
         Self {
-            id: Uuid::new_v4(),
+            id: ConceptId::from_legacy_uuid(uuid),
             name: name.into(),
-            unit: unit.into(),
-            namespace: Some(namespace.into()),
+            unit,
+            namespace: namespace.into(),
             attributes: HashMap::new(),
         }
     }
 
     /// Returns the resource's unique identifier.
-    pub fn id(&self) -> &Uuid {
+    pub fn id(&self) -> &ConceptId {
         &self.id
     }
 
@@ -120,13 +162,18 @@ impl Resource {
     }
 
     /// Returns the resource's unit of measurement.
-    pub fn unit(&self) -> &str {
+    pub fn unit(&self) -> &Unit {
         &self.unit
     }
 
-    /// Returns the resource's namespace, if any.
-    pub fn namespace(&self) -> Option<&str> {
-        self.namespace.as_deref()
+    /// Returns the resource's unit symbol (for backward compatibility).
+    pub fn unit_symbol(&self) -> &str {
+        self.unit.symbol()
+    }
+
+    /// Returns the resource's namespace.
+    pub fn namespace(&self) -> &str {
+        &self.namespace
     }
 
     /// Sets a custom attribute.
@@ -135,9 +182,10 @@ impl Resource {
     ///
     /// ```
     /// use sea_core::primitives::Resource;
+    /// use sea_core::units::unit_from_string;
     /// use serde_json::json;
     ///
-    /// let mut resource = Resource::new("Gold", "kg");
+    /// let mut resource = Resource::new("Gold", unit_from_string("kg"));
     /// resource.set_attribute("purity", json!(0.999));
     /// assert_eq!(resource.get_attribute("purity"), Some(&json!(0.999)));
     /// ```
@@ -153,9 +201,10 @@ impl Resource {
     ///
     /// ```
     /// use sea_core::primitives::Resource;
+    /// use sea_core::units::unit_from_string;
     /// use serde_json::json;
     ///
-    /// let mut resource = Resource::new("Gold", "kg");
+    /// let mut resource = Resource::new("Gold", unit_from_string("kg"));
     /// resource.set_attribute("purity", json!(0.999));
     /// assert_eq!(resource.get_attribute("purity"), Some(&json!(0.999)));
     /// assert_eq!(resource.get_attribute("missing"), None);

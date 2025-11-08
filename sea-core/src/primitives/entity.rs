@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use uuid::Uuid;
+use crate::ConceptId;
 
 /// Represents a business actor, location, or organizational unit.
 ///
@@ -17,7 +18,7 @@ use uuid::Uuid;
 ///
 /// let warehouse = Entity::new("Main Warehouse");
 /// assert_eq!(warehouse.name(), "Main Warehouse");
-/// assert_eq!(warehouse.namespace(), None);
+/// assert_eq!(warehouse.namespace(), "default");
 /// ```
 ///
 /// With namespace:
@@ -26,7 +27,7 @@ use uuid::Uuid;
 /// use sea_core::primitives::Entity;
 ///
 /// let warehouse = Entity::new_with_namespace("Warehouse A", "logistics");
-/// assert_eq!(warehouse.namespace(), Some("logistics"));
+/// assert_eq!(warehouse.namespace(), "logistics");
 /// ```
 ///
 /// With custom attributes:
@@ -54,14 +55,14 @@ use uuid::Uuid;
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Entity {
-    id: Uuid,
+    id: ConceptId,
     name: String,
-    namespace: Option<String>,
+    namespace: String,
     attributes: HashMap<String, Value>,
 }
 
 impl Entity {
-    /// Creates a new Entity with a generated UUID.
+    /// Creates a new Entity with a generated UUID (deprecated - use new_with_namespace).
     ///
     /// # Examples
     ///
@@ -72,10 +73,12 @@ impl Entity {
     /// assert_eq!(entity.name(), "Warehouse");
     /// ```
     pub fn new(name: impl Into<String>) -> Self {
+        let name = name.into();
+        let namespace = "default".to_string();
         Self {
-            id: Uuid::new_v4(),
-            name: name.into(),
-            namespace: None,
+            id: ConceptId::from_concept(&namespace, &name),
+            name,
+            namespace,
             attributes: HashMap::new(),
         }
     }
@@ -88,19 +91,33 @@ impl Entity {
     /// use sea_core::primitives::Entity;
     ///
     /// let entity = Entity::new_with_namespace("Warehouse", "logistics");
-    /// assert_eq!(entity.namespace(), Some("logistics"));
+    /// assert_eq!(entity.namespace(), "logistics");
     /// ```
     pub fn new_with_namespace(name: impl Into<String>, namespace: impl Into<String>) -> Self {
+        let namespace = namespace.into();
+        let name = name.into();
+        let id = ConceptId::from_concept(&namespace, &name);
+
         Self {
-            id: Uuid::new_v4(),
+            id,
+            name,
+            namespace,
+            attributes: HashMap::new(),
+        }
+    }
+
+    /// Creates an Entity from a legacy UUID for backward compatibility.
+    pub fn from_legacy_uuid(uuid: Uuid, name: impl Into<String>, namespace: impl Into<String>) -> Self {
+        Self {
+            id: ConceptId::from_legacy_uuid(uuid),
             name: name.into(),
-            namespace: Some(namespace.into()),
+            namespace: namespace.into(),
             attributes: HashMap::new(),
         }
     }
 
     /// Returns the entity's unique identifier.
-    pub fn id(&self) -> &Uuid {
+    pub fn id(&self) -> &ConceptId {
         &self.id
     }
 
@@ -109,9 +126,9 @@ impl Entity {
         &self.name
     }
 
-    /// Returns the entity's namespace, if any.
-    pub fn namespace(&self) -> Option<&str> {
-        self.namespace.as_deref()
+    /// Returns the entity's namespace.
+    pub fn namespace(&self) -> &str {
+        &self.namespace
     }
 
     /// Sets a custom attribute.

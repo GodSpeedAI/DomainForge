@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
 use serde_json::Value;
+use crate::ConceptId;
+use uuid;
+
+const DEFAULT_NAMESPACE: &str = "default";
 
 /// Represents a physical instance of a resource at a specific entity location.
 ///
@@ -12,9 +15,10 @@ use serde_json::Value;
 ///
 /// ```
 /// use sea_core::primitives::{Entity, Resource, Instance};
+/// use sea_core::units::unit_from_string;
 ///
 /// let warehouse = Entity::new("Warehouse A");
-/// let product = Resource::new("Camera", "units");
+/// let product = Resource::new("Camera", unit_from_string("units"));
 ///
 /// let camera_123 = Instance::new(
 ///     product.id().clone(),
@@ -25,39 +29,47 @@ use serde_json::Value;
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Instance {
-    id: Uuid,
-    resource_id: Uuid,
-    entity_id: Uuid,
-    namespace: Option<String>,
+    id: ConceptId,
+    resource_id: ConceptId,
+    entity_id: ConceptId,
+    namespace: String,
     attributes: HashMap<String, Value>,
 }
 
 impl Instance {
-    /// Creates a new Instance with a generated UUID.
-    pub fn new(resource_id: Uuid, entity_id: Uuid) -> Self {
+    /// Creates a new Instance (deprecated - namespace required).
+    #[deprecated(note = "use new_with_namespace instead")]
+    pub fn new(resource_id: ConceptId, entity_id: ConceptId) -> Self {
+        let namespace = DEFAULT_NAMESPACE.to_string();
+        // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
+        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
         Self {
-            id: Uuid::new_v4(),
+            id,
             resource_id,
             entity_id,
-            namespace: None,
+            namespace,
             attributes: HashMap::new(),
         }
     }
 
-    pub fn new_with_namespace(resource_id: Uuid, entity_id: Uuid, namespace: impl Into<String>) -> Self {
+    pub fn new_with_namespace(resource_id: ConceptId, entity_id: ConceptId, namespace: impl Into<String>) -> Self {
+        let namespace = namespace.into();
+        // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
+        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
+
         Self {
-            id: Uuid::new_v4(),
+            id,
             resource_id,
             entity_id,
-            namespace: Some(namespace.into()),
+            namespace,
             attributes: HashMap::new(),
         }
     }
 
-    pub fn id(&self) -> &Uuid { &self.id }
-    pub fn resource_id(&self) -> &Uuid { &self.resource_id }
-    pub fn entity_id(&self) -> &Uuid { &self.entity_id }
-    pub fn namespace(&self) -> Option<&str> { self.namespace.as_deref() }
+    pub fn id(&self) -> &ConceptId { &self.id }
+    pub fn resource_id(&self) -> &ConceptId { &self.resource_id }
+    pub fn entity_id(&self) -> &ConceptId { &self.entity_id }
+    pub fn namespace(&self) -> &str { &self.namespace }
 
     pub fn set_attribute(&mut self, key: impl Into<String>, value: Value) {
         self.attributes.insert(key.into(), value);

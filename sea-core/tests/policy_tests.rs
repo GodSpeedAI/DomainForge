@@ -2,6 +2,7 @@ use sea_core::{
     Graph,
     primitives::{Entity, Resource, Flow},
     policy::{Expression, BinaryOp, UnaryOp, Quantifier, Policy, DeonticModality, Severity},
+    units::unit_from_string,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -11,11 +12,11 @@ fn build_sample_graph() -> Graph {
 
     let warehouse = Entity::new_with_namespace("Warehouse", "logistics");
     let factory = Entity::new_with_namespace("Factory", "production");
-    let cameras = Resource::new_with_namespace("Cameras", "units", "inventory");
+    let cameras = Resource::new_with_namespace("Cameras", unit_from_string("units"), "inventory");
 
-    let warehouse_id = *warehouse.id();
-    let factory_id = *factory.id();
-    let cameras_id = *cameras.id();
+    let warehouse_id = warehouse.id().clone();
+    let factory_id = factory.id().clone();
+    let cameras_id = cameras.id().clone();
 
     graph.add_entity(warehouse).unwrap();
     graph.add_entity(factory).unwrap();
@@ -571,4 +572,50 @@ fn test_complex_policy_evaluation() {
     let result = policy.evaluate(&graph).unwrap();
 
     assert!(result.is_satisfied);
+}
+
+// Phase 14B: Policy Priority Tests
+#[test]
+fn test_policy_priority_field() {
+    let expr = Expression::literal(true);
+
+    // Test default priority
+    let policy = Policy::new("Test Policy", expr.clone());
+    assert_eq!(policy.priority, 0);
+
+    // Test with_priority builder
+    let high_priority_policy = Policy::new("High Priority", expr.clone())
+        .with_priority(10);
+    assert_eq!(high_priority_policy.priority, 10);
+
+    let low_priority_policy = Policy::new("Low Priority", expr)
+        .with_priority(-5);
+    assert_eq!(low_priority_policy.priority, -5);
+}
+
+#[test]
+fn test_multiple_policies_have_priorities() {
+    let expr = Expression::literal(true);
+
+    let policies = vec![
+        Policy::new("Policy A", expr.clone()).with_priority(1),
+        Policy::new("Policy B", expr.clone()).with_priority(5),
+        Policy::new("Policy C", expr.clone()).with_priority(3),
+        Policy::new("Policy D", expr).with_priority(0),
+    ];
+
+    // Verify each policy has its assigned priority
+    assert_eq!(policies[0].priority, 1);
+    assert_eq!(policies[1].priority, 5);
+    assert_eq!(policies[2].priority, 3);
+    assert_eq!(policies[3].priority, 0);
+
+    // Verify policies can be sorted by priority
+    let mut sorted = policies.clone();
+    sorted.sort_by_key(|p| std::cmp::Reverse(p.priority));
+
+    assert_eq!(sorted[0].priority, 5);
+    assert_eq!(sorted[1].priority, 3);
+    assert_eq!(sorted[2].priority, 1);
+    assert_eq!(sorted[3].priority, 0);
 }

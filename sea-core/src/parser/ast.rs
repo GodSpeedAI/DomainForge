@@ -2,9 +2,10 @@ use pest::Parser;
 use pest::iterators::{Pair, Pairs};
 use crate::parser::{SeaParser, Rule};
 use crate::parser::error::{ParseError, ParseResult};
-use crate::policy::{Expression, BinaryOp, UnaryOp, Quantifier as PolicyQuantifier};
+use crate::policy::{Expression, BinaryOp, UnaryOp, Quantifier as PolicyQuantifier, AggregateFunction};
 use crate::graph::Graph;
 use crate::primitives::{Entity, Resource, Flow};
+use crate::units::unit_from_string;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 use serde_json::Value as JsonValue;
@@ -35,6 +36,7 @@ pub enum AstNode {
     },
     Policy {
         name: String,
+        version: Option<String>,
         expression: Expression,
     },
 }
@@ -87,7 +89,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
 fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
 
-    let name = parse_string_literal(inner.next().ok_or_else(|| {
+    let name = parse_name(inner.next().ok_or_else(|| {
         ParseError::GrammarError("Expected entity name".to_string())
     })?)?;
 
@@ -104,7 +106,7 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
 fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
 
-    let name = parse_string_literal(inner.next().ok_or_else(|| {
+    let name = parse_name(inner.next().ok_or_else(|| {
         ParseError::GrammarError("Expected resource name".to_string())
     })?)?;
 
@@ -190,11 +192,21 @@ fn parse_policy(pair: Pair<Rule>) -> ParseResult<AstNode> {
         ParseError::GrammarError("Expected policy name".to_string())
     })?)?;
 
-    let expression = parse_expression(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected policy expression".to_string())
-    })?)?;
+    let mut version: Option<String> = None;
+    let mut next_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected policy version or expression".to_string())
+    })?;
 
-    Ok(AstNode::Policy { name, expression })
+    if next_pair.as_rule() == Rule::version {
+        version = Some(next_pair.as_str().to_string());
+        next_pair = inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected policy expression".to_string())
+        })?;
+    }
+
+    let expression = parse_expression(next_pair)?;
+
+    Ok(AstNode::Policy { name, version, expression })
 }
 
 /// Parse expression
@@ -378,6 +390,7 @@ fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 
     match inner.as_rule() {
         Rule::expression => parse_expression(inner),
+        Rule::aggregation_expr => parse_aggregation_expr(inner),
         Rule::quantified_expr => parse_quantified_expr(inner),
         Rule::member_access => parse_member_access(inner),
         Rule::literal => parse_literal_expr(inner),
@@ -388,6 +401,58 @@ fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         _ => Err(ParseError::InvalidExpression(format!(
             "Unexpected primary expression: {:?}",
             inner.as_rule()
+        ))),
+    }
+}
+
+/// Parse aggregation expression
+fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let mut inner = pair.into_inner();
+
+    let function_pair = inner.next()
+        .ok_or_else(|| ParseError::GrammarError("Expected aggregate function in aggregation expression".to_string()))?;
+    let function = parse_aggregate_fn(function_pair)?;
+
+    let collection_pair = inner.next()
+        .ok_or_else(|| ParseError::GrammarError("Expected collection in aggregation expression".to_string()))?;
+    let collection = parse_collection(collection_pair)?;
+
+    let mut field: Option<String> = None;
+    let mut filter: Option<Expression> = None;
+
+    // Parse optional field and filter
+    for item in inner {
+        match item.as_rule() {
+            Rule::identifier => {
+                field = Some(parse_identifier(item)?);
+            }
+            Rule::expression => {
+                filter = Some(parse_expression(item)?);
+            }
+            _ => {}
+        }
+    }
+
+    Ok(Expression::aggregation(
+        function,
+        Expression::Variable(collection),
+        field,
+        filter,
+    ))
+}
+
+/// Parse aggregate function
+fn parse_aggregate_fn(pair: Pair<Rule>) -> ParseResult<AggregateFunction> {
+    let fn_str = pair.as_str();
+    match fn_str.to_lowercase().as_str() {
+        "count" => Ok(AggregateFunction::Count),
+        "sum" => Ok(AggregateFunction::Sum),
+        "min" => Ok(AggregateFunction::Min),
+        "max" => Ok(AggregateFunction::Max),
+        "avg" => Ok(AggregateFunction::Avg),
+        _ => Err(ParseError::InvalidExpression(format!(
+            "Unknown aggregate function: {}",
+            fn_str
         ))),
     }
 }
@@ -449,6 +514,10 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             let s = parse_string_literal(inner)?;
             Ok(Expression::Literal(JsonValue::String(s)))
         }
+        Rule::multiline_string => {
+            let s = parse_multiline_string(inner)?;
+            Ok(Expression::Literal(JsonValue::String(s)))
+        }
         Rule::number => {
             let n = parse_decimal(inner)?;
             Ok(Expression::Literal(JsonValue::String(n.to_string())))
@@ -464,6 +533,17 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     }
 }
 
+/// Parse name (handles both string_literal and multiline_string)
+fn parse_name(pair: Pair<Rule>) -> ParseResult<String> {
+    let inner = pair.into_inner().next()
+        .ok_or_else(|| ParseError::GrammarError("Expected inner token for name but got empty pair".to_string()))?;
+    match inner.as_rule() {
+        Rule::string_literal => parse_string_literal(inner),
+        Rule::multiline_string => parse_multiline_string(inner),
+        _ => Err(ParseError::GrammarError(format!("Expected string or multiline string for name, got {:?}", inner.as_rule())))
+    }
+}
+
 /// Parse string literal (removes quotes)
 fn parse_string_literal(pair: Pair<Rule>) -> ParseResult<String> {
     let s = pair.as_str();
@@ -471,6 +551,16 @@ fn parse_string_literal(pair: Pair<Rule>) -> ParseResult<String> {
         Ok(s[1..s.len() - 1].to_string())
     } else {
         Err(ParseError::GrammarError(format!("Invalid string literal: {}", s)))
+    }
+}
+
+/// Parse multiline string (removes triple quotes)
+fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
+    let s = pair.as_str();
+    if s.len() >= 6 && s.starts_with("\"\"\"") && s.ends_with("\"\"\"") {
+        Ok(s[3..s.len() - 3].to_string())
+    } else {
+        Err(ParseError::GrammarError(format!("Invalid multiline string: {}", s)))
     }
 }
 
@@ -530,10 +620,22 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                 }
 
                 let resource = match (unit_name, domain) {
-                    (Some(unit), Some(d)) => Resource::new_with_namespace(name.clone(), unit.clone(), d.clone()),
-                    (Some(unit), None) => Resource::new(name.clone(), unit.clone()),
-                    (None, Some(d)) => Resource::new_with_namespace(name.clone(), "", d.clone()),
-                    (None, None) => Resource::new(name.clone(), ""),
+                    (Some(unit_str), Some(d)) => {
+                        let unit = unit_from_string(unit_str.clone());
+                        Resource::new_with_namespace(name.clone(), unit, d.clone())
+                    },
+                    (Some(unit_str), None) => {
+                        let unit = unit_from_string(unit_str.clone());
+                        Resource::new(name.clone(), unit)
+                    },
+                    (None, Some(d)) => {
+                        let unit = unit_from_string("units");
+                        Resource::new_with_namespace(name.clone(), unit, d.clone())
+                    },
+                    (None, None) => {
+                        let unit = unit_from_string("units");
+                        Resource::new(name.clone(), unit)
+                    },
                 };
                 let resource_id = resource.id().clone();
                 graph.add_resource(resource).map_err(|e| {

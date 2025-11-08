@@ -1,5 +1,6 @@
 use sea_core::Graph;
 use sea_core::primitives::{Entity, Resource, Flow, Instance};
+use sea_core::units::unit_from_string;
 use sea_core::calm::{export, import};
 use rust_decimal::Decimal;
 
@@ -18,7 +19,7 @@ fn test_round_trip_simple_graph() {
 
     let imported_entity = imported_graph.all_entities()[0];
     assert_eq!(imported_entity.name(), "Warehouse");
-    assert_eq!(imported_entity.namespace(), Some("logistics"));
+    assert_eq!(imported_entity.namespace(), "logistics");
 }
 
 #[test]
@@ -27,17 +28,17 @@ fn test_round_trip_complex_graph() {
 
     let warehouse = Entity::new_with_namespace("Warehouse A".to_string(), "logistics".to_string());
     let factory = Entity::new_with_namespace("Factory B".to_string(), "manufacturing".to_string());
-    let cameras = Resource::new_with_namespace("Cameras".to_string(), "units".to_string(), "products".to_string());
+    let cameras = Resource::new_with_namespace("Cameras".to_string(), unit_from_string("units"), "products".to_string());
 
-    let warehouse_id = *warehouse.id();
-    let factory_id = *factory.id();
-    let cameras_id = *cameras.id();
+    let warehouse_id = warehouse.id().clone();
+    let factory_id = factory.id().clone();
+    let cameras_id = cameras.id().clone();
 
     original_graph.add_entity(warehouse).unwrap();
     original_graph.add_entity(factory).unwrap();
     original_graph.add_resource(cameras).unwrap();
 
-    let flow = Flow::new(cameras_id, warehouse_id, factory_id, Decimal::from(100));
+    let flow = Flow::new(cameras_id.clone(), warehouse_id.clone(), factory_id.clone(), Decimal::from(100));
     original_graph.add_flow(flow).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
@@ -56,7 +57,7 @@ fn test_round_trip_complex_graph() {
     let resources = imported_graph.all_resources();
     assert_eq!(resources.len(), 1);
     assert_eq!(resources[0].name(), "Cameras");
-    assert_eq!(resources[0].unit(), "units");
+    assert_eq!(resources[0].unit().symbol(), "units");
 
     let flows = imported_graph.all_flows();
     assert_eq!(flows.len(), 1);
@@ -68,15 +69,15 @@ fn test_round_trip_with_instances() {
     let mut original_graph = Graph::new();
 
     let warehouse = Entity::new("Warehouse".to_string());
-    let cameras = Resource::new("Cameras".to_string(), "units".to_string());
+    let cameras = Resource::new("Cameras".to_string(), unit_from_string("units"));
 
-    let warehouse_id = *warehouse.id();
-    let cameras_id = *cameras.id();
+    let warehouse_id = warehouse.id().clone();
+    let cameras_id = cameras.id().clone();
 
     original_graph.add_entity(warehouse).unwrap();
     original_graph.add_resource(cameras).unwrap();
 
-    let instance = Instance::new(cameras_id, warehouse_id);
+    let instance = Instance::new(cameras_id.clone(), warehouse_id.clone());
     original_graph.add_instance(instance).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
@@ -138,29 +139,29 @@ fn test_semantic_equivalence_after_round_trip() {
 
     let e1 = Entity::new_with_namespace("Entity1".to_string(), "ns1".to_string());
     let e2 = Entity::new_with_namespace("Entity2".to_string(), "ns1".to_string());
-    let r1 = Resource::new_with_namespace("Resource1".to_string(), "kg".to_string(), "ns2".to_string());
+    let r1 = Resource::new_with_namespace("Resource1".to_string(), unit_from_string("kg"), "ns2".to_string());
 
-    let e1_id = *e1.id();
-    let e2_id = *e2.id();
-    let r1_id = *r1.id();
+    let e1_id = e1.id().clone();
+    let e2_id = e2.id().clone();
+    let r1_id = r1.id().clone();
 
     original_graph.add_entity(e1).unwrap();
     original_graph.add_entity(e2).unwrap();
     original_graph.add_resource(r1).unwrap();
 
-    let flow = Flow::new(r1_id, e1_id, e2_id, Decimal::new(2500, 2));
+    let flow = Flow::new(r1_id.clone(), e1_id.clone(), e2_id.clone(), Decimal::new(2500, 2));
     original_graph.add_flow(flow).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
     let imported_graph = import(calm_json).unwrap();
 
-    let original_entities: Vec<(&str, Option<&str>)> = original_graph
+    let original_entities: Vec<(&str, &str)> = original_graph
         .all_entities()
         .iter()
         .map(|e| (e.name(), e.namespace()))
         .collect();
 
-    let imported_entities: Vec<(&str, Option<&str>)> = imported_graph
+    let imported_entities: Vec<(&str, &str)> = imported_graph
         .all_entities()
         .iter()
         .map(|e| (e.name(), e.namespace()))

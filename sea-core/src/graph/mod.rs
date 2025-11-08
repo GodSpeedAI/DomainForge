@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-use uuid::Uuid;
+use indexmap::IndexMap;
 use crate::primitives::{Entity, Resource, Flow, Instance};
+use crate::ConceptId;
 
 #[derive(Debug, Clone, Default)]
 pub struct Graph {
-    entities: HashMap<Uuid, Entity>,
-    resources: HashMap<Uuid, Resource>,
-    flows: HashMap<Uuid, Flow>,
-    instances: HashMap<Uuid, Instance>,
+    entities: IndexMap<ConceptId, Entity>,
+    resources: IndexMap<ConceptId, Resource>,
+    flows: IndexMap<ConceptId, Flow>,
+    instances: IndexMap<ConceptId, Instance>,
 }
 
 impl Graph {
@@ -27,7 +27,7 @@ impl Graph {
     }
 
     pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
-        let id = *entity.id();
+        let id = entity.id().clone();
         if self.entities.contains_key(&id) {
             return Err(format!("Entity with ID {} already exists", id));
         }
@@ -35,15 +35,15 @@ impl Graph {
         Ok(())
     }
 
-    pub fn has_entity(&self, id: &Uuid) -> bool {
+    pub fn has_entity(&self, id: &ConceptId) -> bool {
         self.entities.contains_key(id)
     }
 
-    pub fn get_entity(&self, id: &Uuid) -> Option<&Entity> {
+    pub fn get_entity(&self, id: &ConceptId) -> Option<&Entity> {
         self.entities.get(id)
     }
 
-    pub fn remove_entity(&mut self, id: &Uuid) -> Result<Entity, String> {
+    pub fn remove_entity(&mut self, id: &ConceptId) -> Result<Entity, String> {
         // Check for references in flows
         let referencing_flows: Vec<String> = self.flows.values()
             .filter(|flow| flow.from_id() == id || flow.to_id() == id)
@@ -68,7 +68,7 @@ impl Graph {
         }
 
         self.entities
-            .remove(id)
+            .shift_remove(id)
             .ok_or_else(|| format!("Entity with ID {} not found", id))
     }
 
@@ -77,7 +77,7 @@ impl Graph {
     }
 
     pub fn add_resource(&mut self, resource: Resource) -> Result<(), String> {
-        let id = *resource.id();
+        let id = resource.id().clone();
         if self.resources.contains_key(&id) {
             return Err(format!("Resource with ID {} already exists", id));
         }
@@ -85,15 +85,15 @@ impl Graph {
         Ok(())
     }
 
-    pub fn has_resource(&self, id: &Uuid) -> bool {
+    pub fn has_resource(&self, id: &ConceptId) -> bool {
         self.resources.contains_key(id)
     }
 
-    pub fn get_resource(&self, id: &Uuid) -> Option<&Resource> {
+    pub fn get_resource(&self, id: &ConceptId) -> Option<&Resource> {
         self.resources.get(id)
     }
 
-    pub fn remove_resource(&mut self, id: &Uuid) -> Result<Resource, String> {
+    pub fn remove_resource(&mut self, id: &ConceptId) -> Result<Resource, String> {
         // Check for references in flows
         let referencing_flows: Vec<String> = self.flows.values()
             .filter(|flow| flow.resource_id() == id)
@@ -118,7 +118,7 @@ impl Graph {
         }
 
         self.resources
-            .remove(id)
+            .shift_remove(id)
             .ok_or_else(|| format!("Resource with ID {} not found", id))
     }
 
@@ -127,7 +127,7 @@ impl Graph {
     }
 
     pub fn add_flow(&mut self, flow: Flow) -> Result<(), String> {
-        let id = *flow.id();
+        let id = flow.id().clone();
         if self.flows.contains_key(&id) {
             return Err(format!("Flow with ID {} already exists", id));
         }
@@ -144,17 +144,17 @@ impl Graph {
         Ok(())
     }
 
-    pub fn has_flow(&self, id: &Uuid) -> bool {
+    pub fn has_flow(&self, id: &ConceptId) -> bool {
         self.flows.contains_key(id)
     }
 
-    pub fn get_flow(&self, id: &Uuid) -> Option<&Flow> {
+    pub fn get_flow(&self, id: &ConceptId) -> Option<&Flow> {
         self.flows.get(id)
     }
 
-    pub fn remove_flow(&mut self, id: &Uuid) -> Result<Flow, String> {
+    pub fn remove_flow(&mut self, id: &ConceptId) -> Result<Flow, String> {
         self.flows
-            .remove(id)
+            .shift_remove(id)
             .ok_or_else(|| format!("Flow with ID {} not found", id))
     }
 
@@ -163,7 +163,7 @@ impl Graph {
     }
 
     pub fn add_instance(&mut self, instance: Instance) -> Result<(), String> {
-        let id = *instance.id();
+        let id = instance.id().clone();
         if self.instances.contains_key(&id) {
             return Err(format!("Instance with ID {} already exists", id));
         }
@@ -177,60 +177,60 @@ impl Graph {
         Ok(())
     }
 
-    pub fn has_instance(&self, id: &Uuid) -> bool {
+    pub fn has_instance(&self, id: &ConceptId) -> bool {
         self.instances.contains_key(id)
     }
 
-    pub fn get_instance(&self, id: &Uuid) -> Option<&Instance> {
+    pub fn get_instance(&self, id: &ConceptId) -> Option<&Instance> {
         self.instances.get(id)
     }
 
-    pub fn remove_instance(&mut self, id: &Uuid) -> Result<Instance, String> {
+    pub fn remove_instance(&mut self, id: &ConceptId) -> Result<Instance, String> {
         self.instances
-            .remove(id)
+            .shift_remove(id)
             .ok_or_else(|| format!("Instance with ID {} not found", id))
     }
 
-    pub fn flows_from(&self, entity_id: &Uuid) -> Vec<&Flow> {
+    pub fn flows_from(&self, entity_id: &ConceptId) -> Vec<&Flow> {
         self.flows
             .values()
             .filter(|flow| flow.from_id() == entity_id)
             .collect()
     }
 
-    pub fn flows_to(&self, entity_id: &Uuid) -> Vec<&Flow> {
+    pub fn flows_to(&self, entity_id: &ConceptId) -> Vec<&Flow> {
         self.flows
             .values()
             .filter(|flow| flow.to_id() == entity_id)
             .collect()
     }
 
-    pub fn upstream_entities(&self, entity_id: &Uuid) -> Vec<&Entity> {
+    pub fn upstream_entities(&self, entity_id: &ConceptId) -> Vec<&Entity> {
         self.flows_to(entity_id)
             .iter()
             .filter_map(|flow| self.get_entity(flow.from_id()))
             .collect()
     }
 
-    pub fn downstream_entities(&self, entity_id: &Uuid) -> Vec<&Entity> {
+    pub fn downstream_entities(&self, entity_id: &ConceptId) -> Vec<&Entity> {
         self.flows_from(entity_id)
             .iter()
             .filter_map(|flow| self.get_entity(flow.to_id()))
             .collect()
     }
 
-    pub fn find_entity_by_name(&self, name: &str) -> Option<Uuid> {
+    pub fn find_entity_by_name(&self, name: &str) -> Option<ConceptId> {
         self.entities
             .iter()
             .find(|(_, entity)| entity.name() == name)
-            .map(|(id, _)| *id)
+            .map(|(id, _)| id.clone())
     }
 
-    pub fn find_resource_by_name(&self, name: &str) -> Option<Uuid> {
+    pub fn find_resource_by_name(&self, name: &str) -> Option<ConceptId> {
         self.resources
             .iter()
             .find(|(_, resource)| resource.name() == name)
-            .map(|(id, _)| *id)
+            .map(|(id, _)| id.clone())
     }
 
     pub fn all_entities(&self) -> Vec<&Entity> {

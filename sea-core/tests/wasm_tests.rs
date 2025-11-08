@@ -6,6 +6,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 mod wasm_tests {
     use super::*;
     use sea_core::wasm::{Entity, Resource, Flow, Instance, Graph};
+    use sea_core::units::unit_from_string;
 
     #[wasm_bindgen_test]
     fn test_entity_creation() {

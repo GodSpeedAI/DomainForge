@@ -17,13 +17,13 @@ fn test_entity_name_is_stored() {
 #[test]
 fn test_entity_with_namespace() {
     let entity = Entity::new_with_namespace("Warehouse", "logistics");
-    assert_eq!(entity.namespace(), Some("logistics"));
+    assert_eq!(entity.namespace(), "logistics");
 }
 
 #[test]
-fn test_entity_without_namespace_returns_none() {
+fn test_entity_defaults_to_default_namespace() {
     let entity = Entity::new("Factory");
-    assert_eq!(entity.namespace(), None);
+    assert_eq!(entity.namespace(), "default");
 }
 
 #[test]
