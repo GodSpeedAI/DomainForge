@@ -95,15 +95,15 @@ flowchart TD
     B -->|Yes| C[Generate as Aggregate Root]
     B -->|No| D[Generate as simple Entity]
 
-    C --> E[Scaffold:<br/>- aggregates/{entity}-aggregate.ts<br/>- entities/{entity}-id.ts VO<br/>- factories/{entity}-factory.ts<br/>- Repository port<br/>- Domain events]
+    C --> E[Scaffold:<br/>- aggregates/&#123;entity&#125;-aggregate.ts<br/>- entities/&#123;entity&#125;-id.ts VO<br/>- factories/&#123;entity&#125;-factory.ts<br/>- Repository port<br/>- Domain events]
 
-    D --> F[Scaffold:<br/>- entities/{entity}.ts<br/>- entities/{entity}-id.ts VO<br/>- Repository port<br/>- Basic unit tests]
+    D --> F[Scaffold:<br/>- entities/&#123;entity&#125;.ts<br/>- entities/&#123;entity&#125;-id.ts VO<br/>- Repository port<br/>- Basic unit tests]
 
     E --> G{Namespace provided?}
     F --> G
 
-    G -->|Yes| H[Add namespace field<br/>Group in libs/{namespace}/{entity}]
-    G -->|No| I[Single domain lib<br/>libs/{entity}/domain]
+    G -->|Yes| H[Add namespace field<br/>Group in libs/&#123;namespace&#125;/&#123;entity&#125;]
+    G -->|No| I[Single domain lib<br/>libs/&#123;entity&#125;/domain]
 ```
 
 ### 2. Resource Mapping Decision Tree
@@ -119,10 +119,10 @@ flowchart TD
     D --> F{Resource has<br/>complex behavior?}
 
     E -->|Yes| G[Scaffold:<br/>- value-objects/resource-type.ts<br/>- Enum or union type<br/>- Unit validation logic]
-    E -->|No| H[Scaffold:<br/>- value-objects/{resource-name}.ts<br/>- Immutable struct with unit]
+    E -->|No| H[Scaffold:<br/>- value-objects/&#123;resource-name&#125;.ts<br/>- Immutable struct with unit]
 
-    F -->|Yes| I[Generate as Aggregate Root:<br/>- aggregates/{resource}-aggregate.ts<br/>- Repository port<br/>- Domain events for state changes]
-    F -->|No| J[Generate as Entity:<br/>- entities/{resource}.ts<br/>- Repository port<br/>- Instance collection methods]
+    F -->|Yes| I[Generate as Aggregate Root:<br/>- aggregates/&#123;resource&#125;-aggregate.ts<br/>- Repository port<br/>- Domain events for state changes]
+    F -->|No| J[Generate as Entity:<br/>- entities/&#123;resource&#125;.ts<br/>- Repository port<br/>- Instance collection methods]
 
     G --> K[Usage: embedded in Entities/Aggregates]
     H --> K
@@ -142,15 +142,15 @@ flowchart TD
     C --> E{Flow is asynchronous<br/>or multi-step?}
     D --> F{Multiple flow types<br/>between same entities?}
 
-    E -->|Yes| G[Scaffold:<br/>- aggregates/flow-aggregate.ts<br/>- Flow state machine<br/>- events/flow-{started,completed,failed}.event.ts<br/>- Repository + port<br/>- Process manager / saga option]
+    E -->|Yes| G[Scaffold:<br/>- aggregates/flow-aggregate.ts<br/>- Flow state machine<br/>- events/flow-&#123;started,completed,failed&#125;.event.ts<br/>- Repository + port<br/>- Process manager / saga option]
     E -->|No| H[Scaffold:<br/>- aggregates/flow-aggregate.ts<br/>- events/flow-created.event.ts<br/>- Repository + port<br/>- Basic transfer validation]
 
-    F -->|Yes| I[Scaffold multiple methods:<br/>- {entity}-aggregate.transfer{Type}<br/>- Domain events per flow type]
-    F -->|No| J[Scaffold single method:<br/>- {entity}-aggregate.transfer<br/>- events/resource-transferred.event.ts]
+    F -->|Yes| I[Scaffold multiple methods:<br/>- &#123;entity&#125;-aggregate.transfer&#123;Type&#125;<br/>- Domain events per flow type]
+    F -->|No| J[Scaffold single method:<br/>- &#123;entity&#125;-aggregate.transfer<br/>- events/resource-transferred.event.ts]
 
     G --> K[Application layer:<br/>- use-cases/execute-flow.usecase.ts<br/>- Saga/process-manager if async]
     H --> K
-    I --> L[Application layer:<br/>- use-cases/transfer-{type}.usecase.ts<br/>- UoW orchestration]
+    I --> L[Application layer:<br/>- use-cases/transfer-&#123;type&#125;.usecase.ts<br/>- UoW orchestration]
     J --> L
 ```
 
@@ -166,7 +166,7 @@ flowchart TD
     C --> E{Instance is child<br/>of aggregate or<br/>independent?}
     D --> F[Scaffold:<br/>- value-objects/instance-record.ts<br/>- Immutable with resourceId, entityId, serial<br/>- Validation only]
 
-    E -->|Child| G[Scaffold as child entity:<br/>- entities/{parent}/instance.ts<br/>- Managed by parent aggregate<br/>- No separate repository]
+    E -->|Child| G[Scaffold as child entity:<br/>- entities/&#123;parent&#125;/instance.ts<br/>- Managed by parent aggregate<br/>- No separate repository]
     E -->|Independent| H[Scaffold as root entity:<br/>- entities/instance.ts<br/>- Repository port<br/>- Instance lifecycle events]
 
     G --> I{Instances tracked<br/>in collections?}
@@ -175,7 +175,7 @@ flowchart TD
     I -->|Yes| K[Add collection methods on parent:<br/>- addInstance, removeInstance<br/>- Query methods<br/>- Collection invariants]
     I -->|No| L[Single instance reference on parent]
 
-    J -->|Yes| M[Add event sourcing:<br/>- events/instance-{created,moved,retired}.event.ts<br/>- Event store adapter option]
+    J -->|Yes| M[Add event sourcing:<br/>- events/instance-&#123;created,moved,retired&#125;.event.ts<br/>- Event store adapter option]
     J -->|No| N[Standard CRUD events]
 ```
 
@@ -197,8 +197,8 @@ flowchart TD
     G -->|error| I[Scaffold:<br/>- policies/policy-engine.ts<br/>- Policy evaluator with collection access<br/>- Throw domain exception on violation<br/>- Run in UoW pre-commit hook]
     G -->|warn/info| J[Scaffold:<br/>- policies/policy-engine.ts<br/>- Policy evaluator<br/>- Emit domain event on violation<br/>- Run in UoW post-commit]
 
-    H -->|Validation| K[Scaffold:<br/>- specifications/{policy-name}-spec.ts<br/>- isSatisfiedBy method<br/>- Used in aggregate invariants]
-    H -->|Query| L[Scaffold:<br/>- specifications/{policy-name}-spec.ts<br/>- toExpression method for repos<br/>- Used in application query services]
+    H -->|Validation| K[Scaffold:<br/>- specifications/&#123;policy-name&#125;-spec.ts<br/>- isSatisfiedBy method<br/>- Used in aggregate invariants]
+    H -->|Query| L[Scaffold:<br/>- specifications/&#123;policy-name&#125;-spec.ts<br/>- toExpression method for repos<br/>- Used in application query services]
 
     D --> M[Scaffold:<br/>- Type guards or Zod/Yup schema<br/>- Compile-time enforcement<br/>- No runtime policy engine]
 ```
