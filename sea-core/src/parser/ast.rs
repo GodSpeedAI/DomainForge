@@ -57,7 +57,7 @@ fn build_ast(pairs: Pairs<Rule>) -> ParseResult<Ast> {
         match pair.as_rule() {
             Rule::program => {
                 for inner in pair.into_inner() {
-                    if let Rule::declaration = inner.as_rule() {
+                    if inner.as_rule() == Rule::declaration {
                         for decl in inner.into_inner() {
                             let node = parse_declaration(decl)?;
                             declarations.push(node);
@@ -303,17 +303,14 @@ fn parse_not_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         .next()
         .ok_or_else(|| ParseError::GrammarError("Expected expression in NOT".to_string()))?;
 
-    match first.as_rule() {
-        Rule::not_expr => {
-            // NOT operation
-            let expr = parse_expression(first)?;
-            Ok(Expression::Unary {
-                op: UnaryOp::Not,
-                operand: Box::new(expr),
-            })
-        }
-        _ => parse_expression(first),
-    }
+    // Parse the first inner expression
+    let expr = parse_expression(first)?;
+
+    // Always wrap with NOT operation
+    Ok(Expression::Unary {
+        op: UnaryOp::Not,
+        operand: Box::new(expr),
+    })
 }
 
 /// Parse comparison expression
@@ -625,28 +622,47 @@ fn parse_name(pair: Pair<Rule>) -> ParseResult<String> {
     }
 }
 
-/// Parse string literal (removes quotes)
+/// Parse string literal (handles escape sequences)
 fn parse_string_literal(pair: Pair<Rule>) -> ParseResult<String> {
     let s = pair.as_str();
-    if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
-        Ok(s[1..s.len() - 1].to_string())
-    } else {
-        Err(ParseError::GrammarError(format!(
+    if s.len() < 2 || !s.starts_with('"') || !s.ends_with('"') {
+        return Err(ParseError::GrammarError(format!(
             "Invalid string literal: {}",
             s
+        )));
+    }
+
+    let content = &s[1..s.len() - 1];
+
+    // Use serde_json to properly parse and unescape the string
+    match serde_json::from_str(&format!("\"{}\"", content)) {
+        Ok(unescaped) => Ok(unescaped),
+        Err(e) => Err(ParseError::GrammarError(format!(
+            "Invalid string literal escape sequences: {} - {}",
+            s, e
         )))
     }
 }
 
-/// Parse multiline string (removes triple quotes)
+/// Parse multiline string (removes triple quotes and handles escape sequences)
 fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
     let s = pair.as_str();
-    if s.len() >= 6 && s.starts_with("\"\"\"") && s.ends_with("\"\"\"") {
-        Ok(s[3..s.len() - 3].to_string())
-    } else {
-        Err(ParseError::GrammarError(format!(
+    if s.len() < 6 || !s.starts_with("\"\"\"") || !s.ends_with("\"\"\"") {
+        return Err(ParseError::GrammarError(format!(
             "Invalid multiline string: {}",
             s
+        )));
+    }
+
+    let content = &s[3..s.len() - 3];
+
+    // Create a JSON string from the multiline content and parse it to unescape
+    let json_string = format!("\"{}\"", content);
+    match serde_json::from_str(&json_string) {
+        Ok(unescaped) => Ok(unescaped),
+        Err(e) => Err(ParseError::GrammarError(format!(
+            "Invalid multiline string escape sequences: {} - {}",
+            s, e
         )))
     }
 }

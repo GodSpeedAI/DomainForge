@@ -6,436 +6,319 @@ Analyzing
 Reviewing
 
 ============================================================================
-File: .github/copilot-instructions.md
-Line: 646
+File: sea-core/src/wasm/graph.rs
+Line: 88
 Type: potential_issue
 
-[x] Task:
-.github/copilot-instructions.md around line 646: the sentence begins with a lowercase "for" ("for example, ...") but should start with a capital letter; update the sentence to start with "For example," and ensure surrounding punctuation/capitalization remains consistent with the document's style.
-
-
-
-============================================================================
-File: sea-core/examples/parser_demo.rs
-Line: 105
-Type: potential_issue
-
-[x] Task:
-In sea-core/examples/parser_demo.rs around lines 105-106, 118-119 and 143, remove the unchecked .unwrap() calls on graph lookups and replace them with explicit handling: use match or if let to handle the Option returned by graph.get_entity(...) / graph.get_resource(...), return or propagate an error (Result) or skip the flow with a clear log/error message when the entity/resource is missing, and ensure downstream code receives a valid value before use; apply the same pattern to each listed line so missing entities/resources do not cause a panic.
-
-
-
-============================================================================
-File: sea-core/tests/calm_schema_validation_tests.rs
-Line: 84 to 93
-Type: refactor_suggestion
-
-[x] Task:
-In sea-core/tests/calm_schema_validation_tests.rs around lines 84 to 93, the test duplicates schema compilation by calling serde_json::from_str and JSONSchema::compile; replace those two lines with a call to the existing compile_calm_schema() helper to obtain the compiled_schema variable, ensuring the test uses compile_calm_schema() (and import or adjust scope if necessary) so the test reads compiled_schema = compile_calm_schema(); and then proceeds unchanged.
-
-
-
-============================================================================
-File: sea-core/deny.toml
-Line: 31
-Type: potential_issue
-
-[x] Task:
-In sea-core/deny.toml around line 31, the allow-registry entry uses a malformed crates.io git URL; replace the value with the registry name "crates-io" (allow-registry = ["crates-io"]) or, if you must use a git URL, change it to the correct Git URL with the .git suffix (e.g., "https://github.com/rust-lang/crates.io-index.git") so the registry is recognized properly.
-
-
-
-============================================================================
-File: .github/workflows/ci.yml
-Line: 101 to 102
-Type: nitpick
-
-[x] Task:
-.github/workflows/ci.yml around lines 101 to 102: the workflow installs maturin and pytest without pinned versions which risks non-reproducible builds; update the step to install pinned versions (either hardcode vetted versions like maturin== and pytest== or reference workflow inputs/variables that contain approved version strings or a constraints file) so the CI always installs deterministic, tested releases; ensure the chosen versions are documented in the repo (or a single source of truth) and update any related workflow matrix or cache keys if needed.
-
-
-
-============================================================================
-File: .coderabbit.yml
-Line: 10 to 13
-Type: potential_issue
-
-[x] Task:
-.coderabbit.yml around lines 10 to 13: the auto_review configuration uses the wrong property name "branches:" which fails schema validation; change the key to "base_branches:" preserving the same list values (- main, - dev, - release/*) so the config conforms to the expected schema.
-
-
-
-============================================================================
-File: sea-core/tests/graph_tests.rs
-Line: 1 to 7
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/graph_tests.rs around lines 1 to 7, the test code calls uuid::Uuid::new_v4() but never imports the uuid crate; add a top-level import (use uuid::Uuid;) to the file and ensure the uuid dependency is present in Cargo.toml (e.g., uuid = "1" or the project’s chosen version) so the calls to Uuid::new_v4() compile.
-
-
-
-============================================================================
-File: .coderabbit.yml
-Line: 36
-Type: potential_issue
-
-[x] Task:
-.coderabbit.yml around line 36: change the misuse of auto_title_placeholder which currently holds a pipe-delimited pattern string; move that pattern into auto_title_instructions and set auto_title_placeholder to a placeholder identifier (for example "@coderabbitai") as the schema expects. Update the file so auto_title_placeholder contains the placeholder identifier string and add or adjust auto_title_instructions to contain the pattern(s) or guidance for generating titles instead of placing them in auto_title_placeholder.
-
-
-
-============================================================================
-File: sea-core/tests/sbvr_fact_schema_tests.rs
-Line: 16 to 19
-Type: nitpick
-
-[x] Task:
-In sea-core/tests/sbvr_fact_schema_tests.rs around lines 16 to 19, the test uses fragile substring checks on the serialized JSON; instead deserialize the JSON string back into a serde_json::Value (or a concrete struct) and assert the specific fields/values directly (e.g., check value["schema_version"] == "2.0", that value has a "destination" key, and that the appropriate resource id equals "resource-123"), replacing the json.contains(...) assertions with structured assertions that fail only on actual mismatches.
-
-
-
-============================================================================
-File: sea-core/tests/parser_tests.rs
-Line: 75 to 81
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/parser_tests.rs around lines 75 to 81, the test test_parse_policy_with_colon() duplicates test_parse_policy_simple(); either delete this redundant test or change it to assert a colon-specific behavior. For a replacement, update the test source to a case that exercises colon parsing (for example use a different placement of ':' or the "as:" form) and change the assertions to validate the parser outcome that depends on the colon (e.g., assert the declaration alias/name/token is parsed as expected or that a missing/extra colon produces an error).
-
-
-
-============================================================================
-File: sea-core/src/validation_error.rs
-Line: 192
-Type: nitpick
-
-[x] Task:
-In sea-core/src/validation_error.rs around line 192, the comment contains an organizational artifact "Phase 15A:"; remove that prefix so the comment reads only "Additional convenience constructors for common error patterns" (matching the project's comment style and consistency).
-
-
-
-============================================================================
-File: .github/workflows/ci.yml
-Line: 170
-Type: potential_issue
-
-[x] Task:
-.github/workflows/ci.yml around line 170: the workflow uses a curl | sh pattern to install wasm-pack which is a supply-chain risk; replace it with a verified install via Rust's package manager by running cargo install wasm-pack (include --locked if you want reproducible builds), ensure the Rust toolchain is present (rustup/cargo available) in the job beforehand, and update PATH if necessary so the installed binary is found; remove the curl pipe-to-shell line and use the cargo-based installation step instead.
-
-
-
-============================================================================
-File: .github/workflows/ci.yml
-Line: 176 to 183
-Type: potential_issue
-
-[x] Task:
-.github/workflows/ci.yml around lines 176 to 183: the script assigns SIZE from stat but does not validate it before using an arithmetic comparison, which can fail if SIZE is empty or non-numeric; after setting SIZE, add an explicit validation step that ensures SIZE is a non-empty numeric value (e.g., check for empty or a regex/ctype-digit test), and if the check fails emit a clear ::error:: message and exit 1; only proceed to the numeric comparison against 524288 if the validation passes.
-
-
-
-============================================================================
-File: requirements.txt
-Line: 1 to 2
-Type: potential_issue
-
-[x] Task:
-In requirements.txt lines 1-2, replace the unmaintained tree-sitter-languages==1.10.2 entry with the maintained alternative tree-sitter-language-pack and pin it to a release compatible with tree-sitter 0.25.x (or use the latest tree-sitter-language-pack that aligns with tree-sitter 0.25.x); remove the tree-sitter-languages line and add tree-sitter-language-pack with a matching version constraint so the tree-sitter and language-pack versions remain compatible, then run pip-compile / pip install to regenerate lockfiles and verify imports/tests still work.
-
-
-
-============================================================================
-File: .coderabbit.yml
-Line: 19 to 21
-Type: potential_issue
-
-[x] Task:
-In .coderabbit.yml around lines 19 to 21, remove the unsupported rustfmt tool configuration block (the three lines defining "rustfmt: enabled: true config_file: .rustfmt.toml") so the file conforms to the CodeRabbit schema; delete those lines and adjust indentation/spacing if necessary to keep valid YAML (ensure there are no leftover blank keys or broken structure) and rely on the already-configured clippy for Rust checks.
-
-
-
-============================================================================
-File: sea-core/src/parser/ast.rs
-Line: 568
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/parser/ast.rs around line 568, the call pair.into_inner().next().unwrap() panics when literal content is missing; replace the unwrap with next().ok_or_else(|| / construct a ParseError or appropriate error type with a clear message like "missing literal content" /)? so the function returns a proper error instead of panicking and propagates it with ?. Ensure you construct the error using the existing parser error type/constructor used elsewhere in this module for consistency.
-
-
-
-============================================================================
-File: sea-core/tests/rdf_xml_typed_literal_tests.rs
-Line: 26 to 32
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/rdf_xml_typed_literal_tests.rs around lines 26 to 32, the test suppresses deprecation for Flow::new; replace this deprecated constructor with the current non-deprecated API: call the up-to-date Flow constructor (e.g., Flow::try_new or Flow::from_parts — whichever is provided by Flow's public API), adapt the call arguments to the new signature, handle any Result or error return (unwrap or expect in the test), and then remove the #[allow(deprecated)] attribute so the test uses the supported API and fails on future breaking changes.
-
-
-
-============================================================================
-File: sea-core/tests/rdf_xml_typed_literal_tests.rs
-Line: 56
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/rdf_xml_typed_literal_tests.rs around line 56, the test currently asserts a fragile exact string fragment for an XML closing tag; instead parse the generated rdf_xml and assert semantically: parse rdf_xml with an XML parser (e.g., roxmltree or quick-xml), locate the element whose local name is "label" and namespace is "http://domainforge.ai/rdfs#" (or resolve via the RDF/XML namespace mappings), extract its text content and assert it equals or contains "Warehouse" (or the expected literal value); this avoids brittle whitespace/prefix/formatting issues while keeping the same semantic check.
-
-
-
-============================================================================
-File: sea-core/src/parser/ast.rs
-Line: 525 to 528
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/parser/ast.rs around lines 525 to 528, the four .unwrap() calls in parse_quantified_expr can panic on malformed input; replace each unwrap() with ok_or_else that returns a descriptive parse error (matching the file's existing style) before calling the parse_ helpers — e.g., for each inner.next() use inner.next().ok_or_else(|| parse_error_with_context("expected  in quantified expression"))? and then pass that token to the corresponding parse_ function, so errors are propagated instead of panicking.
-
-
-
-============================================================================
-File: sea-core/tests/parser_integration_tests.rs
-Line: 232
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/parser_integration_tests.rs around line 232, the Flow declaration Flow "X" from "A" to "A" is missing the required quantity parameter; update this line to include a valid quantity (e.g., quantity 1 or the correct numeric amount for this test) so the Flow declaration matches the expected syntax used by other tests.
-
-
-
-============================================================================
-File: tmp/coderabbit_results.md
-Line: 13 to 14
-Type: potential_issue
-
-[x] Task:
-Finding 1 now acknowledges that task-06-rdf-sbvr-escaping.md:test_language_tag_preserved asserts both `xml:lang="en"` and the `<http://domainforge.ai/rdfs#label>` element value, so the language-tag handling test already verifies its behavior and no further change is required under this finding.
-
-
-
-============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 537
-Type: potential_issue
-
-[x] Task:
-In docs/plans/tmp/task-07-fix-api-robustness.md around line 537, the code rebuilds constructor args using only the first argument node which will drop additional arguments or complex multi-part expressions; update the transformer to collect all argument nodes (e.g., iterate arguments_node.named_children), reconstruct the original argument text by either joining each child's source text in order or by slicing from the first child's start to the last child's end to preserve nested/complex expressions, and adjust any callers to use that full reconstructed args string; add/extend the test around lines 399–411 to include multi-argument and nested-expression Entity::new(...) cases and verify tree-sitter named_children boundaries for Rust call expressions.
-
-
-
-============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 756 to 758
-Type: potential_issue
-
-[x] Task:
-In docs/plans/tmp/task-07-fix-api-robustness.md around lines 756–758, the current behavior silently warns and returns when Resource::new has an unexpected arg count; change this to record and report skipped transformations instead of silently returning: add a counter and a collection of skipped locations (file and line or call snippet) and increment/populate it when len(args) != 2, keep the warning but do not just return silently; then at the end of the migration run emit a dry-run summary showing total transformed vs skipped and list/sketch of skipped call sites so operators can review; also add an optional strict flag that, when enabled, causes the code to raise an error and halt if any skips were recorded.
-
-
-
-============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 1360 to 1391
-Type: nitpick
-
-[x] Task:
-In docs/plans/tmp/task-07-fix-api-robustness.md around lines 1360 to 1391, the main() does not validate that the provided --file is a Rust source; add a check at about line 1398 that inspects parsed_args.file.suffix and if it is not in {'.rs', '.rs.bak'} call logger.error with a clear message and exit with sys.exit(1); also ensure imports for sys (and Path if missing) are present at the top of the file so the validation and exit work.
-
-
-
-============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 88 to 101
-Type: nitpick
-
-
-
-
-============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 1495 to 1502
-Type: potential_issue
-
-[x] Task:
-docs/plans/tmp/task-07-fix-api-robustness.md lines 1495–1502: Section 6 promises a regex fallback when tree-sitter parsing fails but the code raises on parse errors; implement the fallback inside RustTransformer.parse_file() so it tries tree-sitter, catches parse exceptions, logs a warning with the error, invokes a simple regex-based fallback parser that extracts imports, function signatures and comments into a minimal parse result compatible with downstream transformers, writes a /rollback/parse_failure_.log entry, and returns the fallback parse result (make this behavior configurable via a flag and keep tree-sitter failure re-raise only when fallback is disabled), or alternatively remove the fallback statement from the plan if you choose to defer it.
-
-
-
-============================================================================
-File: sea-core/tests/sbvr_flow_facts_tests.rs
-Line: 25 to 31
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/sbvr_flow_facts_tests.rs around lines 25 to 31, remove the #[allow(deprecated)] attribute and replace the deprecated Flow::new(...) call with the current constructor (e.g., Flow::try_new(...) or the library's documented replacement) and handle the Result (unwrap or expect with a clear message) so the test uses the non-deprecated API; consult the Flow type docs or code to pick the exact replacement name and signature and pass the same camera_id, warehouse_id, factory_id and Decimal::new(100, 0) arguments.
-
-
-
-============================================================================
-File: sea-core/src/parser/ast.rs
-Line: 560 to 561
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/parser/ast.rs around lines 560 to 561, the code uses inner.next().unwrap() which panics on missing tokens; replace these unwraps with proper error handling by using inner.next().ok_or_else(|| ParseError::new("expected identifier for object/member"))? (or the project’s existing parse error constructor) and then pass the resulting token into parse_identifier(...)? so the function returns a controlled parse error instead of panicking, matching the codebase’s error-handling style.
-
-
-
-============================================================================
-File: sea-core/tests/rdf_xml_typed_literal_tests.rs
-Line: 80 to 85
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/rdf_xml_typed_literal_tests.rs around lines 80 to 85, the test currently only checks for presence of escaped entities which allows malformed outputs; replace the loose contains() assertions with a single equality assertion that the escaped result equals the exact expected string "&amp;&lt;&gt;&quot;&apos;". Update the test to call KnowledgeGraph::escape_xml("&\"'") and assert_eq!(escaped, expected) (or equivalent) so the transformation is verified exactly.
-
-
+[x] Task: ✅ COMPLETED
+In sea-core/src/wasm/graph.rs around lines 88 (and likewise for the other affected blocks at 139–147, 189–198, 240–249 and the single-line occurrences 146, 197, 248), the four all_* methods currently swallow serialization failures by using unwrap_or(JsValue::NULL); update each method signature to return Result and stop returning JsValue::NULL on error—propagate the serde_wasm_bindgen serialization error to the caller by converting the serialization error into a JsValue and returning Err(...) instead of unwrapping to NULL, making the body return the successful JsValue on Ok and Err(converted_error) on failure.
 
 ============================================================================
 File: .github/workflows/release.yml
 Line: 88
 Type: potential_issue
 
-[x] Task:
-.github/workflows/release.yml around line 88: the workflow currently references the wrong maturin wheel output path (sea-core/target/wheels/.whl); change it to the default maturin output path target/wheels/.whl so the upload step picks up the generated wheels from the project root.
-
-
+[x] Task: ✅ COMPLETED
+.github/workflows/release.yml around line 88: the upload-artifact path uses target/wheels/.whl but the job runs with working-directory: sea-core so the wheels are actually under sea-core/target/wheels/.whl; update the path to point to sea-core/target/wheels/*.whl (or use a relative path that matches the working-directory) so the artifact uploader can find and upload the generated wheel files.
 
 ============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 1005 to 1010
+File: sea-core/src/calm/export.rs
+Line: 1 to 12
 Type: potential_issue
 
-[x] Task:
-In docs/plans/tmp/task-07-fix-api-robustness.md around lines 1005 to 1010, the separator logic incorrectly handles cases where the last non-whitespace character before the closing brace is a comma (including trailing commas with extra spaces or newlines), producing malformed imports; change the logic to inspect the last non-whitespace character before the brace (not just rstrip().endswith(',')) and, if that character is a comma, set the fragment to insert a leading space plus the new import followed by a trailing comma (e.g., " import_name,") so the new item keeps the list comma-terminated, otherwise use ", " + import_name (no trailing comma); also add a unit test after line 942 in test_import_insertion.py that covers multiline imports with trailing commas to validate both inline and multiline spacing variants.
-
-
-
-============================================================================
-File: docs/plans/tmp/task-06-rdf-sbvr-escaping.md
-Line: 800 to 812
-Type: potential_issue
-
-[x] Task:
-In docs/plans/tmp/task-06-rdf-sbvr-escaping.md around lines 800 to 812, the test asserts schema_version == "1.0" but the default_schema_version() returns "2.0"; update the test to assert schema_version equals "2.0" (and optionally update the inline comment to reflect that the default injected version is 2.0) so the assertion matches the actual default.
-
-
+[x] Task: ✅ COMPLETED
+In sea-core/src/calm/export.rs around lines 1 to 12, the code calls chrono::Utc::now() but chrono is not imported; add a top-level import like use chrono::Utc; to the imports block and then update line 12 to call Utc::now().to_rfc3339() (i.e., remove the chrono:: prefix) so the code compiles.
 
 ============================================================================
 File: sea-core/tests/wasm_tests.rs
-Line: 8
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/wasm_tests.rs around line 8, the import use sea_core::units::unit_from_string; is unused; remove that line from the file (delete the unused use statement) and save the file so the tests compile without unused-import warnings.
-
-
-
-============================================================================
-File: sea-core/tests/wasm_tests.rs
-Line: 3 to 6
-Type: potential_issue
-
-[x] Task:
-In sea-core/tests/wasm_tests.rs around lines 3 to 6, the wasm_bindgen_test_configure!(run_in_browser) macro is declared outside the cfg(feature = "wasm") mod wasm_tests block so its run_in_browser setting won't apply to those tests; move the wasm_bindgen_test_configure!(run_in_browser) invocation inside the mod wasm_tests scope (immediately after the mod declaration and before any test functions) so the configuration is in the same module as the tests and wrapped by #[cfg(feature = "wasm")].
-
-
-
-============================================================================
-File: docs/plans/tmp/task-06-rdf-sbvr-escaping.md
-Line: 1003 to 1012
-Type: potential_issue
-
-[x] Task:
-In docs/plans/tmp/task-06-rdf-sbvr-escaping.md around lines 1003 to 1012, the test compares flow_fact.destination (Option) directly to factory_id.to_string() (String) causing a type mismatch; change the assertion to compare against Some(factory_id.to_string()) (or unwrap/expect the Option first) so the types match — e.g. replace the failing assert_eq! with one that asserts flow_fact.destination == Some(factory_id.to_string()) or uses flow_fact.destination.as_ref().map(|s| s.as_str()) == Some(factory_id.as_str()) as appropriate.
-
-
-
-============================================================================
-File: docs/plans/tmp/task-06-rdf-sbvr-escaping.md
-Line: 1022 to 1031
-Type: potential_issue
-
-[x] Task:
-In docs/plans/tmp/task-06-rdf-sbvr-escaping.md around lines 1022 to 1031, the assignment to the destination field uses a String but the struct expects Option; change the assignment to provide an Option by wrapping the value in Some(...) or using .map(|s| s.to_string()) as appropriate (e.g., destination: Some(flow.to_id().to_string())), ensuring the field type matches Option.
-
-
-
-============================================================================
-File: sea-core/src/primitives/flow.rs
-Line: 46 to 66
+Line: 1 to 9
 Type: nitpick
 
-[x] Task:
-In sea-core/src/primitives/flow.rs around lines 46 to 66, the new() constructor duplicates the logic of new_with_namespace by creating the default namespace and UUID itself; refactor new() to call new_with_namespace(DEFAULT_NAMESPACE.to_string(), resource_id, from_id, to_id, quantity) so it delegates creation and avoids duplicated code, preserving the same returned Flow structure and attributes initialization.
-
-
+[x] Task: ✅ COMPLETED
+In sea-core/tests/wasm_tests.rs around lines 1 to 9, the top-level #[allow(unused_imports)] and the wasm_bindgen_test imports are declared outside the #[cfg(feature = "wasm")] module causing the allow attribute to mask unused imports when the wasm feature is disabled; move the lines importing wasm_bindgen_test and wasm_bindgen_test_configure (and remove the file-level #[allow(unused_imports)]) into the feature-gated mod wasm_tests block so the imports only exist when feature="wasm" and the allow attribute is no longer needed.
 
 ============================================================================
-File: sea-core/src/wasm/primitives.rs
-Line: 11 to 368
-Type: nitpick
-
-[x] Task:
-In sea-core/src/wasm/primitives.rs around lines 11 to 368, multiple wrapper structs (Entity, Resource, Flow, Instance) repeat identical wasm-bindgen methods (set_attribute, get_attribute, to_json) and helper impls (inner, from_inner, into_inner); introduce a macro (e.g., impl_wasm_common!) that generates those shared #[wasm_bindgen] impl blocks and the helper impls parameterized by wrapper and inner types, place the macro definition above the struct definitions, replace each duplicated block with a single macro invocation like impl_wasm_common!(Entity, RustEntity) for each wrapper, and ensure the macro preserves #[wasm_bindgen(js_name = ...)] attributes, uses serde_wasm_bindgen/console/JsValue as before, and is visible to all usages (move necessary use/imports earlier if needed).
-
-
-
-============================================================================
-File: docs/plans/tmp/task-07-fix-api-robustness.md
-Line: 1022 to 1023
-Type: potential_issue
-
-[x] Task:
-In docs/plans/tmp/task-07-fix-api-robustness.md around lines 1017–1023, ImportInserter._create_new_import currently sets insert_byte = 0 when no existing use_declaration is found, which can insert imports inside functions or comments; change the logic so that when last_use is None you compute an insertion point at the start of the module-level declarations by finding the end of any shebang and module docstring (or else the first top-level statement start) and use that byte offset instead of 0; then add a unit test in tests/test_import_insertion.py that creates a file with no imports but with a top-level function and asserts the new import is inserted before that function definition.
-
-
-
-============================================================================
-File: sea-core/src/primitives/instance.rs
-Line: 41 to 52
+File: sea-core/Cargo.toml
+Line: 21
 Type: refactor_suggestion
 
-[x] Task:
-In sea-core/src/primitives/instance.rs around lines 41 to 52, the new() constructor duplicates the initialization logic present in new_with_namespace(); refactor new() to simply delegate to new_with_namespace() by returning Self::new_with_namespace(resource_id, entity_id, DEFAULT_NAMESPACE.to_string()) (or String::from(DEFAULT_NAMESPACE)) so the UUID, namespace assignment and attribute initialization remain centralized in new_with_namespace().
+[x] Task: ✅ COMPLETED
+In sea-core/Cargo.toml around line 21, the log dependency is using a floating semver "0.4"; change it to a pinned patch version (e.g., "0.4.21" or the latest 0.4.x) to ensure reproducible builds; also check and pin any other unpinned log entries referenced in the comment (lines 28 and 34) to the same 0.4.x patch version for consistency.
+
+============================================================================
+File: docs/plans/tmp/task-07-fix-api-robustness.md
+Line: 1390 to 1394
+Type: nitpick
+
+[ ] Task:
+In docs/plans/tmp/task-07-fix-api-robustness.md around lines 1390 to 1394, the test reaches into Inserter internals (setting inserter.source_code/inserter.parser and calling_find_primitives_use_decls) which verifies implementation instead of the public API; change the test to exercise only the public add_import()/related public methods and then parse the resulting source (or the returned/updated code) to assert the AST contains the expected sea_core::primitives use/import declaration — do not set or read private attributes or call underscored helper methods.
+
+============================================================================
+File: docs/plans/tmp/task-07-fix-api-robustness.md
+Line: 163
+Type: nitpick
+
+[ ] Task:
+In docs/plans/tmp/task-07-fix-api-robustness.md at line 163, the label "tree-sitter-rust (Python bindings)" is misleading; change the wording to "tree-sitter with tree_sitter_languages" and update the parenthetical to indicate it uses the tree_sitter_languages package (pre-built language parsers including Rust) so readers aren't confused by a non-existent "tree-sitter-rust" package.
+
+============================================================================
+File: docs/plans/tmp/task-07-fix-api-robustness.md
+Line: 866 to 872
+Type: potential_issue
+
+[ ] Task:
+In docs/plans/tmp/task-07-fix-api-robustness.md around lines 866 to 872, the macro name extraction used to detect stringify/concat does not handle fully-qualified paths (e.g. core::stringify), so change the check to use the last path segment: split the extracted macro_name on '::' and use the final element (macro_base) when testing membership in {'stringify','concat'} (or alternatively normalize by rpartition['::'](-1)) so fully-qualified macros are correctly recognized.
+
+============================================================================
+File: docs/plans/tmp/task-07-fix-api-robustness.md
+Line: 1594 to 1595
+Type: nitpick
+
+[ ] Task:
+In docs/plans/tmp/task-07-fix-api-robustness.md around lines 1594–1595: the plan describes an allow_fallback flag and regex-based fallback for RustTransformer.parse_file() but the implementation is missing; add logic in RustTransformer.parse_file() so that on a tree-sitter parse exception it logs a warning, writes the raw exception and stack trace to /rollback/parse_failure_.log, then if self.allow_fallback (wired to the CLI --allow-fallback and automatically true for dry-runs) synthesizes and returns a minimalist AST built by scanning the source with a short regex that extracts top-level use statements, top-level function signatures and outer file comments (structured to satisfy downstream transformers/import inserter), otherwise re-raise the original parse exception to fail fast in strict mode.
+
+============================================================================
+File: sea-core/tests/rdf_xml_typed_literal_tests.rs
+Line: 89 to 93
+Type: nitpick
+
+============================================================================
+File: sea-core/tests/sbvr_fact_schema_tests.rs
+Line: 50 to 57
+Type: potential_issue
+
+[x] Task: ✅ COMPLETED
+In sea-core/tests/sbvr_fact_schema_tests.rs around lines 50 to 57, the round-trip JSON test checks every field except verb; add a new assertion immediately after line 55 that verifies the deserialized.verb matches the original fact's verb value (for this test case assert that it equals the expected verb, e.g. "installs"), so the test fully covers all SbvrFactType fields.
+
+============================================================================
+File: sea-core/tests/flow_tests.rs
+Line: 34 to 37
+Type: potential_issue
+
+[ ] Task:
+In sea-core/tests/flow_tests.rs around lines 34 to 37, the test currently only asserts the ID strings are non-empty; replace these weak checks with actual UUID parsing validation by calling Uuid::parse_str(...) (from the uuid crate) for flow.resource_id(), flow.from_id(), flow.to_id(), and flow.id(), and assert that each parse returns Ok(_); ensure you import uuid::Uuid at the top of the test file if not already present.
+
+============================================================================
+File: sea-core/src/python/policy.rs
+Line: 30 to 48
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/python/policy.rs around lines 30 to 48, the BinaryOp enum is exposed to Python but lacks Python docstrings; add documentation by exposing a class-level __doc__ and per-variant docs using pyo3 class attributes. Concretely: add a #[pymethods] impl BinaryOp block that defines a #[classattr] const or fn __doc__ -> &'static str returning a descriptive docstring for the enum, and add #[classattr] constants for each variant (e.g., pub const And: BinaryOp = BinaryOp::And) with brief docstrings so Python users see documentation for the enum and its members.
+
+
+
+============================================================================
+File: sea-core/src/python/policy.rs
+Line: 8 to 16
+Type: potential_issue
+
 
 
 
 ============================================================================
 File: sea-core/src/calm/import.rs
-Line: 185 to 189
+Line: 198 to 353
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/calm/import.rs around lines 198 to 353, tests only cover happy-path entity/resource/flow imports; add unit tests to exercise instance imports, error paths, and edge cases: create a test that imports a node with metadata indicating an Instance (use import_instance path) and assert instance_count and properties; add tests that feed malformed JSON to import and assert Err for missing required metadata, relationships referencing unknown node IDs, and invalid quantity formats (e.g., non-numeric strings); add edge-case tests for nodes missing namespace (ensure import tolerates or rejects per spec) and relationships with invalid parties (e.g., missing source/destination or same ID) and assert correct error behavior. For each test, construct serde_json::json fixtures, call import(calm_json), and assert Ok with expected counts/properties or Err with expected error kind/message to validate error handling.
+
+
+
+============================================================================
+File: sea-core/src/calm/import.rs
+Line: 76
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/calm/import.rs around line 76, the trailing comment "Skip entities, resources, and constraints in second pass" is misleading because constraint handling isn't implemented; update the comment to explicitly state that constraints are not yet supported (e.g., "Skip entities and resources in second pass; constraints not yet supported") or implement the missing constraint handling if intended—make the comment and code consistent.
+
+
+
+============================================================================
+File: sea-core/src/calm/import.rs
+Line: 55
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/calm/import.rs around line 55, update the trailing comment on the match arm that currently reads "Skip instances and constraints in first pass" to explicitly reflect actual behavior: change it to something like "Skip instances (handled in second pass) and other unsupported node types" so it doesn't claim support for constraints that don't exist; keep the match logic unchanged and only revise the comment text for clarity.
+
+
+
+============================================================================
+File: .coderabbit.yml
+Line: 14 to 22
 Type: potential_issue
 
-[x] Task:
-In sea-core/src/calm/import.rs around lines 185 to 189, Simple relationship variants are currently no-ops which silently drop data; update the match arm to explicitly handle the "ownership" case (return a descriptive Err indicating Simple relationships are not yet supported for ownership) and for any other Simple rel_type either return a similar unsupported error or explicitly document via a clear comment that those Simple encodings are intentionally skipped; ensure the function propagates the error type used in this module and include the rel_type value in the error message for debugging.
+[ ] Task:
+.coderabbit.yml lines 14-22: the current snippet nests a top-level tools section under auto_review and includes unsupported config_file properties for clippy and ruff; move the tools block out to be a sibling of auto_review under reviews, and remove the unsupported config_file keys for clippy and ruff (leave only enabled: true) or, if you need to keep config_file, relocate those settings to a tool that supports config_file (e.g., golangci-lint, swiftlint, or semgrep) and ensure the final YAML conforms to the CodeRabbit schema.
+
+
+
+============================================================================
+File: sea-core/tests/turtle_entity_export_tests.rs
+Line: 1 to 2
+Type: nitpick
+
+[ ] Task:
+In sea-core/tests/turtle_entity_export_tests.rs around lines 1 to 2, the file is wrapped with an unnecessary #[cfg(test)] and a module declaration because files under tests/ are already integration tests; remove the leading #[cfg(test)] attribute and the surrounding "mod turtle_entity_export_tests {", move the test items from inside that module to the top level of the file, and delete the corresponding closing brace at the end of the file so the tests live at file scope.
+
+
+
+============================================================================
+File: sea-core/examples/parser_demo.rs
+Line: 164 to 174
+Type: potential_issue
+
+[ ] Task:
+In sea-core/examples/parser_demo.rs around lines 164 to 174, the code currently converts flow.quantity() by calling .to_string().parse::().unwrap_or(0.0) which is inefficient and fragile; replace this with a direct numeric conversion or accessor: if Quantity is already a numeric type cast or convert it directly to f64 (e.g. as f64 or as_primitive), or add/use a Quantity::to_f64()/as_f64() method and call that; handle conversion failures explicitly (e.g. match or unwrap_or with a logged warning) instead of round-tripping through strings so totals are accurate and performant.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 306 to 309
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/quantifier.rs around lines 306 to 309, the code silently falls back to 0.0 on parse errors (avg.to_string().parse::().unwrap_or(0.0)), corrupting average results; replace the panic/unwrap_or path by actually propagating the parse error: perform the parse into f64 and propagate any Err (using the ? operator or map_err to convert into the function's error type) and then wrap the successfully parsed f64 into serde_json::json!(...). Ensure the function's Result/Err type is used to return the parse error rather than returning 0.0.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 275 to 278
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/quantifier.rs around lines 275 to 278, the code currently uses unwrap_or(0.0) when parsing the Decimal-to-f64 conversion which hides parse failures and returns 0.0; change it to propagate the parse error instead of defaulting: remove unwrap_or and use the ? operator (or map_err to convert the parse error into the function's error type) so the parse failure is returned to the caller, and ensure the surrounding function signature/return type supports returning that error.
+
+
+
+============================================================================
+File: sea-core/tests/graph_tests.rs
+Line: 535
+Type: nitpick
+
+[ ] Task:
+In sea-core/tests/graph_tests.rs around line 535, the loop declares an unused variable _i; replace for _i in 1..=5 with for _ in 1..=5 to indicate the index is intentionally unused and silence the unused variable warning.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 238 to 240
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/quantifier.rs around lines 238 to 240, the code unconditionally calls filter_expr.substitute("flow", item) which breaks substitutions for entity/resource/instance collections; replace the hardcoded "flow" with a variable name chosen from the collection type (e.g., match on the collection enum/variant to map to "flow"/"entity"/"resource"/"instance"), then call substitute with that chosen name and keep the existing unwrap_or_else fallback behavior so errors are handled the same way.
+
+
+
+============================================================================
+File: sea-core/tests/parser_tests.rs
+Line: 68 to 91
+Type: refactor_suggestion
+
+[ ] Task:
+In sea-core/tests/parser_tests.rs around lines 68 to 91, remove the redundant test_parse_policy_simple function (lines 68-73) because its assertions duplicate test_parse_policy_with_colon; delete the entire test_parse_policy_simple block so only test_parse_policy_with_colon remains, ensuring compilation still passes and test ordering unaffected.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 353 to 355
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/quantifier.rs around lines 353 to 355, the code silently converts a string to f64 with parse::().unwrap_or(0.0) which masks parse failures by returning 0.0; instead propagate parse errors: perform the parse into a Result and propagate the error (for example use map(|d| d.to_string().parse::()) and then transpose or use and_then with ? to return a Result), removing unwrap_or so failures bubble up to the caller, or convert the parse error into the function's error type and return Err when parsing fails.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 163
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/quantifier.rs around line 163, the code currently does f.quantity().to_string().parse::().unwrap_or(0.0) which silently converts parse failures to 0.0 and corrupts aggregations; instead remove the unwrap_or(0.0) and propagate parse errors upward (or return a Result) so malformed quantities fail loudly — update the surrounding function signature to return Result (or propagate with ?), convert parse errors into a contextual error (with field info) rather than defaulting, and add a small unit test to assert that invalid quantity strings produce an error.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 330 to 332
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/quantifier.rs around lines 330 to 332, the current code calls unwrap_or(0.0) after parsing which swallows parse failures and returns 0.0; instead change the expression to parse into a Result and propagate any parse error back to the caller (do not silently replace with 0.0). Concretely, map the optional value into a parse Result (e.g. min.map(|d| d.to_string().parse::()).transpose() or equivalent), propagate the parse error with ? so failures bubble up, and then wrap the resulting Option into the serde_json::json! call.
+
+
+
+============================================================================
+File: sea-core/src/parser/ast.rs
+Line: 641 to 652
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/parser/ast.rs around lines 641 to 652, parse_multiline_string currently only strips the triple quotes and returns the raw content, missing escape sequence processing; update it to apply the same unescaping logic used by parse_string_literal (or extract a shared helper unescape_string and call it from both functions) so that sequences like \\n, \\t, \\\", unicode escapes, etc., are decoded correctly; ensure errors from the unescape helper map to ParseError::GrammarError and keep the same length/quote validation before unescaping.
+
+
+
+============================================================================
+File: sea-core/src/parser/ast.rs
+Line: 56 to 71
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/parser/ast.rs around lines 56 to 71, the inner node check uses the uncommon if let Rule::declaration = inner.as_rule() form; change this to idiomatic pattern matching by replacing that if let with either if inner.as_rule() == Rule::declaration { ... } or a match inner.as_rule() { Rule::declaration => { ... }, _ => {} } so the code follows standard Rust matching style while preserving the existing logic and error handling for parsing declarations.
+
+
+
+============================================================================
+File: sea-core/src/parser/ast.rs
+Line: 628 to 639
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/parser/ast.rs around lines 628 to 639, the current parse_string_literal simply strips the surrounding quotes and ignores escape sequences, which will misparse strings containing things like \" \\ \n \t; replace the manual slicing with a proper unescaping step—use a JSON-style string parser (e.g. call serde_json::from_str::(s)) to parse and unescape the quoted string, map any serde_json error into the existing ParseError::GrammarError, and return the resulting unescaped String; keep the existing check that the input is a quoted string or let serde_json handle invalid inputs and translate its errors into your ParseResult.
 
 
 
 ============================================================================
 File: sea-core/src/units/mod.rs
-Line: 278 to 295
+Line: 277 to 279
 Type: nitpick
 
-[x] Task:
-In sea-core/src/units/mod.rs around lines 278 to 295, unit_from_string currently constructs UnitRegistry::default() on every call which wastes CPU and memory; instead create a single, shared, lazily-initialized registry (use std::sync::OnceLock or lazy_static) and call get_or_init to initialize UnitRegistry::default() once, then use that static registry reference inside unit_from_string; update imports accordingly and ensure the static is thread-safe and holds the registry for repeated lookups rather than recreating it each invocation.
+[ ] Task:
+In sea-core/src/units/mod.rs around lines 277-281, the doc comment currently on lines 277-278 is attached to DEFAULT_UNIT_REGISTRY but actually documents the unit_from_string function; move that triple-slash doc comment so it sits immediately above the unit_from_string function declaration (line ~281) so the documentation attaches to the correct item, preserving the comment text and formatting and removing it from before DEFAULT_UNIT_REGISTRY.
+
+
+
+============================================================================
+File: sea-core/src/parser/ast.rs
+Line: 299 to 317
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/parser/ast.rs around lines 299 to 317, the parse_not_expr currently only wraps the operand with UnaryOp::Not when the inner rule is Rule::not_expr and otherwise returns the unwrapped expression; change it so that after pulling the first inner pair you always call parse_expression(first) and then return Expression::Unary { op: UnaryOp::Not, operand: Box::new(parsed_expr) }, ensuring any single NOT is unconditionally applied to its operand.
 
 
 
 ============================================================================
 File: sea-core/src/kg.rs
-Line: 471 to 529
-Type: refactor_suggestion
+Line: 141 to 145
+Type: nitpick
 
-[x] Task:
-In sea-core/src/kg.rs around lines 471 to 529 add unit tests that cover URI encoding and escaping edge cases: create entities/resources whose names include space, ':', '/', and '#' and assert exported RDF (turtle) contains distinct, correctly encoded URIs (no collisions); add literals containing escape sequences (\n, \t, \", \\) and assert they appear escaped in turtle output; add values with XML-special characters (&, , ", ') and assert rdf-xml output has them properly escaped or wrapped; include tests for typed literals (e.g. "100"^^xsd:decimal) and language-tagged literals ("hello"@en) and assert those exact tokens are present in the appropriate format; ensure tests use graph.export_rdf("turtle") and graph.export_rdf("rdf-xml") and assert Err(KgError::UnsupportedFormat(_)) for unsupported formats where appropriate.
+[ ] Task:
+In sea-core/src/kg.rs around lines 141 to 145, the code assumes flow.quantity() produces a Turtle-safe decimal literal but doesn't validate or document that; add a short validation or assertion that the decimal string matches a safe numeric pattern (e.g. optional leading sign, digits, optional fractional part, no exponent or non-numeric chars) before constructing the Turtle literal, and if it fails either sanitize/convert it to a safe decimal representation or return/log an error; alternatively add a clear code comment documenting the guarantee that flow.quantity() returns a valid decimal string and consider using a canonical formatting function (or regex check) to enforce the Turtle numeric literal shape before pushing the Triple.
 
 
 
 ============================================================================
-File: sea-core/src/kg.rs
-Line: 380 to 413
+File: sea-core/src/parser/ast.rs
+Line: 598 to 601
 Type: potential_issue
 
 
@@ -443,11 +326,41 @@ Type: potential_issue
 
 ============================================================================
 File: sea-core/src/kg.rs
-Line: 351 to 353
+Line: 339 to 352
 Type: potential_issue
 
-[x] Task:
-In sea-core/src/kg.rs around lines 351 to 353, the current uri_encode replaces [' ', ':', '/', '#'] with underscores which creates collisions (different identifiers mapping to the same URI); replace this with proper percent-encoding per RFC 3986 instead: use a percent-encoding routine (e.g. percent-encoding crate or std helpers) that leaves unreserved characters (ALPHA / DIGIT / '-' / '.' / '_' / '~') intact and percent-encodes reserved/unsafe characters (including space, ':', '/', '#'), then return the encoded string (preserve any existing "sea:" prefix logic elsewhere) so different inputs map to distinct, reversible URIs.
+[ ] Task:
+In sea-core/src/kg.rs around lines 339 to 352, the escape_turtle_literal function misses Turtle escapes for backspace and form feed; add match arms for U+0008 (backspace) and U+000C (form feed) mapping them to "\\b" and "\\f" respectively so that those characters are properly escaped in output, keeping the same push_str style and preserving existing behavior for other characters.
+
+
+
+============================================================================
+File: sea-core/src/kg.rs
+Line: 358 to 366
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/kg.rs around lines 358 to 366, clean_uri currently expands any prefix:name into http://domainforge.ai/{prefix}#{name}, which wrongly rewrites standard RDF/XSD prefixes; replace this hard-coded expansion with a proper prefix-to-namespace lookup: parse the input on the first ':' into (prefix,name), consult a static map (or match) containing standard mappings (e.g. rdf -> "http://www.w3.org/1999/02/22-rdf-syntax-ns#", rdfs -> "http://www.w3.org/2000/01/rdf-schema#", xsd -> "http://www.w3.org/2001/XMLSchema#", owl -> "http://www.w3.org/2002/07/owl#", etc.), and if the prefix exists return namespace + name (using '#' or '/' as appropriate for that namespace), otherwise fall back to the original domainforge expansion or uri.to_string(); also handle inputs with more than one ':' by splitting only on the first ':'.
+
+
+
+============================================================================
+File: sea-core/src/kg.rs
+Line: 571 to 593
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/kg.rs around lines 571 to 593, the test currently asserts the wrong expanded datatype URI (it expects the buggy value "http://domainforge.ai/xsd#decimal"); update the assertion to the correct XSD decimal URI produced by the fixed clean_uri — replace the expected string with "http://www.w3.org/2001/XMLSchema#decimal" (i.e. assert that xml.contains("rdf:datatype=\"http://www.w3.org/2001/XMLSchema#decimal\"")). Ensure the rest of the assertions remain unchanged.
+
+
+
+============================================================================
+File: sea-core/src/typescript/primitives.rs
+Line: 201 to 217
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/typescript/primitives.rs around lines 201 to 217, replace the string-parse conversion with Decimal::to_f64() but keep the original NaN-to-0.0 behavior: call self.inner.quantity().to_f64() and match on the Option, returning the f64 when Some and finite; map positive infinity to f64::MAX, negative infinity to f64::MIN, map NaN to 0.0, and treat None (or any other case) as 0.0.
 
 
 

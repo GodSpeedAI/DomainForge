@@ -11,16 +11,14 @@ reviews:
       - main
       - dev
       - release/*
-    tools:
-      # Rust tooling
-      clippy:
-        enabled: true
-        config_file: sea-core/Cargo.toml
-      # Python tooling
-      ruff:
-        enabled: true
-        config_file: pyproject.toml
-  # Request changes workflow
+  # Tools configuration
+  tools:
+    # Rust tooling
+    clippy:
+      enabled: true
+    # Python tooling
+    ruff:
+      enabled: true
   request_changes_workflow: true
   high_level_summary: true
   poem: false

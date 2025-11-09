@@ -3,13 +3,14 @@ use super::models::{
 };
 use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::Graph;
+use chrono::Utc;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
 pub fn export(graph: &Graph) -> Result<Value, String> {
     let mut calm_model = CalmModel::new();
 
-    calm_model.metadata.sea_timestamp = Some(chrono::Utc::now().to_rfc3339());
+    calm_model.metadata.sea_timestamp = Some(Utc::now().to_rfc3339());
 
     for entity in graph.all_entities() {
         calm_model.nodes.push(export_entity(entity));

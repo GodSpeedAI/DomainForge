@@ -160,7 +160,7 @@ def test_tree_sitter_parses_entity_constructor():
 
 **Decision Point:** Choose between two approaches:
 
-1. **tree-sitter-rust** (Python bindings) - parse Rust to AST, transform in Python
+1. **tree-sitter with tree_sitter_languages** (pre-built language parsers including Rust) - parse Rust to AST, transform in Python
 2. **Rust-based migration script** - use `syn` crate for parsing, write tool in Rust
 
 **Recommended:** Tree-sitter approach (keeps Python tooling, proven for code transformation)
@@ -210,8 +210,8 @@ class RustTransformer:
         self.changes: List[Tuple[int, int, str]] = []  # (start_byte, end_byte, replacement)
         self.source_code: Optional[bytes] = None
 
-    def parse_file(self, filepath: Path) -> Tuple[Tree, bytes]:
-        """Parse Rust file into AST"""
+    def parse_file(self, filepath: Path, allow_fallback: bool = False) -> Tuple[Tree, bytes]:
+        """Parse Rust file into AST with optional fallback on parse failure"""
         try:
             with open(filepath, 'rb') as f:
                 source_code = f.read()
@@ -219,8 +219,32 @@ class RustTransformer:
             self.source_code = source_code
             return tree, source_code
         except Exception as e:
-            logger.error(f"Failed to parse {filepath}: {e}")
-            raise
+            logger.warning(f"Tree-sitter parse failed for {filepath}: {e}")
+
+            # Write error details to rollback log
+            import time
+            timestamp = int(time.time())
+            rollback_dir = Path('/rollback')
+            rollback_dir.mkdir(exist_ok=True)
+            error_log = rollback_dir / f'parse_failure_{timestamp}.log'
+
+            with open(error_log, 'w') as log_file:
+                log_file.write(f"Parse failure for: {filepath}\n")
+                log_file.write(f"Error: {e}\n")
+                log_file.write(f"Stack trace:\n")
+                import traceback
+                log_file.write(traceback.format_exc())
+                log_file.write(f"\nSource code:\n")
+                with open(filepath, 'rb') as f:
+                    log_file.write(f.read().decode('utf-8', errors='replace'))
+
+            if not allow_fallback:
+                logger.error(f"Fallback disabled, re-raising parse exception")
+                raise
+
+            # Fallback: synthesize minimalist AST using regex
+            logger.info(f"Using fallback AST synthesis for {filepath}")
+            return self._synthesize_fallback_ast(filepath)
 
     def find_function_calls(self, node: Node, function_name: str) -> List[Node]:
         """Recursively find all calls to a specific function"""
@@ -272,6 +296,48 @@ class RustTransformer:
             result[start_byte:end_byte] = replacement.encode('utf-8')
 
         return result.decode('utf-8')
+
+    def _synthesize_fallback_ast(self, filepath: Path) -> Tuple[Tree, bytes]:
+        """Synthesize a minimalist AST using regex when tree-sitter fails"""
+        import re
+        from tree_sitter import Tree, Node
+
+        with open(filepath, 'rb') as f:
+            source_code = f.read()
+        self.source_code = source_code
+
+        # Regex patterns to extract basic structure
+        use_pattern = re.compile(r'^\s*use\s+([^;]+);', re.MULTILINE)
+        fn_pattern = re.compile(r'^\s*fn\s+(\w+)\s*\(', re.MULTILINE)
+        comment_pattern = re.compile(r'(//[^\n]*|/\*.*?\*/)', re.DOTALL)
+
+        # Extract use statements
+        use_matches = use_pattern.findall(source_code.decode('utf-8', errors='replace'))
+        use_statements = '\n'.join(f"use {use_stmt};" for use_stmt in use_matches)
+
+        # Extract function signatures
+        fn_matches = fn_pattern.findall(source_code.decode('utf-8', errors='replace'))
+        fn_signatures = '\n'.join(f"fn {name}() {{ /* fallback */ }}" for name in fn_matches)
+
+        # Extract comments
+        comments = comment_pattern.findall(source_code.decode('utf-8', errors='replace'))
+        comment_text = '\n'.join(comments)
+
+        # Synthesize minimal source with structure for downstream transformers
+        synthesized = f"""// Fallback AST - tree-sitter parse failed
+{use_statements}
+{comment_text}
+// Function stubs for downstream compatibility
+{fn_signatures}
+"""
+
+        # Create a minimal tree structure that satisfies downstream transformers
+        # This is a simplified approach - real implementation would need proper tree-sitter nodes
+        logger.info(f"Synthesized fallback AST with {len(use_matches)} imports, {len(fn_matches)} functions")
+
+        # For now, return the original source with warning
+        # In a full implementation, this would create proper tree-sitter Tree/Node objects
+        return Tree(source_code.decode('utf-8', errors='replace'), []), source_code
 
 
 def smoke_test():
@@ -866,9 +932,11 @@ class ResourceTransformer(RustTransformer):
         if target.type == 'macro_invocation':
             macro_node = target.child_by_field_name('macro')
             macro_name = self._node_text(macro_node).decode() if macro_node else ''
-            if macro_name in {'stringify', 'concat'}:
+            # Handle fully-qualified paths (e.g., core::stringify) by using the last segment
+            macro_base = macro_name.rsplit('::', 1)[-1] if '::' in macro_name else macro_name
+            if macro_base in {'stringify', 'concat'}:
                 return True
-            if macro_name == 'format':
+            if macro_base == 'format':
                 return False
 
         return False

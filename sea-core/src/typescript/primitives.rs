@@ -200,8 +200,8 @@ impl Flow {
 
     #[napi(getter)]
     pub fn quantity(&self) -> f64 {
-        match self.inner.quantity().to_string().parse::<f64>() {
-            Ok(value) => {
+        match self.inner.quantity().to_f64() {
+            Some(value) => {
                 if value.is_finite() {
                     value
                 } else if value.is_infinite() && value.is_sign_positive() {
@@ -212,7 +212,7 @@ impl Flow {
                     0.0
                 }
             }
-            Err(_) => 0.0,
+            None => 0.0,
         }
     }
 

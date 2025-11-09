@@ -47,6 +47,80 @@ pub enum BinaryOp {
     EndsWith,
 }
 
+#[pymethods]
+impl BinaryOp {
+    #[classattr]
+    fn __doc__() -> &'static str {
+        "Binary operations for policy expressions.\n\n\
+         This enum defines various binary operators that can be used in policy\n\
+         expressions to compare values, combine conditions, and perform arithmetic.\n\n\
+         Examples:\n\
+         - Logical operations: And, Or\n\
+         - Comparison operations: Equal, GreaterThan, LessThan, etc.\n\
+         - Arithmetic operations: Plus, Minus, Multiply, Divide\n\
+         - String operations: Contains, StartsWith, EndsWith"
+    }
+
+    #[classattr]
+    const And: BinaryOp = BinaryOp::And;
+
+    #[doc = "Logical AND operation - returns true if both operands are true"]
+    #[classattr]
+    const Or: BinaryOp = BinaryOp::Or;
+
+    #[doc = "Equality comparison - returns true if operands are equal"]
+    #[classattr]
+    const Equal: BinaryOp = BinaryOp::Equal;
+
+    #[doc = "Inequality comparison - returns true if operands are not equal"]
+    #[classattr]
+    const NotEqual: BinaryOp = BinaryOp::NotEqual;
+
+    #[doc = "Greater than comparison - returns true if left operand is greater than right"]
+    #[classattr]
+    const GreaterThan: BinaryOp = BinaryOp::GreaterThan;
+
+    #[doc = "Less than comparison - returns true if left operand is less than right"]
+    #[classattr]
+    const LessThan: BinaryOp = BinaryOp::LessThan;
+
+    #[doc = "Greater than or equal comparison - returns true if left operand is greater than or equal to right"]
+    #[classattr]
+    const GreaterThanOrEqual: BinaryOp = BinaryOp::GreaterThanOrEqual;
+
+    #[doc = "Less than or equal comparison - returns true if left operand is less than or equal to right"]
+    #[classattr]
+    const LessThanOrEqual: BinaryOp = BinaryOp::LessThanOrEqual;
+
+    #[doc = "Addition operation - adds two numeric operands"]
+    #[classattr]
+    const Plus: BinaryOp = BinaryOp::Plus;
+
+    #[doc = "Subtraction operation - subtracts right operand from left operand"]
+    #[classattr]
+    const Minus: BinaryOp = BinaryOp::Minus;
+
+    #[doc = "Multiplication operation - multiplies two numeric operands"]
+    #[classattr]
+    const Multiply: BinaryOp = BinaryOp::Multiply;
+
+    #[doc = "Division operation - divides left operand by right operand"]
+    #[classattr]
+    const Divide: BinaryOp = BinaryOp::Divide;
+
+    #[doc = "String containment check - returns true if left string contains right string"]
+    #[classattr]
+    const Contains: BinaryOp = BinaryOp::Contains;
+
+    #[doc = "String prefix check - returns true if left string starts with right string"]
+    #[classattr]
+    const StartsWith: BinaryOp = BinaryOp::StartsWith;
+
+    #[doc = "String suffix check - returns true if left string ends with right string"]
+    #[classattr]
+    const EndsWith: BinaryOp = BinaryOp::EndsWith;
+}
+
 impl From<BinaryOp> for RustBinaryOp {
     fn from(py_op: BinaryOp) -> Self {
         match py_op {

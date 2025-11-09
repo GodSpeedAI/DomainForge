@@ -78,14 +78,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allEntities)]
-    pub fn all_entities(&self) -> JsValue {
+    pub fn all_entities(&self) -> Result<JsValue, JsValue> {
         let entities: Vec<Entity> = self
             .inner
             .all_entities()
             .into_iter()
             .map(|e| Entity::from_inner(e.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&entities).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&entities)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = addResource)]
@@ -136,14 +137,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allResources)]
-    pub fn all_resources(&self) -> JsValue {
+    pub fn all_resources(&self) -> Result<JsValue, JsValue> {
         let resources: Vec<Resource> = self
             .inner
             .all_resources()
             .into_iter()
             .map(|r| Resource::from_inner(r.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&resources).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&resources)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = addFlow)]
@@ -187,14 +189,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allFlows)]
-    pub fn all_flows(&self) -> JsValue {
+    pub fn all_flows(&self) -> Result<JsValue, JsValue> {
         let flows: Vec<Flow> = self
             .inner
             .all_flows()
             .into_iter()
             .map(|f| Flow::from_inner(f.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&flows).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&flows)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = addInstance)]
@@ -238,14 +241,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allInstances)]
-    pub fn all_instances(&self) -> JsValue {
+    pub fn all_instances(&self) -> Result<JsValue, JsValue> {
         let instances: Vec<Instance> = self
             .inner
             .all_instances()
             .into_iter()
             .map(|i| Instance::from_inner(i.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&instances).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&instances)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = flowsFrom)]

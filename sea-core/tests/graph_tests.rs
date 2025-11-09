@@ -532,7 +532,7 @@ fn test_instance_iteration_order_deterministic() {
     graph.add_resource(resource).unwrap();
 
     // Add multiple instances
-    for _i in 1..=5 {
+    for _ in 1..=5 {
         let instance = Instance::new(resource_id.clone(), entity_id.clone());
         graph.add_instance(instance).unwrap();
     }

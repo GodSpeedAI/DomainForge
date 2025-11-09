@@ -274,10 +274,10 @@ impl UnitRegistry {
     }
 }
 
-/// Helper function to get a Unit from a string symbol, using the default registry
-/// Returns a Count-based unit if the symbol is not found
 static DEFAULT_UNIT_REGISTRY: OnceLock<UnitRegistry> = OnceLock::new();
 
+/// Helper function to get a Unit from a string symbol, using the default registry
+/// Returns a Count-based unit if the symbol is not found
 pub fn unit_from_string(symbol: impl Into<String>) -> Unit {
     let symbol = symbol.into();
     let registry = DEFAULT_UNIT_REGISTRY.get_or_init(UnitRegistry::default);

@@ -1,10 +1,8 @@
-#[allow(unused_imports)]
-use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
-
 #[cfg(feature = "wasm")]
 mod wasm_tests {
     use super::*;
     use sea_core::wasm::{Entity, Flow, Graph, Instance, Resource};
+    use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
     wasm_bindgen_test_configure!(run_in_browser);
 

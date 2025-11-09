@@ -2,6 +2,7 @@ use rust_decimal::Decimal;
 use sea_core::primitives::{Entity, Flow, Resource};
 use sea_core::units::unit_from_string;
 use sea_core::ConceptId;
+use uuid::Uuid;
 
 #[test]
 fn test_flow_new_stores_references() {
@@ -31,10 +32,10 @@ fn test_flow_references_are_valid_uuids() {
         Decimal::from(50),
     );
 
-    assert!(!flow.resource_id().to_string().is_empty());
-    assert!(!flow.from_id().to_string().is_empty());
-    assert!(!flow.to_id().to_string().is_empty());
-    assert!(!flow.id().to_string().is_empty());
+    assert!(Uuid::parse_str(&flow.resource_id().to_string()).is_ok());
+    assert!(Uuid::parse_str(&flow.from_id().to_string()).is_ok());
+    assert!(Uuid::parse_str(&flow.to_id().to_string()).is_ok());
+    assert!(Uuid::parse_str(&flow.id().to_string()).is_ok());
 }
 
 #[test]

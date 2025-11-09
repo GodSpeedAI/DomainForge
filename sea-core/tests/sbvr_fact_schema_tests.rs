@@ -52,6 +52,7 @@ mod sbvr_fact_schema_tests {
 
         assert_eq!(deserialized.id, "fact-002");
         assert_eq!(deserialized.subject, "warehouse");
+        assert_eq!(deserialized.verb, "transfers");
         assert_eq!(deserialized.object, "camera-resource");
         assert_eq!(deserialized.destination.as_deref(), Some("factory"));
         assert_eq!(deserialized.schema_version, "2.0");

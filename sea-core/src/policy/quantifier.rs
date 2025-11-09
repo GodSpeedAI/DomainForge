@@ -1,6 +1,7 @@
 use super::expression::{AggregateFunction, BinaryOp, Expression, Quantifier};
 use crate::graph::Graph;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use std::str::FromStr;
 
 impl Expression {
@@ -160,7 +161,7 @@ impl Expression {
                                 "from_entity": f.from_id().to_string(),
                                 "to_entity": f.to_id().to_string(),
                                 "resource": f.resource_id().to_string(),
-                                "quantity": f.quantity().to_string().parse::<f64>().unwrap_or(0.0),
+                                "quantity": f.quantity().to_f64().unwrap_or(0.0),
                             }))
                             .collect();
                         Ok(flows)
@@ -231,12 +232,26 @@ impl Expression {
 
         // Apply filter if present
         let filtered_items = if let Some(filter_expr) = filter {
+            // Determine the variable name based on collection type
+            let variable_name = match collection {
+                Expression::Variable(name) => {
+                    match name.as_str() {
+                        "flows" => "flow",
+                        "entities" => "entity",
+                        "resources" => "resource",
+                        "instances" => "instance",
+                        _ => "item"
+                    }
+                }
+                _ => "item"
+            };
+
             items
                 .into_iter()
                 .filter(|item| {
-                    // Substitute flow variables in the filter
+                    // Substitute collection-specific variables in the filter
                     let substituted = filter_expr
-                        .substitute("flow", item)
+                        .substitute(variable_name, item)
                         .unwrap_or_else(|_| filter_expr.as_ref().clone());
                     // Expand and check if true
                     if let Ok(expanded) = substituted.expand(graph) {
@@ -272,10 +287,12 @@ impl Expression {
                     })
                     .sum();
 
-                Ok(serde_json::json!(sum
-                    .to_string()
-                    .parse::<f64>()
-                    .unwrap_or(0.0)))
+                // Convert Decimal to f64 and propagate parsing errors
+                let sum_f64 = sum
+                    .to_f64()
+                    .ok_or_else(|| format!("Failed to convert sum {} to f64", sum))?;
+
+                Ok(serde_json::json!(sum_f64))
             }
 
             AggregateFunction::Avg => {
@@ -303,10 +320,12 @@ impl Expression {
                 let sum: Decimal = values.iter().copied().sum();
                 let avg = sum / Decimal::from(values.len());
 
-                Ok(serde_json::json!(avg
-                    .to_string()
-                    .parse::<f64>()
-                    .unwrap_or(0.0)))
+                // Convert Decimal to f64 and propagate parsing errors
+                let avg_f64 = avg
+                    .to_f64()
+                    .ok_or_else(|| format!("Failed to convert average {} to f64", avg))?;
+
+                Ok(serde_json::json!(avg_f64))
             }
 
             AggregateFunction::Min => {
@@ -327,9 +346,12 @@ impl Expression {
                     })
                     .min();
 
-                Ok(serde_json::json!(
-                    min.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))
-                ))
+                // Convert Decimal to f64 and propagate parsing errors
+                let min_f64 = min
+                    .as_ref()
+                    .and_then(|d| d.to_f64());
+
+                Ok(serde_json::json!(min_f64))
             }
 
             AggregateFunction::Max => {
@@ -350,9 +372,12 @@ impl Expression {
                     })
                     .max();
 
-                Ok(serde_json::json!(
-                    max.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))
-                ))
+                // Convert Decimal to f64 and propagate parsing errors
+                let max_f64 = max
+                    .as_ref()
+                    .and_then(|d| d.to_f64());
+
+                Ok(serde_json::json!(max_f64))
             }
         }
     }

@@ -138,10 +138,16 @@ impl KnowledgeGraph {
                 });
             }
 
+            // Validate that the quantity is a safe decimal string for Turtle format
+            let quantity_str = flow.quantity().to_string();
+            Self::validate_turtle_decimal(&quantity_str).map_err(|e|
+                KgError::SerializationError(format!("Invalid quantity format: {}", e))
+            )?;
+
             kg.triples.push(Triple {
                 subject: flow_id.clone(),
                 predicate: "sea:quantity".to_string(),
-                object: format!("\"{}\"^^xsd:decimal", flow.quantity()),
+                object: format!("\"{}\"^^xsd:decimal", quantity_str),
             });
         }
 
@@ -345,6 +351,8 @@ impl KnowledgeGraph {
                 '\n' => escaped.push_str("\\n"),
                 '\r' => escaped.push_str("\\r"),
                 '\t' => escaped.push_str("\\t"),
+                '\x08' => escaped.push_str("\\b"),  // backspace
+                '\x0C' => escaped.push_str("\\f"),  // form feed
                 other => escaped.push(other),
             }
         }
@@ -355,11 +363,80 @@ impl KnowledgeGraph {
         utf8_percent_encode(s, URI_ENCODE_SET).to_string()
     }
 
+    fn validate_turtle_decimal(decimal_str: &str) -> Result<(), String> {
+        // Basic validation for safe decimal literals in Turtle
+        let trimmed = decimal_str.trim();
+
+        // Check for invalid characters that could break Turtle syntax
+        if trimmed.chars().any(|ch| matches!(ch, '"' | '\'' | '\\' | '\n' | '\r' | '\t')) {
+            return Err("Decimal contains invalid characters".to_string());
+        }
+
+        // Ensure it looks like a valid decimal number
+        if trimmed.is_empty() {
+            return Err("Decimal is empty".to_string());
+        }
+
+        // Basic pattern check: optional sign, digits, optional fractional part
+        let mut has_digit = false;
+        let mut chars = trimmed.chars().peekable();
+
+        // Optional sign
+        if matches!(chars.peek(), Some('+') | Some('-')) {
+            chars.next();
+        }
+
+        // Digits and optional fractional part
+        while let Some(ch) = chars.next() {
+            if ch.is_ascii_digit() {
+                has_digit = true;
+            } else if ch == '.' {
+                // Check fractional part
+                if !chars.next().map_or(false, |c| c.is_ascii_digit()) {
+                    return Err("Invalid decimal format".to_string());
+                }
+                while let Some(c) = chars.next() {
+                    if !c.is_ascii_digit() {
+                        return Err("Invalid decimal format".to_string());
+                    }
+                }
+                break;
+            } else {
+                return Err("Invalid decimal format".to_string());
+            }
+        }
+
+        if !has_digit {
+            return Err("Invalid decimal format".to_string());
+        }
+
+        Ok(())
+    }
+
     fn clean_uri(uri: &str) -> String {
         if uri.contains(':') {
-            let parts: Vec<&str> = uri.split(':').collect();
+            let parts: Vec<&str> = uri.splitn(2, ':').collect();
             if parts.len() == 2 {
-                return format!("http://domainforge.ai/{}#{}", parts[0], parts[1]);
+                let (prefix, name) = (parts[0], parts[1]);
+
+                // Check for standard RDF/XSD prefixes
+                let standard_prefixes = [
+                    ("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"),
+                    ("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
+                    ("xsd", "http://www.w3.org/2001/XMLSchema#"),
+                    ("owl", "http://www.w3.org/2002/07/owl#"),
+                    ("sh", "http://www.w3.org/ns/shacl#"),
+                    ("sea", "http://domainforge.ai/sea#"),
+                ];
+
+                for (std_prefix, namespace) in &standard_prefixes {
+                    if prefix == *std_prefix {
+                        return format!("{}{}", namespace, name);
+                    }
+                }
+
+                // Fall back to original behavior for unknown prefixes
+                return format!("http://domainforge.ai/{}#{}", prefix, name);
             }
         }
         uri.to_string()
@@ -584,7 +661,7 @@ mod tests {
         });
 
         let xml = kg.to_rdf_xml();
-        assert!(xml.contains("rdf:datatype=\"http://domainforge.ai/xsd#decimal\""));
+        assert!(xml.contains("rdf:datatype=\"http://www.w3.org/2001/XMLSchema#decimal\""));
         assert!(xml.contains(">100<"));
         assert!(xml.contains("xml:lang=\"en\""));
         assert!(xml.contains("&amp;"));

@@ -4,6 +4,7 @@
 //! from DSL source code.
 
 use sea_core::parse_to_graph;
+use rust_decimal::prelude::ToPrimitive;
 
 fn main() {
     // Define a camera supply chain using SEA DSL
@@ -163,8 +164,26 @@ fn main() {
             let mut resource_totals = std::collections::HashMap::new();
             for flow in graph.all_flows() {
                 if let Some(resource) = graph.get_resource(flow.resource_id()) {
-                    *resource_totals.entry(resource.name()).or_insert(0.0) +=
-                        flow.quantity().to_string().parse::<f64>().unwrap_or(0.0);
+                    // Direct conversion from Decimal to f64, handle invalid values explicitly
+                    match flow.quantity().to_f64() {
+                        Some(quantity) if quantity.is_finite() => {
+                            *resource_totals.entry(resource.name()).or_insert(0.0) += quantity;
+                        }
+                        Some(_) => {
+                            eprintln!(
+                                "Warning: flow {} has non-finite quantity {}, treating as 0.0",
+                                flow.id(),
+                                flow.quantity()
+                            );
+                        }
+                        None => {
+                            eprintln!(
+                                "Warning: flow {} has invalid quantity {}, treating as 0.0",
+                                flow.id(),
+                                flow.quantity()
+                            );
+                        }
+                    }
                 } else {
                     eprintln!(
                         "Warning: flow {} missing resource, omitting from totals",
