@@ -1,3 +1,5 @@
+#![allow(clippy::useless_conversion)]
+
 use crate::graph::Graph as RustGraph;
 use crate::parser;
 use crate::ConceptId;
@@ -14,6 +16,7 @@ pub struct Graph {
     inner: RustGraph,
 }
 
+#[allow(clippy::useless_conversion)]
 #[pymethods]
 impl Graph {
     #[new]
@@ -26,25 +29,25 @@ impl Graph {
     fn add_entity(&mut self, entity: &Entity) -> PyResult<()> {
         self.inner
             .add_entity(entity.clone().into_inner())
-            .map_err(|e| PyValueError::new_err(e))
+            .map_err(PyValueError::new_err)
     }
 
     fn add_resource(&mut self, resource: &Resource) -> PyResult<()> {
         self.inner
             .add_resource(resource.clone().into_inner())
-            .map_err(|e| PyValueError::new_err(e))
+            .map_err(PyValueError::new_err)
     }
 
     fn add_flow(&mut self, flow: &Flow) -> PyResult<()> {
         self.inner
             .add_flow(flow.clone().into_inner())
-            .map_err(|e| PyValueError::new_err(e))
+            .map_err(PyValueError::new_err)
     }
 
     fn add_instance(&mut self, instance: &Instance) -> PyResult<()> {
         self.inner
             .add_instance(instance.clone().into_inner())
-            .map_err(|e| PyValueError::new_err(e))
+            .map_err(PyValueError::new_err)
     }
 
     fn entity_count(&self) -> usize {
@@ -204,7 +207,7 @@ impl Graph {
     #[staticmethod]
     fn parse(source: String) -> PyResult<Self> {
         let graph = parser::parse_to_graph(&source)
-            .map_err(|e| PyValueError::new_err(format!("Parse error: {}", e)))?;
+        .map_err(|e| PyValueError::new_err(format!("Parse error: {}", e)))?;
 
         Ok(Self { inner: graph })
     }
@@ -215,7 +218,7 @@ impl Graph {
                 serde_json::to_string_pretty(&value)
                     .map_err(|e| format!("Serialization error: {}", e))
             })
-            .map_err(|e| PyValueError::new_err(e))
+            .map_err(PyValueError::new_err)
     }
 
     #[staticmethod]

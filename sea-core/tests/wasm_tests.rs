@@ -1,6 +1,5 @@
 #[cfg(feature = "wasm")]
 mod wasm_tests {
-    use super::*;
     use sea_core::wasm::{Entity, Flow, Graph, Instance, Resource};
     use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 

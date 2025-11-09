@@ -1,3 +1,5 @@
+#![allow(clippy::new_without_default, clippy::inherent_to_string)]
+
 use crate::graph::Graph as RustGraph;
 use crate::parser;
 use napi::bindgen_prelude::*;
@@ -25,28 +27,28 @@ impl Graph {
     pub fn add_entity(&mut self, entity: &Entity) -> Result<()> {
         self.inner
             .add_entity(entity.inner_ref().clone())
-            .map_err(|e| Error::from_reason(e))
+            .map_err(Error::from_reason)
     }
 
     #[napi]
     pub fn add_resource(&mut self, resource: &Resource) -> Result<()> {
         self.inner
             .add_resource(resource.inner_ref().clone())
-            .map_err(|e| Error::from_reason(e))
+            .map_err(Error::from_reason)
     }
 
     #[napi]
     pub fn add_flow(&mut self, flow: &Flow) -> Result<()> {
         self.inner
             .add_flow(flow.inner_ref().clone())
-            .map_err(|e| Error::from_reason(e))
+            .map_err(Error::from_reason)
     }
 
     #[napi]
     pub fn add_instance(&mut self, instance: &Instance) -> Result<()> {
         self.inner
             .add_instance(instance.inner_ref().clone())
-            .map_err(|e| Error::from_reason(e))
+            .map_err(Error::from_reason)
     }
 
     #[napi]
@@ -73,37 +75,42 @@ impl Graph {
     pub fn has_entity(&self, id: String) -> Result<bool> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_entity(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_entity(&cid))
     }
 
     #[napi]
     pub fn has_resource(&self, id: String) -> Result<bool> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_resource(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_resource(&cid))
     }
 
     #[napi]
     pub fn has_flow(&self, id: String) -> Result<bool> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_flow(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_flow(&cid))
     }
 
     #[napi]
     pub fn has_instance(&self, id: String) -> Result<bool> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_instance(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_instance(&cid))
     }
 
     #[napi]
     pub fn get_entity(&self, id: String) -> Result<Option<Entity>> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_entity(&uuid)
+            .get_entity(&cid)
             .map(|e| Entity::from_rust(e.clone())))
     }
 
@@ -111,9 +118,10 @@ impl Graph {
     pub fn get_resource(&self, id: String) -> Result<Option<Resource>> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_resource(&uuid)
+            .get_resource(&cid)
             .map(|r| Resource::from_rust(r.clone())))
     }
 
@@ -121,9 +129,10 @@ impl Graph {
     pub fn get_flow(&self, id: String) -> Result<Option<Flow>> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_flow(&uuid)
+            .get_flow(&cid)
             .map(|f| Flow::from_rust(f.clone())))
     }
 
@@ -131,9 +140,10 @@ impl Graph {
     pub fn get_instance(&self, id: String) -> Result<Option<Instance>> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_instance(&uuid)
+            .get_instance(&cid)
             .map(|i| Instance::from_rust(i.clone())))
     }
 
@@ -155,10 +165,11 @@ impl Graph {
     pub fn flows_from(&self, entity_id: String) -> Result<Vec<Flow>> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
 
         Ok(self
             .inner
-            .flows_from(&uuid)
+            .flows_from(&cid)
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect())
@@ -168,10 +179,11 @@ impl Graph {
     pub fn flows_to(&self, entity_id: String) -> Result<Vec<Flow>> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
 
         Ok(self
             .inner
-            .flows_to(&uuid)
+            .flows_to(&cid)
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect())
@@ -228,7 +240,7 @@ impl Graph {
                 serde_json::to_string_pretty(&value)
                     .map_err(|e| format!("Serialization error: {}", e))
             })
-            .map_err(|e| Error::from_reason(e))
+            .map_err(Error::from_reason)
     }
 
     #[napi(factory)]

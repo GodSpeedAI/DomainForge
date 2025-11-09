@@ -1,3 +1,5 @@
+#![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
+
 use crate::primitives::{
     Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
 };
@@ -15,6 +17,7 @@ pub struct Entity {
     inner: RustEntity,
 }
 
+#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Entity {
     #[new]
@@ -96,6 +99,7 @@ pub struct Resource {
     inner: RustResource,
 }
 
+#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Resource {
     #[new]
@@ -185,6 +189,7 @@ pub struct Flow {
     inner: RustFlow,
 }
 
+#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Flow {
     #[new]
@@ -292,6 +297,7 @@ pub struct Instance {
     inner: RustInstance,
 }
 
+#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Instance {
     #[new]

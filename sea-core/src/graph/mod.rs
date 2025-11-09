@@ -1,8 +1,9 @@
 use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::ConceptId;
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Graph {
     entities: IndexMap<ConceptId, Entity>,
     resources: IndexMap<ConceptId, Resource>,

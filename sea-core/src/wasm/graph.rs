@@ -1,3 +1,5 @@
+#![allow(clippy::new_without_default)]
+
 use crate::graph::Graph as RustGraph;
 use crate::wasm::primitives::{Entity, Flow, Instance, Resource};
 use std::str::FromStr;
@@ -20,7 +22,8 @@ impl Graph {
 
     #[wasm_bindgen(js_name = parse)]
     pub fn parse(source: String) -> Result<Graph, JsValue> {
-        let graph = crate::parser::parse(&source)
+        // parse_to_graph returns a Graph; parser::parse returns an AST
+        let graph = crate::parser::parse_to_graph(&source)
             .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
         Ok(Self { inner: graph })
     }
@@ -41,16 +44,18 @@ impl Graph {
     pub fn has_entity(&self, id: String) -> Result<bool, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_entity(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_entity(&cid))
     }
 
     #[wasm_bindgen(js_name = getEntity)]
     pub fn get_entity(&self, id: String) -> Result<Option<Entity>, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_entity(&uuid)
+            .get_entity(&cid)
             .map(|e| Entity::from_inner(e.clone())))
     }
 
@@ -58,9 +63,10 @@ impl Graph {
     pub fn remove_entity(&mut self, id: String) -> Result<Entity, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let entity = self
             .inner
-            .remove_entity(&uuid)
+            .remove_entity(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Entity::from_inner(entity))
     }
@@ -100,16 +106,18 @@ impl Graph {
     pub fn has_resource(&self, id: String) -> Result<bool, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_resource(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_resource(&cid))
     }
 
     #[wasm_bindgen(js_name = getResource)]
     pub fn get_resource(&self, id: String) -> Result<Option<Resource>, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_resource(&uuid)
+            .get_resource(&cid)
             .map(|r| Resource::from_inner(r.clone())))
     }
 
@@ -117,9 +125,10 @@ impl Graph {
     pub fn remove_resource(&mut self, id: String) -> Result<Resource, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let resource = self
             .inner
-            .remove_resource(&uuid)
+            .remove_resource(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Resource::from_inner(resource))
     }
@@ -159,16 +168,18 @@ impl Graph {
     pub fn has_flow(&self, id: String) -> Result<bool, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_flow(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_flow(&cid))
     }
 
     #[wasm_bindgen(js_name = getFlow)]
     pub fn get_flow(&self, id: String) -> Result<Option<Flow>, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_flow(&uuid)
+            .get_flow(&cid)
             .map(|f| Flow::from_inner(f.clone())))
     }
 
@@ -176,9 +187,10 @@ impl Graph {
     pub fn remove_flow(&mut self, id: String) -> Result<Flow, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let flow = self
             .inner
-            .remove_flow(&uuid)
+            .remove_flow(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Flow::from_inner(flow))
     }
@@ -211,16 +223,18 @@ impl Graph {
     pub fn has_instance(&self, id: String) -> Result<bool, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_instance(&uuid))
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_instance(&cid))
     }
 
     #[wasm_bindgen(js_name = getInstance)]
     pub fn get_instance(&self, id: String) -> Result<Option<Instance>, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_instance(&uuid)
+            .get_instance(&cid)
             .map(|i| Instance::from_inner(i.clone())))
     }
 
@@ -228,9 +242,10 @@ impl Graph {
     pub fn remove_instance(&mut self, id: String) -> Result<Instance, JsValue> {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let instance = self
             .inner
-            .remove_instance(&uuid)
+            .remove_instance(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Instance::from_inner(instance))
     }
@@ -256,9 +271,10 @@ impl Graph {
     pub fn flows_from(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let flows: Vec<Flow> = self
             .inner
-            .flows_from(&uuid)
+            .flows_from(&cid)
             .into_iter()
             .map(|f| Flow::from_inner(f.clone()))
             .collect();
@@ -270,9 +286,10 @@ impl Graph {
     pub fn flows_to(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let flows: Vec<Flow> = self
             .inner
-            .flows_to(&uuid)
+            .flows_to(&cid)
             .into_iter()
             .map(|f| Flow::from_inner(f.clone()))
             .collect();
@@ -284,9 +301,10 @@ impl Graph {
     pub fn upstream_entities(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let entities: Vec<Entity> = self
             .inner
-            .upstream_entities(&uuid)
+            .upstream_entities(&cid)
             .into_iter()
             .map(|e| Entity::from_inner(e.clone()))
             .collect();
@@ -298,9 +316,10 @@ impl Graph {
     pub fn downstream_entities(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
         let entities: Vec<Entity> = self
             .inner
-            .downstream_entities(&uuid)
+            .downstream_entities(&cid)
             .into_iter()
             .map(|e| Entity::from_inner(e.clone()))
             .collect();

@@ -1,10 +1,12 @@
 use crate::primitives::{
     Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
 };
+
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
+use crate::units::unit_from_string;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -14,6 +16,7 @@ pub struct Entity {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Entity {
     #[napi(constructor)]
     pub fn new(name: String, namespace: Option<String>) -> Self {
@@ -36,7 +39,12 @@ impl Entity {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -85,12 +93,14 @@ pub struct Resource {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Resource {
     #[napi(constructor)]
     pub fn new(name: String, unit: String, namespace: Option<String>) -> Self {
+        let unit_obj = unit_from_string(unit);
         let inner = match namespace {
-            Some(ns) => RustResource::new_with_namespace(name, unit, ns),
-            None => RustResource::new(name, unit),
+            Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
+            None => RustResource::new(name, unit_obj),
         };
         Self { inner }
     }
@@ -112,7 +122,12 @@ impl Resource {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -162,6 +177,7 @@ pub struct Flow {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Flow {
     #[napi(constructor)]
     pub fn new(resource_id: String, from_id: String, to_id: String, quantity: f64) -> Result<Self> {
@@ -174,7 +190,12 @@ impl Flow {
         let decimal_quantity = Decimal::from_f64(quantity)
             .ok_or_else(|| Error::from_reason("Invalid quantity value"))?;
 
-        let inner = RustFlow::new(resource_uuid, from_uuid, to_uuid, decimal_quantity);
+        let inner = RustFlow::new(
+            crate::ConceptId::from(resource_uuid),
+            crate::ConceptId::from(from_uuid),
+            crate::ConceptId::from(to_uuid),
+            decimal_quantity,
+        );
         Ok(Self { inner })
     }
 
@@ -200,7 +221,7 @@ impl Flow {
 
     #[napi(getter)]
     pub fn quantity(&self) -> f64 {
-        match self.inner.quantity().to_f64() {
+    match self.inner.quantity().to_f64() {
             Some(value) => {
                 if value.is_finite() {
                     value
@@ -218,7 +239,12 @@ impl Flow {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -269,6 +295,7 @@ pub struct Instance {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Instance {
     #[napi(constructor)]
     pub fn new(resource_id: String, entity_id: String, namespace: Option<String>) -> Result<Self> {
@@ -278,8 +305,15 @@ impl Instance {
             .map_err(|e| Error::from_reason(format!("Invalid entity_id UUID: {}", e)))?;
 
         let inner = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(resource_uuid, entity_uuid, ns),
-            None => RustInstance::new(resource_uuid, entity_uuid),
+            Some(ns) => RustInstance::new_with_namespace(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+                ns,
+            ),
+            None => RustInstance::new(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+            ),
         };
         Ok(Self { inner })
     }
@@ -301,7 +335,12 @@ impl Instance {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]

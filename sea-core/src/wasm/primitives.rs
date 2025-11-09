@@ -3,64 +3,14 @@ use crate::primitives::{
     resource::Resource as RustResource,
 };
 use rust_decimal::Decimal;
+use serde::Serialize;
+use crate::units::unit_from_string;
 use std::str::FromStr;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
-
-macro_rules! wasm_common_attributes {
-    ($inner_ty:ty) => {
-        #[wasm_bindgen(js_name = setAttribute)]
-        pub fn set_attribute(&mut self, key: String, value: JsValue) -> Result<(), JsValue> {
-            let json_value: serde_json::Value = serde_wasm_bindgen::from_value(value)
-                .map_err(|e| JsValue::from_str(&format!("Failed to convert value: {}", e)))?;
-            self.inner.set_attribute(key, json_value);
-            Ok(())
-        }
-
-        #[wasm_bindgen(js_name = getAttribute)]
-        pub fn get_attribute(&self, key: String) -> JsValue {
-            self.inner
-                .get_attribute(&key)
-                .and_then(|v| {
-                    serde_wasm_bindgen::to_value(v)
-                        .map_err(|e| {
-                            console::error_1(&JsValue::from_str(&format!(
-                                "Failed to serialize attribute '{}' to JS value: {}",
-                                key, e
-                            )));
-                            e
-                        })
-                        .ok()
-                })
-                .unwrap_or(JsValue::NULL)
-        }
-
-        #[wasm_bindgen(js_name = toJSON)]
-        pub fn to_json(&self) -> Result<JsValue, JsValue> {
-            serde_wasm_bindgen::to_value(&self.inner)
-                .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
-        }
-    };
-}
-
-macro_rules! wasm_common_helpers {
-    ($inner_ty:ty) => {
-        pub fn inner(&self) -> &$inner_ty {
-            &self.inner
-        }
-
-        pub fn from_inner(inner: $inner_ty) -> Self {
-            Self { inner }
-        }
-
-        pub fn into_inner(self) -> $inner_ty {
-            self.inner
-        }
-    };
-}
 
 #[wasm_bindgen]
+#[derive(Serialize)]
 pub struct Entity {
     inner: RustEntity,
 }
@@ -88,17 +38,59 @@ impl Entity {
 
     #[wasm_bindgen(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
-    wasm_common_attributes!(RustEntity);
+    #[wasm_bindgen(js_name = setAttribute)]
+    pub fn set_attribute(&mut self, key: String, value: JsValue) -> Result<(), JsValue> {
+        let json_value: serde_json::Value = serde_wasm_bindgen::from_value(value)
+            .map_err(|e| JsValue::from_str(&format!("Failed to convert value: {}", e)))?;
+        self.inner.set_attribute(key, json_value);
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = getAttribute)]
+    pub fn get_attribute(&self, key: String) -> JsValue {
+        self.inner
+            .get_attribute(&key)
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .inspect_err(|_e| {
+                        // logging unavailable here without web_sys; swallow error
+                    })
+                    .ok()
+            })
+            .unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }
 
 impl Entity {
-    wasm_common_helpers!(RustEntity);
+    pub fn inner(&self) -> &RustEntity {
+        &self.inner
+    }
+
+    pub fn from_inner(inner: RustEntity) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustEntity {
+        self.inner
+    }
 }
 
 #[wasm_bindgen]
+#[derive(Serialize)]
 pub struct Resource {
     inner: RustResource,
 }
@@ -107,9 +99,10 @@ pub struct Resource {
 impl Resource {
     #[wasm_bindgen(constructor)]
     pub fn new(name: String, unit: String, namespace: Option<String>) -> Self {
+        let unit_obj = unit_from_string(unit);
         let resource = match namespace {
-            Some(ns) => RustResource::new_with_namespace(name, unit, ns),
-            None => RustResource::new(name, unit),
+            Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
+            None => RustResource::new(name, unit_obj),
         };
         Self { inner: resource }
     }
@@ -131,17 +124,57 @@ impl Resource {
 
     #[wasm_bindgen(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
-    wasm_common_attributes!(RustResource);
+    #[wasm_bindgen(js_name = setAttribute)]
+    pub fn set_attribute(&mut self, key: String, value: JsValue) -> Result<(), JsValue> {
+        let json_value: serde_json::Value = serde_wasm_bindgen::from_value(value)
+            .map_err(|e| JsValue::from_str(&format!("Failed to convert value: {}", e)))?;
+        self.inner.set_attribute(key, json_value);
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = getAttribute)]
+    pub fn get_attribute(&self, key: String) -> JsValue {
+        self.inner
+            .get_attribute(&key)
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .inspect_err(|_e| {})
+                    .ok()
+            })
+            .unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }
 
 impl Resource {
-    wasm_common_helpers!(RustResource);
+    pub fn inner(&self) -> &RustResource {
+        &self.inner
+    }
+
+    pub fn from_inner(inner: RustResource) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustResource {
+        self.inner
+    }
 }
 
 #[wasm_bindgen]
+#[derive(Serialize)]
 pub struct Flow {
     inner: RustFlow,
 }
@@ -164,7 +197,12 @@ impl Flow {
         let quantity_decimal = Decimal::from_str(&quantity)
             .map_err(|e| JsValue::from_str(&format!("Invalid quantity: {}", e)))?;
 
-        let flow = RustFlow::new(resource_uuid, from_uuid, to_uuid, quantity_decimal);
+        let flow = RustFlow::new(
+            crate::ConceptId::from(resource_uuid),
+            crate::ConceptId::from(from_uuid),
+            crate::ConceptId::from(to_uuid),
+            quantity_decimal,
+        );
 
         Ok(Self { inner: flow })
     }
@@ -196,17 +234,57 @@ impl Flow {
 
     #[wasm_bindgen(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
-    wasm_common_attributes!(RustFlow);
+    #[wasm_bindgen(js_name = setAttribute)]
+    pub fn set_attribute(&mut self, key: String, value: JsValue) -> Result<(), JsValue> {
+        let json_value: serde_json::Value = serde_wasm_bindgen::from_value(value)
+            .map_err(|e| JsValue::from_str(&format!("Failed to convert value: {}", e)))?;
+        self.inner.set_attribute(key, json_value);
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = getAttribute)]
+    pub fn get_attribute(&self, key: String) -> JsValue {
+        self.inner
+            .get_attribute(&key)
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .inspect_err(|_e| {})
+                    .ok()
+            })
+            .unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }
 
 impl Flow {
-    wasm_common_helpers!(RustFlow);
+    pub fn inner(&self) -> &RustFlow {
+        &self.inner
+    }
+
+    pub fn from_inner(inner: RustFlow) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustFlow {
+        self.inner
+    }
 }
 
 #[wasm_bindgen]
+#[derive(Serialize)]
 pub struct Instance {
     inner: RustInstance,
 }
@@ -225,8 +303,15 @@ impl Instance {
             .map_err(|e| JsValue::from_str(&format!("Invalid entity_id UUID: {}", e)))?;
 
         let instance = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(resource_uuid, entity_uuid, ns),
-            None => RustInstance::new(resource_uuid, entity_uuid),
+            Some(ns) => RustInstance::new_with_namespace(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+                ns,
+            ),
+            None => RustInstance::new(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+            ),
         };
 
         Ok(Self { inner: instance })
@@ -249,12 +334,51 @@ impl Instance {
 
     #[wasm_bindgen(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
-    wasm_common_attributes!(RustInstance);
+    #[wasm_bindgen(js_name = setAttribute)]
+    pub fn set_attribute(&mut self, key: String, value: JsValue) -> Result<(), JsValue> {
+        let json_value: serde_json::Value = serde_wasm_bindgen::from_value(value)
+            .map_err(|e| JsValue::from_str(&format!("Failed to convert value: {}", e)))?;
+        self.inner.set_attribute(key, json_value);
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = getAttribute)]
+    pub fn get_attribute(&self, key: String) -> JsValue {
+        self.inner
+            .get_attribute(&key)
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .inspect_err(|_e| {})
+                    .ok()
+            })
+            .unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }
 
 impl Instance {
-    wasm_common_helpers!(RustInstance);
+    pub fn inner(&self) -> &RustInstance {
+        &self.inner
+    }
+
+    pub fn from_inner(inner: RustInstance) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustInstance {
+        self.inner
+    }
 }

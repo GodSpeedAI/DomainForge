@@ -395,10 +395,10 @@ impl KnowledgeGraph {
                 has_digit = true;
             } else if ch == '.' {
                 // Check fractional part
-                if !chars.next().map_or(false, |c| c.is_ascii_digit()) {
+                if !chars.next().is_some_and(|c| c.is_ascii_digit()) {
                     return Err("Invalid decimal format".to_string());
                 }
-                while let Some(c) = chars.next() {
+                for c in chars.by_ref() {
                     if !c.is_ascii_digit() {
                         return Err("Invalid decimal format".to_string());
                     }
