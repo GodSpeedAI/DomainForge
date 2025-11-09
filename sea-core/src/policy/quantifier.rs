@@ -158,8 +158,12 @@ impl Expression {
                             .all_flows()
                             .iter()
                             .map(|f| {
-                                let quantity = f.quantity().to_f64()
-                                    .ok_or_else(|| format!("Failed to convert flow quantity {} to f64", f.quantity()))?;
+                                let quantity = f.quantity().to_f64().ok_or_else(|| {
+                                    format!(
+                                        "Failed to convert flow quantity {} to f64",
+                                        f.quantity()
+                                    )
+                                })?;
                                 Ok(serde_json::json!({
                                     "id": f.id().to_string(), // Keep as string for JSON compatibility
                                     "from_entity": f.from_id().to_string(),

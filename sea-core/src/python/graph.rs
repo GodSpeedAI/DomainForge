@@ -18,8 +18,8 @@ pub struct Graph {
 
 /// Helper function to parse a UUID string into a ConceptId
 fn parse_concept_id(id: &str) -> PyResult<ConceptId> {
-    let uuid = Uuid::from_str(id)
-        .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
+    let uuid =
+        Uuid::from_str(id).map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
     Ok(ConceptId::from(uuid))
 }
 
@@ -191,7 +191,7 @@ impl Graph {
     #[staticmethod]
     fn parse(source: String) -> PyResult<Self> {
         let graph = parser::parse_to_graph(&source)
-        .map_err(|e| PyValueError::new_err(format!("Parse error: {}", e)))?;
+            .map_err(|e| PyValueError::new_err(format!("Parse error: {}", e)))?;
 
         Ok(Self { inner: graph })
     }

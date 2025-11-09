@@ -678,11 +678,11 @@ fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
 
     // Escape special characters for JSON compatibility
     let escaped = content
-        .replace('\\', "\\\\")  // Backslash must be first
-        .replace('"', "\\\"")   // Double quotes
-        .replace('\n', "\\n")   // Newlines
-        .replace('\r', "\\r")   // Carriage returns
-        .replace('\t', "\\t");  // Tabs
+        .replace('\\', "\\\\") // Backslash must be first
+        .replace('"', "\\\"") // Double quotes
+        .replace('\n', "\\n") // Newlines
+        .replace('\r', "\\r") // Carriage returns
+        .replace('\t', "\\t"); // Tabs
 
     // Create a JSON string and parse it to handle escape sequences
     let json_string = format!("\"{}\"", escaped);

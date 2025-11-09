@@ -231,15 +231,12 @@ impl Flow {
 
     #[getter]
     fn quantity(&self) -> PyResult<f64> {
-        self.inner
-            .quantity()
-            .to_f64()
-            .ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                    "Failed to convert Decimal quantity {} to f64 (overflow or out of range)",
-                    self.inner.quantity()
-                ))
-            })
+        self.inner.quantity().to_f64().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to convert Decimal quantity {} to f64 (overflow or out of range)",
+                self.inner.quantity()
+            ))
+        })
     }
 
     #[getter]

@@ -2,11 +2,11 @@ use crate::primitives::{
     Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
 };
 
+use crate::units::unit_from_string;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
-use crate::units::unit_from_string;
 use std::str::FromStr;
 use uuid::Uuid;
 

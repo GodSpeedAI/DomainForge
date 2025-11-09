@@ -16,8 +16,8 @@ pub struct Graph {
 
 /// Helper function to parse a UUID string into a ConceptId
 fn parse_concept_id(id: &str) -> Result<crate::ConceptId> {
-    let uuid = Uuid::from_str(id)
-        .map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+    let uuid =
+        Uuid::from_str(id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
     Ok(crate::ConceptId::from(uuid))
 }
 

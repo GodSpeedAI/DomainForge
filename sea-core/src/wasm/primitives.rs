@@ -2,9 +2,9 @@ use crate::primitives::{
     entity::Entity as RustEntity, flow::Flow as RustFlow, instance::Instance as RustInstance,
     resource::Resource as RustResource,
 };
+use crate::units::unit_from_string;
 use rust_decimal::Decimal;
 use serde::Serialize;
-use crate::units::unit_from_string;
 use std::str::FromStr;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
@@ -58,13 +58,7 @@ impl Entity {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| {
-                serde_wasm_bindgen::to_value(v)
-                    .inspect_err(|_e| {
-                        // logging unavailable here without web_sys; swallow error
-                    })
-                    .ok()
-            })
+            .and_then(|v| serde_wasm_bindgen::to_value(v).inspect_err(|_e| {}).ok())
             .unwrap_or(JsValue::NULL)
     }
 
@@ -144,11 +138,7 @@ impl Resource {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| {
-                serde_wasm_bindgen::to_value(v)
-                    .inspect_err(|_e| {})
-                    .ok()
-            })
+            .and_then(|v| serde_wasm_bindgen::to_value(v).inspect_err(|_e| {}).ok())
             .unwrap_or(JsValue::NULL)
     }
 
@@ -254,11 +244,7 @@ impl Flow {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| {
-                serde_wasm_bindgen::to_value(v)
-                    .inspect_err(|_e| {})
-                    .ok()
-            })
+            .and_then(|v| serde_wasm_bindgen::to_value(v).inspect_err(|_e| {}).ok())
             .unwrap_or(JsValue::NULL)
     }
 
@@ -354,11 +340,7 @@ impl Instance {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| {
-                serde_wasm_bindgen::to_value(v)
-                    .inspect_err(|_e| {})
-                    .ok()
-            })
+            .and_then(|v| serde_wasm_bindgen::to_value(v).inspect_err(|_e| {}).ok())
             .unwrap_or(JsValue::NULL)
     }
 

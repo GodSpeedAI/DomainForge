@@ -288,15 +288,15 @@ impl KnowledgeGraph {
         xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.push_str("<rdf:RDF\n");
         xml.push_str("    xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n");
-    // Use project-local namespace for rdfs to preserve existing prefix mapping
-    // in tests and downstream tooling that expects the domainforge namespace.
-    xml.push_str("    xmlns:rdfs=\"http://domainforge.ai/rdfs#\"\n");
+        // Use project-local namespace for rdfs to preserve existing prefix mapping
+        // in tests and downstream tooling that expects the domainforge namespace.
+        xml.push_str("    xmlns:rdfs=\"http://domainforge.ai/rdfs#\"\n");
         xml.push_str("    xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n");
         xml.push_str("    xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\"\n");
-    // Explicitly declare the xml namespace so XML processors (and tests using roxmltree)
-    // can resolve attributes like xml:lang correctly.
-    xml.push_str("    xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n");
-    xml.push_str("    xmlns:sea=\"http://domainforge.ai/sea#\">\n\n");
+        // Explicitly declare the xml namespace so XML processors (and tests using roxmltree)
+        // can resolve attributes like xml:lang correctly.
+        xml.push_str("    xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n");
+        xml.push_str("    xmlns:sea=\"http://domainforge.ai/sea#\">\n\n");
 
         for triple in &self.triples {
             let subject = Self::clean_uri(&triple.subject);
