@@ -142,7 +142,7 @@ fn test_policy_priority_ordering() {
 
     let mut policies = [policy1, policy2, policy3];
     // sort the array in-place via a mutable slice
-    (&mut policies[..]).sort_by_key(|p| p.priority);
+    policies[..].sort_by_key(|p| p.priority);
 
     assert_eq!(policies[0].name, "policy_b");
     assert_eq!(policies[1].name, "policy_a");
