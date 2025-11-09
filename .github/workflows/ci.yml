@@ -100,15 +100,24 @@ jobs:
             sea-core/target
           key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Create virtualenv
+        run: python -m venv .venv
+
       - name: Install maturin and pytest
-        run: pip install maturin==${{ env.MATURIN_VERSION }} pytest==${{ env.PYTEST_VERSION }}
+        run: |
+          source .venv/bin/activate
+          pip install maturin==${{ env.MATURIN_VERSION }} pytest==${{ env.PYTEST_VERSION }}
 
       - name: Build Python bindings
-        run: maturin develop --features python
+        run: |
+          source ../.venv/bin/activate
+          maturin develop --features python
         working-directory: sea-core
 
       - name: Run Python tests
-        run: pytest tests/
+        run: |
+          source .venv/bin/activate
+          pytest tests/
 
   test-typescript:
     name: Test TypeScript

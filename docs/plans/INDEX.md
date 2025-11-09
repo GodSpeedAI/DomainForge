@@ -39,7 +39,7 @@ graph TD
 
 | # | Phase | Status | MVP | Duration | Dependencies | Traceability |
 |---|-------|--------|-----|----------|--------------|--------------|
-| 0 | [Foundation Bootstrap](./Phase%200:%20Foundation%20Bootstrap.md) | ✅ Ready | ✅ | 4-6h | None | ADR-002, PRD-005 |
+| 0 | [Foundation Bootstrap](./Phase%200%20-%20Foundation%20Bootstrap.md) | ✅ Ready | ✅ | 4-6h | None | ADR-002, PRD-005 |
 | 1 | [Entity Primitive](./Phase%201:%20Entity%20Primitive.md) | 📝 Draft | ✅ | 3-4h | Phase 0 | ADR-005, PRD-002, SDS-002 |
 | 2 | [Resource Primitive](./Phase%202:%20Resource%20Primitive.md) | 📝 Draft | ✅ | 3-4h | Phase 1 | ADR-005, PRD-002, SDS-003 |
 | 3 | [Flow & Instance Primitives](./Phase%203:%20Flow%20and%20Instance.md) | 📝 Draft | ✅ | 6-8h | Phase 2 | ADR-005, PRD-002, SDS-004 |
