@@ -23,6 +23,17 @@ reviews:
     ruff:
       enabled: true
       config_file: pyproject.toml
+  # Request changes workflow
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/target/**"
+    - "!**/node_modules/**"
+    - "!**/*.lock"
+  auto_title_placeholder: "feat|fix|chore|docs|test|refactor"
 knowledge_base:
   code_guidelines:
     enabled: true
@@ -32,3 +43,5 @@ knowledge_base:
       - "sea-core/**/*.py"
       - "tests/**/*.rs"
       - "tests/**/*.py"
+chat:
+  auto_reply: true
