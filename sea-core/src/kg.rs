@@ -1,4 +1,5 @@
 use crate::graph::Graph;
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -47,6 +48,8 @@ pub struct KnowledgeGraph {
     pub triples: Vec<Triple>,
     pub shapes: Vec<ShaclShape>,
 }
+
+const URI_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b':').add(b'/').add(b'#');
 
 impl KnowledgeGraph {
     pub fn new() -> Self {
@@ -349,7 +352,7 @@ impl KnowledgeGraph {
     }
 
     fn uri_encode(s: &str) -> String {
-        s.replace([' ', ':', '/', '#'], "_")
+        utf8_percent_encode(s, URI_ENCODE_SET).to_string()
     }
 
     fn clean_uri(uri: &str) -> String {
@@ -525,5 +528,67 @@ mod tests {
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), KgError::UnsupportedFormat(_)));
+    }
+
+    #[test]
+    fn test_export_rdf_turtle_encodes_special_characters_and_literals() {
+        let mut graph = Graph::new();
+
+        let entity_space = Entity::new("Entity With Space");
+        let entity_colon = Entity::new("Entity:Colon");
+        let entity_slash = Entity::new("Entity/Slash");
+        let entity_hash = Entity::new("Entity#Hash");
+
+        graph.add_entity(entity_space.clone()).unwrap();
+        graph.add_entity(entity_colon.clone()).unwrap();
+        graph.add_entity(entity_slash.clone()).unwrap();
+        graph.add_entity(entity_hash.clone()).unwrap();
+
+        let resource = Resource::new(
+            "Resource:Name/Hash",
+            crate::units::unit_from_string("units"),
+        );
+        let resource_id = resource.id().clone();
+        graph.add_resource(resource).unwrap();
+
+        let flow = Flow::new(
+            resource_id,
+            entity_space.id().clone(),
+            entity_colon.id().clone(),
+            Decimal::new(42, 0),
+        );
+        graph.add_flow(flow).unwrap();
+
+        let turtle = graph.export_rdf("turtle").unwrap();
+        assert!(turtle.contains("sea:Entity%20With%20Space"));
+        assert!(turtle.contains("sea:Entity%3AColon"));
+        assert!(turtle.contains("sea:Entity%2FSlash"));
+        assert!(turtle.contains("sea:Entity%23Hash"));
+        assert!(turtle.contains("sea:Resource%3AName%2FHash"));
+        assert!(turtle.contains("\"42\"^^xsd:decimal"));
+    }
+
+    #[test]
+    fn test_rdf_xml_escapes_special_literals_and_language_tags() {
+        let mut kg = KnowledgeGraph::new();
+
+        kg.triples.push(Triple {
+            subject: "sea:testEntity".to_string(),
+            predicate: "sea:hasNumericValue".to_string(),
+            object: "\"100\"^^xsd:decimal".to_string(),
+        });
+        kg.triples.push(Triple {
+            subject: "sea:testEntity".to_string(),
+            predicate: "sea:description".to_string(),
+            object: "\"Hello & <World>\"@en".to_string(),
+        });
+
+        let xml = kg.to_rdf_xml();
+        assert!(xml.contains("rdf:datatype=\"http://domainforge.ai/xsd#decimal\""));
+        assert!(xml.contains(">100<"));
+        assert!(xml.contains("xml:lang=\"en\""));
+        assert!(xml.contains("&amp;"));
+        assert!(xml.contains("&lt;"));
+        assert!(xml.contains("&gt;"));
     }
 }

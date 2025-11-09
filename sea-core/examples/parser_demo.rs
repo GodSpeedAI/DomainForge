@@ -102,27 +102,49 @@ fn main() {
                 let inflows = graph.flows_to(plant.id());
                 println!("  Incoming flows: {}", inflows.len());
                 for flow in inflows {
-                    let from = graph.get_entity(flow.from_id()).unwrap();
-                    let resource = graph.get_resource(flow.resource_id()).unwrap();
-                    println!(
-                        "    ← {} of {} from {}",
-                        flow.quantity(),
-                        resource.name(),
-                        from.name()
-                    );
+                    match (
+                        graph.get_entity(flow.from_id()),
+                        graph.get_resource(flow.resource_id()),
+                    ) {
+                        (Some(from), Some(resource)) => {
+                            println!(
+                                "    ← {} of {} from {}",
+                                flow.quantity(),
+                                resource.name(),
+                                from.name()
+                            );
+                        }
+                        _ => {
+                            eprintln!(
+                                "Warning: incoming flow {} has missing references, skipping",
+                                flow.id()
+                            );
+                        }
+                    }
                 }
 
                 let outflows = graph.flows_from(plant.id());
                 println!("  Outgoing flows: {}", outflows.len());
                 for flow in outflows {
-                    let to = graph.get_entity(flow.to_id()).unwrap();
-                    let resource = graph.get_resource(flow.resource_id()).unwrap();
-                    println!(
-                        "    → {} of {} to {}",
-                        flow.quantity(),
-                        resource.name(),
-                        to.name()
-                    );
+                    match (
+                        graph.get_entity(flow.to_id()),
+                        graph.get_resource(flow.resource_id()),
+                    ) {
+                        (Some(to), Some(resource)) => {
+                            println!(
+                                "    → {} of {} to {}",
+                                flow.quantity(),
+                                resource.name(),
+                                to.name()
+                            );
+                        }
+                        _ => {
+                            eprintln!(
+                                "Warning: outgoing flow {} has missing references, skipping",
+                                flow.id()
+                            );
+                        }
+                    }
                 }
 
                 println!(
@@ -140,9 +162,15 @@ fn main() {
             println!("🔄 Total Flow Quantities:");
             let mut resource_totals = std::collections::HashMap::new();
             for flow in graph.all_flows() {
-                let resource = graph.get_resource(flow.resource_id()).unwrap();
-                *resource_totals.entry(resource.name()).or_insert(0.0) +=
-                    flow.quantity().to_string().parse::<f64>().unwrap_or(0.0);
+                if let Some(resource) = graph.get_resource(flow.resource_id()) {
+                    *resource_totals.entry(resource.name()).or_insert(0.0) +=
+                        flow.quantity().to_string().parse::<f64>().unwrap_or(0.0);
+                } else {
+                    eprintln!(
+                        "Warning: flow {} missing resource, omitting from totals",
+                        flow.id()
+                    );
+                }
             }
             for (resource, total) in resource_totals.iter() {
                 println!("  • {}: {} units", resource, total);

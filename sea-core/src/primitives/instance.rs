@@ -39,16 +39,7 @@ pub struct Instance {
 impl Instance {
     /// Creates a new Instance (default namespace).
     pub fn new(resource_id: ConceptId, entity_id: ConceptId) -> Self {
-        let namespace = DEFAULT_NAMESPACE.to_string();
-        // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
-        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
-        Self {
-            id,
-            resource_id,
-            entity_id,
-            namespace,
-            attributes: HashMap::new(),
-        }
+        Self::new_with_namespace(resource_id, entity_id, DEFAULT_NAMESPACE)
     }
 
     pub fn new_with_namespace(

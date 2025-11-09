@@ -5,6 +5,7 @@ use sea_core::{
     Graph,
 };
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[test]
 fn test_graph_creation() {
@@ -177,8 +178,8 @@ fn test_add_flow_without_entities() {
 
     graph.add_resource(cameras).unwrap();
 
-    let warehouse_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
-    let factory_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let warehouse_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
+    let factory_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
 
     let flow = Flow::new(
         cameras_id,
@@ -202,7 +203,7 @@ fn test_add_flow_without_resource() {
     graph.add_entity(warehouse).unwrap();
     graph.add_entity(factory).unwrap();
 
-    let resource_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let resource_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
 
     let flow = Flow::new(
         resource_id,
@@ -242,7 +243,7 @@ fn test_add_instance_without_entity() {
 
     graph.add_resource(cameras).unwrap();
 
-    let entity_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let entity_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
     let instance = Instance::new(cameras_id.clone(), entity_id.clone());
 
     assert!(graph.add_instance(instance).is_err());
@@ -256,7 +257,7 @@ fn test_add_instance_without_resource() {
 
     graph.add_entity(warehouse).unwrap();
 
-    let resource_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let resource_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
     let instance = Instance::new(resource_id.clone(), warehouse_id.clone());
 
     assert!(graph.add_instance(instance).is_err());

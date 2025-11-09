@@ -183,9 +183,12 @@ fn import_relationship(
             graph.add_flow(flow_obj)?;
         }
         RelationshipType::Simple(rel_type) => {
-            if rel_type.as_str() != "ownership" {
-                // TODO: handle additional relationship encodings when defined
-            }
+            let rel_type_text = rel_type.as_str();
+            log::warn!(
+                "Skipping unsupported Simple relationship '{}' in CALM import",
+                rel_type_text
+            );
+            return Ok(());
         }
     }
 

@@ -51,18 +51,7 @@ impl Flow {
         to_id: ConceptId,
         quantity: Decimal,
     ) -> Self {
-        let namespace = DEFAULT_NAMESPACE.to_string();
-        // Use UUID v4 for flows to ensure uniqueness (flows are events, not concepts)
-        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
-        Self {
-            id,
-            resource_id,
-            from_id,
-            to_id,
-            quantity,
-            namespace,
-            attributes: HashMap::new(),
-        }
+        Self::new_with_namespace(resource_id, from_id, to_id, quantity, DEFAULT_NAMESPACE)
     }
 
     /// Creates a new Flow with namespace.

@@ -229,7 +229,7 @@ fn test_end_to_end_comments_and_whitespace() {
         // Another comment
         Resource "X" units
 
-        Flow "X" from "A" to "A"
+        Flow "X" from "A" to "A" quantity 1
 
         // End comment
     "#;

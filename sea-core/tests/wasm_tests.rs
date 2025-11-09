@@ -1,12 +1,12 @@
-use wasm_bindgen_test::*;
-
-wasm_bindgen_test_configure!(run_in_browser);
+#[allow(unused_imports)]
+use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 #[cfg(feature = "wasm")]
 mod wasm_tests {
     use super::*;
-    use sea_core::units::unit_from_string;
     use sea_core::wasm::{Entity, Flow, Graph, Instance, Resource};
+
+    wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
     fn test_entity_creation() {

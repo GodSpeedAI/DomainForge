@@ -1,4 +1,4 @@
-use sea_core::parser::{parse, parse_to_graph};
+use sea_core::parser::{parse, parse_to_graph, AstNode};
 
 #[test]
 fn test_parse_entity_basic() {
@@ -78,6 +78,16 @@ fn test_parse_policy_with_colon() {
     let ast = parse(source).unwrap();
 
     assert_eq!(ast.declarations.len(), 1);
+    match &ast.declarations[0] {
+        AstNode::Policy { name, version, .. } => {
+            assert_eq!(name, "check_qty");
+            assert!(version.is_none());
+        }
+        _ => panic!("Expected policy declaration"),
+    }
+
+    let missing_colon = r#"Policy check_qty as Flow.quantity > 0"#;
+    assert!(parse(missing_colon).is_err());
 }
 
 #[test]

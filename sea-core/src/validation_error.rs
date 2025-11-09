@@ -189,7 +189,7 @@ impl ValidationError {
         self
     }
 
-    // Phase 15A: Additional convenience constructors for common error patterns
+    // Additional convenience constructors for common error patterns
 
     /// Create an error for an undefined Entity with a helpful suggestion
     pub fn undefined_entity(name: impl Into<String>, location: impl Into<String>) -> Self {

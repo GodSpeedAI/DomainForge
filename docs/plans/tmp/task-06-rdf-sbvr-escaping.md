@@ -806,7 +806,7 @@ mod sbvr_fact_schema_tests {
         }"#;
 
         let upgraded: SbvrFactType = serde_json::from_str(legacy).unwrap();
-        assert_eq!(upgraded.schema_version, "1.0");  // default injected
+        assert_eq!(upgraded.schema_version, "2.0");  // default injected
         assert_eq!(upgraded.destination.as_deref(), None);
         assert_eq!(upgraded.object, "legacy-to"); // still resource field until migration runs
     }
@@ -985,6 +985,9 @@ mod sbvr_flow_facts_tests {
         let warehouse_id = warehouse.id().clone();
         let factory_id = factory.id().clone();
         let camera_id = camera.id().clone();
+        let warehouse_id_str = warehouse_id.to_string();
+        let factory_id_str = factory_id.to_string();
+        let camera_id_str = camera_id.to_string();
 
         graph.add_entity(warehouse).unwrap();
         graph.add_entity(factory).unwrap();
@@ -1005,10 +1008,10 @@ mod sbvr_flow_facts_tests {
             .find(|f| f.id == flow.id().to_string())
             .expect("Flow fact not found");
 
-        assert_eq!(flow_fact.subject, warehouse_id.to_string());
+        assert_eq!(flow_fact.subject, warehouse_id_str);
         assert_eq!(flow_fact.verb, "transfers");
-        assert_eq!(flow_fact.object, camera_id.to_string());  // Resource ID
-        assert_eq!(flow_fact.destination, factory_id.to_string());  // Destination entity
+        assert_eq!(flow_fact.object, camera_id_str);  // Resource ID
+        assert_eq!(flow_fact.destination.as_deref(), Some(factory_id_str.as_str()));  // Destination entity
     }
 }
 ```
@@ -1020,15 +1023,15 @@ mod sbvr_flow_facts_tests {
 **Update `sea-core/src/sbvr.rs` lines 106-113:**
 
 ```rust
-for flow in graph.all_flows() {
-    model.facts.push(SbvrFactType {
-        id: flow.id().to_string(),
-        subject: flow.from_id().to_string(),
-        verb: "transfers".to_string(),
-        object: flow.resource_id().to_string(),      // CHANGED: was flow.to_id()
-        destination: flow.to_id().to_string(),       // NEW FIELD
-    });
-}
+        for flow in graph.all_flows() {
+            model.facts.push(SbvrFactType {
+                id: flow.id().to_string(),
+                subject: flow.from_id().to_string(),
+                verb: "transfers".to_string(),
+                object: flow.resource_id().to_string(),      // CHANGED: was flow.to_id()
+                destination: Some(flow.to_id().to_string()), // NEW FIELD
+            });
+        }
 ```
 
 #### Verification & Evidence Capture

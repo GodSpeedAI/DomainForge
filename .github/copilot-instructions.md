@@ -643,4 +643,4 @@ This project supports several MCP (Model Context Protocol) servers for enhanced 
 
 **Usage**: These tools are available via the MCP protocol. Always check which MCP tools are available and use them when appropriate. Chain tools for complex tasks.
 
-for example, use Exa Search to find relevant code snippets, then use Context7 to fetch detailed documentation on specific functions or types found and finally use Vibe Check to ensure the reasoning and approach are sound.
+For example, use Exa Search to find relevant code snippets, then use Context7 to fetch detailed documentation on specific functions or types found and finally use Vibe Check to ensure the reasoning and approach are sound.

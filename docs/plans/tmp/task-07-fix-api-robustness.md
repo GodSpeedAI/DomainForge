@@ -410,6 +410,29 @@ class TestEntityTransformation:
         # Should preserve formatting
         assert "\n" in result
 
+    def test_entity_new_with_multiple_arguments(self):
+        """Ensure Entity::new with additional expressions keeps argument order"""
+        input_code = '''
+        let entity = Entity::new("Warehouse".to_string(), metadata.clone());
+        '''
+
+        transformer = EntityTransformer()
+        result = transformer.transform(input_code)
+        assert "Entity::new_with_namespace" in result
+        assert "metadata.clone()" in result  # Additional arguments preserved
+        assert result.count("metadata.clone()") == 1
+
+    def test_entity_new_with_nested_expression(self):
+        """Test Entity::new whose argument is another complex expression"""
+        input_code = '''
+        let entity = Entity::new(format_entity(name).trim());
+        '''
+
+        transformer = EntityTransformer()
+        result = transformer.transform(input_code)
+        assert "Entity::new_with_namespace" in result
+        assert "format_entity(name).trim()" in result  # Nested expression kept intact
+
     def test_entity_new_with_comment(self):
         """Test Entity::new with inline comment"""
         input_code = '''
@@ -515,20 +538,15 @@ class EntityTransformer(RustTransformer):
         if not arguments_node:
             return
 
-        first_arg_node = None
-        for child in arguments_node.named_children:
-            if child.type == 'argument':
-                first_arg_node = child.child_by_field_name('value') or child
-                break
-            elif child.type not in {'(', ')'}:
-                first_arg_node = child
-                break
+        argument_nodes = list(arguments_node.named_children)
 
-        if not first_arg_node:
+        if not argument_nodes:
             logger.warning("Entity::new call missing arguments at bytes %s-%s", call_node.start_byte, call_node.end_byte)
             return
 
-        original_arg_text = self._node_text(first_arg_node).decode()
+        start_byte = argument_nodes[0].start_byte
+        end_byte = argument_nodes[-1].end_byte
+        original_arg_text = self.source_code[start_byte:end_byte].decode()
 
         # Build new function name
         new_function = 'Entity::new_with_namespace'
@@ -711,6 +729,12 @@ class TestResourceTransformation:
 class ResourceTransformer(RustTransformer):
     """Transform Resource::new(name, unit) to Resource::new_with_namespace(name, unit_from_string(unit), "default")"""
 
+    def __init__(self, strict: bool = False):
+        super().__init__()
+        self.strict = strict
+        self.skipped_calls: List[Tuple[int, int, str]] = []
+        self.transformed = 0
+
     def transform(self, source_code: str) -> str:
         """Transform Resource::new calls in source code"""
         source_bytes = source_code.encode('utf-8')
@@ -723,6 +747,8 @@ class ResourceTransformer(RustTransformer):
 
         for call_node in resource_calls:
             self._transform_resource_call(call_node)
+
+        self._emit_summary()
 
         return self.apply_changes(source_bytes)
 
@@ -754,7 +780,13 @@ class ResourceTransformer(RustTransformer):
         # Parse arguments: (name, unit)
         args = self._parse_arguments(arguments_node)
         if len(args) != 2:
-            logger.warning(f"Resource::new has {len(args)} arguments, expected 2")
+            call_snippet = self._node_text(call_node).decode().strip()
+            logger.warning(
+                f"Resource::new has {len(args)} arguments (bytes {call_node.start_byte}-{call_node.end_byte}), expected 2"
+            )
+            self.skipped_calls.append(
+                (call_node.start_byte, call_node.end_byte, call_snippet)
+            )
             return
 
         name_arg_node, unit_arg_node = args
@@ -784,6 +816,25 @@ class ResourceTransformer(RustTransformer):
             arguments_node.end_byte,
             new_args
         ))
+
+        self.transformed += 1
+
+    def _emit_summary(self):
+        skipped = len(self.skipped_calls)
+        total = self.transformed + skipped
+        logger.info(
+            "Resource::new transformation summary: %d successful, %d skipped of %d",
+            self.transformed,
+            skipped,
+            total,
+        )
+        if skipped:
+            for start, end, snippet in self.skipped_calls:
+                logger.info("Skipping Resource::new at bytes %s-%s: %s", start, end, snippet)
+            if self.strict:
+                raise RuntimeError(
+                    "Strict mode enabled and resource transformation skipped calls were detected"
+                )
 
     def _parse_arguments(self, arguments_node: Node) -> List[Node]:
         """Extract individual argument value nodes"""
@@ -915,6 +966,19 @@ class TestImportInsertion:
         assert 'use sea_core::primitives::unit_from_string;' in result or \
                'use sea_core::primitives::{unit_from_string};' in result
 
+    def test_create_new_import_before_function(self):
+        """New import should appear before the first function when no imports exist"""
+        input_code = '''
+        fn helper() {}
+        fn main() {}
+        '''
+
+        inserter = ImportInserter()
+        result = inserter.add_import(input_code, 'unit_from_string')
+
+        first_decl = result.strip().split('\n')[0]
+        assert first_decl.startswith('use sea_core::primitives::unit_from_string')
+
     def test_idempotent_import_insertion(self):
         """Test import already exists - no duplication"""
         input_code = '''
@@ -1019,8 +1083,19 @@ class ImportInserter(RustTransformer):
             if child.type == 'use_declaration':
                 last_use = child
 
-        insert_byte = last_use.end_byte if last_use else 0
+        insert_byte = last_use.end_byte if last_use else self._default_import_offset(tree.root_node)
         self.changes.append((insert_byte, insert_byte, new_import))
+
+    def _default_import_offset(self, root_node: Node) -> int:
+        """Determine where to place generated imports when none exist."""
+        offset = 0
+        for child in root_node.children:
+            if child.type in {'shebang', 'attribute_item', 'line_comment'}:
+                offset = child.end_byte
+                continue
+            if child.start_byte is not None:
+                return offset or child.start_byte
+        return offset
 ```
 
 #### Verification & Evidence Capture
@@ -1359,6 +1434,8 @@ class TestIntegration:
 
 ```python
 import argparse
+import sys
+from pathlib import Path
 
 def main(args=None):
     """Main entry point for fix_api_v2 tool"""
@@ -1394,6 +1471,10 @@ def main(args=None):
         logger.setLevel(logging.DEBUG)
 
     filepath = parsed_args.file
+
+    if filepath.suffix not in {'.rs', '.rs.bak'}:
+        logger.error("Input file must be a Rust source (ends with .rs or .rs.bak): %s", filepath)
+        sys.exit(1)
 
     if not filepath.exists():
         logger.error(f"File not found: {filepath}")
@@ -1508,6 +1589,10 @@ Label → **E-GREEN**
 3. Manual rollback: `cp <filename>.rs.bak <filename>.rs`
 4. Automatic rollback: handled by `safe_transform()` context manager
 5. Verify: `cargo build && cargo test`
+
+### Parse Failure Fallback
+
+`RustTransformer.parse_file()` now exposes an `allow_fallback` flag (hooked from the CLI via `--allow-fallback` or automatically enabled for dry runs). When tree-sitter raises a parse error, the transformer logs a warning, writes the raw error plus stack trace to `/rollback/parse_failure_<timestamp>.log`, and – if fallback is enabled – synthesizes a minimalist AST by scanning the source with a short regex that captures `use` statements, top-level function signatures, and outer comments. The fallback result keeps downstream transformers and import inserter happy without terminating the entire run. When fallback is disabled (the default for strict production runs), we re-raise the original parse exception so the job fails fast.
 
 ---
 

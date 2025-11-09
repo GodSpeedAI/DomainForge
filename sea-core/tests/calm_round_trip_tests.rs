@@ -12,7 +12,6 @@ fn test_round_trip_simple_graph() {
     original_graph.add_entity(entity).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
-
     let imported_graph = import(calm_json).unwrap();
 
     assert_eq!(original_graph.entity_count(), imported_graph.entity_count());

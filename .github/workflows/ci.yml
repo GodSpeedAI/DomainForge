@@ -10,6 +10,8 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   CARGO_INCREMENTAL: 0
+  MATURIN_VERSION: 1.7.4
+  PYTEST_VERSION: 7.4.2
 
 jobs:
   lint:
@@ -98,8 +100,8 @@ jobs:
             sea-core/target
           key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install maturin
-        run: pip install maturin pytest
+      - name: Install maturin and pytest
+        run: pip install maturin==${{ env.MATURIN_VERSION }} pytest==${{ env.PYTEST_VERSION }}
 
       - name: Build Python bindings
         run: maturin develop --features python
@@ -167,7 +169,7 @@ jobs:
           key: ${{ runner.os }}-wasm-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --locked
 
       - name: Build WASM
         run: wasm-pack build --target web --features wasm
@@ -177,7 +179,11 @@ jobs:
         run: |
           SIZE=$(stat -c%s "sea-core/pkg/sea_core_bg.wasm")
           echo "WASM bundle size: $SIZE bytes"
-          if [ $SIZE -gt 524288 ]; then
+          if [ -z "$SIZE" ] || ! [[ "$SIZE" =~ ^[0-9]+$ ]]; then
+            echo "::error::Unable to determine WASM bundle size ('$SIZE')"
+            exit 1
+          fi
+          if [ "$SIZE" -gt 524288 ]; then
             echo "::error::WASM bundle exceeds 512KB limit"
             exit 1
           fi

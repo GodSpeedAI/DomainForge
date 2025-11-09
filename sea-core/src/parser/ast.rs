@@ -522,10 +522,22 @@ fn parse_aggregate_fn(pair: Pair<Rule>) -> ParseResult<AggregateFunction> {
 fn parse_quantified_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
 
-    let quantifier = parse_quantifier(inner.next().unwrap())?;
-    let variable = parse_identifier(inner.next().unwrap())?;
-    let collection = parse_collection(inner.next().unwrap())?;
-    let condition = parse_expression(inner.next().unwrap())?;
+    let quantifier = parse_quantifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected quantifier in quantified expression".to_string())
+    })?)?;
+    let variable = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError(
+            "Expected variable identifier in quantified expression".to_string(),
+        )
+    })?)?;
+    let collection = parse_collection(inner.next().ok_or_else(|| {
+        ParseError::GrammarError(
+            "Expected collection identifier in quantified expression".to_string(),
+        )
+    })?)?;
+    let condition = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected quantified condition expression".to_string())
+    })?)?;
 
     Ok(Expression::Quantifier {
         quantifier,
@@ -557,15 +569,22 @@ fn parse_collection(pair: Pair<Rule>) -> ParseResult<String> {
 /// Parse member access
 fn parse_member_access(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let object = parse_identifier(inner.next().unwrap())?;
-    let member = parse_identifier(inner.next().unwrap())?;
+    let object = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected object identifier in member access".to_string())
+    })?)?;
+    let member = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected member identifier in member access".to_string())
+    })?)?;
 
     Ok(Expression::MemberAccess { object, member })
 }
 
 /// Parse literal expression
 fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
-    let inner = pair.into_inner().next().unwrap();
+    let inner = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected literal content".to_string()))?;
 
     match inner.as_rule() {
         Rule::string_literal => {

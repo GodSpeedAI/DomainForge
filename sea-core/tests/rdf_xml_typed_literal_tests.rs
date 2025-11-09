@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod rdf_xml_typed_literal_tests {
+    use roxmltree::Document;
     use rust_decimal::Decimal;
     use sea_core::primitives::{Entity, Flow, Resource};
     use sea_core::{
@@ -23,12 +24,12 @@ mod rdf_xml_typed_literal_tests {
         graph.add_entity(manufacturer).unwrap();
         graph.add_resource(money).unwrap();
 
-        #[allow(deprecated)]
-        let flow = Flow::new(
+        let flow = Flow::new_with_namespace(
             money_id,
             supplier_id,
             manufacturer_id,
             Decimal::new(2500, 2),
+            "default",
         );
         graph.add_flow(flow).unwrap();
 
@@ -52,8 +53,18 @@ mod rdf_xml_typed_literal_tests {
 
         let rdf_xml = kg.to_rdf_xml();
 
-        assert!(rdf_xml.contains("xml:lang=\"en\""));
-        assert!(rdf_xml.contains(">Warehouse</http://domainforge.ai/rdfs#label>"));
+        let doc = Document::parse(&rdf_xml).expect("Failed to parse RDF/XML");
+        let label_node = doc
+            .descendants()
+            .find(|node| {
+                node.is_element()
+                    && node.tag_name().name() == "label"
+                    && node.tag_name().namespace() == Some("http://domainforge.ai/rdfs#")
+            })
+            .expect("Missing rdfs:label element");
+
+        assert_eq!(label_node.text(), Some("Warehouse"));
+        assert_eq!(label_node.attribute("xml:lang"), Some("en"));
     }
 
     #[test]
@@ -78,10 +89,6 @@ mod rdf_xml_typed_literal_tests {
     #[test]
     fn test_escape_xml_helper_covers_all_entities() {
         let escaped = KnowledgeGraph::escape_xml("&<>\"'");
-        assert!(escaped.contains("&amp;"));
-        assert!(escaped.contains("&lt;"));
-        assert!(escaped.contains("&gt;"));
-        assert!(escaped.contains("&quot;"));
-        assert!(escaped.contains("&apos;"));
+        assert_eq!(escaped, "&amp;&lt;&gt;&quot;&apos;");
     }
 }

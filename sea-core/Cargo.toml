@@ -18,17 +18,20 @@ chrono = { version = "0.4", features = ["serde"] }
 pest = "2.7"
 pest_derive = "2.7"
 indexmap = { version = "2.0", features = ["serde"] }
+log = "0.4"
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 pythonize = { version = "0.22", optional = true }
 napi = { version = "2.16", features = ["async"], optional = true }
 napi-derive = { version = "2.16", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
+percent-encoding = "2.3.2"
 
 [dev-dependencies]
 proptest = "1.0"
 wasm-bindgen-test = "0.3"
 jsonschema = "0.18"
+roxmltree = "0.21.1"
 
 [build-dependencies]
 napi-build = "2.1"

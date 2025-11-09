@@ -1,6 +1,7 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Dimension {
@@ -275,21 +276,20 @@ impl UnitRegistry {
 
 /// Helper function to get a Unit from a string symbol, using the default registry
 /// Returns a Count-based unit if the symbol is not found
+static DEFAULT_UNIT_REGISTRY: OnceLock<UnitRegistry> = OnceLock::new();
+
 pub fn unit_from_string(symbol: impl Into<String>) -> Unit {
     let symbol = symbol.into();
-    let registry = UnitRegistry::default();
+    let registry = DEFAULT_UNIT_REGISTRY.get_or_init(UnitRegistry::default);
 
-    registry
-        .get_unit(&symbol)
-        .cloned()
-        .unwrap_or_else(|_| {
-            // Default to Count dimension for unknown units
-            Unit::new(
-                symbol.clone(),
-                symbol.clone(),
-                Dimension::Count,
-                Decimal::from(1),
-            )
-            .expect("default unit should have non-zero base_factor")
-        })
+    registry.get_unit(&symbol).cloned().unwrap_or_else(|_| {
+        // Default to Count dimension for unknown units
+        Unit::new(
+            symbol.clone(),
+            symbol.clone(),
+            Dimension::Count,
+            Decimal::from(1),
+        )
+        .expect("default unit should have non-zero base_factor")
+    })
 }

@@ -14,9 +14,11 @@ mod sbvr_fact_schema_tests {
         };
 
         let json = serde_json::to_string(&fact).unwrap();
-        assert!(json.contains("\"schema_version\":\"2.0\""));
-        assert!(json.contains("\"destination\""));
-        assert!(json.contains("resource-123"));
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(value["schema_version"], "2.0");
+        assert_eq!(value["destination"].as_str(), Some("entity-to"));
+        assert_eq!(value["object"], "resource-123");
     }
 
     #[test]

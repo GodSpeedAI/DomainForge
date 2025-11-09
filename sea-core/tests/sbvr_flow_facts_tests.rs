@@ -22,12 +22,12 @@ mod sbvr_flow_facts_tests {
         graph.add_entity(factory).unwrap();
         graph.add_resource(camera).unwrap();
 
-        #[allow(deprecated)]
-        let flow = Flow::new(
+        let flow = Flow::new_with_namespace(
             camera_id.clone(),
             warehouse_id.clone(),
             factory_id.clone(),
             Decimal::new(100, 0),
+            "default",
         );
         graph.add_flow(flow.clone()).unwrap();
 

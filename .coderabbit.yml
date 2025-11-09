@@ -7,22 +7,19 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    branches:
+    base_branches:
       - main
       - dev
       - release/*
-  tools:
-    # Rust tooling
-    clippy:
-      enabled: true
-      config_file: sea-core/Cargo.toml
-    rustfmt:
-      enabled: true
-      config_file: .rustfmt.toml
-    # Python tooling
-    ruff:
-      enabled: true
-      config_file: pyproject.toml
+    tools:
+      # Rust tooling
+      clippy:
+        enabled: true
+        config_file: sea-core/Cargo.toml
+      # Python tooling
+      ruff:
+        enabled: true
+        config_file: pyproject.toml
   # Request changes workflow
   request_changes_workflow: true
   high_level_summary: true
@@ -33,7 +30,8 @@ reviews:
     - "!**/target/**"
     - "!**/node_modules/**"
     - "!**/*.lock"
-  auto_title_placeholder: "feat|fix|chore|docs|test|refactor"
+  auto_title_placeholder: "@coderabbitai"
+  auto_title_instructions: "Start titles with a conventional prefix such as feat, fix, chore, docs, test, or refactor followed by a brief summary."
 knowledge_base:
   code_guidelines:
     enabled: true

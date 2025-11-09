@@ -82,8 +82,7 @@ fn test_schema_is_valid_json_schema() {
 
 #[test]
 fn test_empty_graph_validates() {
-    let schema = serde_json::from_str(CALM_SCHEMA).expect("Invalid schema JSON");
-    let compiled_schema = JSONSchema::compile(&schema).expect("Failed to compile schema");
+    let compiled_schema = compile_calm_schema();
 
     let graph = Graph::new();
     let calm_json = export(&graph).unwrap();
