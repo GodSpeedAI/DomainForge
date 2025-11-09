@@ -106,3 +106,5 @@ Thumbs.db
 # Sensitive files (auto-detected)
 node_modules
 
+*.bak
+.bak.coderabbit.yml

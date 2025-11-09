@@ -33,15 +33,19 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
         working-directory: sea-core
 
-      - name: Package artifacts
+      - name: Package artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd sea-core/target/${{ matrix.target }}/release
+          7z a ../../../../sea-core-${{ matrix.target }}.zip sea_core.exe
+
+      - name: Package artifacts (Unix)
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           cd sea-core/target/${{ matrix.target }}/release
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            7z a ../../../../sea-core-${{ matrix.target }}.zip sea_core.exe
-          else
-            tar czf ../../../../sea-core-${{ matrix.target }}.tar.gz sea_core
-          fi
+          tar czf ../../../../sea-core-${{ matrix.target }}.tar.gz sea_core
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
