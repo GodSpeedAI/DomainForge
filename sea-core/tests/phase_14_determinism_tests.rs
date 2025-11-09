@@ -140,8 +140,9 @@ fn test_policy_priority_ordering() {
     let policy2 = Policy::new("policy_b", expr2).with_priority(5);
     let policy3 = Policy::new("policy_c", expr3).with_priority(20);
 
-    let mut policies = vec![policy1, policy2, policy3];
-    policies.sort_by_key(|p| p.priority);
+    let mut policies = [policy1, policy2, policy3];
+    // sort the array in-place via a mutable slice
+    (&mut policies[..]).sort_by_key(|p| p.priority);
 
     assert_eq!(policies[0].name, "policy_b");
     assert_eq!(policies[1].name, "policy_a");
