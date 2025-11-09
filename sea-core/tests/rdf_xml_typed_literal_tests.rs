@@ -64,7 +64,13 @@ mod rdf_xml_typed_literal_tests {
             .expect("Missing rdfs:label element");
 
         assert_eq!(label_node.text(), Some("Warehouse"));
-        assert_eq!(label_node.attribute("xml:lang"), Some("en"));
+        // Use namespace-aware attribute lookup: roxmltree allows checking attributes by
+        // expanded name (namespace URI, local name). The `xml:lang` attribute lives in
+        // the XML namespace "http://www.w3.org/XML/1998/namespace".
+        assert_eq!(
+            label_node.attribute(("http://www.w3.org/XML/1998/namespace", "lang")),
+            Some("en")
+        );
     }
 
     #[test]

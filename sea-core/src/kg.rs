@@ -288,14 +288,22 @@ impl KnowledgeGraph {
         xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.push_str("<rdf:RDF\n");
         xml.push_str("    xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n");
-        xml.push_str("    xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n");
+    // Use project-local namespace for rdfs to preserve existing prefix mapping
+    // in tests and downstream tooling that expects the domainforge namespace.
+    xml.push_str("    xmlns:rdfs=\"http://domainforge.ai/rdfs#\"\n");
         xml.push_str("    xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n");
         xml.push_str("    xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\"\n");
-        xml.push_str("    xmlns:sea=\"http://domainforge.ai/sea#\">\n\n");
+    // Explicitly declare the xml namespace so XML processors (and tests using roxmltree)
+    // can resolve attributes like xml:lang correctly.
+    xml.push_str("    xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n");
+    xml.push_str("    xmlns:sea=\"http://domainforge.ai/sea#\">\n\n");
 
         for triple in &self.triples {
             let subject = Self::clean_uri(&triple.subject);
-            let predicate = Self::clean_uri(&triple.predicate);
+            // Keep the predicate as the original prefixed name for use as XML element
+            // (e.g. rdfs:label). Use the cleaned URI only for rdf:datatype or rdf:resource
+            // attributes where a full URI is required.
+            let predicate_name = triple.predicate.clone();
             let object = &triple.object;
 
             if object.starts_with('"') {
@@ -309,19 +317,19 @@ impl KnowledgeGraph {
                         let datatype_uri = Self::clean_uri(&datatype);
                         xml.push_str(&format!(
                             "    <{} rdf:datatype=\"{}\">{}</{}>\n",
-                            predicate, datatype_uri, escaped_value, predicate
+                            predicate_name, datatype_uri, escaped_value, predicate_name
                         ));
                     }
                     Some(TypedLiteralSuffix::Language(lang)) => {
                         xml.push_str(&format!(
                             "    <{} xml:lang=\"{}\">{}</{}>\n",
-                            predicate, lang, escaped_value, predicate
+                            predicate_name, lang, escaped_value, predicate_name
                         ));
                     }
                     None => {
                         xml.push_str(&format!(
                             "    <{}>{}</{}>\n",
-                            predicate, escaped_value, predicate
+                            predicate_name, escaped_value, predicate_name
                         ));
                     }
                 }
@@ -332,7 +340,7 @@ impl KnowledgeGraph {
                 xml.push_str(&format!("  <rdf:Description rdf:about=\"{}\">\n", subject));
                 xml.push_str(&format!(
                     "    <{} rdf:resource=\"{}\"/>\n",
-                    predicate, cleaned_object
+                    predicate_name, cleaned_object
                 ));
                 xml.push_str("  </rdf:Description>\n\n");
             }

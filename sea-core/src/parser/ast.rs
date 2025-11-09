@@ -8,6 +8,7 @@ use crate::primitives::{Entity, Flow, Resource};
 use crate::units::unit_from_string;
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
+use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -594,7 +595,27 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         }
         Rule::number => {
             let n = parse_decimal(inner)?;
-            Ok(Expression::Literal(JsonValue::String(n.to_string())))
+            // Convert Decimal to f64 for JSON Number representation
+            let f = n.to_f64().ok_or_else(|| {
+                ParseError::InvalidQuantity(format!(
+                    "Decimal value {} cannot be represented as f64",
+                    n
+                ))
+            })?;
+            // Ensure the value is finite
+            if !f.is_finite() {
+                return Err(ParseError::InvalidQuantity(format!(
+                    "Decimal value {} converts to non-finite f64: {}",
+                    n, f
+                )));
+            }
+            let num = serde_json::Number::from_f64(f).ok_or_else(|| {
+                ParseError::InvalidQuantity(format!(
+                    "Cannot create JSON Number from f64 value: {}",
+                    f
+                ))
+            })?;
+            Ok(Expression::Literal(JsonValue::Number(num)))
         }
         Rule::boolean => {
             let b = inner.as_str().eq_ignore_ascii_case("true");
@@ -632,10 +653,9 @@ fn parse_string_literal(pair: Pair<Rule>) -> ParseResult<String> {
         )));
     }
 
-    let content = &s[1..s.len() - 1];
-
     // Use serde_json to properly parse and unescape the string
-    match serde_json::from_str(&format!("\"{}\"", content)) {
+    // The string already has quotes, so pass it directly
+    match serde_json::from_str(s) {
         Ok(unescaped) => Ok(unescaped),
         Err(e) => Err(ParseError::GrammarError(format!(
             "Invalid string literal escape sequences: {} - {}",
@@ -656,12 +676,20 @@ fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
 
     let content = &s[3..s.len() - 3];
 
-    // Create a JSON string from the multiline content and parse it to unescape
-    let json_string = format!("\"{}\"", content);
+    // Escape special characters for JSON compatibility
+    let escaped = content
+        .replace('\\', "\\\\")  // Backslash must be first
+        .replace('"', "\\\"")   // Double quotes
+        .replace('\n', "\\n")   // Newlines
+        .replace('\r', "\\r")   // Carriage returns
+        .replace('\t', "\\t");  // Tabs
+
+    // Create a JSON string and parse it to handle escape sequences
+    let json_string = format!("\"{}\"", escaped);
     match serde_json::from_str(&json_string) {
         Ok(unescaped) => Ok(unescaped),
         Err(e) => Err(ParseError::GrammarError(format!(
-            "Invalid multiline string escape sequences: {} - {}",
+            "Invalid multiline string escape sequences in '{}': {}",
             s, e
         ))),
     }

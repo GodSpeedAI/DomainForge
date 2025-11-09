@@ -14,6 +14,13 @@ pub struct Graph {
     inner: RustGraph,
 }
 
+/// Helper function to parse a UUID string into a ConceptId
+fn parse_concept_id(id: &str) -> Result<crate::ConceptId> {
+    let uuid = Uuid::from_str(id)
+        .map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
+    Ok(crate::ConceptId::from(uuid))
+}
+
 #[napi]
 impl Graph {
     #[napi(constructor)]
@@ -73,41 +80,31 @@ impl Graph {
 
     #[napi]
     pub fn has_entity(&self, id: String) -> Result<bool> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_entity(&cid))
     }
 
     #[napi]
     pub fn has_resource(&self, id: String) -> Result<bool> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_resource(&cid))
     }
 
     #[napi]
     pub fn has_flow(&self, id: String) -> Result<bool> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_flow(&cid))
     }
 
     #[napi]
     pub fn has_instance(&self, id: String) -> Result<bool> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_instance(&cid))
     }
 
     #[napi]
     pub fn get_entity(&self, id: String) -> Result<Option<Entity>> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_entity(&cid)
@@ -116,9 +113,7 @@ impl Graph {
 
     #[napi]
     pub fn get_resource(&self, id: String) -> Result<Option<Resource>> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_resource(&cid)
@@ -127,9 +122,7 @@ impl Graph {
 
     #[napi]
     pub fn get_flow(&self, id: String) -> Result<Option<Flow>> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_flow(&cid)
@@ -138,9 +131,7 @@ impl Graph {
 
     #[napi]
     pub fn get_instance(&self, id: String) -> Result<Option<Instance>> {
-        let uuid =
-            Uuid::from_str(&id).map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_instance(&cid)
@@ -163,10 +154,7 @@ impl Graph {
 
     #[napi]
     pub fn flows_from(&self, entity_id: String) -> Result<Vec<Flow>> {
-        let uuid = Uuid::from_str(&entity_id)
-            .map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
-
+        let cid = parse_concept_id(&entity_id)?;
         Ok(self
             .inner
             .flows_from(&cid)
@@ -177,10 +165,7 @@ impl Graph {
 
     #[napi]
     pub fn flows_to(&self, entity_id: String) -> Result<Vec<Flow>> {
-        let uuid = Uuid::from_str(&entity_id)
-            .map_err(|e| Error::from_reason(format!("Invalid UUID: {}", e)))?;
-        let cid = crate::ConceptId::from(uuid);
-
+        let cid = parse_concept_id(&entity_id)?;
         Ok(self
             .inner
             .flows_to(&cid)

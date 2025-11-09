@@ -16,7 +16,13 @@ pub struct Graph {
     inner: RustGraph,
 }
 
-#[allow(clippy::useless_conversion)]
+/// Helper function to parse a UUID string into a ConceptId
+fn parse_concept_id(id: &str) -> PyResult<ConceptId> {
+    let uuid = Uuid::from_str(id)
+        .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
+    Ok(ConceptId::from(uuid))
+}
+
 #[pymethods]
 impl Graph {
     #[new]
@@ -67,37 +73,27 @@ impl Graph {
     }
 
     fn has_entity(&self, id: String) -> PyResult<bool> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_entity(&cid))
     }
 
     fn has_resource(&self, id: String) -> PyResult<bool> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_resource(&cid))
     }
 
     fn has_flow(&self, id: String) -> PyResult<bool> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_flow(&cid))
     }
 
     fn has_instance(&self, id: String) -> PyResult<bool> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_instance(&cid))
     }
 
     fn get_entity(&self, id: String) -> PyResult<Option<Entity>> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_entity(&cid)
@@ -105,9 +101,7 @@ impl Graph {
     }
 
     fn get_resource(&self, id: String) -> PyResult<Option<Resource>> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_resource(&cid)
@@ -115,9 +109,7 @@ impl Graph {
     }
 
     fn get_flow(&self, id: String) -> PyResult<Option<Flow>> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_flow(&cid)
@@ -125,9 +117,7 @@ impl Graph {
     }
 
     fn get_instance(&self, id: String) -> PyResult<Option<Instance>> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
+        let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_instance(&cid)
@@ -147,10 +137,7 @@ impl Graph {
     }
 
     fn flows_from(&self, entity_id: String) -> PyResult<Vec<Flow>> {
-        let uuid = Uuid::from_str(&entity_id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
-
+        let cid = parse_concept_id(&entity_id)?;
         Ok(self
             .inner
             .flows_from(&cid)
@@ -160,10 +147,7 @@ impl Graph {
     }
 
     fn flows_to(&self, entity_id: String) -> PyResult<Vec<Flow>> {
-        let uuid = Uuid::from_str(&entity_id)
-            .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
-        let cid = ConceptId::from(uuid);
-
+        let cid = parse_concept_id(&entity_id)?;
         Ok(self
             .inner
             .flows_to(&cid)

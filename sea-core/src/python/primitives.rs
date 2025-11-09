@@ -17,7 +17,6 @@ pub struct Entity {
     inner: RustEntity,
 }
 
-#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Entity {
     #[new]
@@ -99,7 +98,6 @@ pub struct Resource {
     inner: RustResource,
 }
 
-#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Resource {
     #[new]
@@ -189,7 +187,6 @@ pub struct Flow {
     inner: RustFlow,
 }
 
-#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Flow {
     #[new]
@@ -233,11 +230,16 @@ impl Flow {
     }
 
     #[getter]
-    fn quantity(&self) -> f64 {
+    fn quantity(&self) -> PyResult<f64> {
         self.inner
             .quantity()
             .to_f64()
-            .expect("Failed to convert Decimal quantity to f64 in Python binding")
+            .ok_or_else(|| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to convert Decimal quantity {} to f64 (overflow or out of range)",
+                    self.inner.quantity()
+                ))
+            })
     }
 
     #[getter]
@@ -297,7 +299,6 @@ pub struct Instance {
     inner: RustInstance,
 }
 
-#[allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 #[pymethods]
 impl Instance {
     #[new]

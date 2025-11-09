@@ -221,18 +221,20 @@ impl Flow {
 
     #[napi(getter)]
     pub fn quantity(&self) -> f64 {
-    match self.inner.quantity().to_f64() {
+        match self.inner.quantity().to_f64() {
             Some(value) => {
                 if value.is_finite() {
                     value
                 } else if value.is_infinite() && value.is_sign_positive() {
-                    f64::MAX
+                    f64::INFINITY
                 } else if value.is_infinite() && value.is_sign_negative() {
-                    f64::MIN
+                    f64::NEG_INFINITY
                 } else {
+                    // NaN case
                     0.0
                 }
             }
+            // Conversion failure - return 0.0 as fallback
             None => 0.0,
         }
     }

@@ -154,20 +154,22 @@ impl Expression {
             Expression::Variable(name) => {
                 match name.as_str() {
                     "flows" => {
-                        let flows: Vec<serde_json::Value> = graph
+                        let flows: Result<Vec<serde_json::Value>, String> = graph
                             .all_flows()
                             .iter()
                             .map(|f| {
-                                serde_json::json!({
+                                let quantity = f.quantity().to_f64()
+                                    .ok_or_else(|| format!("Failed to convert flow quantity {} to f64", f.quantity()))?;
+                                Ok(serde_json::json!({
                                     "id": f.id().to_string(), // Keep as string for JSON compatibility
                                     "from_entity": f.from_id().to_string(),
                                     "to_entity": f.to_id().to_string(),
                                     "resource": f.resource_id().to_string(),
-                                    "quantity": f.quantity().to_f64().unwrap_or(0.0),
-                                })
+                                    "quantity": quantity,
+                                }))
                             })
                             .collect();
-                        Ok(flows)
+                        flows
                     }
                     "entities" => {
                         let entities: Vec<serde_json::Value> = graph
@@ -348,9 +350,14 @@ impl Expression {
                     .min();
 
                 // Convert Decimal to f64 and propagate parsing errors
-                let min_f64 = min.as_ref().and_then(|d| d.to_f64());
-
-                Ok(serde_json::json!(min_f64))
+                if let Some(min_val) = min {
+                    let min_f64 = min_val
+                        .to_f64()
+                        .ok_or_else(|| format!("Failed to convert min {} to f64", min_val))?;
+                    Ok(serde_json::json!(min_f64))
+                } else {
+                    Ok(serde_json::json!(null))
+                }
             }
 
             AggregateFunction::Max => {
@@ -372,9 +379,14 @@ impl Expression {
                     .max();
 
                 // Convert Decimal to f64 and propagate parsing errors
-                let max_f64 = max.as_ref().and_then(|d| d.to_f64());
-
-                Ok(serde_json::json!(max_f64))
+                if let Some(max_val) = max {
+                    let max_f64 = max_val
+                        .to_f64()
+                        .ok_or_else(|| format!("Failed to convert max {} to f64", max_val))?;
+                    Ok(serde_json::json!(max_f64))
+                } else {
+                    Ok(serde_json::json!(null))
+                }
             }
         }
     }
