@@ -1,8 +1,8 @@
-use sea_core::Graph;
-use sea_core::policy::{Policy, Expression, AggregateFunction, BinaryOp};
-use sea_core::primitives::{Entity, Resource, Flow};
-use sea_core::units::{Unit, Dimension};
 use rust_decimal::Decimal;
+use sea_core::policy::{AggregateFunction, BinaryOp, Expression, Policy};
+use sea_core::primitives::{Entity, Flow, Resource};
+use sea_core::units::{Dimension, Unit};
+use sea_core::Graph;
 
 fn build_test_graph() -> Graph {
     let mut graph = Graph::new();
@@ -158,21 +158,25 @@ fn test_count_mixed_resources() {
 
     // Create 2 camera flows
     for _ in 0..2 {
-        graph.add_flow(Flow::new(
-            camera.id().clone(),
-            warehouse.id().clone(),
-            factory.id().clone(),
-            Decimal::from(100),
-        )).unwrap();
+        graph
+            .add_flow(Flow::new(
+                camera.id().clone(),
+                warehouse.id().clone(),
+                factory.id().clone(),
+                Decimal::from(100),
+            ))
+            .unwrap();
     }
 
     // Create 1 gold flow
-    graph.add_flow(Flow::new(
-        gold.id().clone(),
-        warehouse.id().clone(),
-        factory.id().clone(),
-        Decimal::from(50),
-    )).unwrap();
+    graph
+        .add_flow(Flow::new(
+            gold.id().clone(),
+            warehouse.id().clone(),
+            factory.id().clone(),
+            Decimal::from(50),
+        ))
+        .unwrap();
 
     // Total should be 3 flows
     let policy_all = Policy::new(

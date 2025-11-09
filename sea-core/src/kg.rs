@@ -1,5 +1,5 @@
 use crate::graph::Graph;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub enum KgError {
@@ -10,7 +10,9 @@ pub enum KgError {
 impl std::fmt::Display for KgError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KgError::SerializationError(msg) => write!(f, "Knowledge graph serialization error: {}", msg),
+            KgError::SerializationError(msg) => {
+                write!(f, "Knowledge graph serialization error: {}", msg)
+            }
             KgError::UnsupportedFormat(fmt) => write!(f, "Unsupported format: {}", fmt),
         }
     }
@@ -67,13 +69,13 @@ impl KnowledgeGraph {
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
                 predicate: "rdfs:label".to_string(),
-                object: format!("\"{}\"", entity.name()),
+                object: format!("\"{}\"", Self::escape_turtle_literal(entity.name())),
             });
 
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
                 predicate: "sea:namespace".to_string(),
-                object: format!("\"{}\"", entity.namespace()),
+                object: format!("\"{}\"", Self::escape_turtle_literal(entity.namespace())),
             });
         }
 
@@ -87,13 +89,16 @@ impl KnowledgeGraph {
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(resource.name())),
                 predicate: "rdfs:label".to_string(),
-                object: format!("\"{}\"", resource.name()),
+                object: format!("\"{}\"", Self::escape_turtle_literal(resource.name())),
             });
 
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(resource.name())),
                 predicate: "sea:unit".to_string(),
-                object: format!("\"{:?}\"", resource.unit()),
+                object: format!(
+                    "\"{}\"",
+                    Self::escape_turtle_literal(&resource.unit().to_string())
+                ),
             });
         }
 
@@ -173,15 +178,13 @@ impl KnowledgeGraph {
 
         kg.shapes.push(ShaclShape {
             target_class: "sea:Entity".to_string(),
-            properties: vec![
-                ShaclProperty {
-                    path: "rdfs:label".to_string(),
-                    datatype: Some("xsd:string".to_string()),
-                    min_count: Some(1),
-                    max_count: Some(1),
-                    min_exclusive: None,
-                },
-            ],
+            properties: vec![ShaclProperty {
+                path: "rdfs:label".to_string(),
+                datatype: Some("xsd:string".to_string()),
+                min_count: Some(1),
+                max_count: Some(1),
+                min_exclusive: None,
+            }],
         });
 
         Ok(kg)
@@ -196,12 +199,14 @@ impl KnowledgeGraph {
         turtle.push_str("@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n");
         turtle.push_str("@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n");
         turtle.push_str("@prefix sh: <http://www.w3.org/ns/shacl#> .\n");
-        turtle.push_str("\n");
+        turtle.push('\n');
 
         turtle.push_str("# Ontology\n");
         turtle.push_str("sea:Entity a owl:Class ;\n");
         turtle.push_str("    rdfs:label \"Entity\" ;\n");
-        turtle.push_str("    rdfs:comment \"Business actor, location, or organizational unit\" .\n\n");
+        turtle.push_str(
+            "    rdfs:comment \"Business actor, location, or organizational unit\" .\n\n",
+        );
 
         turtle.push_str("sea:Resource a owl:Class ;\n");
         turtle.push_str("    rdfs:label \"Resource\" ;\n");
@@ -225,13 +230,18 @@ impl KnowledgeGraph {
 
         turtle.push_str("# Instances\n");
         for triple in &self.triples {
-            turtle.push_str(&format!("{} {} {} .\n", triple.subject, triple.predicate, triple.object));
+            turtle.push_str(&format!(
+                "{} {} {} .\n",
+                triple.subject, triple.predicate, triple.object
+            ));
         }
 
         turtle.push_str("\n# SHACL Shapes\n");
         for shape in &self.shapes {
-            turtle.push_str(&format!("sea:{}Shape a sh:NodeShape ;\n",
-                shape.target_class.replace("sea:", "")));
+            turtle.push_str(&format!(
+                "sea:{}Shape a sh:NodeShape ;\n",
+                shape.target_class.replace("sea:", "")
+            ));
             turtle.push_str(&format!("    sh:targetClass {} ;\n", shape.target_class));
 
             for (i, prop) in shape.properties.iter().enumerate() {
@@ -257,7 +267,7 @@ impl KnowledgeGraph {
                     turtle.push_str("    ] .\n");
                 }
             }
-            turtle.push_str("\n");
+            turtle.push('\n');
         }
 
         turtle
@@ -280,16 +290,41 @@ impl KnowledgeGraph {
             let object = &triple.object;
 
             if object.starts_with('"') {
-                let cleaned_object = object.trim_matches('"');
+                let (literal_value, suffix) = Self::parse_typed_literal(object);
+                let escaped_value = Self::escape_xml(&literal_value);
+
                 xml.push_str(&format!("  <rdf:Description rdf:about=\"{}\">\n", subject));
-                xml.push_str(&format!("    <{}>", predicate));
-                xml.push_str(&Self::escape_xml(cleaned_object));
-                xml.push_str(&format!("</{}>\n", predicate));
+
+                match suffix {
+                    Some(TypedLiteralSuffix::Datatype(datatype)) => {
+                        let datatype_uri = Self::clean_uri(&datatype);
+                        xml.push_str(&format!(
+                            "    <{} rdf:datatype=\"{}\">{}</{}>\n",
+                            predicate, datatype_uri, escaped_value, predicate
+                        ));
+                    }
+                    Some(TypedLiteralSuffix::Language(lang)) => {
+                        xml.push_str(&format!(
+                            "    <{} xml:lang=\"{}\">{}</{}>\n",
+                            predicate, lang, escaped_value, predicate
+                        ));
+                    }
+                    None => {
+                        xml.push_str(&format!(
+                            "    <{}>{}</{}>\n",
+                            predicate, escaped_value, predicate
+                        ));
+                    }
+                }
+
                 xml.push_str("  </rdf:Description>\n\n");
             } else {
                 let cleaned_object = Self::clean_uri(object);
                 xml.push_str(&format!("  <rdf:Description rdf:about=\"{}\">\n", subject));
-                xml.push_str(&format!("    <{} rdf:resource=\"{}\"/>\n", predicate, cleaned_object));
+                xml.push_str(&format!(
+                    "    <{} rdf:resource=\"{}\"/>\n",
+                    predicate, cleaned_object
+                ));
                 xml.push_str("  </rdf:Description>\n\n");
             }
         }
@@ -298,11 +333,23 @@ impl KnowledgeGraph {
         xml
     }
 
+    pub fn escape_turtle_literal(input: &str) -> String {
+        let mut escaped = String::with_capacity(input.len());
+        for ch in input.chars() {
+            match ch {
+                '\\' => escaped.push_str("\\\\"),
+                '"' => escaped.push_str("\\\""),
+                '\n' => escaped.push_str("\\n"),
+                '\r' => escaped.push_str("\\r"),
+                '\t' => escaped.push_str("\\t"),
+                other => escaped.push(other),
+            }
+        }
+        escaped
+    }
+
     fn uri_encode(s: &str) -> String {
-        s.replace(' ', "_")
-            .replace(':', "_")
-            .replace('/', "_")
-            .replace('#', "_")
+        s.replace([' ', ':', '/', '#'], "_")
     }
 
     fn clean_uri(uri: &str) -> String {
@@ -315,13 +362,93 @@ impl KnowledgeGraph {
         uri.to_string()
     }
 
-    fn escape_xml(s: &str) -> String {
-        s.replace('&', "&amp;")
-            .replace('<', "&lt;")
-            .replace('>', "&gt;")
-            .replace('"', "&quot;")
-            .replace('\'', "&apos;")
+    pub fn escape_xml(input: &str) -> String {
+        let mut escaped = String::with_capacity(input.len());
+        for ch in input.chars() {
+            match ch {
+                '&' => escaped.push_str("&amp;"),
+                '<' => escaped.push_str("&lt;"),
+                '>' => escaped.push_str("&gt;"),
+                '"' => escaped.push_str("&quot;"),
+                '\'' => escaped.push_str("&apos;"),
+                other => escaped.push(other),
+            }
+        }
+        escaped
     }
+
+    fn parse_escaped_value<I>(chars: &mut I) -> String
+    where
+        I: Iterator<Item = char>,
+    {
+        let mut value = String::new();
+        let mut escaped = false;
+
+        for ch in chars.by_ref() {
+            if escaped {
+                let resolved = match ch {
+                    'n' => '\n',
+                    't' => '\t',
+                    'r' => '\r',
+                    '"' => '"',
+                    '\\' => '\\',
+                    other => {
+                        value.push('\\');
+                        other
+                    }
+                };
+                value.push(resolved);
+                escaped = false;
+                continue;
+            }
+
+            match ch {
+                '\\' => escaped = true,
+                '"' => break,
+                other => value.push(other),
+            }
+        }
+
+        value
+    }
+
+    fn parse_typed_literal(literal: &str) -> (String, Option<TypedLiteralSuffix>) {
+        if !literal.starts_with('"') {
+            return (literal.to_string(), None);
+        }
+
+        let mut chars = literal.chars();
+        chars.next();
+        let value = Self::parse_escaped_value(&mut chars);
+
+        let remainder: String = chars.collect();
+        let trimmed = remainder.trim();
+
+        let suffix = if let Some(rest) = trimmed.strip_prefix("^^") {
+            let datatype = rest.trim();
+            if datatype.is_empty() {
+                None
+            } else {
+                Some(TypedLiteralSuffix::Datatype(datatype.to_string()))
+            }
+        } else if let Some(rest) = trimmed.strip_prefix('@') {
+            let language = rest.trim();
+            if language.is_empty() {
+                None
+            } else {
+                Some(TypedLiteralSuffix::Language(language.to_string()))
+            }
+        } else {
+            None
+        };
+
+        (value, suffix)
+    }
+}
+
+enum TypedLiteralSuffix {
+    Datatype(String),
+    Language(String),
 }
 
 impl Default for KnowledgeGraph {
@@ -344,7 +471,7 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::{Entity, Resource, Flow};
+    use crate::primitives::{Entity, Flow, Resource};
     use rust_decimal::Decimal;
 
     #[test]
@@ -353,7 +480,11 @@ mod tests {
 
         let entity1 = Entity::new_with_namespace("Supplier", "supply_chain");
         let entity2 = Entity::new_with_namespace("Manufacturer", "supply_chain");
-        let resource = Resource::new_with_namespace("Parts", crate::units::unit_from_string("kg"), "supply_chain");
+        let resource = Resource::new_with_namespace(
+            "Parts",
+            crate::units::unit_from_string("kg"),
+            "supply_chain",
+        );
 
         let entity1_id = entity1.id().clone();
         let entity2_id = entity2.id().clone();
@@ -363,6 +494,7 @@ mod tests {
         graph.add_entity(entity2).unwrap();
         graph.add_resource(resource).unwrap();
 
+        #[allow(deprecated)]
         let flow = Flow::new(resource_id, entity1_id, entity2_id, Decimal::new(100, 0));
         graph.add_flow(flow).unwrap();
 

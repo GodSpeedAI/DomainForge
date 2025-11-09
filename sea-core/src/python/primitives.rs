@@ -1,16 +1,13 @@
-use pyo3::prelude::*;
-use pyo3::exceptions::{PyValueError, PyKeyError};
 use crate::primitives::{
-    Entity as RustEntity,
-    Resource as RustResource,
-    Flow as RustFlow,
-    Instance as RustInstance,
+    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
 };
-use uuid::Uuid;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use crate::units::unit_from_string;
+use pyo3::exceptions::{PyKeyError, PyValueError};
+use pyo3::prelude::*;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
+use rust_decimal::Decimal;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[pyclass]
 #[derive(Clone)]
@@ -43,7 +40,11 @@ impl Entity {
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -58,7 +59,10 @@ impl Entity {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 
@@ -124,7 +128,11 @@ impl Resource {
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -139,7 +147,10 @@ impl Resource {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 
@@ -218,13 +229,20 @@ impl Flow {
 
     #[getter]
     fn quantity(&self) -> f64 {
-        self.inner.quantity().to_f64().expect("Failed to convert Decimal quantity to f64 in Python binding")
+        self.inner
+            .quantity()
+            .to_f64()
+            .expect("Failed to convert Decimal quantity to f64 in Python binding")
     }
 
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -239,7 +257,10 @@ impl Flow {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 
@@ -313,7 +334,11 @@ impl Instance {
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -328,7 +353,10 @@ impl Instance {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 

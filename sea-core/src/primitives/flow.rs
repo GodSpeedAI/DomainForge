@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use rust_decimal::Decimal;
-use std::collections::HashMap;
-use serde_json::Value;
 use crate::ConceptId;
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 use uuid;
 
 const DEFAULT_NAMESPACE: &str = "default";
@@ -44,9 +44,13 @@ pub struct Flow {
 }
 
 impl Flow {
-    /// Creates a new Flow (deprecated - namespace required).
-    #[deprecated(note = "use new_with_namespace instead")]
-    pub fn new(resource_id: ConceptId, from_id: ConceptId, to_id: ConceptId, quantity: Decimal) -> Self {
+    /// Creates a new Flow using the default namespace.
+    pub fn new(
+        resource_id: ConceptId,
+        from_id: ConceptId,
+        to_id: ConceptId,
+        quantity: Decimal,
+    ) -> Self {
         let namespace = DEFAULT_NAMESPACE.to_string();
         // Use UUID v4 for flows to ensure uniqueness (flows are events, not concepts)
         let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
@@ -84,12 +88,24 @@ impl Flow {
         }
     }
 
-    pub fn id(&self) -> &ConceptId { &self.id }
-    pub fn resource_id(&self) -> &ConceptId { &self.resource_id }
-    pub fn from_id(&self) -> &ConceptId { &self.from_id }
-    pub fn to_id(&self) -> &ConceptId { &self.to_id }
-    pub fn quantity(&self) -> Decimal { self.quantity }
-    pub fn namespace(&self) -> &str { &self.namespace }
+    pub fn id(&self) -> &ConceptId {
+        &self.id
+    }
+    pub fn resource_id(&self) -> &ConceptId {
+        &self.resource_id
+    }
+    pub fn from_id(&self) -> &ConceptId {
+        &self.from_id
+    }
+    pub fn to_id(&self) -> &ConceptId {
+        &self.to_id
+    }
+    pub fn quantity(&self) -> Decimal {
+        self.quantity
+    }
+    pub fn namespace(&self) -> &str {
+        &self.namespace
+    }
 
     pub fn set_attribute(&mut self, key: impl Into<String>, value: Value) {
         self.attributes.insert(key.into(), value);

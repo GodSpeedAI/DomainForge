@@ -1,5 +1,5 @@
+use super::expression::{AggregateFunction, BinaryOp, Expression, Quantifier};
 use crate::graph::Graph;
-use super::expression::{Expression, BinaryOp, Quantifier, AggregateFunction};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -55,22 +55,24 @@ impl Expression {
                     }
                 }
             }
-            Expression::Binary { op, left, right } => {
-                Ok(Expression::binary(
-                    op.clone(),
-                    left.expand(graph)?,
-                    right.expand(graph)?,
-                ))
-            }
+            Expression::Binary { op, left, right } => Ok(Expression::binary(
+                op.clone(),
+                left.expand(graph)?,
+                right.expand(graph)?,
+            )),
             Expression::Unary { op, operand } => {
                 Ok(Expression::unary(op.clone(), operand.expand(graph)?))
             }
-            Expression::MemberAccess { .. } => {
-                Ok(self.clone())
-            }
-            Expression::Aggregation { function, collection, field, filter } => {
+            Expression::MemberAccess { .. } => Ok(self.clone()),
+            Expression::Aggregation {
+                function,
+                collection,
+                field,
+                filter,
+            } => {
                 // Evaluate the aggregation and return a literal
-                let result = Self::evaluate_aggregation(function, collection, field, filter, graph)?;
+                let result =
+                    Self::evaluate_aggregation(function, collection, field, filter, graph)?;
                 Ok(Expression::Literal(result))
             }
             _ => Ok(self.clone()),
@@ -93,20 +95,21 @@ impl Expression {
                     Ok(self.clone())
                 }
             }
-            Expression::Binary { op, left, right } => {
-                Ok(Expression::binary(
-                    op.clone(),
-                    left.substitute(var, value)?,
-                    right.substitute(var, value)?,
-                ))
-            }
-            Expression::Unary { op, operand } => {
-                Ok(Expression::unary(
-                    op.clone(),
-                    operand.substitute(var, value)?,
-                ))
-            }
-            Expression::Quantifier { quantifier, variable, collection, condition } => {
+            Expression::Binary { op, left, right } => Ok(Expression::binary(
+                op.clone(),
+                left.substitute(var, value)?,
+                right.substitute(var, value)?,
+            )),
+            Expression::Unary { op, operand } => Ok(Expression::unary(
+                op.clone(),
+                operand.substitute(var, value)?,
+            )),
+            Expression::Quantifier {
+                quantifier,
+                variable,
+                collection,
+                condition,
+            } => {
                 if var == variable {
                     // Don't substitute into condition when var matches the bound variable
                     // to avoid variable capture
@@ -126,19 +129,21 @@ impl Expression {
                     ))
                 }
             }
-            Expression::MemberAccess { .. } => {
-                Ok(self.clone())
-            }
-            Expression::Aggregation { function, collection, field, filter } => {
-                Ok(Expression::aggregation(
-                    function.clone(),
-                    collection.substitute(var, value)?,
-                    field.clone(),
-                    filter.as_ref()
-                        .map(|f| f.substitute(var, value))
-                        .transpose()?,
-                ))
-            }
+            Expression::MemberAccess { .. } => Ok(self.clone()),
+            Expression::Aggregation {
+                function,
+                collection,
+                field,
+                filter,
+            } => Ok(Expression::aggregation(
+                function.clone(),
+                collection.substitute(var, value)?,
+                field.clone(),
+                filter
+                    .as_ref()
+                    .map(|f| f.substitute(var, value))
+                    .transpose()?,
+            )),
             _ => Ok(self.clone()),
         }
     }
@@ -161,43 +166,52 @@ impl Expression {
                         Ok(flows)
                     }
                     "entities" => {
-                        let entities: Vec<serde_json::Value> = graph.all_entities()
+                        let entities: Vec<serde_json::Value> = graph
+                            .all_entities()
                             .iter()
-                            .map(|e| serde_json::json!({
-                                "id": e.id().to_string(),
-                                "name": e.name(),
-                                "namespace": e.namespace(),
-                            }))
+                            .map(|e| {
+                                serde_json::json!({
+                                    "id": e.id().to_string(),
+                                    "name": e.name(),
+                                    "namespace": e.namespace(),
+                                })
+                            })
                             .collect();
                         Ok(entities)
                     }
                     "resources" => {
-                        let resources: Vec<serde_json::Value> = graph.all_resources()
+                        let resources: Vec<serde_json::Value> = graph
+                            .all_resources()
                             .iter()
-                            .map(|r| serde_json::json!({
-                                "id": r.id().to_string(),
-                                "name": r.name(),
-                                "namespace": r.namespace(),
-                                "unit": r.unit(),
-                            }))
+                            .map(|r| {
+                                serde_json::json!({
+                                    "id": r.id().to_string(),
+                                    "name": r.name(),
+                                    "namespace": r.namespace(),
+                                    "unit": r.unit(),
+                                })
+                            })
                             .collect();
                         Ok(resources)
                     }
                     "instances" => {
-                        let instances: Vec<serde_json::Value> = graph.all_instances()
+                        let instances: Vec<serde_json::Value> = graph
+                            .all_instances()
                             .iter()
-                            .map(|i| serde_json::json!({
-                                "id": i.id().to_string(),
-                                "entity": i.entity_id().to_string(),
-                                "resource": i.resource_id().to_string(),
-                            }))
+                            .map(|i| {
+                                serde_json::json!({
+                                    "id": i.id().to_string(),
+                                    "entity": i.entity_id().to_string(),
+                                    "resource": i.resource_id().to_string(),
+                                })
+                            })
                             .collect();
                         Ok(instances)
                     }
-                    _ => Err(format!("Unknown collection: {}", name))
+                    _ => Err(format!("Unknown collection: {}", name)),
                 }
             }
-            _ => Err("Collection expression must be a variable".to_string())
+            _ => Err("Collection expression must be a variable".to_string()),
         }
     }
 
@@ -217,10 +231,13 @@ impl Expression {
 
         // Apply filter if present
         let filtered_items = if let Some(filter_expr) = filter {
-            items.into_iter()
+            items
+                .into_iter()
                 .filter(|item| {
                     // Substitute flow variables in the filter
-                    let substituted = filter_expr.substitute("flow", item).unwrap_or_else(|_| filter_expr.as_ref().clone());
+                    let substituted = filter_expr
+                        .substitute("flow", item)
+                        .unwrap_or_else(|_| filter_expr.as_ref().clone());
                     // Expand and check if true
                     if let Ok(expanded) = substituted.expand(graph) {
                         Self::is_true_literal(&expanded)
@@ -235,48 +252,47 @@ impl Expression {
 
         // Apply aggregation function
         match function {
-            AggregateFunction::Count => {
-                Ok(serde_json::json!(filtered_items.len()))
-            }
+            AggregateFunction::Count => Ok(serde_json::json!(filtered_items.len())),
 
             AggregateFunction::Sum => {
-                let field_name = field.as_ref()
-                    .ok_or("Sum requires a field specification")?;
+                let field_name = field.as_ref().ok_or("Sum requires a field specification")?;
 
-                let sum: Decimal = filtered_items.iter()
+                let sum: Decimal = filtered_items
+                    .iter()
                     .filter_map(|item| {
-                        item.get(field_name)
-                            .and_then(|v| {
-                                if let Some(num) = v.as_f64() {
-                                    Decimal::from_str(&num.to_string()).ok()
-                                } else if let Some(s) = v.as_str() {
-                                    Decimal::from_str(s).ok()
-                                } else {
-                                    None
-                                }
-                            })
+                        item.get(field_name).and_then(|v| {
+                            if let Some(num) = v.as_f64() {
+                                Decimal::from_str(&num.to_string()).ok()
+                            } else if let Some(s) = v.as_str() {
+                                Decimal::from_str(s).ok()
+                            } else {
+                                None
+                            }
+                        })
                     })
                     .sum();
 
-                Ok(serde_json::json!(sum.to_string().parse::<f64>().unwrap_or(0.0)))
+                Ok(serde_json::json!(sum
+                    .to_string()
+                    .parse::<f64>()
+                    .unwrap_or(0.0)))
             }
 
             AggregateFunction::Avg => {
-                let field_name = field.as_ref()
-                    .ok_or("Avg requires a field specification")?;
+                let field_name = field.as_ref().ok_or("Avg requires a field specification")?;
 
-                let values: Vec<Decimal> = filtered_items.iter()
+                let values: Vec<Decimal> = filtered_items
+                    .iter()
                     .filter_map(|item| {
-                        item.get(field_name)
-                            .and_then(|v| {
-                                if let Some(num) = v.as_f64() {
-                                    Decimal::from_str(&num.to_string()).ok()
-                                } else if let Some(s) = v.as_str() {
-                                    Decimal::from_str(s).ok()
-                                } else {
-                                    None
-                                }
-                            })
+                        item.get(field_name).and_then(|v| {
+                            if let Some(num) = v.as_f64() {
+                                Decimal::from_str(&num.to_string()).ok()
+                            } else if let Some(s) = v.as_str() {
+                                Decimal::from_str(s).ok()
+                            } else {
+                                None
+                            }
+                        })
                     })
                     .collect();
 
@@ -287,51 +303,56 @@ impl Expression {
                 let sum: Decimal = values.iter().copied().sum();
                 let avg = sum / Decimal::from(values.len());
 
-                Ok(serde_json::json!(avg.to_string().parse::<f64>().unwrap_or(0.0)))
+                Ok(serde_json::json!(avg
+                    .to_string()
+                    .parse::<f64>()
+                    .unwrap_or(0.0)))
             }
 
             AggregateFunction::Min => {
-                let field_name = field.as_ref()
-                    .ok_or("Min requires a field specification")?;
+                let field_name = field.as_ref().ok_or("Min requires a field specification")?;
 
-                let min = filtered_items.iter()
+                let min = filtered_items
+                    .iter()
                     .filter_map(|item| {
-                        item.get(field_name)
-                            .and_then(|v| {
-                                if let Some(num) = v.as_f64() {
-                                    Decimal::from_str(&num.to_string()).ok()
-                                } else if let Some(s) = v.as_str() {
-                                    Decimal::from_str(s).ok()
-                                } else {
-                                    None
-                                }
-                            })
+                        item.get(field_name).and_then(|v| {
+                            if let Some(num) = v.as_f64() {
+                                Decimal::from_str(&num.to_string()).ok()
+                            } else if let Some(s) = v.as_str() {
+                                Decimal::from_str(s).ok()
+                            } else {
+                                None
+                            }
+                        })
                     })
                     .min();
 
-                Ok(serde_json::json!(min.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))))
+                Ok(serde_json::json!(
+                    min.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))
+                ))
             }
 
             AggregateFunction::Max => {
-                let field_name = field.as_ref()
-                    .ok_or("Max requires a field specification")?;
+                let field_name = field.as_ref().ok_or("Max requires a field specification")?;
 
-                let max = filtered_items.iter()
+                let max = filtered_items
+                    .iter()
                     .filter_map(|item| {
-                        item.get(field_name)
-                            .and_then(|v| {
-                                if let Some(num) = v.as_f64() {
-                                    Decimal::from_str(&num.to_string()).ok()
-                                } else if let Some(s) = v.as_str() {
-                                    Decimal::from_str(s).ok()
-                                } else {
-                                    None
-                                }
-                            })
+                        item.get(field_name).and_then(|v| {
+                            if let Some(num) = v.as_f64() {
+                                Decimal::from_str(&num.to_string()).ok()
+                            } else if let Some(s) = v.as_str() {
+                                Decimal::from_str(s).ok()
+                            } else {
+                                None
+                            }
+                        })
                     })
                     .max();
 
-                Ok(serde_json::json!(max.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))))
+                Ok(serde_json::json!(
+                    max.map(|d| d.to_string().parse::<f64>().unwrap_or(0.0))
+                ))
             }
         }
     }

@@ -59,8 +59,15 @@ fn main() {
             println!("🏢 Entities by Domain:");
             let mut domains = std::collections::HashMap::new();
             for entity in graph.all_entities() {
-                let domain = if entity.namespace().is_empty() { "(no domain)" } else { entity.namespace() };
-                domains.entry(domain).or_insert_with(Vec::new).push(entity.name());
+                let domain = if entity.namespace().is_empty() {
+                    "(no domain)"
+                } else {
+                    entity.namespace()
+                };
+                domains
+                    .entry(domain)
+                    .or_insert_with(Vec::new)
+                    .push(entity.name());
             }
             for (domain, entities) in domains.iter() {
                 println!("  {}: {}", domain, entities.join(", "));
@@ -70,16 +77,24 @@ fn main() {
             // Display resource types
             println!("📦 Resources:");
             for resource in graph.all_resources() {
-                let namespace = if resource.namespace().is_empty() { "(no domain)" } else { resource.namespace() };
-                println!("  • {} [{}] in {}",
+                let namespace = if resource.namespace().is_empty() {
+                    "(no domain)"
+                } else {
+                    resource.namespace()
+                };
+                println!(
+                    "  • {} [{}] in {}",
                     resource.name(),
                     resource.unit().symbol(),
-                    namespace);
+                    namespace
+                );
             }
             println!();
 
             // Analyze a specific entity
-            if let Some(plant) = graph.all_entities().iter()
+            if let Some(plant) = graph
+                .all_entities()
+                .iter()
                 .find(|e| e.name() == "Camera Assembly Plant")
             {
                 println!("🏭 Camera Assembly Plant Analysis:");
@@ -89,10 +104,12 @@ fn main() {
                 for flow in inflows {
                     let from = graph.get_entity(flow.from_id()).unwrap();
                     let resource = graph.get_resource(flow.resource_id()).unwrap();
-                    println!("    ← {} of {} from {}",
+                    println!(
+                        "    ← {} of {} from {}",
                         flow.quantity(),
                         resource.name(),
-                        from.name());
+                        from.name()
+                    );
                 }
 
                 let outflows = graph.flows_from(plant.id());
@@ -100,16 +117,22 @@ fn main() {
                 for flow in outflows {
                     let to = graph.get_entity(flow.to_id()).unwrap();
                     let resource = graph.get_resource(flow.resource_id()).unwrap();
-                    println!("    → {} of {} to {}",
+                    println!(
+                        "    → {} of {} to {}",
                         flow.quantity(),
                         resource.name(),
-                        to.name());
+                        to.name()
+                    );
                 }
 
-                println!("  Upstream entities: {}",
-                    graph.upstream_entities(plant.id()).len());
-                println!("  Downstream entities: {}",
-                    graph.downstream_entities(plant.id()).len());
+                println!(
+                    "  Upstream entities: {}",
+                    graph.upstream_entities(plant.id()).len()
+                );
+                println!(
+                    "  Downstream entities: {}",
+                    graph.downstream_entities(plant.id()).len()
+                );
             }
             println!();
 
@@ -124,7 +147,6 @@ fn main() {
             for (resource, total) in resource_totals.iter() {
                 println!("  • {}: {} units", resource, total);
             }
-
         }
         Err(e) => {
             eprintln!("❌ Parse error: {}", e);

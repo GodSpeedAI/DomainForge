@@ -1,9 +1,9 @@
-use sea_core::Graph;
-use sea_core::primitives::{Entity, Resource, Flow, Instance};
-use sea_core::units::unit_from_string;
-use sea_core::calm::export;
 use jsonschema::JSONSchema;
 use rust_decimal::Decimal;
+use sea_core::calm::export;
+use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::units::unit_from_string;
+use sea_core::Graph;
 
 const CALM_SCHEMA: &str = include_str!("../schemas/calm-v1.schema.json");
 
@@ -74,7 +74,10 @@ fn test_schema_is_valid_json_schema() {
 
     let schema_value = schema.unwrap();
     assert!(schema_value.is_object());
-    assert_eq!(schema_value["$schema"], "http://json-schema.org/draft-07/schema#");
+    assert_eq!(
+        schema_value["$schema"],
+        "http://json-schema.org/draft-07/schema#"
+    );
 }
 
 #[test]
@@ -108,17 +111,20 @@ fn test_all_node_types_validate() {
         graph.all_resources()[0].id().clone(),
         graph.all_entities()[0].id().clone(),
         graph.all_entities()[0].id().clone(),
-        Decimal::from(100)
+        Decimal::from(100),
     );
     graph.add_flow(flow).unwrap();
 
     // Add one instance
     let instance = Instance::new(
         graph.all_resources()[0].id().clone(),
-        graph.all_entities()[0].id().clone()
+        graph.all_entities()[0].id().clone(),
     );
-    graph.add_instance(instance).unwrap();    // Export and validate
+    graph.add_instance(instance).unwrap(); // Export and validate
     let calm_json = export(&graph).unwrap();
     let result = compiled_schema.validate(&calm_json);
-    assert!(result.is_ok(), "Graph with all node types should export valid CALM JSON");
+    assert!(
+        result.is_ok(),
+        "Graph with all node types should export valid CALM JSON"
+    );
 }

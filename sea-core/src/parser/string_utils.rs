@@ -1,7 +1,7 @@
 pub fn unescape_string(s: &str) -> Result<String, String> {
     let mut result = String::new();
     let mut chars = s.chars().peekable();
-    
+
     while let Some(ch) = chars.next() {
         if ch == '\\' {
             match chars.next() {
@@ -24,24 +24,31 @@ pub fn unescape_string(s: &str) -> Result<String, String> {
                                     chars.next();
                                 }
                                 Some(&c) => {
-                                    return Err(format!("Invalid character in unicode escape: {}", c));
+                                    return Err(format!(
+                                        "Invalid character in unicode escape: {}",
+                                        c
+                                    ));
                                 }
                                 None => {
                                     return Err("Unterminated unicode escape sequence".to_string());
                                 }
                             }
                         }
-                        
+
                         if hex_digits.is_empty() || hex_digits.len() > 6 {
-                            return Err(format!("Invalid unicode escape length: {}", hex_digits.len()));
+                            return Err(format!(
+                                "Invalid unicode escape length: {}",
+                                hex_digits.len()
+                            ));
                         }
-                        
+
                         let code_point = u32::from_str_radix(&hex_digits, 16)
                             .map_err(|e| format!("Invalid hex in unicode escape: {}", e))?;
-                        
-                        let unicode_char = char::from_u32(code_point)
-                            .ok_or_else(|| format!("Invalid unicode code point: U+{:X}", code_point))?;
-                        
+
+                        let unicode_char = char::from_u32(code_point).ok_or_else(|| {
+                            format!("Invalid unicode code point: U+{:X}", code_point)
+                        })?;
+
                         result.push(unicode_char);
                     } else {
                         return Err("Expected '{' after \\u".to_string());
@@ -58,7 +65,7 @@ pub fn unescape_string(s: &str) -> Result<String, String> {
             result.push(ch);
         }
     }
-    
+
     Ok(result)
 }
 
@@ -78,7 +85,10 @@ mod tests {
 
     #[test]
     fn test_unescape_quote() {
-        assert_eq!(unescape_string("say \\\"hello\\\"").unwrap(), "say \"hello\"");
+        assert_eq!(
+            unescape_string("say \\\"hello\\\"").unwrap(),
+            "say \"hello\""
+        );
     }
 
     #[test]

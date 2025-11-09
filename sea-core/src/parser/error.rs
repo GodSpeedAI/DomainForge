@@ -1,6 +1,6 @@
-use std::fmt;
-use pest::error::Error as PestError;
 use crate::parser::Rule;
+use pest::error::Error as PestError;
+use std::fmt;
 
 pub type ParseResult<T> = Result<T, ParseError>;
 
@@ -73,7 +73,11 @@ impl ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::SyntaxError { message, line, column } => {
+            ParseError::SyntaxError {
+                message,
+                line,
+                column,
+            } => {
                 write!(f, "Syntax error at {}:{}: {}", line, column, message)
             }
             ParseError::GrammarError(msg) => write!(f, "Grammar error: {}", msg),

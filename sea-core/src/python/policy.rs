@@ -1,12 +1,9 @@
-use pyo3::prelude::*;
 use crate::policy::{
-    Expression as RustExpression,
-    BinaryOp as RustBinaryOp,
+    AggregateFunction as RustAggregateFunction, BinaryOp as RustBinaryOp,
+    Expression as RustExpression, Policy as RustPolicy, Quantifier as RustQuantifier,
     UnaryOp as RustUnaryOp,
-    Quantifier as RustQuantifier,
-    AggregateFunction as RustAggregateFunction,
-    Policy as RustPolicy,
 };
+use pyo3::prelude::*;
 
 #[pyclass]
 #[derive(Clone)]

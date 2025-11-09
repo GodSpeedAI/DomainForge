@@ -1,5 +1,4 @@
 use sea_core::parser::parse;
-use sea_core::policy::{Expression, AggregateFunction, BinaryOp};
 
 #[test]
 fn test_parse_count_syntax() {

@@ -24,18 +24,18 @@
 
 pub const VERSION: &str = "0.0.1";
 
-pub mod primitives;
-pub mod uuid_module;
-pub mod concept_id;
-pub mod semantic_version;
-pub mod graph;
-pub mod policy;
-pub mod parser;
 pub mod calm;
-pub mod units;
-pub mod validation_error;
-pub mod sbvr;
+pub mod concept_id;
+pub mod graph;
 pub mod kg;
+pub mod parser;
+pub mod policy;
+pub mod primitives;
+pub mod sbvr;
+pub mod semantic_version;
+pub mod units;
+pub mod uuid_module;
+pub mod validation_error;
 
 #[cfg(feature = "python")]
 pub mod python;
@@ -44,7 +44,9 @@ pub mod python;
 pub mod typescript;
 
 #[cfg(feature = "typescript")]
-pub use typescript::primitives::{Entity as TsEntity, Resource as TsResource, Flow as TsFlow, Instance as TsInstance};
+pub use typescript::primitives::{
+    Entity as TsEntity, Flow as TsFlow, Instance as TsInstance, Resource as TsResource,
+};
 
 #[cfg(feature = "typescript")]
 pub use typescript::graph::Graph as TsGraph;
@@ -52,15 +54,15 @@ pub use typescript::graph::Graph as TsGraph;
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
-pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};
 pub use concept_id::ConceptId;
-pub use semantic_version::SemanticVersion;
 pub use graph::Graph;
+pub use kg::{KgError, KnowledgeGraph};
 pub use parser::{parse, parse_to_graph};
-pub use units::{Dimension, Unit, UnitRegistry, UnitError, unit_from_string};
+pub use sbvr::{SbvrError, SbvrModel};
+pub use semantic_version::SemanticVersion;
+pub use units::{unit_from_string, Dimension, Unit, UnitError, UnitRegistry};
+pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};
 pub use validation_error::ValidationError;
-pub use sbvr::{SbvrModel, SbvrError};
-pub use kg::{KnowledgeGraph, KgError};
 
 #[cfg(test)]
 mod test_utils;
@@ -91,4 +93,3 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     Ok(())
 }
-

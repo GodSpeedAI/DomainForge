@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: "Generate concise, actionable, and unambiguous fix instructions. Specify exact file paths and edits; focus on mechanical details required for automated or manual application. Focus on critical issues only."
+reviews:
+  # ... other review settings
+  path_filters:
+    # Exclude top-level directories except docs/
+    - "!.github/**"
+    - "!.git/**"
+    - "!.pytest_cache/**"
+    - "!.venv/**"
+    - "!__pycache__/**"
+    - "!context/**"
+    - "!examples/**"
+    - "!node_modules/**"
+    - "!pkg/**"
+    - "!python/**"
+    - "!scripts/**"
+    - "!sea-core/**"
+    - "!tests/**"
+    - "!tmp/**"
+    - "!typescript-tests/**"
+    - "!docs/diagrams/**"
+    - "!docs/explanations/**"
+    - "!docs/howtos/**"
+    - "!docs/implementation/**"
+    - "!docs/plans/Phase*.md"
+    - "!docs/plans/PLAN_TEMPLATE.md"
+    - "!docs/plans/INDEX.md"
+    - "!docs/plans/Phases_*.md"
+    - "!docs/reference/**"
+    - "!docs/specs/**"
+    - "!docs/tutorials/**"
+    - "!docs/work_summaries/**"
+    - "!docs/*.md"
+
+    # Include only markdown files in docs/plans/tmp/ (recursive)
+    - "docs/plans/tmp/**/*.md"

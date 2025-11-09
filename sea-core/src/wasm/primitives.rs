@@ -1,14 +1,12 @@
-use wasm_bindgen::prelude::*;
-use web_sys::console;
 use crate::primitives::{
-    entity::Entity as RustEntity,
+    entity::Entity as RustEntity, flow::Flow as RustFlow, instance::Instance as RustInstance,
     resource::Resource as RustResource,
-    flow::Flow as RustFlow,
-    instance::Instance as RustInstance,
 };
-use uuid::Uuid;
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use uuid::Uuid;
+use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 #[wasm_bindgen]
 pub struct Entity {
@@ -53,10 +51,17 @@ impl Entity {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| serde_wasm_bindgen::to_value(v).map_err(|e| {
-                console::error_1(&JsValue::from_str(&format!("Failed to serialize attribute '{}' to JS value: {}", key, e)));
-                e
-            }).ok())
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .map_err(|e| {
+                        console::error_1(&JsValue::from_str(&format!(
+                            "Failed to serialize attribute '{}' to JS value: {}",
+                            key, e
+                        )));
+                        e
+                    })
+                    .ok()
+            })
             .unwrap_or(JsValue::NULL)
     }
 
@@ -129,10 +134,17 @@ impl Resource {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| serde_wasm_bindgen::to_value(v).map_err(|e| {
-                console::error_1(&JsValue::from_str(&format!("Failed to serialize attribute '{}' to JS value: {}", key, e)));
-                e
-            }).ok())
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .map_err(|e| {
+                        console::error_1(&JsValue::from_str(&format!(
+                            "Failed to serialize attribute '{}' to JS value: {}",
+                            key, e
+                        )));
+                        e
+                    })
+                    .ok()
+            })
             .unwrap_or(JsValue::NULL)
     }
 
@@ -227,10 +239,17 @@ impl Flow {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| serde_wasm_bindgen::to_value(v).map_err(|e| {
-                console::error_1(&JsValue::from_str(&format!("Failed to serialize attribute '{}' to JS value: {}", key, e)));
-                e
-            }).ok())
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .map_err(|e| {
+                        console::error_1(&JsValue::from_str(&format!(
+                            "Failed to serialize attribute '{}' to JS value: {}",
+                            key, e
+                        )));
+                        e
+                    })
+                    .ok()
+            })
             .unwrap_or(JsValue::NULL)
     }
 
@@ -313,10 +332,17 @@ impl Instance {
     pub fn get_attribute(&self, key: String) -> JsValue {
         self.inner
             .get_attribute(&key)
-            .and_then(|v| serde_wasm_bindgen::to_value(v).map_err(|e| {
-                console::error_1(&JsValue::from_str(&format!("Failed to serialize attribute '{}' to JS value: {}", key, e)));
-                e
-            }).ok())
+            .and_then(|v| {
+                serde_wasm_bindgen::to_value(v)
+                    .map_err(|e| {
+                        console::error_1(&JsValue::from_str(&format!(
+                            "Failed to serialize attribute '{}' to JS value: {}",
+                            key, e
+                        )));
+                        e
+                    })
+                    .ok()
+            })
             .unwrap_or(JsValue::NULL)
     }
 

@@ -1,5 +1,4 @@
 use sea_core::parser::{parse, unescape_string};
-use sea_core::graph::Graph;
 
 #[test]
 fn test_unicode_entity_names() {
@@ -10,7 +9,11 @@ fn test_unicode_entity_names() {
     "#;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse Unicode entity names: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse Unicode entity names: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -22,7 +25,11 @@ fn test_unicode_resource_names() {
     "#;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse Unicode resource names: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse Unicode resource names: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -33,7 +40,11 @@ fn test_unicode_identifiers_in_policies() {
     "#;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse Unicode identifiers: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse Unicode identifiers: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -85,7 +96,11 @@ fn test_escape_sequences_in_entity() {
     "#;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse escape sequences: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse escape sequences: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -99,7 +114,11 @@ fn test_multiline_string_literal() {
     "####;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse multi-line strings: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse multi-line strings: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -111,7 +130,11 @@ fn test_multiline_string_in_resource() {
     "####;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse multi-line resource names: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse multi-line resource names: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -130,7 +153,11 @@ fn test_complex_unicode_entities() {
     "#;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse complex Unicode names: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse complex Unicode names: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -165,7 +192,11 @@ Last line
     "####;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse and preserve multiline content: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse and preserve multiline content: {:?}",
+        ast.err()
+    );
 }
 
 #[test]
@@ -175,7 +206,11 @@ fn test_empty_multiline_string() {
     "####;
 
     let ast = parse(source);
-    assert!(ast.is_ok(), "Should parse empty multiline string: {:?}", ast.err());
+    assert!(
+        ast.is_ok(),
+        "Should parse empty multiline string: {:?}",
+        ast.err()
+    );
 }
 
 #[test]

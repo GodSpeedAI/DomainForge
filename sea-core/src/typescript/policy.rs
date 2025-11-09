@@ -1,8 +1,5 @@
+use crate::policy::{AggregateFunction as RustAggregateFunction, BinaryOp as RustBinaryOp};
 use napi_derive::napi;
-use crate::policy::{
-    AggregateFunction as RustAggregateFunction,
-    BinaryOp as RustBinaryOp,
-};
 
 #[napi]
 pub enum AggregateFunction {

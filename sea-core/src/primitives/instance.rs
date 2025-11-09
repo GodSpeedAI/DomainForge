@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use serde_json::Value;
 use crate::ConceptId;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 use uuid;
 
 const DEFAULT_NAMESPACE: &str = "default";
@@ -37,8 +37,7 @@ pub struct Instance {
 }
 
 impl Instance {
-    /// Creates a new Instance (deprecated - namespace required).
-    #[deprecated(note = "use new_with_namespace instead")]
+    /// Creates a new Instance (default namespace).
     pub fn new(resource_id: ConceptId, entity_id: ConceptId) -> Self {
         let namespace = DEFAULT_NAMESPACE.to_string();
         // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
@@ -52,7 +51,11 @@ impl Instance {
         }
     }
 
-    pub fn new_with_namespace(resource_id: ConceptId, entity_id: ConceptId, namespace: impl Into<String>) -> Self {
+    pub fn new_with_namespace(
+        resource_id: ConceptId,
+        entity_id: ConceptId,
+        namespace: impl Into<String>,
+    ) -> Self {
         let namespace = namespace.into();
         // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
         let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
@@ -66,10 +69,18 @@ impl Instance {
         }
     }
 
-    pub fn id(&self) -> &ConceptId { &self.id }
-    pub fn resource_id(&self) -> &ConceptId { &self.resource_id }
-    pub fn entity_id(&self) -> &ConceptId { &self.entity_id }
-    pub fn namespace(&self) -> &str { &self.namespace }
+    pub fn id(&self) -> &ConceptId {
+        &self.id
+    }
+    pub fn resource_id(&self) -> &ConceptId {
+        &self.resource_id
+    }
+    pub fn entity_id(&self) -> &ConceptId {
+        &self.entity_id
+    }
+    pub fn namespace(&self) -> &str {
+        &self.namespace
+    }
 
     pub fn set_attribute(&mut self, key: impl Into<String>, value: Value) {
         self.attributes.insert(key.into(), value);

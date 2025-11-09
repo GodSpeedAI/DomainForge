@@ -1,5 +1,9 @@
-use sea_core::{Graph, primitives::{Entity, Resource, Flow, Instance}, units::unit_from_string};
 use rust_decimal::Decimal;
+use sea_core::{
+    primitives::{Entity, Flow, Instance, Resource},
+    units::unit_from_string,
+    Graph,
+};
 use std::str::FromStr;
 
 #[test]

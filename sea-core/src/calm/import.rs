@@ -1,12 +1,12 @@
-use crate::Graph;
-use crate::primitives::{Entity, Resource, Flow, Instance};
+use super::models::{CalmModel, NodeType, Parties, RelationshipType};
+use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::units::unit_from_string;
 use crate::ConceptId;
-use super::models::{CalmModel, NodeType, RelationshipType, Parties};
+use crate::Graph;
+use rust_decimal::Decimal;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
-use rust_decimal::Decimal;
 
 pub fn import(calm_json: Value) -> Result<Graph, String> {
     let calm_model: CalmModel = serde_json::from_value(calm_json)
@@ -91,11 +91,13 @@ fn import_entity(node: &super::models::CalmNode) -> Result<Entity, String> {
 }
 
 fn import_resource(node: &super::models::CalmNode) -> Result<Resource, String> {
-    let unit = node.metadata.get("sea:unit")
+    let unit = node
+        .metadata
+        .get("sea:unit")
         .and_then(|v| v.as_str())
         .unwrap_or("units")
         .to_string();
-    
+
     let unit_obj = unit_from_string(unit);
 
     let resource = if let Some(ns) = &node.namespace {
@@ -111,18 +113,24 @@ fn import_instance(
     node: &super::models::CalmNode,
     id_map: &HashMap<String, ConceptId>,
 ) -> Result<Instance, String> {
-    let entity_id_str = node.metadata.get("sea:entity_id")
+    let entity_id_str = node
+        .metadata
+        .get("sea:entity_id")
         .and_then(|v| v.as_str())
         .ok_or("Missing sea:entity_id in instance metadata")?;
 
-    let resource_id_str = node.metadata.get("sea:resource_id")
+    let resource_id_str = node
+        .metadata
+        .get("sea:resource_id")
         .and_then(|v| v.as_str())
         .ok_or("Missing sea:resource_id in instance metadata")?;
 
-    let entity_id = id_map.get(entity_id_str)
+    let entity_id = id_map
+        .get(entity_id_str)
         .ok_or_else(|| format!("Unknown entity ID: {}", entity_id_str))?;
 
-    let resource_id = id_map.get(resource_id_str)
+    let resource_id = id_map
+        .get(resource_id_str)
         .ok_or_else(|| format!("Unknown resource ID: {}", resource_id_str))?;
 
     let instance = if let Some(ns) = &node.namespace {
@@ -142,31 +150,41 @@ fn import_relationship(
     match &relationship.relationship_type {
         RelationshipType::Flow { flow } => {
             let (source_id, dest_id) = match &relationship.parties {
-                Parties::SourceDestination { source, destination } => (source, destination),
-                _ => return Err("Flow relationship must have source/destination parties".to_string()),
+                Parties::SourceDestination {
+                    source,
+                    destination,
+                } => (source, destination),
+                _ => {
+                    return Err("Flow relationship must have source/destination parties".to_string())
+                }
             };
 
-            let source_uuid = id_map.get(source_id)
+            let source_uuid = id_map
+                .get(source_id)
                 .ok_or_else(|| format!("Unknown source ID: {}", source_id))?;
 
-            let dest_uuid = id_map.get(dest_id)
+            let dest_uuid = id_map
+                .get(dest_id)
                 .ok_or_else(|| format!("Unknown destination ID: {}", dest_id))?;
 
-            let resource_uuid = id_map.get(&flow.resource)
+            let resource_uuid = id_map
+                .get(&flow.resource)
                 .ok_or_else(|| format!("Unknown resource ID: {}", flow.resource))?;
 
             let quantity = Decimal::from_str(&flow.quantity)
                 .map_err(|e| format!("Invalid quantity '{}': {}", flow.quantity, e))?;
 
-            let flow_obj = Flow::new(resource_uuid.clone(), source_uuid.clone(), dest_uuid.clone(), quantity);
+            let flow_obj = Flow::new(
+                resource_uuid.clone(),
+                source_uuid.clone(),
+                dest_uuid.clone(),
+                quantity,
+            );
             graph.add_flow(flow_obj)?;
         }
         RelationshipType::Simple(rel_type) => {
-            match rel_type.as_str() {
-                "ownership" => {
-                }
-                _ => {
-                }
+            if rel_type.as_str() != "ownership" {
+                // TODO: handle additional relationship encodings when defined
             }
         }
     }

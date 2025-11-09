@@ -1,5 +1,9 @@
-use sea_core::{Graph, primitives::{Entity, Resource, Flow}, units::unit_from_string};
 use rust_decimal::Decimal;
+use sea_core::{
+    primitives::{Entity, Flow, Resource},
+    units::unit_from_string,
+    Graph,
+};
 
 #[test]
 fn test_flow_creation_with_resource_unit() {

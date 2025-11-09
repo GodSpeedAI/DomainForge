@@ -1,6 +1,6 @@
-use sea_core::primitives::Resource;
-use sea_core::units::{Unit, Dimension};
 use rust_decimal::Decimal;
+use sea_core::primitives::Resource;
+use sea_core::units::{Dimension, Unit};
 
 #[test]
 fn test_resource_with_unit() {

@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "sea-core",
+]
+# Optional: set a default workspace edition for tooling that reads it
+# (no [package] here because this is a workspace root)

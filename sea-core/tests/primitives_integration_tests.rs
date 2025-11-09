@@ -1,6 +1,6 @@
-use sea_core::primitives::{Entity, Resource, Flow, Instance};
-use sea_core::units::unit_from_string;
 use rust_decimal::Decimal;
+use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::units::unit_from_string;
 
 #[test]
 fn test_complete_supply_chain_model() {
@@ -14,13 +14,10 @@ fn test_complete_supply_chain_model() {
         steel.id().clone(),
         supplier.id().clone(),
         warehouse.id().clone(),
-        Decimal::from(5000)
+        Decimal::from(5000),
     );
 
-    let camera_instance = Instance::new(
-        camera.id().clone(),
-        warehouse.id().clone()
-    );
+    let camera_instance = Instance::new(camera.id().clone(), warehouse.id().clone());
 
     assert!(steel_shipment.quantity() > Decimal::ZERO);
     assert_eq!(camera_instance.entity_id(), warehouse.id());
@@ -41,21 +38,21 @@ fn test_multi_stage_flow() {
         steel.id().clone(),
         supplier.id().clone(),
         warehouse.id().clone(),
-        Decimal::from(1000)
+        Decimal::from(1000),
     );
 
     let flow2 = Flow::new(
         camera_parts.id().clone(),
         warehouse.id().clone(),
         manufacturer.id().clone(),
-        Decimal::from(500)
+        Decimal::from(500),
     );
 
     let flow3 = Flow::new(
         finished_camera.id().clone(),
         manufacturer.id().clone(),
         retailer.id().clone(),
-        Decimal::from(100)
+        Decimal::from(100),
     );
 
     assert_eq!(flow1.from_id(), supplier.id());
@@ -72,15 +69,9 @@ fn test_instance_tracking_across_entities() {
     let warehouse_b = Entity::new("Warehouse B");
     let camera = Resource::new("Camera Model X", unit_from_string("units"));
 
-    let instance1 = Instance::new(
-        camera.id().clone(),
-        warehouse_a.id().clone()
-    );
+    let instance1 = Instance::new(camera.id().clone(), warehouse_a.id().clone());
 
-    let instance2 = Instance::new(
-        camera.id().clone(),
-        warehouse_b.id().clone()
-    );
+    let instance2 = Instance::new(camera.id().clone(), warehouse_b.id().clone());
 
     assert_eq!(instance1.resource_id(), camera.id());
     assert_eq!(instance2.resource_id(), camera.id());
@@ -98,18 +89,12 @@ fn test_resource_flow_with_instances() {
         product.id().clone(),
         origin.id().clone(),
         destination.id().clone(),
-        Decimal::from(50)
+        Decimal::from(50),
     );
 
-    let instance_at_origin = Instance::new(
-        product.id().clone(),
-        origin.id().clone()
-    );
+    let instance_at_origin = Instance::new(product.id().clone(), origin.id().clone());
 
-    let instance_at_destination = Instance::new(
-        product.id().clone(),
-        destination.id().clone()
-    );
+    let instance_at_destination = Instance::new(product.id().clone(), destination.id().clone());
 
     assert_eq!(transfer.resource_id(), product.id());
     assert_eq!(transfer.from_id(), instance_at_origin.entity_id());
@@ -124,12 +109,9 @@ fn test_all_primitives_serialization() {
         resource.id().clone(),
         entity.id().clone(),
         entity.id().clone(),
-        Decimal::from(10)
+        Decimal::from(10),
     );
-    let instance = Instance::new(
-        resource.id().clone(),
-        entity.id().clone()
-    );
+    let instance = Instance::new(resource.id().clone(), entity.id().clone());
 
     let entity_json = serde_json::to_string(&entity).unwrap();
     let resource_json = serde_json::to_string(&resource).unwrap();

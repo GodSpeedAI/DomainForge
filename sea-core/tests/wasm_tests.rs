@@ -5,8 +5,8 @@ wasm_bindgen_test_configure!(run_in_browser);
 #[cfg(feature = "wasm")]
 mod wasm_tests {
     use super::*;
-    use sea_core::wasm::{Entity, Resource, Flow, Instance, Graph};
     use sea_core::units::unit_from_string;
+    use sea_core::wasm::{Entity, Flow, Graph, Instance, Resource};
 
     #[wasm_bindgen_test]
     fn test_entity_creation() {
@@ -28,7 +28,7 @@ mod wasm_tests {
         let mut entity = Entity::new("Store".to_string(), None);
         let value = serde_wasm_bindgen::to_value(&serde_json::json!({"location": "NYC"})).unwrap();
         entity.set_attribute("metadata".to_string(), value).unwrap();
-        
+
         let retrieved = entity.get_attribute("metadata".to_string());
         assert!(!retrieved.is_null());
     }
@@ -59,12 +59,7 @@ mod wasm_tests {
         let entity2 = Entity::new("Dest".to_string(), None);
         let resource = Resource::new("Product".to_string(), "units".to_string(), None);
 
-        let flow = Flow::new(
-            resource.id(),
-            entity1.id(),
-            entity2.id(),
-            "100".to_string(),
-        );
+        let flow = Flow::new(resource.id(), entity1.id(), entity2.id(), "100".to_string());
 
         assert!(flow.is_ok());
         let flow = flow.unwrap();
@@ -77,11 +72,7 @@ mod wasm_tests {
         let entity = Entity::new("Warehouse".to_string(), None);
         let resource = Resource::new("Product".to_string(), "units".to_string(), None);
 
-        let instance = Instance::new(
-            resource.id(),
-            entity.id(),
-            None,
-        );
+        let instance = Instance::new(resource.id(), entity.id(), None);
 
         assert!(instance.is_ok());
         let instance = instance.unwrap();
@@ -103,7 +94,7 @@ mod wasm_tests {
     fn test_graph_add_entity() {
         let mut graph = Graph::new();
         let entity = Entity::new("Factory".to_string(), None);
-        
+
         let result = graph.add_entity(&entity);
         assert!(result.is_ok());
         assert_eq!(graph.entity_count(), 1);
@@ -115,10 +106,10 @@ mod wasm_tests {
         let mut graph = Graph::new();
         let entity = Entity::new("Office".to_string(), None);
         let id = entity.id();
-        
+
         graph.add_entity(&entity).unwrap();
         let retrieved = graph.get_entity(id).unwrap();
-        
+
         assert!(retrieved.is_some());
         let retrieved = retrieved.unwrap();
         assert_eq!(retrieved.name(), "Office");
@@ -128,10 +119,10 @@ mod wasm_tests {
     fn test_graph_find_entity_by_name() {
         let mut graph = Graph::new();
         let entity = Entity::new("Distribution Center".to_string(), None);
-        
+
         graph.add_entity(&entity).unwrap();
         let found_id = graph.find_entity_by_name("Distribution Center".to_string());
-        
+
         assert!(found_id.is_some());
     }
 
@@ -139,7 +130,7 @@ mod wasm_tests {
     fn test_graph_add_resource() {
         let mut graph = Graph::new();
         let resource = Resource::new("Materials".to_string(), "kg".to_string(), None);
-        
+
         let result = graph.add_resource(&resource);
         assert!(result.is_ok());
         assert_eq!(graph.resource_count(), 1);
@@ -151,17 +142,12 @@ mod wasm_tests {
         let entity1 = Entity::new("Source".to_string(), None);
         let entity2 = Entity::new("Target".to_string(), None);
         let resource = Resource::new("Goods".to_string(), "units".to_string(), None);
-        
+
         graph.add_entity(&entity1).unwrap();
         graph.add_entity(&entity2).unwrap();
         graph.add_resource(&resource).unwrap();
 
-        let flow = Flow::new(
-            resource.id(),
-            entity1.id(),
-            entity2.id(),
-            "50".to_string(),
-        ).unwrap();
+        let flow = Flow::new(resource.id(), entity1.id(), entity2.id(), "50".to_string()).unwrap();
 
         let result = graph.add_flow(&flow);
         assert!(result.is_ok());
@@ -174,17 +160,12 @@ mod wasm_tests {
         let entity1 = Entity::new("Warehouse".to_string(), None);
         let entity2 = Entity::new("Store".to_string(), None);
         let resource = Resource::new("Items".to_string(), "units".to_string(), None);
-        
+
         graph.add_entity(&entity1).unwrap();
         graph.add_entity(&entity2).unwrap();
         graph.add_resource(&resource).unwrap();
 
-        let flow = Flow::new(
-            resource.id(),
-            entity1.id(),
-            entity2.id(),
-            "100".to_string(),
-        ).unwrap();
+        let flow = Flow::new(resource.id(), entity1.id(), entity2.id(), "100".to_string()).unwrap();
         graph.add_flow(&flow).unwrap();
 
         let flows = graph.flows_from(entity1.id());
@@ -200,7 +181,7 @@ Resource "Cameras" units
 
         let result = Graph::parse(source.to_string());
         assert!(result.is_ok());
-        
+
         let graph = result.unwrap();
         assert_eq!(graph.entity_count(), 1);
         assert_eq!(graph.resource_count(), 1);
@@ -217,7 +198,7 @@ Flow "Materials" from "Warehouse" to "Factory" quantity 500
 
         let result = Graph::parse(source.to_string());
         assert!(result.is_ok());
-        
+
         let graph = result.unwrap();
         assert_eq!(graph.entity_count(), 2);
         assert_eq!(graph.resource_count(), 1);

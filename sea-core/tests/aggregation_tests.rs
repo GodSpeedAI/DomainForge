@@ -1,4 +1,4 @@
-use sea_core::policy::{Expression, AggregateFunction};
+use sea_core::policy::{AggregateFunction, Expression};
 
 #[test]
 fn test_count_aggregation() {
@@ -22,7 +22,9 @@ fn test_sum_with_field() {
     );
 
     match expr {
-        Expression::Aggregation { function, field, .. } => {
+        Expression::Aggregation {
+            function, field, ..
+        } => {
             assert_eq!(function, AggregateFunction::Sum);
             assert_eq!(field, Some("quantity".to_string()));
         }
@@ -41,7 +43,9 @@ fn test_aggregation_with_filter() {
     );
 
     match expr {
-        Expression::Aggregation { filter: Some(_), .. } => {}
+        Expression::Aggregation {
+            filter: Some(_), ..
+        } => {}
         _ => panic!("Expected filter"),
     }
 }

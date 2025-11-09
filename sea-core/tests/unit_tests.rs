@@ -1,5 +1,5 @@
-use sea_core::units::{Dimension, Unit, UnitRegistry, UnitError};
 use rust_decimal::Decimal;
+use sea_core::units::{Dimension, Unit, UnitError, UnitRegistry};
 
 #[test]
 fn test_dimension_equality() {
@@ -34,7 +34,10 @@ fn test_incompatible_unit_conversion() {
 
     let result = registry.convert(Decimal::from(100), kg, usd);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), UnitError::IncompatibleDimensions { .. }));
+    assert!(matches!(
+        result.unwrap_err(),
+        UnitError::IncompatibleDimensions { .. }
+    ));
 }
 
 #[test]
@@ -55,8 +58,12 @@ fn test_all_registered_units_have_base() {
     let registry = UnitRegistry::default();
     for (symbol, unit) in registry.units().iter() {
         let base_unit = registry.base_units().get(unit.dimension());
-        assert!(base_unit.is_some(),
-            "Unit {} dimension {:?} has no base unit", symbol, unit.dimension());
+        assert!(
+            base_unit.is_some(),
+            "Unit {} dimension {:?} has no base unit",
+            symbol,
+            unit.dimension()
+        );
     }
 }
 

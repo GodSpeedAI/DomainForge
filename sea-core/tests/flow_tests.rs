@@ -1,7 +1,7 @@
-use sea_core::primitives::{Entity, Resource, Flow};
+use rust_decimal::Decimal;
+use sea_core::primitives::{Entity, Flow, Resource};
 use sea_core::units::unit_from_string;
 use sea_core::ConceptId;
-use rust_decimal::Decimal;
 
 #[test]
 fn test_flow_new_stores_references() {
@@ -13,7 +13,7 @@ fn test_flow_new_stores_references() {
         product.id().clone(),
         warehouse.id().clone(),
         factory.id().clone(),
-        Decimal::from(100)
+        Decimal::from(100),
     );
 
     assert_eq!(flow.quantity(), Decimal::from(100));
@@ -28,13 +28,13 @@ fn test_flow_references_are_valid_uuids() {
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
-        Decimal::from(50)
+        Decimal::from(50),
     );
 
-    assert!(flow.resource_id().to_string().len() > 0);
-    assert!(flow.from_id().to_string().len() > 0);
-    assert!(flow.to_id().to_string().len() > 0);
-    assert!(flow.id().to_string().len() > 0);
+    assert!(!flow.resource_id().to_string().is_empty());
+    assert!(!flow.from_id().to_string().is_empty());
+    assert!(!flow.to_id().to_string().is_empty());
+    assert!(!flow.id().to_string().is_empty());
 }
 
 #[test]
@@ -43,14 +43,20 @@ fn test_flow_attributes() {
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
-        Decimal::from(100)
+        Decimal::from(100),
     );
 
     flow.set_attribute("priority", serde_json::json!("high"));
     flow.set_attribute("scheduled_date", serde_json::json!("2025-11-15"));
 
-    assert_eq!(flow.get_attribute("priority"), Some(&serde_json::json!("high")));
-    assert_eq!(flow.get_attribute("scheduled_date"), Some(&serde_json::json!("2025-11-15")));
+    assert_eq!(
+        flow.get_attribute("priority"),
+        Some(&serde_json::json!("high"))
+    );
+    assert_eq!(
+        flow.get_attribute("scheduled_date"),
+        Some(&serde_json::json!("2025-11-15"))
+    );
     assert_eq!(flow.get_attribute("nonexistent"), None);
 }
 
@@ -60,7 +66,7 @@ fn test_flow_serialization() {
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
-        Decimal::from(250)
+        Decimal::from(250),
     );
 
     let json = serde_json::to_string(&flow).unwrap();

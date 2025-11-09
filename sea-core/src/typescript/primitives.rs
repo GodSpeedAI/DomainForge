@@ -1,15 +1,12 @@
+use crate::primitives::{
+    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
+};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use crate::primitives::{
-    Entity as RustEntity,
-    Resource as RustResource,
-    Flow as RustFlow,
-    Instance as RustInstance,
-};
-use uuid::Uuid;
-use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::Decimal;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[napi]
 pub struct Entity {
@@ -52,7 +49,8 @@ impl Entity {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 
@@ -127,7 +125,8 @@ impl Resource {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 
@@ -232,7 +231,8 @@ impl Flow {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 
@@ -314,7 +314,8 @@ impl Instance {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 

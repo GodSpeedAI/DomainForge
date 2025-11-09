@@ -1,5 +1,9 @@
-use sea_core::{Graph, primitives::{Entity, Resource, Flow, Instance}, units::unit_from_string};
 use rust_decimal::Decimal;
+use sea_core::{
+    primitives::{Entity, Flow, Instance, Resource},
+    units::unit_from_string,
+    Graph,
+};
 use std::str::FromStr;
 
 #[test]
@@ -410,9 +414,21 @@ fn test_entity_iteration_order_deterministic() {
     }
 
     // Collect IDs multiple times - IndexMap guarantees same order
-    let ids1: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
-    let ids2: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
-    let ids3: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
+    let ids1: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
+    let ids2: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
+    let ids3: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
 
     // IndexMap guarantees same order across iterations
     assert_eq!(ids1, ids2);
@@ -487,8 +503,16 @@ fn test_resource_iteration_order_deterministic() {
         graph.add_resource(resource).unwrap();
     }
 
-    let ids1: Vec<_> = graph.all_resources().iter().map(|r| r.id().clone()).collect();
-    let ids2: Vec<_> = graph.all_resources().iter().map(|r| r.id().clone()).collect();
+    let ids1: Vec<_> = graph
+        .all_resources()
+        .iter()
+        .map(|r| r.id().clone())
+        .collect();
+    let ids2: Vec<_> = graph
+        .all_resources()
+        .iter()
+        .map(|r| r.id().clone())
+        .collect();
 
     assert_eq!(ids1, ids2);
 }
@@ -508,15 +532,20 @@ fn test_instance_iteration_order_deterministic() {
 
     // Add multiple instances
     for _i in 1..=5 {
-        let instance = Instance::new(
-            resource_id.clone(),
-            entity_id.clone(),
-        );
+        let instance = Instance::new(resource_id.clone(), entity_id.clone());
         graph.add_instance(instance).unwrap();
     }
 
-    let ids1: Vec<_> = graph.all_instances().iter().map(|i| i.id().clone()).collect();
-    let ids2: Vec<_> = graph.all_instances().iter().map(|i| i.id().clone()).collect();
+    let ids1: Vec<_> = graph
+        .all_instances()
+        .iter()
+        .map(|i| i.id().clone())
+        .collect();
+    let ids2: Vec<_> = graph
+        .all_instances()
+        .iter()
+        .map(|i| i.id().clone())
+        .collect();
 
     assert_eq!(ids1, ids2);
 }

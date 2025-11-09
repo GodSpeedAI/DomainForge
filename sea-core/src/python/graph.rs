@@ -1,12 +1,12 @@
-use pyo3::prelude::*;
-use pyo3::exceptions::PyValueError;
 use crate::graph::Graph as RustGraph;
 use crate::parser;
-use uuid::Uuid;
 use crate::ConceptId;
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
 use std::str::FromStr;
+use uuid::Uuid;
 
-use super::primitives::{Entity, Resource, Flow, Instance};
+use super::primitives::{Entity, Flow, Instance, Resource};
 
 #[pyclass]
 #[derive(Clone)]
@@ -95,36 +95,52 @@ impl Graph {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
         let cid = ConceptId::from(uuid);
-        Ok(self.inner.get_entity(&cid).map(|e| Entity::from_rust(e.clone())))
+        Ok(self
+            .inner
+            .get_entity(&cid)
+            .map(|e| Entity::from_rust(e.clone())))
     }
 
     fn get_resource(&self, id: String) -> PyResult<Option<Resource>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
         let cid = ConceptId::from(uuid);
-        Ok(self.inner.get_resource(&cid).map(|r| Resource::from_rust(r.clone())))
+        Ok(self
+            .inner
+            .get_resource(&cid)
+            .map(|r| Resource::from_rust(r.clone())))
     }
 
     fn get_flow(&self, id: String) -> PyResult<Option<Flow>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
         let cid = ConceptId::from(uuid);
-        Ok(self.inner.get_flow(&cid).map(|f| Flow::from_rust(f.clone())))
+        Ok(self
+            .inner
+            .get_flow(&cid)
+            .map(|f| Flow::from_rust(f.clone())))
     }
 
     fn get_instance(&self, id: String) -> PyResult<Option<Instance>> {
         let uuid = Uuid::from_str(&id)
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
         let cid = ConceptId::from(uuid);
-        Ok(self.inner.get_instance(&cid).map(|i| Instance::from_rust(i.clone())))
+        Ok(self
+            .inner
+            .get_instance(&cid)
+            .map(|i| Instance::from_rust(i.clone())))
     }
 
     fn find_entity_by_name(&self, name: String) -> Option<String> {
-        self.inner.find_entity_by_name(&name).map(|uuid| uuid.to_string())
+        self.inner
+            .find_entity_by_name(&name)
+            .map(|uuid| uuid.to_string())
     }
 
     fn find_resource_by_name(&self, name: String) -> Option<String> {
-        self.inner.find_resource_by_name(&name).map(|uuid| uuid.to_string())
+        self.inner
+            .find_resource_by_name(&name)
+            .map(|uuid| uuid.to_string())
     }
 
     fn flows_from(&self, entity_id: String) -> PyResult<Vec<Flow>> {
@@ -132,7 +148,9 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
         let cid = ConceptId::from(uuid);
 
-        Ok(self.inner.flows_from(&cid)
+        Ok(self
+            .inner
+            .flows_from(&cid)
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect())
@@ -143,35 +161,41 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Invalid UUID: {}", e)))?;
         let cid = ConceptId::from(uuid);
 
-        Ok(self.inner.flows_to(&cid)
+        Ok(self
+            .inner
+            .flows_to(&cid)
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect())
     }
 
     fn all_entities(&self) -> Vec<Entity> {
-        self.inner.all_entities()
+        self.inner
+            .all_entities()
             .into_iter()
             .map(|e| Entity::from_rust(e.clone()))
             .collect()
     }
 
     fn all_resources(&self) -> Vec<Resource> {
-        self.inner.all_resources()
+        self.inner
+            .all_resources()
             .into_iter()
             .map(|r| Resource::from_rust(r.clone()))
             .collect()
     }
 
     fn all_flows(&self) -> Vec<Flow> {
-        self.inner.all_flows()
+        self.inner
+            .all_flows()
             .into_iter()
             .map(|f| Flow::from_rust(f.clone()))
             .collect()
     }
 
     fn all_instances(&self) -> Vec<Instance> {
-        self.inner.all_instances()
+        self.inner
+            .all_instances()
             .into_iter()
             .map(|i| Instance::from_rust(i.clone()))
             .collect()
@@ -187,8 +211,10 @@ impl Graph {
 
     fn export_calm(&self) -> PyResult<String> {
         crate::calm::export(&self.inner)
-            .and_then(|value| serde_json::to_string_pretty(&value)
-                .map_err(|e| format!("Serialization error: {}", e)))
+            .and_then(|value| {
+                serde_json::to_string_pretty(&value)
+                    .map_err(|e| format!("Serialization error: {}", e))
+            })
             .map_err(|e| PyValueError::new_err(e))
     }
 

@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::units::Dimension;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum ValidationError {
@@ -52,11 +52,7 @@ pub enum ValidationError {
 }
 
 impl ValidationError {
-    pub fn syntax_error(
-        message: impl Into<String>,
-        line: usize,
-        column: usize,
-    ) -> Self {
+    pub fn syntax_error(message: impl Into<String>, line: usize, column: usize) -> Self {
         Self::SyntaxError {
             message: message.into(),
             line,
@@ -82,10 +78,7 @@ impl ValidationError {
         }
     }
 
-    pub fn type_error(
-        message: impl Into<String>,
-        location: impl Into<String>,
-    ) -> Self {
+    pub fn type_error(message: impl Into<String>, location: impl Into<String>) -> Self {
         Self::TypeError {
             message: message.into(),
             location: location.into(),
@@ -95,11 +88,7 @@ impl ValidationError {
         }
     }
 
-    pub fn unit_error(
-        expected: Dimension,
-        found: Dimension,
-        location: impl Into<String>,
-    ) -> Self {
+    pub fn unit_error(expected: Dimension, found: Dimension, location: impl Into<String>) -> Self {
         Self::UnitError {
             expected,
             found,
@@ -121,10 +110,7 @@ impl ValidationError {
         }
     }
 
-    pub fn determinism_error(
-        message: impl Into<String>,
-        hint: impl Into<String>,
-    ) -> Self {
+    pub fn determinism_error(message: impl Into<String>, hint: impl Into<String>) -> Self {
         Self::DeterminismError {
             message: message.into(),
             hint: hint.into(),
@@ -156,10 +142,7 @@ impl ValidationError {
         }
     }
 
-    pub fn invalid_expression(
-        message: impl Into<String>,
-        location: impl Into<String>,
-    ) -> Self {
+    pub fn invalid_expression(message: impl Into<String>, location: impl Into<String>) -> Self {
         Self::InvalidExpression {
             message: message.into(),
             location: location.into(),
@@ -194,7 +177,12 @@ impl ValidationError {
         expected_type: impl Into<String>,
         found_type: impl Into<String>,
     ) -> Self {
-        if let ValidationError::TypeError { expected_type: e, found_type: f, .. } = &mut self {
+        if let ValidationError::TypeError {
+            expected_type: e,
+            found_type: f,
+            ..
+        } = &mut self
+        {
             *e = Some(expected_type.into());
             *f = Some(found_type.into());
         }
@@ -232,7 +220,10 @@ impl ValidationError {
             reference_type: "Flow".to_string(),
             name: name.clone(),
             location: location.into(),
-            suggestion: Some(format!("Did you mean to define a Flow involving '{}'?", name)),
+            suggestion: Some(format!(
+                "Did you mean to define a Flow involving '{}'?",
+                name
+            )),
         }
     }
 
@@ -267,7 +258,10 @@ impl ValidationError {
             location: location.into(),
             expected_type: Some(expected.clone()),
             found_type: Some(found.clone()),
-            suggestion: Some(format!("Convert {} to {} or adjust the expression", found, expected)),
+            suggestion: Some(format!(
+                "Convert {} to {} or adjust the expression",
+                found, expected
+            )),
         }
     }
 
@@ -279,7 +273,10 @@ impl ValidationError {
     ) -> Self {
         let variable = variable.into();
         let suggestion = if !available.is_empty() {
-            Some(format!("Available variables: {}. Did you mean one of these?", available.join(", ")))
+            Some(format!(
+                "Available variables: {}. Did you mean one of these?",
+                available.join(", ")
+            ))
         } else {
             Some("No variables are currently in scope.".to_string())
         };
@@ -296,14 +293,30 @@ impl ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ValidationError::SyntaxError { message, line, column, end_line, end_column } => {
+            ValidationError::SyntaxError {
+                message,
+                line,
+                column,
+                end_line,
+                end_column,
+            } => {
                 if let (Some(el), Some(ec)) = (end_line, end_column) {
-                    write!(f, "Syntax error at {}:{} to {}:{}: {}", line, column, el, ec, message)
+                    write!(
+                        f,
+                        "Syntax error at {}:{} to {}:{}: {}",
+                        line, column, el, ec, message
+                    )
                 } else {
                     write!(f, "Syntax error at {}:{}: {}", line, column, message)
                 }
             }
-            ValidationError::TypeError { message, location, expected_type, found_type, suggestion } => {
+            ValidationError::TypeError {
+                message,
+                location,
+                expected_type,
+                found_type,
+                suggestion,
+            } => {
                 write!(f, "Type error at {}: {}", location, message)?;
                 if let (Some(exp), Some(fnd)) = (expected_type, found_type) {
                     write!(f, " (expected {}, found {})", exp, fnd)?;
@@ -313,7 +326,12 @@ impl fmt::Display for ValidationError {
                 }
                 Ok(())
             }
-            ValidationError::UnitError { expected, found, location, suggestion } => {
+            ValidationError::UnitError {
+                expected,
+                found,
+                location,
+                suggestion,
+            } => {
                 write!(
                     f,
                     "Unit error at {}: incompatible dimensions (expected {:?}, found {:?})",
@@ -324,8 +342,17 @@ impl fmt::Display for ValidationError {
                 }
                 Ok(())
             }
-            ValidationError::ScopeError { variable, available_in, location, suggestion } => {
-                write!(f, "Scope error at {}: variable '{}' not in scope", location, variable)?;
+            ValidationError::ScopeError {
+                variable,
+                available_in,
+                location,
+                suggestion,
+            } => {
+                write!(
+                    f,
+                    "Scope error at {}: variable '{}' not in scope",
+                    location, variable
+                )?;
                 if !available_in.is_empty() {
                     write!(f, "\n  Available in: {}", available_in.join(", "))?;
                 }
@@ -338,21 +365,34 @@ impl fmt::Display for ValidationError {
                 write!(f, "Determinism error: {}", message)?;
                 write!(f, "\n  Hint: {}", hint)
             }
-            ValidationError::UndefinedReference { reference_type, name, location, suggestion } => {
+            ValidationError::UndefinedReference {
+                reference_type,
+                name,
+                location,
+                suggestion,
+            } => {
                 write!(f, "Undefined {} '{}' at {}", reference_type, name, location)?;
                 if let Some(sug) = suggestion {
                     write!(f, "\n  Suggestion: {}", sug)?;
                 }
                 Ok(())
             }
-            ValidationError::DuplicateDeclaration { name, first_location, second_location } => {
+            ValidationError::DuplicateDeclaration {
+                name,
+                first_location,
+                second_location,
+            } => {
                 write!(
                     f,
                     "Duplicate declaration of '{}': first at {}, duplicate at {}",
                     name, first_location, second_location
                 )
             }
-            ValidationError::InvalidExpression { message, location, suggestion } => {
+            ValidationError::InvalidExpression {
+                message,
+                location,
+                suggestion,
+            } => {
                 write!(f, "Invalid expression at {}: {}", location, message)?;
                 if let Some(sug) = suggestion {
                     write!(f, "\n  Suggestion: {}", sug)?;

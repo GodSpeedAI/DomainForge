@@ -1,5 +1,5 @@
-use pest_derive::Parser;
 use crate::graph::Graph;
+use pest_derive::Parser;
 
 #[derive(Parser)]
 #[grammar = "grammar/sea.pest"]

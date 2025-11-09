@@ -1,6 +1,6 @@
-use indexmap::IndexMap;
-use crate::primitives::{Entity, Resource, Flow, Instance};
+use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::ConceptId;
+use indexmap::IndexMap;
 
 #[derive(Debug, Clone, Default)]
 pub struct Graph {
@@ -45,13 +45,17 @@ impl Graph {
 
     pub fn remove_entity(&mut self, id: &ConceptId) -> Result<Entity, String> {
         // Check for references in flows
-        let referencing_flows: Vec<String> = self.flows.values()
+        let referencing_flows: Vec<String> = self
+            .flows
+            .values()
             .filter(|flow| flow.from_id() == id || flow.to_id() == id)
             .map(|flow| flow.id().to_string())
             .collect();
 
         // Check for references in instances
-        let referencing_instances: Vec<String> = self.instances.values()
+        let referencing_instances: Vec<String> = self
+            .instances
+            .values()
             .filter(|instance| instance.entity_id() == id)
             .map(|instance| instance.id().to_string())
             .collect();
@@ -62,7 +66,10 @@ impl Graph {
                 error_msg.push_str(&format!(" by flows: {}", referencing_flows.join(", ")));
             }
             if !referencing_instances.is_empty() {
-                error_msg.push_str(&format!(" by instances: {}", referencing_instances.join(", ")));
+                error_msg.push_str(&format!(
+                    " by instances: {}",
+                    referencing_instances.join(", ")
+                ));
             }
             return Err(error_msg);
         }
@@ -95,13 +102,17 @@ impl Graph {
 
     pub fn remove_resource(&mut self, id: &ConceptId) -> Result<Resource, String> {
         // Check for references in flows
-        let referencing_flows: Vec<String> = self.flows.values()
+        let referencing_flows: Vec<String> = self
+            .flows
+            .values()
             .filter(|flow| flow.resource_id() == id)
             .map(|flow| flow.id().to_string())
             .collect();
 
         // Check for references in instances
-        let referencing_instances: Vec<String> = self.instances.values()
+        let referencing_instances: Vec<String> = self
+            .instances
+            .values()
             .filter(|instance| instance.resource_id() == id)
             .map(|instance| instance.id().to_string())
             .collect();
@@ -112,7 +123,10 @@ impl Graph {
                 error_msg.push_str(&format!(" by flows: {}", referencing_flows.join(", ")));
             }
             if !referencing_instances.is_empty() {
-                error_msg.push_str(&format!(" by instances: {}", referencing_instances.join(", ")));
+                error_msg.push_str(&format!(
+                    " by instances: {}",
+                    referencing_instances.join(", ")
+                ));
             }
             return Err(error_msg);
         }

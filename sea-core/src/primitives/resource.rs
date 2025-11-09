@@ -1,9 +1,9 @@
+use crate::units::Unit;
+use crate::ConceptId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use uuid::Uuid;
-use crate::units::Unit;
-use crate::ConceptId;
 
 /// Represents a quantifiable subject of value in enterprise models.
 ///

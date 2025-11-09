@@ -403,21 +403,21 @@ fn test_parse_complex_supply_chain() {
 
 #[test]
 fn test_parse_error_invalid_syntax() {
-    let source = r#"Entity"#;  // Missing name
+    let source = r#"Entity"#; // Missing name
     let result = parse(source);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_parse_error_unclosed_string() {
-    let source = r#"Entity "Warehouse"#;  // Unclosed quote
+    let source = r#"Entity "Warehouse"#; // Unclosed quote
     let result = parse(source);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_parse_error_missing_from() {
-    let source = r#"Flow "Camera" to "Factory""#;  // Missing 'from'
+    let source = r#"Flow "Camera" to "Factory""#; // Missing 'from'
     let result = parse(source);
     assert!(result.is_err());
 }

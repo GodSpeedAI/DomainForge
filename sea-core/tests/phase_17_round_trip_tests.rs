@@ -1,9 +1,9 @@
-use sea_core::graph::Graph;
-use sea_core::primitives::{Entity, Resource, Flow};
-use sea_core::sbvr::SbvrModel;
-use sea_core::kg::KnowledgeGraph;
-use sea_core::units::unit_from_string;
 use rust_decimal::Decimal;
+use sea_core::graph::Graph;
+use sea_core::kg::KnowledgeGraph;
+use sea_core::primitives::{Entity, Flow, Resource};
+use sea_core::sbvr::SbvrModel;
+use sea_core::units::unit_from_string;
 
 #[test]
 fn test_sbvr_export_import_entities() {
@@ -27,7 +27,7 @@ fn test_sbvr_export_preserves_entity_count() {
     let mut original = Graph::new();
 
     for i in 1..=5 {
-        let entity = Entity::new_with_namespace(&format!("Entity{}", i), "test");
+        let entity = Entity::new_with_namespace(format!("Entity{}", i), "test");
         original.add_entity(entity).unwrap();
     }
 
@@ -42,7 +42,8 @@ fn test_sbvr_export_preserves_resource_count() {
     let mut original = Graph::new();
 
     for i in 1..=3 {
-        let resource = Resource::new_with_namespace(&format!("Resource{}", i), unit_from_string("kg"), "test");
+        let resource =
+            Resource::new_with_namespace(format!("Resource{}", i), unit_from_string("kg"), "test");
         original.add_resource(resource).unwrap();
     }
 
@@ -69,7 +70,12 @@ fn test_sbvr_export_preserves_flow_count() {
     original.add_resource(resource).unwrap();
 
     for i in 1..=4 {
-        let flow = Flow::new(resource_id.clone(), entity1_id.clone(), entity2_id.clone(), Decimal::new(i * 10, 0));
+        let flow = Flow::new(
+            resource_id.clone(),
+            entity1_id.clone(),
+            entity2_id.clone(),
+            Decimal::new(i * 10, 0),
+        );
         original.add_flow(flow).unwrap();
     }
 
@@ -84,7 +90,7 @@ fn test_rdf_export_preserves_entity_count() {
     let mut original = Graph::new();
 
     for i in 1..=5 {
-        let entity = Entity::new_with_namespace(&format!("Entity{}", i), "test");
+        let entity = Entity::new_with_namespace(format!("Entity{}", i), "test");
         original.add_entity(entity).unwrap();
     }
 
@@ -99,7 +105,8 @@ fn test_rdf_export_preserves_resource_count() {
     let mut original = Graph::new();
 
     for i in 1..=3 {
-        let resource = Resource::new_with_namespace(&format!("Resource{}", i), unit_from_string("kg"), "test");
+        let resource =
+            Resource::new_with_namespace(format!("Resource{}", i), unit_from_string("kg"), "test");
         original.add_resource(resource).unwrap();
     }
 
@@ -164,7 +171,7 @@ fn test_knowledge_graph_round_trip_structure() {
 
     let kg = KnowledgeGraph::from_graph(&graph).unwrap();
 
-    assert!(kg.triples.len() > 0);
+    assert!(!kg.triples.is_empty());
 
     let turtle = kg.to_turtle();
     assert!(turtle.contains("Organization"));

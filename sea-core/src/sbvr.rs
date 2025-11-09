@@ -1,5 +1,5 @@
 use crate::graph::Graph;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub enum SbvrError {
@@ -39,6 +39,16 @@ pub struct SbvrFactType {
     pub subject: String,
     pub verb: String,
     pub object: String,
+    #[serde(default)]
+    pub destination: Option<String>,
+    #[serde(default = "SbvrFactType::default_schema_version")]
+    pub schema_version: String,
+}
+
+impl SbvrFactType {
+    pub fn default_schema_version() -> String {
+        "2.0".to_string()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,7 +101,11 @@ impl SbvrModel {
                 id: resource.id().to_string(),
                 name: resource.name().to_string(),
                 term_type: TermType::IndividualConcept,
-                definition: Some(format!("Resource: {} ({:?})", resource.name(), resource.unit())),
+                definition: Some(format!(
+                    "Resource: {} ({})",
+                    resource.name(),
+                    resource.unit()
+                )),
             });
         }
 
@@ -107,7 +121,9 @@ impl SbvrModel {
                 id: flow.id().to_string(),
                 subject: flow.from_id().to_string(),
                 verb: "transfers".to_string(),
-                object: flow.to_id().to_string(),
+                object: flow.resource_id().to_string(),
+                destination: Some(flow.to_id().to_string()),
+                schema_version: SbvrFactType::default_schema_version(),
             });
         }
 
@@ -124,32 +140,44 @@ impl SbvrModel {
         for term in &self.vocabulary {
             match term.term_type {
                 TermType::GeneralConcept => {
-                    xmi.push_str(&format!("    <sbvr:GeneralConcept id=\"{}\" name=\"{}\">\n",
+                    xmi.push_str(&format!(
+                        "    <sbvr:GeneralConcept id=\"{}\" name=\"{}\">\n",
                         Self::escape_xml(&term.id),
-                        Self::escape_xml(&term.name)));
+                        Self::escape_xml(&term.name)
+                    ));
                     if let Some(def) = &term.definition {
-                        xmi.push_str(&format!("      <sbvr:Definition>{}</sbvr:Definition>\n",
-                            Self::escape_xml(def)));
+                        xmi.push_str(&format!(
+                            "      <sbvr:Definition>{}</sbvr:Definition>\n",
+                            Self::escape_xml(def)
+                        ));
                     }
                     xmi.push_str("    </sbvr:GeneralConcept>\n");
                 }
                 TermType::IndividualConcept => {
-                    xmi.push_str(&format!("    <sbvr:IndividualConcept id=\"{}\" name=\"{}\">\n",
+                    xmi.push_str(&format!(
+                        "    <sbvr:IndividualConcept id=\"{}\" name=\"{}\">\n",
                         Self::escape_xml(&term.id),
-                        Self::escape_xml(&term.name)));
+                        Self::escape_xml(&term.name)
+                    ));
                     if let Some(def) = &term.definition {
-                        xmi.push_str(&format!("      <sbvr:Definition>{}</sbvr:Definition>\n",
-                            Self::escape_xml(def)));
+                        xmi.push_str(&format!(
+                            "      <sbvr:Definition>{}</sbvr:Definition>\n",
+                            Self::escape_xml(def)
+                        ));
                     }
                     xmi.push_str("    </sbvr:IndividualConcept>\n");
                 }
                 TermType::VerbConcept => {
-                    xmi.push_str(&format!("    <sbvr:VerbConcept id=\"{}\" name=\"{}\">\n",
+                    xmi.push_str(&format!(
+                        "    <sbvr:VerbConcept id=\"{}\" name=\"{}\">\n",
                         Self::escape_xml(&term.id),
-                        Self::escape_xml(&term.name)));
+                        Self::escape_xml(&term.name)
+                    ));
                     if let Some(def) = &term.definition {
-                        xmi.push_str(&format!("      <sbvr:Definition>{}</sbvr:Definition>\n",
-                            Self::escape_xml(def)));
+                        xmi.push_str(&format!(
+                            "      <sbvr:Definition>{}</sbvr:Definition>\n",
+                            Self::escape_xml(def)
+                        ));
                     }
                     xmi.push_str("    </sbvr:VerbConcept>\n");
                 }
@@ -157,10 +185,32 @@ impl SbvrModel {
         }
 
         for fact in &self.facts {
-            xmi.push_str(&format!("    <sbvr:FactType id=\"{}\">\n", Self::escape_xml(&fact.id)));
-            xmi.push_str(&format!("      <sbvr:Subject>{}</sbvr:Subject>\n", Self::escape_xml(&fact.subject)));
-            xmi.push_str(&format!("      <sbvr:Verb>{}</sbvr:Verb>\n", Self::escape_xml(&fact.verb)));
-            xmi.push_str(&format!("      <sbvr:Object>{}</sbvr:Object>\n", Self::escape_xml(&fact.object)));
+            xmi.push_str(&format!(
+                "    <sbvr:FactType id=\"{}\">\n",
+                Self::escape_xml(&fact.id)
+            ));
+            xmi.push_str(&format!(
+                "      <sbvr:SchemaVersion>{}</sbvr:SchemaVersion>\n",
+                Self::escape_xml(&fact.schema_version)
+            ));
+            xmi.push_str(&format!(
+                "      <sbvr:Subject>{}</sbvr:Subject>\n",
+                Self::escape_xml(&fact.subject)
+            ));
+            xmi.push_str(&format!(
+                "      <sbvr:Verb>{}</sbvr:Verb>\n",
+                Self::escape_xml(&fact.verb)
+            ));
+            xmi.push_str(&format!(
+                "      <sbvr:Object>{}</sbvr:Object>\n",
+                Self::escape_xml(&fact.object)
+            ));
+            if let Some(dest) = &fact.destination {
+                xmi.push_str(&format!(
+                    "      <sbvr:Destination>{}</sbvr:Destination>\n",
+                    Self::escape_xml(dest)
+                ));
+            }
             xmi.push_str("    </sbvr:FactType>\n");
         }
 
@@ -172,14 +222,20 @@ impl SbvrModel {
                 RuleType::Derivation => "Derivation",
             };
 
-            xmi.push_str(&format!("    <sbvr:{} id=\"{}\" name=\"{}\">\n",
+            xmi.push_str(&format!(
+                "    <sbvr:{} id=\"{}\" name=\"{}\">\n",
                 rule_element,
                 Self::escape_xml(&rule.id),
-                Self::escape_xml(&rule.name)));
-            xmi.push_str(&format!("      <sbvr:Expression>{}</sbvr:Expression>\n",
-                Self::escape_xml(&rule.expression)));
-            xmi.push_str(&format!("      <sbvr:Severity>{}</sbvr:Severity>\n",
-                Self::escape_xml(&rule.severity)));
+                Self::escape_xml(&rule.name)
+            ));
+            xmi.push_str(&format!(
+                "      <sbvr:Expression>{}</sbvr:Expression>\n",
+                Self::escape_xml(&rule.expression)
+            ));
+            xmi.push_str(&format!(
+                "      <sbvr:Severity>{}</sbvr:Severity>\n",
+                Self::escape_xml(&rule.severity)
+            ));
             xmi.push_str(&format!("    </sbvr:{}>\n", rule_element));
         }
 
@@ -214,7 +270,7 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::{Entity, Resource, Flow};
+    use crate::primitives::{Entity, Flow, Resource};
     use rust_decimal::Decimal;
 
     #[test]
@@ -231,7 +287,11 @@ mod tests {
 
         let entity1 = Entity::new_with_namespace("Supplier", "supply_chain");
         let entity2 = Entity::new_with_namespace("Manufacturer", "supply_chain");
-        let resource = Resource::new_with_namespace("Parts", crate::units::unit_from_string("kg"), "supply_chain");
+        let resource = Resource::new_with_namespace(
+            "Parts",
+            crate::units::unit_from_string("kg"),
+            "supply_chain",
+        );
 
         let entity1_id = entity1.id().clone();
         let entity2_id = entity2.id().clone();
@@ -241,6 +301,7 @@ mod tests {
         graph.add_entity(entity2).unwrap();
         graph.add_resource(resource).unwrap();
 
+        #[allow(deprecated)]
         let flow = Flow::new(resource_id, entity1_id, entity2_id, Decimal::new(100, 0));
         graph.add_flow(flow).unwrap();
 

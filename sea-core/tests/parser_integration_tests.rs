@@ -28,9 +28,7 @@ fn test_end_to_end_camera_supply_chain() {
 
     // Verify entities
     assert_eq!(graph.all_entities().len(), 4);
-    let entities: Vec<_> = graph.all_entities().iter()
-        .map(|e| e.name())
-        .collect();
+    let entities: Vec<_> = graph.all_entities().iter().map(|e| e.name()).collect();
     assert!(entities.contains(&"Component Supplier"));
     assert!(entities.contains(&"Camera Factory"));
     assert!(entities.contains(&"Distribution Center"));
@@ -38,9 +36,7 @@ fn test_end_to_end_camera_supply_chain() {
 
     // Verify resources
     assert_eq!(graph.all_resources().len(), 3);
-    let resources: Vec<_> = graph.all_resources().iter()
-        .map(|r| r.name())
-        .collect();
+    let resources: Vec<_> = graph.all_resources().iter().map(|r| r.name()).collect();
     assert!(resources.contains(&"Camera Components"));
     assert!(resources.contains(&"Assembled Cameras"));
     assert!(resources.contains(&"Packaged Cameras"));
@@ -50,7 +46,8 @@ fn test_end_to_end_camera_supply_chain() {
 
     // Test graph queries
     let entities = graph.all_entities();
-    let factory = entities.iter()
+    let factory = entities
+        .iter()
         .find(|e| e.name() == "Camera Factory")
         .expect("Factory not found");
 
@@ -87,13 +84,17 @@ fn test_end_to_end_multi_domain_model() {
     assert_eq!(graph.all_flows().len(), 2);
 
     // Verify namespace separation
-    let finance_entities: Vec<_> = graph.all_entities().iter()
+    let finance_entities: Vec<_> = graph
+        .all_entities()
+        .iter()
         .filter(|e| e.namespace() == "finance")
         .map(|e| e.name())
         .collect();
     assert_eq!(finance_entities.len(), 2);
 
-    let logistics_entities: Vec<_> = graph.all_entities().iter()
+    let logistics_entities: Vec<_> = graph
+        .all_entities()
+        .iter()
         .filter(|e| e.namespace() == "logistics")
         .map(|e| e.name())
         .collect();
@@ -162,7 +163,8 @@ fn test_end_to_end_parse_and_query() {
 
     // Test upstream/downstream queries
     let entities = graph.all_entities();
-    let midstream = entities.iter()
+    let midstream = entities
+        .iter()
         .find(|e| e.name() == "Midstream")
         .expect("Midstream not found");
 
