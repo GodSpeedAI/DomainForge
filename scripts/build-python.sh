@@ -25,8 +25,8 @@ if ! python -c "import pytest" 2>/dev/null; then
 fi
 
 # Build Python bindings in development mode
-echo "Building with maturin develop..."
-maturin develop --features python --manifest-path sea-core/Cargo.toml
+echo "Building with maturin develop (pyproject configuration)..."
+maturin develop
 
 echo "✓ Python bindings built successfully"
 echo "✓ Virtual environment activated at .venv"

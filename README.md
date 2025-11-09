@@ -47,7 +47,7 @@ pip install maturin
 git clone https://github.com/GodSpeedAI/DomainForge.git
 cd DomainForge
 maturin develop
-# or build wheel: maturin build --release --features python
+# or build wheel: maturin build --release
 
 # TypeScript/Node.js
 npm install

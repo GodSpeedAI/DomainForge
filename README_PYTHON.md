@@ -11,10 +11,10 @@ Python bindings for the Semantic Enterprise Architecture (SEA) Domain Specific L
 pip install maturin
 git clone https://github.com/GodSpeedAI/DomainForge.git
 cd DomainForge
-maturin develop --features python
+maturin develop
 
 # Or build wheel
-maturin build --release --features python
+maturin build --release
 pip install target/wheels/sea_dsl-*.whl
 ```
 
@@ -207,7 +207,7 @@ flow = Flow.new(
 pip install maturin
 
 # Build and install in development mode
-maturin develop --features python
+maturin develop
 
 # Run tests
 pytest
