@@ -1,7 +1,7 @@
 use super::expression::{AggregateFunction, BinaryOp, Expression, Quantifier};
 use crate::graph::Graph;
-use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use std::str::FromStr;
 
 impl Expression {
@@ -154,15 +154,18 @@ impl Expression {
             Expression::Variable(name) => {
                 match name.as_str() {
                     "flows" => {
-                        let flows: Vec<serde_json::Value> = graph.all_flows()
+                        let flows: Vec<serde_json::Value> = graph
+                            .all_flows()
                             .iter()
-                            .map(|f| serde_json::json!({
-                                "id": f.id().to_string(), // Keep as string for JSON compatibility
-                                "from_entity": f.from_id().to_string(),
-                                "to_entity": f.to_id().to_string(),
-                                "resource": f.resource_id().to_string(),
-                                "quantity": f.quantity().to_f64().unwrap_or(0.0),
-                            }))
+                            .map(|f| {
+                                serde_json::json!({
+                                    "id": f.id().to_string(), // Keep as string for JSON compatibility
+                                    "from_entity": f.from_id().to_string(),
+                                    "to_entity": f.to_id().to_string(),
+                                    "resource": f.resource_id().to_string(),
+                                    "quantity": f.quantity().to_f64().unwrap_or(0.0),
+                                })
+                            })
                             .collect();
                         Ok(flows)
                     }
@@ -234,16 +237,14 @@ impl Expression {
         let filtered_items = if let Some(filter_expr) = filter {
             // Determine the variable name based on collection type
             let variable_name = match collection {
-                Expression::Variable(name) => {
-                    match name.as_str() {
-                        "flows" => "flow",
-                        "entities" => "entity",
-                        "resources" => "resource",
-                        "instances" => "instance",
-                        _ => "item"
-                    }
-                }
-                _ => "item"
+                Expression::Variable(name) => match name.as_str() {
+                    "flows" => "flow",
+                    "entities" => "entity",
+                    "resources" => "resource",
+                    "instances" => "instance",
+                    _ => "item",
+                },
+                _ => "item",
             };
 
             items
@@ -347,9 +348,7 @@ impl Expression {
                     .min();
 
                 // Convert Decimal to f64 and propagate parsing errors
-                let min_f64 = min
-                    .as_ref()
-                    .and_then(|d| d.to_f64());
+                let min_f64 = min.as_ref().and_then(|d| d.to_f64());
 
                 Ok(serde_json::json!(min_f64))
             }
@@ -373,9 +372,7 @@ impl Expression {
                     .max();
 
                 // Convert Decimal to f64 and propagate parsing errors
-                let max_f64 = max
-                    .as_ref()
-                    .and_then(|d| d.to_f64());
+                let max_f64 = max.as_ref().and_then(|d| d.to_f64());
 
                 Ok(serde_json::json!(max_f64))
             }

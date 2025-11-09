@@ -640,7 +640,7 @@ fn parse_string_literal(pair: Pair<Rule>) -> ParseResult<String> {
         Err(e) => Err(ParseError::GrammarError(format!(
             "Invalid string literal escape sequences: {} - {}",
             s, e
-        )))
+        ))),
     }
 }
 
@@ -663,7 +663,7 @@ fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
         Err(e) => Err(ParseError::GrammarError(format!(
             "Invalid multiline string escape sequences: {} - {}",
             s, e
-        )))
+        ))),
     }
 }
 

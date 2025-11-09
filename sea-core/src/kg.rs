@@ -140,9 +140,9 @@ impl KnowledgeGraph {
 
             // Validate that the quantity is a safe decimal string for Turtle format
             let quantity_str = flow.quantity().to_string();
-            Self::validate_turtle_decimal(&quantity_str).map_err(|e|
+            Self::validate_turtle_decimal(&quantity_str).map_err(|e| {
                 KgError::SerializationError(format!("Invalid quantity format: {}", e))
-            )?;
+            })?;
 
             kg.triples.push(Triple {
                 subject: flow_id.clone(),
@@ -351,8 +351,8 @@ impl KnowledgeGraph {
                 '\n' => escaped.push_str("\\n"),
                 '\r' => escaped.push_str("\\r"),
                 '\t' => escaped.push_str("\\t"),
-                '\x08' => escaped.push_str("\\b"),  // backspace
-                '\x0C' => escaped.push_str("\\f"),  // form feed
+                '\x08' => escaped.push_str("\\b"), // backspace
+                '\x0C' => escaped.push_str("\\f"), // form feed
                 other => escaped.push(other),
             }
         }
@@ -368,7 +368,10 @@ impl KnowledgeGraph {
         let trimmed = decimal_str.trim();
 
         // Check for invalid characters that could break Turtle syntax
-        if trimmed.chars().any(|ch| matches!(ch, '"' | '\'' | '\\' | '\n' | '\r' | '\t')) {
+        if trimmed
+            .chars()
+            .any(|ch| matches!(ch, '"' | '\'' | '\\' | '\n' | '\r' | '\t'))
+        {
             return Err("Decimal contains invalid characters".to_string());
         }
 

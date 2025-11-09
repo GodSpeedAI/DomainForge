@@ -399,8 +399,14 @@ mod tests {
 
         let instance = graph.all_instances()[0];
         // Verify the instance references the correct entities and resources
-        assert_eq!(graph.get_entity(instance.entity_id()).unwrap().name(), "Warehouse");
-        assert_eq!(graph.get_resource(instance.resource_id()).unwrap().name(), "Cameras");
+        assert_eq!(
+            graph.get_entity(instance.entity_id()).unwrap().name(),
+            "Warehouse"
+        );
+        assert_eq!(
+            graph.get_resource(instance.resource_id()).unwrap().name(),
+            "Cameras"
+        );
     }
 
     #[test]
@@ -454,8 +460,14 @@ mod tests {
 
         let instance = graph.all_instances()[0];
         // Verify the instance references the correct entities and resources
-        assert_eq!(graph.get_entity(instance.entity_id()).unwrap().name(), "Warehouse");
-        assert_eq!(graph.get_resource(instance.resource_id()).unwrap().name(), "Cameras");
+        assert_eq!(
+            graph.get_entity(instance.entity_id()).unwrap().name(),
+            "Warehouse"
+        );
+        assert_eq!(
+            graph.get_resource(instance.resource_id()).unwrap().name(),
+            "Cameras"
+        );
         assert_eq!(instance.namespace(), "monitoring");
     }
 
@@ -591,7 +603,9 @@ mod tests {
 
         let result = import(calm_json);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unknown entity ID: nonexistent-entity"));
+        assert!(result
+            .unwrap_err()
+            .contains("Unknown entity ID: nonexistent-entity"));
     }
 
     #[test]
@@ -636,7 +650,9 @@ mod tests {
 
         let result = import(calm_json);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unknown resource ID: nonexistent-resource"));
+        assert!(result
+            .unwrap_err()
+            .contains("Unknown resource ID: nonexistent-resource"));
     }
 
     #[test]
@@ -742,7 +758,9 @@ mod tests {
 
         let result = import(calm_json);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unknown source ID: nonexistent-entity"));
+        assert!(result
+            .unwrap_err()
+            .contains("Unknown source ID: nonexistent-entity"));
     }
 
     #[test]
@@ -791,7 +809,9 @@ mod tests {
 
         let result = import(calm_json);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unknown destination ID: nonexistent-entity"));
+        assert!(result
+            .unwrap_err()
+            .contains("Unknown destination ID: nonexistent-entity"));
     }
 
     #[test]
@@ -961,6 +981,8 @@ mod tests {
 
         let result = import(calm_json);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Flow relationship must have source/destination parties"));
+        assert!(result
+            .unwrap_err()
+            .contains("Flow relationship must have source/destination parties"));
     }
 }

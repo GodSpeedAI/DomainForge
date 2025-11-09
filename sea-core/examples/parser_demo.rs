@@ -3,8 +3,8 @@
 //! This example shows how to use the parser to create a supply chain model
 //! from DSL source code.
 
-use sea_core::parse_to_graph;
 use rust_decimal::prelude::ToPrimitive;
+use sea_core::parse_to_graph;
 
 fn main() {
     // Define a camera supply chain using SEA DSL
