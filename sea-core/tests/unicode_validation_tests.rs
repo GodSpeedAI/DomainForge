@@ -18,7 +18,8 @@ fn test_unicode_in_entity_names() {
             assert_eq!(graph.entity_count(), 4, "✅ Unicode in entity names works!");
 
             // Verify we can find entities with Unicode names
-            let entities: Vec<_> = graph.all_entities()
+            let entities: Vec<_> = graph
+                .all_entities()
                 .iter()
                 .map(|e| e.name().to_string())
                 .collect();
@@ -46,7 +47,11 @@ fn test_unicode_in_resource_names() {
 
     match result {
         Ok(graph) => {
-            assert_eq!(graph.resource_count(), 3, "✅ Unicode in resource names works!");
+            assert_eq!(
+                graph.resource_count(),
+                3,
+                "✅ Unicode in resource names works!"
+            );
         }
         Err(e) => {
             panic!("❌ Unicode in resource names failed: {:?}", e);
@@ -70,7 +75,9 @@ fn test_basic_escape_sequences_validation() {
     for (source, expected_name) in test_cases {
         match parse_to_graph(source) {
             Ok(graph) => {
-                let entity_name = graph.all_entities().first()
+                let entity_name = graph
+                    .all_entities()
+                    .first()
                     .map(|e| e.name().to_string())
                     .unwrap_or_default();
 
@@ -109,7 +116,11 @@ fn test_emoji_and_special_unicode() {
     match result {
         Ok(graph) => {
             assert_eq!(graph.entity_count(), 2, "✅ Emoji in names works!");
-            assert_eq!(graph.resource_count(), 1, "✅ Emoji in resource names works!");
+            assert_eq!(
+                graph.resource_count(),
+                1,
+                "✅ Emoji in resource names works!"
+            );
         }
         Err(e) => {
             println!("❌ Emoji support failed: {:?}", e);

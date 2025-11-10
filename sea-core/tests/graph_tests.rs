@@ -1,6 +1,11 @@
-use sea_core::{Graph, primitives::{Entity, Resource, Flow, Instance}, units::unit_from_string};
 use rust_decimal::Decimal;
+use sea_core::{
+    primitives::{Entity, Flow, Instance, Resource},
+    units::unit_from_string,
+    Graph,
+};
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[test]
 fn test_graph_creation() {
@@ -12,7 +17,7 @@ fn test_graph_creation() {
 #[test]
 fn test_add_entity_to_graph() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Warehouse A");
+    let entity = Entity::new_with_namespace("Warehouse A", "default".to_string());
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity).unwrap();
@@ -23,7 +28,7 @@ fn test_add_entity_to_graph() {
 #[test]
 fn test_add_duplicate_entity() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Warehouse A");
+    let entity = Entity::new_with_namespace("Warehouse A", "default".to_string());
 
     graph.add_entity(entity.clone()).unwrap();
     assert!(graph.add_entity(entity).is_err());
@@ -43,7 +48,7 @@ fn test_add_resource() {
 #[test]
 fn test_get_entity_by_id() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Warehouse");
+    let entity = Entity::new_with_namespace("Warehouse", "default".to_string());
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity).unwrap();
@@ -56,7 +61,7 @@ fn test_get_entity_by_id() {
 #[test]
 fn test_remove_entity() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Factory");
+    let entity = Entity::new_with_namespace("Factory", "default".to_string());
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity).unwrap();
@@ -70,8 +75,8 @@ fn test_remove_entity() {
 fn test_flows_from_entity() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -98,8 +103,8 @@ fn test_flows_from_entity() {
 fn test_flows_to_entity() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -173,8 +178,8 @@ fn test_add_flow_without_entities() {
 
     graph.add_resource(cameras).unwrap();
 
-    let warehouse_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
-    let factory_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let warehouse_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
+    let factory_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
 
     let flow = Flow::new(
         cameras_id,
@@ -189,8 +194,8 @@ fn test_add_flow_without_entities() {
 #[test]
 fn test_add_flow_without_resource() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
 
     let warehouse_id = warehouse.id().clone();
     let factory_id = factory.id().clone();
@@ -198,7 +203,7 @@ fn test_add_flow_without_resource() {
     graph.add_entity(warehouse).unwrap();
     graph.add_entity(factory).unwrap();
 
-    let resource_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let resource_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
 
     let flow = Flow::new(
         resource_id,
@@ -213,7 +218,7 @@ fn test_add_flow_without_resource() {
 #[test]
 fn test_add_instance() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -238,7 +243,7 @@ fn test_add_instance_without_entity() {
 
     graph.add_resource(cameras).unwrap();
 
-    let entity_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let entity_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
     let instance = Instance::new(cameras_id.clone(), entity_id.clone());
 
     assert!(graph.add_instance(instance).is_err());
@@ -247,12 +252,12 @@ fn test_add_instance_without_entity() {
 #[test]
 fn test_add_instance_without_resource() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let warehouse_id = warehouse.id().clone();
 
     graph.add_entity(warehouse).unwrap();
 
-    let resource_id = sea_core::ConceptId::from_uuid(uuid::Uuid::new_v4());
+    let resource_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
     let instance = Instance::new(resource_id.clone(), warehouse_id.clone());
 
     assert!(graph.add_instance(instance).is_err());
@@ -261,7 +266,7 @@ fn test_add_instance_without_resource() {
 #[test]
 fn test_find_entity_by_name() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let warehouse_id = warehouse.id().clone();
 
     graph.add_entity(warehouse).unwrap();
@@ -306,8 +311,8 @@ fn test_remove_resource() {
 #[test]
 fn test_remove_flow() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -336,7 +341,7 @@ fn test_remove_flow() {
 #[test]
 fn test_remove_instance() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -358,9 +363,9 @@ fn test_remove_instance() {
 fn build_supply_chain_graph() -> Graph {
     let mut graph = Graph::new();
 
-    let supplier = Entity::new("Supplier");
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let supplier_id = supplier.id().clone();
@@ -410,9 +415,21 @@ fn test_entity_iteration_order_deterministic() {
     }
 
     // Collect IDs multiple times - IndexMap guarantees same order
-    let ids1: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
-    let ids2: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
-    let ids3: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
+    let ids1: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
+    let ids2: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
+    let ids3: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
 
     // IndexMap guarantees same order across iterations
     assert_eq!(ids1, ids2);
@@ -424,9 +441,9 @@ fn test_flow_iteration_order_deterministic() {
     let mut graph = Graph::new();
 
     // Setup entities and resource
-    let entity_a = Entity::new("Entity A");
-    let entity_b = Entity::new("Entity B");
-    let entity_c = Entity::new("Entity C");
+    let entity_a = Entity::new_with_namespace("Entity A", "default".to_string());
+    let entity_b = Entity::new_with_namespace("Entity B", "default".to_string());
+    let entity_c = Entity::new_with_namespace("Entity C", "default".to_string());
     let resource = Resource::new("Resource", unit_from_string("units"));
 
     let entity_a_id = entity_a.id().clone();
@@ -487,8 +504,16 @@ fn test_resource_iteration_order_deterministic() {
         graph.add_resource(resource).unwrap();
     }
 
-    let ids1: Vec<_> = graph.all_resources().iter().map(|r| r.id().clone()).collect();
-    let ids2: Vec<_> = graph.all_resources().iter().map(|r| r.id().clone()).collect();
+    let ids1: Vec<_> = graph
+        .all_resources()
+        .iter()
+        .map(|r| r.id().clone())
+        .collect();
+    let ids2: Vec<_> = graph
+        .all_resources()
+        .iter()
+        .map(|r| r.id().clone())
+        .collect();
 
     assert_eq!(ids1, ids2);
 }
@@ -497,7 +522,7 @@ fn test_resource_iteration_order_deterministic() {
 fn test_instance_iteration_order_deterministic() {
     let mut graph = Graph::new();
 
-    let entity = Entity::new("Warehouse");
+    let entity = Entity::new_with_namespace("Warehouse", "default".to_string());
     let resource = Resource::new("Camera", unit_from_string("units"));
 
     let entity_id = entity.id().clone();
@@ -507,16 +532,21 @@ fn test_instance_iteration_order_deterministic() {
     graph.add_resource(resource).unwrap();
 
     // Add multiple instances
-    for _i in 1..=5 {
-        let instance = Instance::new(
-            resource_id.clone(),
-            entity_id.clone(),
-        );
+    for _ in 1..=5 {
+        let instance = Instance::new(resource_id.clone(), entity_id.clone());
         graph.add_instance(instance).unwrap();
     }
 
-    let ids1: Vec<_> = graph.all_instances().iter().map(|i| i.id().clone()).collect();
-    let ids2: Vec<_> = graph.all_instances().iter().map(|i| i.id().clone()).collect();
+    let ids1: Vec<_> = graph
+        .all_instances()
+        .iter()
+        .map(|i| i.id().clone())
+        .collect();
+    let ids2: Vec<_> = graph
+        .all_instances()
+        .iter()
+        .map(|i| i.id().clone())
+        .collect();
 
     assert_eq!(ids1, ids2);
 }

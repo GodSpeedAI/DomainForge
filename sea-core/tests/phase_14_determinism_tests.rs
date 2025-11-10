@@ -1,8 +1,8 @@
-use sea_core::graph::Graph;
-use sea_core::primitives::{Entity, Resource, Flow};
-use sea_core::units::unit_from_string;
-use sea_core::policy::{Policy, Expression, PolicyKind};
 use rust_decimal::Decimal;
+use sea_core::graph::Graph;
+use sea_core::policy::{Expression, Policy, PolicyKind};
+use sea_core::primitives::{Entity, Flow, Resource};
+use sea_core::units::unit_from_string;
 
 #[test]
 fn test_flow_iteration_order_stable() {
@@ -36,12 +36,7 @@ fn test_flow_iteration_order_stable() {
         entity3_id.clone(),
         Decimal::new(200, 0),
     );
-    let flow3 = Flow::new(
-        resource_id,
-        entity1_id,
-        entity3_id,
-        Decimal::new(150, 0),
-    );
+    let flow3 = Flow::new(resource_id, entity1_id, entity3_id, Decimal::new(150, 0));
 
     graph.add_flow(flow1.clone()).unwrap();
     graph.add_flow(flow2.clone()).unwrap();
@@ -65,10 +60,21 @@ fn test_entity_iteration_order_stable() {
     graph.add_entity(entity2.clone()).unwrap();
     graph.add_entity(entity3.clone()).unwrap();
 
-    let entities1: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
-    let entities2: Vec<_> = graph.all_entities().iter().map(|e| e.id().clone()).collect();
+    let entities1: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
+    let entities2: Vec<_> = graph
+        .all_entities()
+        .iter()
+        .map(|e| e.id().clone())
+        .collect();
 
-    assert_eq!(entities1, entities2, "Entity iteration order must be stable");
+    assert_eq!(
+        entities1, entities2,
+        "Entity iteration order must be stable"
+    );
 }
 
 #[test]
@@ -83,17 +89,27 @@ fn test_resource_iteration_order_stable() {
     graph.add_resource(resource2.clone()).unwrap();
     graph.add_resource(resource3.clone()).unwrap();
 
-    let resources1: Vec<_> = graph.all_resources().iter().map(|r| r.id().clone()).collect();
-    let resources2: Vec<_> = graph.all_resources().iter().map(|r| r.id().clone()).collect();
+    let resources1: Vec<_> = graph
+        .all_resources()
+        .iter()
+        .map(|r| r.id().clone())
+        .collect();
+    let resources2: Vec<_> = graph
+        .all_resources()
+        .iter()
+        .map(|r| r.id().clone())
+        .collect();
 
-    assert_eq!(resources1, resources2, "Resource iteration order must be stable");
+    assert_eq!(
+        resources1, resources2,
+        "Resource iteration order must be stable"
+    );
 }
 
 #[test]
 fn test_policy_kind_constraint() {
     let expr = Expression::Literal(serde_json::json!(true));
-    let policy = Policy::new("test_policy", expr)
-        .with_kind(PolicyKind::Constraint);
+    let policy = Policy::new("test_policy", expr).with_kind(PolicyKind::Constraint);
 
     assert_eq!(policy.kind(), &PolicyKind::Constraint);
 }
@@ -101,8 +117,7 @@ fn test_policy_kind_constraint() {
 #[test]
 fn test_policy_kind_derivation() {
     let expr = Expression::Literal(serde_json::json!(true));
-    let policy = Policy::new("test_policy", expr)
-        .with_kind(PolicyKind::Derivation);
+    let policy = Policy::new("test_policy", expr).with_kind(PolicyKind::Derivation);
 
     assert_eq!(policy.kind(), &PolicyKind::Derivation);
 }
@@ -110,8 +125,7 @@ fn test_policy_kind_derivation() {
 #[test]
 fn test_policy_kind_obligation() {
     let expr = Expression::Literal(serde_json::json!(true));
-    let policy = Policy::new("test_policy", expr)
-        .with_kind(PolicyKind::Obligation);
+    let policy = Policy::new("test_policy", expr).with_kind(PolicyKind::Obligation);
 
     assert_eq!(policy.kind(), &PolicyKind::Obligation);
 }
@@ -126,8 +140,9 @@ fn test_policy_priority_ordering() {
     let policy2 = Policy::new("policy_b", expr2).with_priority(5);
     let policy3 = Policy::new("policy_c", expr3).with_priority(20);
 
-    let mut policies = vec![policy1, policy2, policy3];
-    policies.sort_by_key(|p| p.priority);
+    let mut policies = [policy1, policy2, policy3];
+    // sort the array in-place via a mutable slice
+    policies[..].sort_by_key(|p| p.priority);
 
     assert_eq!(policies[0].name, "policy_b");
     assert_eq!(policies[1].name, "policy_a");

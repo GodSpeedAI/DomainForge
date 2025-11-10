@@ -185,6 +185,7 @@ All SEA primitives have a namespace that defaults to "default":
 - Generated entities should include namespace as required field (not optional)
 - Domain services should support namespace filtering for multi-tenant scenarios
 - Repositories should index by (namespace, id) composite keys
+- Resource scaffolding should mirror the runtime API: use the namespace-aware constructors and default to "default" so generated DTOs never expose `undefined`.
 
 ---
 

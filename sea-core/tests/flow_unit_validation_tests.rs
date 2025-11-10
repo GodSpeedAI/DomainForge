@@ -1,12 +1,16 @@
-use sea_core::{Graph, primitives::{Entity, Resource, Flow}, units::unit_from_string};
 use rust_decimal::Decimal;
+use sea_core::{
+    primitives::{Entity, Flow, Resource},
+    units::unit_from_string,
+    Graph,
+};
 
 #[test]
 fn test_flow_creation_with_resource_unit() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = unit_from_string("kg");
     let gold = Resource::new("Gold", kg);
 

@@ -1,9 +1,9 @@
-use sea_core::parser::parse;
-use sea_core::Graph;
-use sea_core::policy::{Policy, Expression, AggregateFunction, BinaryOp};
-use sea_core::primitives::{Entity, Resource, Flow};
-use sea_core::units::{Unit, Dimension, unit_from_string};
 use rust_decimal::Decimal;
+use sea_core::parser::parse;
+use sea_core::policy::{AggregateFunction, BinaryOp, Expression, Policy};
+use sea_core::primitives::{Entity, Flow, Resource};
+use sea_core::units::{unit_from_string, Dimension, Unit};
+use sea_core::Graph;
 
 #[test]
 fn test_end_to_end_count_aggregation() {
@@ -15,8 +15,8 @@ fn test_end_to_end_count_aggregation() {
     assert_eq!(ast.declarations.len(), 1);
 
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
     let gold = Resource::new("Gold", kg);
 
@@ -62,8 +62,8 @@ fn test_end_to_end_sum_aggregation() {
     assert_eq!(ast.declarations.len(), 1);
 
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
     let gold = Resource::new("Gold", kg);
 
@@ -102,8 +102,8 @@ fn test_end_to_end_sum_aggregation() {
 #[test]
 fn test_end_to_end_avg_aggregation() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
     let camera = Resource::new("Camera", units);
 
@@ -143,8 +143,8 @@ fn test_end_to_end_avg_aggregation() {
 #[test]
 fn test_end_to_end_min_aggregation() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
     let camera = Resource::new("Camera", units);
 
@@ -184,8 +184,8 @@ fn test_end_to_end_min_aggregation() {
 #[test]
 fn test_end_to_end_max_aggregation() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
     let camera = Resource::new("Camera", units);
 
@@ -225,8 +225,8 @@ fn test_end_to_end_max_aggregation() {
 #[test]
 fn test_complex_aggregation_policy() {
     let mut graph = Graph::new();
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
     let gold = Resource::new("Gold", kg);
 
@@ -273,7 +273,10 @@ fn test_complex_aggregation_policy() {
     );
 
     let result = policy.evaluate(&graph).unwrap();
-    assert!(result.is_satisfied, "Should satisfy both count > 3 and sum < 1000");
+    assert!(
+        result.is_satisfied,
+        "Should satisfy both count > 3 and sum < 1000"
+    );
 }
 
 #[test]

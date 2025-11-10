@@ -1,16 +1,15 @@
-use pyo3::prelude::*;
-use pyo3::exceptions::{PyValueError, PyKeyError};
+#![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
+
 use crate::primitives::{
-    Entity as RustEntity,
-    Resource as RustResource,
-    Flow as RustFlow,
-    Instance as RustInstance,
+    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
 };
-use uuid::Uuid;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use crate::units::unit_from_string;
+use pyo3::exceptions::{PyKeyError, PyValueError};
+use pyo3::prelude::*;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
+use rust_decimal::Decimal;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[pyclass]
 #[derive(Clone)]
@@ -25,7 +24,7 @@ impl Entity {
     fn new(name: String, namespace: Option<String>) -> Self {
         let inner = match namespace {
             Some(ns) => RustEntity::new_with_namespace(name, ns),
-            None => RustEntity::new(name),
+            None => RustEntity::new_with_namespace(name, "default".to_string()),
         };
         Self { inner }
     }
@@ -43,7 +42,11 @@ impl Entity {
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -58,7 +61,10 @@ impl Entity {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 
@@ -97,11 +103,10 @@ impl Resource {
     #[new]
     #[pyo3(signature = (name, unit, namespace=None))]
     fn new(name: String, unit: String, namespace: Option<String>) -> Self {
-        // Convert unit string to Unit using helper
         let unit_obj = unit_from_string(unit);
         let inner = match namespace {
             Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
-            None => RustResource::new(name, unit_obj),
+            None => RustResource::new_with_namespace(name, unit_obj, "default".to_string()),
         };
         Self { inner }
     }
@@ -124,7 +129,11 @@ impl Resource {
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -139,7 +148,10 @@ impl Resource {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 
@@ -217,14 +229,23 @@ impl Flow {
     }
 
     #[getter]
-    fn quantity(&self) -> f64 {
-        self.inner.quantity().to_f64().expect("Failed to convert Decimal quantity to f64 in Python binding")
+    fn quantity(&self) -> PyResult<f64> {
+        self.inner.quantity().to_f64().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to convert Decimal quantity {} to f64 (overflow or out of range)",
+                self.inner.quantity()
+            ))
+        })
     }
 
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -239,7 +260,10 @@ impl Flow {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 
@@ -313,7 +337,11 @@ impl Instance {
     #[getter]
     fn namespace(&self) -> Option<String> {
         let ns = self.inner.namespace();
-        if ns == "default" { None } else { Some(ns.to_string()) }
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
@@ -328,7 +356,10 @@ impl Instance {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!("Attribute '{}' not found", key))),
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
         }
     }
 

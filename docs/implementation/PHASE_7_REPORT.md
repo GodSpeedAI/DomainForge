@@ -141,7 +141,7 @@ Phase 7 successfully implements idiomatic Python bindings for the SEA DSL Rust c
 
 ```bash
 # Build successful
-maturin develop --features python
+maturin develop
 # Built wheel: sea_dsl-0.1.0-cp312-cp312-linux_x86_64.whl
 
 # Module import test

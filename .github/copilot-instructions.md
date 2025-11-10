@@ -628,3 +628,19 @@ cargo test calm -- --nocapture
 | Build TypeScript   | `npm run build` (runs cargo + napi)         |
 | Build WASM         | `./scripts/build-wasm.sh`                   |
 | Generate docs      | `cargo doc --no-deps --open`                |
+
+### Available MCP Integrations
+
+This project supports several MCP (Model Context Protocol) servers for enhanced AI capabilities:
+
+- **Context7**: Up-to-date library documentation (resolve library IDs, fetch docs)
+- **Microsoft Docs**: Official Microsoft/Azure documentation (search, fetch, code samples)
+- **Exa Search**: Code context and web search for programming tasks, examples and best practices
+- **Memory Tool**: User preference storage and recall
+- **GitHub MCP**: Repository operations (PRs, commits, issues, reviews)
+- **Ref**: Documentation search and URL reading
+- **Vibe Check**: Metacognitive questioning and pattern recognition for AI workflows
+
+**Usage**: These tools are available via the MCP protocol. Always check which MCP tools are available and use them when appropriate. Chain tools for complex tasks.
+
+For example, use Exa Search to find relevant code snippets, then use Context7 to fetch detailed documentation on specific functions or types found and finally use Vibe Check to ensure the reasoning and approach are sound.

@@ -37,6 +37,6 @@ mod tests {
         let id1 = generate_uuid_v7();
         std::thread::sleep(std::time::Duration::from_millis(1));
         let id2 = generate_uuid_v7();
-        assert!(id1 < id2 || id1 == id2); // Allow equality for same millisecond
+        assert!(id1 <= id2); // Allow equality for same millisecond
     }
 }

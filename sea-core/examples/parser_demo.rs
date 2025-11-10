@@ -3,6 +3,7 @@
 //! This example shows how to use the parser to create a supply chain model
 //! from DSL source code.
 
+use rust_decimal::prelude::ToPrimitive;
 use sea_core::parse_to_graph;
 
 fn main() {
@@ -59,8 +60,15 @@ fn main() {
             println!("🏢 Entities by Domain:");
             let mut domains = std::collections::HashMap::new();
             for entity in graph.all_entities() {
-                let domain = if entity.namespace().is_empty() { "(no domain)" } else { entity.namespace() };
-                domains.entry(domain).or_insert_with(Vec::new).push(entity.name());
+                let domain = if entity.namespace().is_empty() {
+                    "(no domain)"
+                } else {
+                    entity.namespace()
+                };
+                domains
+                    .entry(domain)
+                    .or_insert_with(Vec::new)
+                    .push(entity.name());
             }
             for (domain, entities) in domains.iter() {
                 println!("  {}: {}", domain, entities.join(", "));
@@ -70,16 +78,24 @@ fn main() {
             // Display resource types
             println!("📦 Resources:");
             for resource in graph.all_resources() {
-                let namespace = if resource.namespace().is_empty() { "(no domain)" } else { resource.namespace() };
-                println!("  • {} [{}] in {}",
+                let namespace = if resource.namespace().is_empty() {
+                    "(no domain)"
+                } else {
+                    resource.namespace()
+                };
+                println!(
+                    "  • {} [{}] in {}",
                     resource.name(),
                     resource.unit().symbol(),
-                    namespace);
+                    namespace
+                );
             }
             println!();
 
             // Analyze a specific entity
-            if let Some(plant) = graph.all_entities().iter()
+            if let Some(plant) = graph
+                .all_entities()
+                .iter()
                 .find(|e| e.name() == "Camera Assembly Plant")
             {
                 println!("🏭 Camera Assembly Plant Analysis:");
@@ -87,29 +103,59 @@ fn main() {
                 let inflows = graph.flows_to(plant.id());
                 println!("  Incoming flows: {}", inflows.len());
                 for flow in inflows {
-                    let from = graph.get_entity(flow.from_id()).unwrap();
-                    let resource = graph.get_resource(flow.resource_id()).unwrap();
-                    println!("    ← {} of {} from {}",
-                        flow.quantity(),
-                        resource.name(),
-                        from.name());
+                    match (
+                        graph.get_entity(flow.from_id()),
+                        graph.get_resource(flow.resource_id()),
+                    ) {
+                        (Some(from), Some(resource)) => {
+                            println!(
+                                "    ← {} of {} from {}",
+                                flow.quantity(),
+                                resource.name(),
+                                from.name()
+                            );
+                        }
+                        _ => {
+                            eprintln!(
+                                "Warning: incoming flow {} has missing references, skipping",
+                                flow.id()
+                            );
+                        }
+                    }
                 }
 
                 let outflows = graph.flows_from(plant.id());
                 println!("  Outgoing flows: {}", outflows.len());
                 for flow in outflows {
-                    let to = graph.get_entity(flow.to_id()).unwrap();
-                    let resource = graph.get_resource(flow.resource_id()).unwrap();
-                    println!("    → {} of {} to {}",
-                        flow.quantity(),
-                        resource.name(),
-                        to.name());
+                    match (
+                        graph.get_entity(flow.to_id()),
+                        graph.get_resource(flow.resource_id()),
+                    ) {
+                        (Some(to), Some(resource)) => {
+                            println!(
+                                "    → {} of {} to {}",
+                                flow.quantity(),
+                                resource.name(),
+                                to.name()
+                            );
+                        }
+                        _ => {
+                            eprintln!(
+                                "Warning: outgoing flow {} has missing references, skipping",
+                                flow.id()
+                            );
+                        }
+                    }
                 }
 
-                println!("  Upstream entities: {}",
-                    graph.upstream_entities(plant.id()).len());
-                println!("  Downstream entities: {}",
-                    graph.downstream_entities(plant.id()).len());
+                println!(
+                    "  Upstream entities: {}",
+                    graph.upstream_entities(plant.id()).len()
+                );
+                println!(
+                    "  Downstream entities: {}",
+                    graph.downstream_entities(plant.id()).len()
+                );
             }
             println!();
 
@@ -117,14 +163,37 @@ fn main() {
             println!("🔄 Total Flow Quantities:");
             let mut resource_totals = std::collections::HashMap::new();
             for flow in graph.all_flows() {
-                let resource = graph.get_resource(flow.resource_id()).unwrap();
-                *resource_totals.entry(resource.name()).or_insert(0.0) +=
-                    flow.quantity().to_string().parse::<f64>().unwrap_or(0.0);
+                if let Some(resource) = graph.get_resource(flow.resource_id()) {
+                    // Direct conversion from Decimal to f64, handle invalid values explicitly
+                    match flow.quantity().to_f64() {
+                        Some(quantity) if quantity.is_finite() => {
+                            *resource_totals.entry(resource.name()).or_insert(0.0) += quantity;
+                        }
+                        Some(_) => {
+                            eprintln!(
+                                "Warning: flow {} has non-finite quantity {}, treating as 0.0",
+                                flow.id(),
+                                flow.quantity()
+                            );
+                        }
+                        None => {
+                            eprintln!(
+                                "Warning: flow {} has invalid quantity {}, treating as 0.0",
+                                flow.id(),
+                                flow.quantity()
+                            );
+                        }
+                    }
+                } else {
+                    eprintln!(
+                        "Warning: flow {} missing resource, omitting from totals",
+                        flow.id()
+                    );
+                }
             }
             for (resource, total) in resource_totals.iter() {
                 println!("  • {}: {} units", resource, total);
             }
-
         }
         Err(e) => {
             eprintln!("❌ Parse error: {}", e);

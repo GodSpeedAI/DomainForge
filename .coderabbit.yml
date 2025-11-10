@@ -1,0 +1,43 @@
+language: en-US
+tone_instructions: "Generate concise, actionable, and unambiguous fix instructions. Specify exact file paths and edits; focus on mechanical details required for automated or manual application. Focus on critical issues only."
+reviews:
+  profile: assertive
+  commit_status: true
+  fail_commit_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - dev
+      - release/*
+  # Tools configuration
+  tools:
+    # Rust tooling
+    clippy:
+      enabled: true
+    # Python tooling
+    ruff:
+      enabled: true
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/target/**"
+    - "!**/node_modules/**"
+    - "!**/*.lock"
+  auto_title_placeholder: "@coderabbitai"
+  auto_title_instructions: "Start titles with a conventional prefix such as feat, fix, chore, docs, test, or refactor followed by a brief summary."
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "docs/**/*.md"
+      - "sea-core/**/*.rs"
+      - "sea-core/**/*.py"
+      - "tests/**/*.rs"
+      - "tests/**/*.py"
+chat:
+  auto_reply: true

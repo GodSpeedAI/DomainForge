@@ -1,15 +1,8 @@
+use crate::policy::{AggregateFunction as RustAggregateFunction, BinaryOp as RustBinaryOp};
 use pyo3::prelude::*;
-use crate::policy::{
-    Expression as RustExpression,
-    BinaryOp as RustBinaryOp,
-    UnaryOp as RustUnaryOp,
-    Quantifier as RustQuantifier,
-    AggregateFunction as RustAggregateFunction,
-    Policy as RustPolicy,
-};
 
-#[pyclass]
-#[derive(Clone)]
+#[pyclass(eq, eq_int)]
+#[derive(Clone, PartialEq)]
 pub enum AggregateFunction {
     Count,
     Sum,
@@ -30,8 +23,8 @@ impl From<AggregateFunction> for RustAggregateFunction {
     }
 }
 
-#[pyclass]
-#[derive(Clone)]
+#[pyclass(eq, eq_int)]
+#[derive(Clone, PartialEq)]
 pub enum BinaryOp {
     And,
     Or,

@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "sea-core",
+]
+resolver = "2"  # Explicit resolver for edition 2021
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = 'abort'

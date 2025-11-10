@@ -1,10 +1,10 @@
-use sea_core::{
-    Graph,
-    primitives::{Entity, Resource, Flow},
-    policy::{Expression, BinaryOp, UnaryOp, Quantifier, Policy, DeonticModality, Severity},
-    units::unit_from_string,
-};
 use rust_decimal::Decimal;
+use sea_core::{
+    policy::{BinaryOp, DeonticModality, Expression, Policy, Quantifier, Severity, UnaryOp},
+    primitives::{Entity, Flow, Resource},
+    units::unit_from_string,
+    Graph,
+};
 use std::str::FromStr;
 
 fn build_sample_graph() -> Graph {
@@ -38,7 +38,7 @@ fn test_simple_comparison() {
     let expr = Expression::binary(
         BinaryOp::GreaterThan,
         Expression::variable("quantity"),
-        Expression::literal(100)
+        Expression::literal(100),
     );
 
     assert_eq!(expr.to_string(), "(quantity > 100)");
@@ -49,7 +49,7 @@ fn test_logical_and() {
     let expr = Expression::binary(
         BinaryOp::And,
         Expression::comparison("x", ">", 0).unwrap(),
-        Expression::comparison("y", "<", 100).unwrap()
+        Expression::comparison("y", "<", 100).unwrap(),
     );
 
     assert_eq!(expr.to_string(), "((x > 0) AND (y < 100))");
@@ -61,7 +61,7 @@ fn test_quantifier_expression() {
         Quantifier::ForAll,
         "flow",
         Expression::variable("flows"),
-        Expression::comparison("flow.quantity", ">", 0).unwrap()
+        Expression::comparison("flow.quantity", ">", 0).unwrap(),
     );
 
     assert!(matches!(expr, Expression::Quantifier { .. }));
@@ -81,10 +81,7 @@ fn test_literal_expressions() {
 
 #[test]
 fn test_unary_not() {
-    let expr = Expression::unary(
-        UnaryOp::Not,
-        Expression::literal(true)
-    );
+    let expr = Expression::unary(UnaryOp::Not, Expression::literal(true));
 
     assert_eq!(expr.to_string(), "NOT true");
 }
@@ -94,13 +91,13 @@ fn test_nested_binary_operations() {
     let inner = Expression::binary(
         BinaryOp::And,
         Expression::comparison("a", ">", 5).unwrap(),
-        Expression::comparison("b", "<", 10).unwrap()
+        Expression::comparison("b", "<", 10).unwrap(),
     );
 
     let outer = Expression::binary(
         BinaryOp::Or,
         inner,
-        Expression::comparison("c", "==", 0).unwrap()
+        Expression::comparison("c", "==", 0).unwrap(),
     );
 
     assert!(outer.to_string().contains("OR"));
@@ -133,7 +130,7 @@ fn test_forall_expansion() {
         Quantifier::ForAll,
         "flow",
         Expression::variable("flows"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let expanded = expr.expand(&graph).unwrap();
@@ -149,7 +146,7 @@ fn test_exists_expansion() {
         Quantifier::Exists,
         "entity",
         Expression::variable("entities"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let expanded = expr.expand(&graph).unwrap();
@@ -165,7 +162,7 @@ fn test_exists_unique_expansion() {
         Quantifier::ExistsUnique,
         "entity",
         Expression::variable("entities"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let expanded = expr.expand(&graph).unwrap();
@@ -181,7 +178,7 @@ fn test_forall_empty_collection() {
         Quantifier::ForAll,
         "flow",
         Expression::variable("flows"),
-        Expression::literal(false)
+        Expression::literal(false),
     );
 
     let expanded = expr.expand(&graph).unwrap();
@@ -197,7 +194,7 @@ fn test_exists_empty_collection() {
         Quantifier::Exists,
         "resource",
         Expression::variable("resources"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let expanded = expr.expand(&graph).unwrap();
@@ -209,10 +206,7 @@ fn test_exists_empty_collection() {
 fn test_evaluate_simple_policy_true() {
     let graph = build_sample_graph();
 
-    let policy = Policy::new(
-        "Always True Rule",
-        Expression::literal(true)
-    );
+    let policy = Policy::new("Always True Rule", Expression::literal(true));
 
     let result = policy.evaluate(&graph).unwrap();
 
@@ -224,10 +218,7 @@ fn test_evaluate_simple_policy_true() {
 fn test_evaluate_simple_policy_false() {
     let graph = build_sample_graph();
 
-    let policy = Policy::new(
-        "Always False Rule",
-        Expression::literal(false)
-    );
+    let policy = Policy::new("Always False Rule", Expression::literal(false));
 
     let result = policy.evaluate(&graph).unwrap();
 
@@ -243,7 +234,7 @@ fn test_evaluate_logical_and_true() {
     let expr = Expression::binary(
         BinaryOp::And,
         Expression::literal(true),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let policy = Policy::new("AND True", expr);
@@ -259,7 +250,7 @@ fn test_evaluate_logical_and_false() {
     let expr = Expression::binary(
         BinaryOp::And,
         Expression::literal(true),
-        Expression::literal(false)
+        Expression::literal(false),
     );
 
     let policy = Policy::new("AND False", expr);
@@ -275,7 +266,7 @@ fn test_evaluate_logical_or_true() {
     let expr = Expression::binary(
         BinaryOp::Or,
         Expression::literal(false),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let policy = Policy::new("OR True", expr);
@@ -291,7 +282,7 @@ fn test_evaluate_logical_or_false() {
     let expr = Expression::binary(
         BinaryOp::Or,
         Expression::literal(false),
-        Expression::literal(false)
+        Expression::literal(false),
     );
 
     let policy = Policy::new("OR False", expr);
@@ -304,10 +295,7 @@ fn test_evaluate_logical_or_false() {
 fn test_evaluate_not_true() {
     let graph = build_sample_graph();
 
-    let expr = Expression::unary(
-        UnaryOp::Not,
-        Expression::literal(true)
-    );
+    let expr = Expression::unary(UnaryOp::Not, Expression::literal(true));
 
     let policy = Policy::new("NOT True", expr);
     let result = policy.evaluate(&graph).unwrap();
@@ -319,10 +307,7 @@ fn test_evaluate_not_true() {
 fn test_evaluate_not_false() {
     let graph = build_sample_graph();
 
-    let expr = Expression::unary(
-        UnaryOp::Not,
-        Expression::literal(false)
-    );
+    let expr = Expression::unary(UnaryOp::Not, Expression::literal(false));
 
     let policy = Policy::new("NOT False", expr);
     let result = policy.evaluate(&graph).unwrap();
@@ -337,7 +322,7 @@ fn test_evaluate_numeric_comparison_greater_than() {
     let expr = Expression::binary(
         BinaryOp::GreaterThan,
         Expression::literal(10),
-        Expression::literal(5)
+        Expression::literal(5),
     );
 
     let policy = Policy::new("10 > 5", expr);
@@ -353,7 +338,7 @@ fn test_evaluate_numeric_comparison_less_than() {
     let expr = Expression::binary(
         BinaryOp::LessThan,
         Expression::literal(3),
-        Expression::literal(7)
+        Expression::literal(7),
     );
 
     let policy = Policy::new("3 < 7", expr);
@@ -369,7 +354,7 @@ fn test_evaluate_equality_true() {
     let expr = Expression::binary(
         BinaryOp::Equal,
         Expression::literal(42),
-        Expression::literal(42)
+        Expression::literal(42),
     );
 
     let policy = Policy::new("42 == 42", expr);
@@ -385,7 +370,7 @@ fn test_evaluate_equality_false() {
     let expr = Expression::binary(
         BinaryOp::Equal,
         Expression::literal(10),
-        Expression::literal(20)
+        Expression::literal(20),
     );
 
     let policy = Policy::new("10 == 20", expr);
@@ -402,7 +387,7 @@ fn test_evaluate_quantified_forall_policy() {
         Quantifier::ForAll,
         "entity",
         Expression::variable("entities"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let policy = Policy::new("All Entities Pass", expr);
@@ -419,7 +404,7 @@ fn test_evaluate_quantified_exists_policy() {
         Quantifier::Exists,
         "resource",
         Expression::variable("resources"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let policy = Policy::new("At Least One Resource Exists", expr);
@@ -470,11 +455,12 @@ fn test_evaluation_result_has_errors() {
 fn test_violation_with_context() {
     use sea_core::policy::Violation;
 
-    let violation = Violation::new("Test Policy", "Test message", Severity::Warning)
-        .with_context(serde_json::json!({
+    let violation = Violation::new("Test Policy", "Test message", Severity::Warning).with_context(
+        serde_json::json!({
             "entity_id": "123",
             "field": "quantity"
-        }));
+        }),
+    );
 
     assert_eq!(violation.context["entity_id"], "123");
     assert_eq!(violation.context["field"], "quantity");
@@ -487,7 +473,7 @@ fn test_string_comparison_contains() {
     let expr = Expression::binary(
         BinaryOp::Contains,
         Expression::literal("hello world"),
-        Expression::literal("world")
+        Expression::literal("world"),
     );
 
     let policy = Policy::new("Contains", expr);
@@ -503,7 +489,7 @@ fn test_string_comparison_starts_with() {
     let expr = Expression::binary(
         BinaryOp::StartsWith,
         Expression::literal("hello world"),
-        Expression::literal("hello")
+        Expression::literal("hello"),
     );
 
     let policy = Policy::new("StartsWith", expr);
@@ -519,7 +505,7 @@ fn test_string_comparison_ends_with() {
     let expr = Expression::binary(
         BinaryOp::EndsWith,
         Expression::literal("hello world"),
-        Expression::literal("world")
+        Expression::literal("world"),
     );
 
     let policy = Policy::new("EndsWith", expr);
@@ -536,14 +522,14 @@ fn test_nested_quantifiers() {
         Quantifier::Exists,
         "flow",
         Expression::variable("flows"),
-        Expression::literal(true)
+        Expression::literal(true),
     );
 
     let outer = Expression::quantifier(
         Quantifier::ForAll,
         "entity",
         Expression::variable("entities"),
-        inner
+        inner,
     );
 
     let expanded = outer.expand(&graph).unwrap();
@@ -560,12 +546,9 @@ fn test_complex_policy_evaluation() {
         Expression::binary(
             BinaryOp::Or,
             Expression::literal(true),
-            Expression::literal(false)
+            Expression::literal(false),
         ),
-        Expression::unary(
-            UnaryOp::Not,
-            Expression::literal(false)
-        )
+        Expression::unary(UnaryOp::Not, Expression::literal(false)),
     );
 
     let policy = Policy::new("Complex Expression", expr);
@@ -584,12 +567,10 @@ fn test_policy_priority_field() {
     assert_eq!(policy.priority, 0);
 
     // Test with_priority builder
-    let high_priority_policy = Policy::new("High Priority", expr.clone())
-        .with_priority(10);
+    let high_priority_policy = Policy::new("High Priority", expr.clone()).with_priority(10);
     assert_eq!(high_priority_policy.priority, 10);
 
-    let low_priority_policy = Policy::new("Low Priority", expr)
-        .with_priority(-5);
+    let low_priority_policy = Policy::new("Low Priority", expr).with_priority(-5);
     assert_eq!(low_priority_policy.priority, -5);
 }
 

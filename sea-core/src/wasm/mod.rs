@@ -1,5 +1,5 @@
-pub mod primitives;
 pub mod graph;
+pub mod primitives;
 
-pub use primitives::*;
 pub use graph::*;
+pub use primitives::*;

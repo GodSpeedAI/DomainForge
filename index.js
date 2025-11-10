@@ -310,10 +310,12 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Entity, Resource, Flow, Instance, Graph } = nativeBinding
+const { Graph, AggregateFunction, BinaryOp, Entity, Resource, Flow, Instance } = nativeBinding
 
+module.exports.Graph = Graph
+module.exports.AggregateFunction = AggregateFunction
+module.exports.BinaryOp = BinaryOp
 module.exports.Entity = Entity
 module.exports.Resource = Resource
 module.exports.Flow = Flow
 module.exports.Instance = Instance
-module.exports.Graph = Graph

@@ -1,8 +1,8 @@
+mod core;
 mod expression;
 mod quantifier;
-mod policy;
 mod violation;
 
-pub use expression::{Expression, BinaryOp, UnaryOp, Quantifier, AggregateFunction};
-pub use policy::{Policy, DeonticModality, EvaluationResult, PolicyKind};
-pub use violation::{Violation, Severity};
+pub use core::{DeonticModality, EvaluationResult, Policy, PolicyKind};
+pub use expression::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
+pub use violation::{Severity, Violation};

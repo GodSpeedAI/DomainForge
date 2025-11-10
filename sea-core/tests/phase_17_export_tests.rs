@@ -1,9 +1,9 @@
-use sea_core::graph::Graph;
-use sea_core::primitives::{Entity, Resource, Flow};
-use sea_core::units::unit_from_string;
-use sea_core::sbvr::SbvrModel;
-use sea_core::kg::KnowledgeGraph;
 use rust_decimal::Decimal;
+use sea_core::graph::Graph;
+use sea_core::kg::KnowledgeGraph;
+use sea_core::primitives::{Entity, Flow, Resource};
+use sea_core::sbvr::SbvrModel;
+use sea_core::units::unit_from_string;
 
 #[test]
 fn test_export_to_sbvr() {
@@ -205,7 +205,7 @@ fn test_knowledge_graph_from_graph() {
 
     let kg = KnowledgeGraph::from_graph(&graph).unwrap();
 
-    assert!(kg.triples.len() > 0);
+    assert!(!kg.triples.is_empty());
 }
 
 #[test]
@@ -227,7 +227,7 @@ fn test_multiple_entities_sbvr() {
     let mut graph = Graph::new();
 
     for i in 1..=5 {
-        let entity = Entity::new_with_namespace(&format!("Entity{}", i), "test");
+        let entity = Entity::new_with_namespace(format!("Entity{}", i), "test");
         graph.add_entity(entity).unwrap();
     }
 
@@ -256,7 +256,12 @@ fn test_multiple_flows_rdf() {
     graph.add_entity(entity3).unwrap();
     graph.add_resource(resource).unwrap();
 
-    let flow1 = Flow::new(resource_id.clone(), entity1_id, entity2_id.clone(), Decimal::new(10, 0));
+    let flow1 = Flow::new(
+        resource_id.clone(),
+        entity1_id,
+        entity2_id.clone(),
+        Decimal::new(10, 0),
+    );
     let flow2 = Flow::new(resource_id, entity2_id, entity3_id, Decimal::new(20, 0));
 
     graph.add_flow(flow1).unwrap();

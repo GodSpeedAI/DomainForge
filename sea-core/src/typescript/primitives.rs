@@ -1,15 +1,14 @@
+use crate::primitives::{
+    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
+};
+
+use crate::units::unit_from_string;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use crate::primitives::{
-    Entity as RustEntity,
-    Resource as RustResource,
-    Flow as RustFlow,
-    Instance as RustInstance,
-};
-use uuid::Uuid;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
-use rust_decimal::prelude::FromPrimitive;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[napi]
 pub struct Entity {
@@ -17,12 +16,13 @@ pub struct Entity {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Entity {
     #[napi(constructor)]
     pub fn new(name: String, namespace: Option<String>) -> Self {
         let inner = match namespace {
             Some(ns) => RustEntity::new_with_namespace(name, ns),
-            None => RustEntity::new(name),
+            None => RustEntity::new_with_namespace(name, "default".to_string()),
         };
         Self { inner }
     }
@@ -39,7 +39,12 @@ impl Entity {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -52,7 +57,8 @@ impl Entity {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 
@@ -87,12 +93,14 @@ pub struct Resource {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Resource {
     #[napi(constructor)]
     pub fn new(name: String, unit: String, namespace: Option<String>) -> Self {
+        let unit_obj = unit_from_string(unit);
         let inner = match namespace {
-            Some(ns) => RustResource::new_with_namespace(name, unit, ns),
-            None => RustResource::new(name, unit),
+            Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
+            None => RustResource::new_with_namespace(name, unit_obj, "default".to_string()),
         };
         Self { inner }
     }
@@ -114,7 +122,12 @@ impl Resource {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -127,7 +140,8 @@ impl Resource {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 
@@ -163,6 +177,7 @@ pub struct Flow {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Flow {
     #[napi(constructor)]
     pub fn new(resource_id: String, from_id: String, to_id: String, quantity: f64) -> Result<Self> {
@@ -175,7 +190,12 @@ impl Flow {
         let decimal_quantity = Decimal::from_f64(quantity)
             .ok_or_else(|| Error::from_reason("Invalid quantity value"))?;
 
-        let inner = RustFlow::new(resource_uuid, from_uuid, to_uuid, decimal_quantity);
+        let inner = RustFlow::new(
+            crate::ConceptId::from(resource_uuid),
+            crate::ConceptId::from(from_uuid),
+            crate::ConceptId::from(to_uuid),
+            decimal_quantity,
+        );
         Ok(Self { inner })
     }
 
@@ -201,25 +221,32 @@ impl Flow {
 
     #[napi(getter)]
     pub fn quantity(&self) -> f64 {
-        match self.inner.quantity().to_string().parse::<f64>() {
-            Ok(value) => {
+        match self.inner.quantity().to_f64() {
+            Some(value) => {
                 if value.is_finite() {
                     value
                 } else if value.is_infinite() && value.is_sign_positive() {
-                    f64::MAX
+                    f64::INFINITY
                 } else if value.is_infinite() && value.is_sign_negative() {
-                    f64::MIN
+                    f64::NEG_INFINITY
                 } else {
+                    // NaN case
                     0.0
                 }
             }
-            Err(_) => 0.0,
+            // Conversion failure - return 0.0 as fallback
+            None => 0.0,
         }
     }
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -232,7 +259,8 @@ impl Flow {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 
@@ -269,6 +297,7 @@ pub struct Instance {
 }
 
 #[napi]
+#[allow(clippy::inherent_to_string)]
 impl Instance {
     #[napi(constructor)]
     pub fn new(resource_id: String, entity_id: String, namespace: Option<String>) -> Result<Self> {
@@ -278,8 +307,15 @@ impl Instance {
             .map_err(|e| Error::from_reason(format!("Invalid entity_id UUID: {}", e)))?;
 
         let inner = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(resource_uuid, entity_uuid, ns),
-            None => RustInstance::new(resource_uuid, entity_uuid),
+            Some(ns) => RustInstance::new_with_namespace(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+                ns,
+            ),
+            None => RustInstance::new(
+                crate::ConceptId::from(resource_uuid),
+                crate::ConceptId::from(entity_uuid),
+            ),
         };
         Ok(Self { inner })
     }
@@ -301,7 +337,12 @@ impl Instance {
 
     #[napi(getter)]
     pub fn namespace(&self) -> Option<String> {
-        self.inner.namespace().map(|s| s.to_string())
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
     }
 
     #[napi]
@@ -314,7 +355,8 @@ impl Instance {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.get_attribute(&key)
+        self.inner
+            .get_attribute(&key)
             .and_then(|v| serde_json::to_string(v).ok())
     }
 

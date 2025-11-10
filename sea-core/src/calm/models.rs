@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub struct CalmModel {
     #[serde(default = "default_version")]
     pub version: String,
-    
+
     pub metadata: CalmMetadata,
     pub nodes: Vec<CalmNode>,
     pub relationships: Vec<CalmRelationship>,
@@ -20,10 +20,10 @@ fn default_version() -> String {
 pub struct CalmMetadata {
     #[serde(rename = "sea:exported")]
     pub sea_exported: bool,
-    
+
     #[serde(rename = "sea:version")]
     pub sea_version: String,
-    
+
     #[serde(rename = "sea:timestamp", skip_serializing_if = "Option::is_none")]
     pub sea_timestamp: Option<String>,
 }
@@ -32,15 +32,15 @@ pub struct CalmMetadata {
 pub struct CalmNode {
     #[serde(rename = "unique-id")]
     pub unique_id: String,
-    
+
     #[serde(rename = "node-type")]
     pub node_type: NodeType,
-    
+
     pub name: String,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub namespace: Option<String>,
-    
+
     #[serde(default)]
     pub metadata: HashMap<String, Value>,
 }
@@ -59,19 +59,17 @@ pub enum NodeType {
 pub struct CalmRelationship {
     #[serde(rename = "unique-id")]
     pub unique_id: String,
-    
+
     #[serde(rename = "relationship-type")]
     pub relationship_type: RelationshipType,
-    
+
     pub parties: Parties,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RelationshipType {
-    Flow {
-        flow: FlowDetails,
-    },
+    Flow { flow: FlowDetails },
     Simple(String),
 }
 
@@ -84,14 +82,8 @@ pub struct FlowDetails {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Parties {
-    SourceDestination {
-        source: String,
-        destination: String,
-    },
-    OwnerOwned {
-        owner: String,
-        owned: String,
-    },
+    SourceDestination { source: String, destination: String },
+    OwnerOwned { owner: String, owned: String },
 }
 
 impl CalmModel {

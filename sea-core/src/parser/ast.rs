@@ -1,14 +1,17 @@
-use pest::Parser;
-use pest::iterators::{Pair, Pairs};
-use crate::parser::{SeaParser, Rule};
-use crate::parser::error::{ParseError, ParseResult};
-use crate::policy::{Expression, BinaryOp, UnaryOp, Quantifier as PolicyQuantifier, AggregateFunction};
 use crate::graph::Graph;
-use crate::primitives::{Entity, Resource, Flow};
+use crate::parser::error::{ParseError, ParseResult};
+use crate::parser::{Rule, SeaParser};
+use crate::policy::{
+    AggregateFunction, BinaryOp, Expression, Quantifier as PolicyQuantifier, UnaryOp,
+};
+use crate::primitives::{Entity, Flow, Resource};
 use crate::units::unit_from_string;
+use pest::iterators::{Pair, Pairs};
+use pest::Parser;
+use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
-use std::collections::HashMap;
 use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 
 /// Abstract Syntax Tree for SEA DSL
 #[derive(Debug, Clone, PartialEq)]
@@ -55,7 +58,7 @@ fn build_ast(pairs: Pairs<Rule>) -> ParseResult<Ast> {
         match pair.as_rule() {
             Rule::program => {
                 for inner in pair.into_inner() {
-                    if let Rule::declaration = inner.as_rule() {
+                    if inner.as_rule() == Rule::declaration {
                         for decl in inner.into_inner() {
                             let node = parse_declaration(decl)?;
                             declarations.push(node);
@@ -89,9 +92,11 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
 fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
 
-    let name = parse_name(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected entity name".to_string())
-    })?)?;
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected entity name".to_string()))?,
+    )?;
 
     let domain = if let Some(domain_pair) = inner.next() {
         Some(parse_identifier(domain_pair)?)
@@ -106,9 +111,11 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
 fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
 
-    let name = parse_name(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected resource name".to_string())
-    })?)?;
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
+    )?;
 
     let mut unit_name = None;
     let mut domain = None;
@@ -145,30 +152,40 @@ fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
             }
             _ => {
                 return Err(ParseError::GrammarError(
-                    "Unexpected token in resource declaration".to_string()
+                    "Unexpected token in resource declaration".to_string(),
                 ));
             }
         }
     }
 
-    Ok(AstNode::Resource { name, unit_name, domain })
+    Ok(AstNode::Resource {
+        name,
+        unit_name,
+        domain,
+    })
 }
 
 /// Parse flow declaration
 fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
 
-    let resource_name = parse_string_literal(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected resource name".to_string())
-    })?)?;
+    let resource_name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
+    )?;
 
-    let from_entity = parse_string_literal(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected from entity".to_string())
-    })?)?;
+    let from_entity = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected from entity".to_string()))?,
+    )?;
 
-    let to_entity = parse_string_literal(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected to entity".to_string())
-    })?)?;
+    let to_entity = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected to entity".to_string()))?,
+    )?;
 
     let quantity = if let Some(qty_pair) = inner.next() {
         Some(parse_number(qty_pair)?)
@@ -188,9 +205,11 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
 fn parse_policy(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
 
-    let name = parse_identifier(inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected policy name".to_string())
-    })?)?;
+    let name = parse_identifier(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected policy name".to_string()))?,
+    )?;
 
     let mut version: Option<String> = None;
     let mut next_pair = inner.next().ok_or_else(|| {
@@ -199,23 +218,28 @@ fn parse_policy(pair: Pair<Rule>) -> ParseResult<AstNode> {
 
     if next_pair.as_rule() == Rule::version {
         version = Some(next_pair.as_str().to_string());
-        next_pair = inner.next().ok_or_else(|| {
-            ParseError::GrammarError("Expected policy expression".to_string())
-        })?;
+        next_pair = inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected policy expression".to_string()))?;
     }
 
     let expression = parse_expression(next_pair)?;
 
-    Ok(AstNode::Policy { name, version, expression })
+    Ok(AstNode::Policy {
+        name,
+        version,
+        expression,
+    })
 }
 
 /// Parse expression
 fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
     match pair.as_rule() {
         Rule::expression => {
-            let inner = pair.into_inner().next().ok_or_else(|| {
-                ParseError::GrammarError("Empty expression".to_string())
-            })?;
+            let inner = pair
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Empty expression".to_string()))?;
             parse_expression(inner)
         }
         Rule::or_expr => parse_or_expr(pair),
@@ -236,7 +260,10 @@ fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
 /// Parse OR expression
 fn parse_or_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let mut left = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected left expression in OR".to_string()))?)?;
+    let mut left =
+        parse_expression(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected left expression in OR".to_string())
+        })?)?;
 
     for right_pair in inner {
         let right = parse_expression(right_pair)?;
@@ -253,7 +280,10 @@ fn parse_or_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 /// Parse AND expression
 fn parse_and_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let mut left = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected left expression in AND".to_string()))?)?;
+    let mut left =
+        parse_expression(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected left expression in AND".to_string())
+        })?)?;
 
     for right_pair in inner {
         let right = parse_expression(right_pair)?;
@@ -270,29 +300,32 @@ fn parse_and_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 /// Parse NOT expression
 fn parse_not_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let first = inner.next().ok_or_else(|| ParseError::GrammarError("Expected expression in NOT".to_string()))?;
+    let first = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected expression in NOT".to_string()))?;
 
-    match first.as_rule() {
-        Rule::not_expr => {
-            // NOT operation
-            let expr = parse_expression(first)?;
-            Ok(Expression::Unary {
-                op: UnaryOp::Not,
-                operand: Box::new(expr),
-            })
-        }
-        _ => parse_expression(first),
-    }
+    // Parse the first inner expression
+    let expr = parse_expression(first)?;
+
+    // Always wrap with NOT operation
+    Ok(Expression::Unary {
+        op: UnaryOp::Not,
+        operand: Box::new(expr),
+    })
 }
 
 /// Parse comparison expression
 fn parse_comparison_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let mut left = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected left expression in comparison".to_string()))?)?;
+    let mut left = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected left expression in comparison".to_string())
+    })?)?;
 
     if let Some(op_pair) = inner.next() {
         let op = parse_comparison_op(op_pair)?;
-        let right = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected right expression in comparison".to_string()))?)?;
+        let right = parse_expression(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected right expression in comparison".to_string())
+        })?)?;
         left = Expression::Binary {
             left: Box::new(left),
             op,
@@ -326,15 +359,23 @@ fn parse_comparison_op(pair: Pair<Rule>) -> ParseResult<BinaryOp> {
 /// Parse additive expression
 fn parse_additive_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let mut left = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected left expression in additive".to_string()))?)?;
+    let mut left = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected left expression in additive".to_string())
+    })?)?;
 
     while let Some(op_pair) = inner.next() {
         let op = match op_pair.as_str() {
             "+" => BinaryOp::Plus,
             "-" => BinaryOp::Minus,
-            _ => return Err(ParseError::InvalidExpression("Invalid additive operator".to_string())),
+            _ => {
+                return Err(ParseError::InvalidExpression(
+                    "Invalid additive operator".to_string(),
+                ))
+            }
         };
-        let right = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected right expression in additive".to_string()))?)?;
+        let right = parse_expression(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected right expression in additive".to_string())
+        })?)?;
         left = Expression::Binary {
             left: Box::new(left),
             op,
@@ -348,15 +389,23 @@ fn parse_additive_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 /// Parse multiplicative expression
 fn parse_multiplicative_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let mut left = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected left expression in multiplicative".to_string()))?)?;
+    let mut left = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected left expression in multiplicative".to_string())
+    })?)?;
 
     while let Some(op_pair) = inner.next() {
         let op = match op_pair.as_str() {
             "*" => BinaryOp::Multiply,
             "/" => BinaryOp::Divide,
-            _ => return Err(ParseError::InvalidExpression("Invalid multiplicative operator".to_string())),
+            _ => {
+                return Err(ParseError::InvalidExpression(
+                    "Invalid multiplicative operator".to_string(),
+                ))
+            }
         };
-        let right = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected right expression in multiplicative".to_string()))?)?;
+        let right = parse_expression(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected right expression in multiplicative".to_string())
+        })?)?;
         left = Expression::Binary {
             left: Box::new(left),
             op,
@@ -370,11 +419,15 @@ fn parse_multiplicative_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 /// Parse unary expression
 fn parse_unary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let first = inner.next().ok_or_else(|| ParseError::GrammarError("Expected expression in unary".to_string()))?;
+    let first = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected expression in unary".to_string()))?;
 
     if first.as_str() == "-" {
         // Unary minus
-        let expr = parse_expression(inner.next().ok_or_else(|| ParseError::GrammarError("Expected expression after unary minus".to_string()))?)?;
+        let expr = parse_expression(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected expression after unary minus".to_string())
+        })?)?;
         Ok(Expression::Unary {
             op: UnaryOp::Negate,
             operand: Box::new(expr),
@@ -386,7 +439,9 @@ fn parse_unary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 
 /// Parse primary expression
 fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
-    let inner = pair.into_inner().next().ok_or_else(|| ParseError::GrammarError("Expected inner expression in primary".to_string()))?;
+    let inner = pair.into_inner().next().ok_or_else(|| {
+        ParseError::GrammarError("Expected inner expression in primary".to_string())
+    })?;
 
     match inner.as_rule() {
         Rule::expression => parse_expression(inner),
@@ -409,12 +464,16 @@ fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
 
-    let function_pair = inner.next()
-        .ok_or_else(|| ParseError::GrammarError("Expected aggregate function in aggregation expression".to_string()))?;
+    let function_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError(
+            "Expected aggregate function in aggregation expression".to_string(),
+        )
+    })?;
     let function = parse_aggregate_fn(function_pair)?;
 
-    let collection_pair = inner.next()
-        .ok_or_else(|| ParseError::GrammarError("Expected collection in aggregation expression".to_string()))?;
+    let collection_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected collection in aggregation expression".to_string())
+    })?;
     let collection = parse_collection(collection_pair)?;
 
     let mut field: Option<String> = None;
@@ -461,10 +520,22 @@ fn parse_aggregate_fn(pair: Pair<Rule>) -> ParseResult<AggregateFunction> {
 fn parse_quantified_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
 
-    let quantifier = parse_quantifier(inner.next().unwrap())?;
-    let variable = parse_identifier(inner.next().unwrap())?;
-    let collection = parse_collection(inner.next().unwrap())?;
-    let condition = parse_expression(inner.next().unwrap())?;
+    let quantifier = parse_quantifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected quantifier in quantified expression".to_string())
+    })?)?;
+    let variable = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError(
+            "Expected variable identifier in quantified expression".to_string(),
+        )
+    })?)?;
+    let collection = parse_collection(inner.next().ok_or_else(|| {
+        ParseError::GrammarError(
+            "Expected collection identifier in quantified expression".to_string(),
+        )
+    })?)?;
+    let condition = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected quantified condition expression".to_string())
+    })?)?;
 
     Ok(Expression::Quantifier {
         quantifier,
@@ -496,18 +567,22 @@ fn parse_collection(pair: Pair<Rule>) -> ParseResult<String> {
 /// Parse member access
 fn parse_member_access(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
-    let object = parse_identifier(inner.next().unwrap())?;
-    let member = parse_identifier(inner.next().unwrap())?;
+    let object = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected object identifier in member access".to_string())
+    })?)?;
+    let member = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected member identifier in member access".to_string())
+    })?)?;
 
-    Ok(Expression::MemberAccess {
-        object,
-        member,
-    })
+    Ok(Expression::MemberAccess { object, member })
 }
 
 /// Parse literal expression
 fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
-    let inner = pair.into_inner().next().unwrap();
+    let inner = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected literal content".to_string()))?;
 
     match inner.as_rule() {
         Rule::string_literal => {
@@ -520,7 +595,27 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         }
         Rule::number => {
             let n = parse_decimal(inner)?;
-            Ok(Expression::Literal(JsonValue::String(n.to_string())))
+            // Convert Decimal to f64 for JSON Number representation
+            let f = n.to_f64().ok_or_else(|| {
+                ParseError::InvalidQuantity(format!(
+                    "Decimal value {} cannot be represented as f64",
+                    n
+                ))
+            })?;
+            // Ensure the value is finite
+            if !f.is_finite() {
+                return Err(ParseError::InvalidQuantity(format!(
+                    "Decimal value {} converts to non-finite f64: {}",
+                    n, f
+                )));
+            }
+            let num = serde_json::Number::from_f64(f).ok_or_else(|| {
+                ParseError::InvalidQuantity(format!(
+                    "Cannot create JSON Number from f64 value: {}",
+                    f
+                ))
+            })?;
+            Ok(Expression::Literal(JsonValue::Number(num)))
         }
         Rule::boolean => {
             let b = inner.as_str().eq_ignore_ascii_case("true");
@@ -535,32 +630,68 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 
 /// Parse name (handles both string_literal and multiline_string)
 fn parse_name(pair: Pair<Rule>) -> ParseResult<String> {
-    let inner = pair.into_inner().next()
-        .ok_or_else(|| ParseError::GrammarError("Expected inner token for name but got empty pair".to_string()))?;
+    let inner = pair.into_inner().next().ok_or_else(|| {
+        ParseError::GrammarError("Expected inner token for name but got empty pair".to_string())
+    })?;
     match inner.as_rule() {
         Rule::string_literal => parse_string_literal(inner),
         Rule::multiline_string => parse_multiline_string(inner),
-        _ => Err(ParseError::GrammarError(format!("Expected string or multiline string for name, got {:?}", inner.as_rule())))
+        _ => Err(ParseError::GrammarError(format!(
+            "Expected string or multiline string for name, got {:?}",
+            inner.as_rule()
+        ))),
     }
 }
 
-/// Parse string literal (removes quotes)
+/// Parse string literal (handles escape sequences)
 fn parse_string_literal(pair: Pair<Rule>) -> ParseResult<String> {
     let s = pair.as_str();
-    if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
-        Ok(s[1..s.len() - 1].to_string())
-    } else {
-        Err(ParseError::GrammarError(format!("Invalid string literal: {}", s)))
+    if s.len() < 2 || !s.starts_with('"') || !s.ends_with('"') {
+        return Err(ParseError::GrammarError(format!(
+            "Invalid string literal: {}",
+            s
+        )));
+    }
+
+    // Use serde_json to properly parse and unescape the string
+    // The string already has quotes, so pass it directly
+    match serde_json::from_str(s) {
+        Ok(unescaped) => Ok(unescaped),
+        Err(e) => Err(ParseError::GrammarError(format!(
+            "Invalid string literal escape sequences: {} - {}",
+            s, e
+        ))),
     }
 }
 
-/// Parse multiline string (removes triple quotes)
+/// Parse multiline string (removes triple quotes and handles escape sequences)
 fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
     let s = pair.as_str();
-    if s.len() >= 6 && s.starts_with("\"\"\"") && s.ends_with("\"\"\"") {
-        Ok(s[3..s.len() - 3].to_string())
-    } else {
-        Err(ParseError::GrammarError(format!("Invalid multiline string: {}", s)))
+    if s.len() < 6 || !s.starts_with("\"\"\"") || !s.ends_with("\"\"\"") {
+        return Err(ParseError::GrammarError(format!(
+            "Invalid multiline string: {}",
+            s
+        )));
+    }
+
+    let content = &s[3..s.len() - 3];
+
+    // Escape special characters for JSON compatibility
+    let escaped = content
+        .replace('\\', "\\\\") // Backslash must be first
+        .replace('"', "\\\"") // Double quotes
+        .replace('\n', "\\n") // Newlines
+        .replace('\r', "\\r") // Carriage returns
+        .replace('\t', "\\t"); // Tabs
+
+    // Create a JSON string and parse it to handle escape sequences
+    let json_string = format!("\"{}\"", escaped);
+    match serde_json::from_str(&json_string) {
+        Ok(unescaped) => Ok(unescaped),
+        Err(e) => Err(ParseError::GrammarError(format!(
+            "Invalid multiline string escape sequences in '{}': {}",
+            s, e
+        ))),
     }
 }
 
@@ -571,16 +702,16 @@ fn parse_identifier(pair: Pair<Rule>) -> ParseResult<String> {
 
 /// Parse number as i32
 fn parse_number(pair: Pair<Rule>) -> ParseResult<i32> {
-    pair.as_str().parse().map_err(|_| {
-        ParseError::InvalidQuantity(format!("Invalid number: {}", pair.as_str()))
-    })
+    pair.as_str()
+        .parse()
+        .map_err(|_| ParseError::InvalidQuantity(format!("Invalid number: {}", pair.as_str())))
 }
 
 /// Parse number as Decimal
 fn parse_decimal(pair: Pair<Rule>) -> ParseResult<Decimal> {
-    pair.as_str().parse().map_err(|_| {
-        ParseError::InvalidQuantity(format!("Invalid decimal: {}", pair.as_str()))
-    })
+    pair.as_str()
+        .parse()
+        .map_err(|_| ParseError::InvalidQuantity(format!("Invalid decimal: {}", pair.as_str())))
 }
 
 /// Convert AST to Graph
@@ -603,7 +734,7 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                 let entity = if let Some(d) = domain {
                     Entity::new_with_namespace(name.clone(), d.clone())
                 } else {
-                    Entity::new(name.clone())
+                    Entity::new_with_namespace(name.clone(), "default".to_string())
                 };
                 let entity_id = entity.id().clone();
                 graph.add_entity(entity).map_err(|e| {
@@ -611,7 +742,11 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                 })?;
                 entity_map.insert(name.clone(), entity_id);
             }
-            AstNode::Resource { name, unit_name, domain } => {
+            AstNode::Resource {
+                name,
+                unit_name,
+                domain,
+            } => {
                 if resource_map.contains_key(name) {
                     return Err(ParseError::duplicate_declaration(format!(
                         "Resource '{}' already declared",
@@ -623,19 +758,19 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                     (Some(unit_str), Some(d)) => {
                         let unit = unit_from_string(unit_str.clone());
                         Resource::new_with_namespace(name.clone(), unit, d.clone())
-                    },
+                    }
                     (Some(unit_str), None) => {
                         let unit = unit_from_string(unit_str.clone());
                         Resource::new(name.clone(), unit)
-                    },
+                    }
                     (None, Some(d)) => {
                         let unit = unit_from_string("units");
                         Resource::new_with_namespace(name.clone(), unit, d.clone())
-                    },
+                    }
                     (None, None) => {
                         let unit = unit_from_string("units");
                         Resource::new(name.clone(), unit)
-                    },
+                    }
                 };
                 let resource_id = resource.id().clone();
                 graph.add_resource(resource).map_err(|e| {
@@ -671,9 +806,9 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
             let qty = quantity.map(Decimal::from).unwrap_or(Decimal::ZERO);
             let flow = Flow::new(resource_id.clone(), from_id.clone(), to_id.clone(), qty);
 
-            graph.add_flow(flow).map_err(|e| {
-                ParseError::GrammarError(format!("Failed to add flow: {}", e))
-            })?;
+            graph
+                .add_flow(flow)
+                .map_err(|e| ParseError::GrammarError(format!("Failed to add flow: {}", e)))?;
         }
     }
 

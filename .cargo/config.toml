@@ -1,0 +1,6 @@
+# Cargo configuration for DomainForge workspace
+
+[target.wasm32-unknown-unknown]
+# Configure getrandom backend for WebAssembly
+# Required for getrandom 0.3+ when targeting wasm32-unknown-unknown
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']

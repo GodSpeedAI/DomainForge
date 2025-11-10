@@ -1,8 +1,10 @@
-use wasm_bindgen::prelude::*;
+#![allow(clippy::new_without_default)]
+
 use crate::graph::Graph as RustGraph;
-use crate::wasm::primitives::{Entity, Resource, Flow, Instance};
-use uuid::Uuid;
+use crate::wasm::primitives::{Entity, Flow, Instance, Resource};
 use std::str::FromStr;
+use uuid::Uuid;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct Graph {
@@ -20,7 +22,8 @@ impl Graph {
 
     #[wasm_bindgen(js_name = parse)]
     pub fn parse(source: String) -> Result<Graph, JsValue> {
-        let graph = crate::parser::parse(&source)
+        // parse_to_graph returns a Graph; parser::parse returns an AST
+        let graph = crate::parser::parse_to_graph(&source)
             .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
         Ok(Self { inner: graph })
     }
@@ -39,31 +42,40 @@ impl Graph {
 
     #[wasm_bindgen(js_name = hasEntity)]
     pub fn has_entity(&self, id: String) -> Result<bool, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_entity(&uuid))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_entity(&cid))
     }
 
     #[wasm_bindgen(js_name = getEntity)]
     pub fn get_entity(&self, id: String) -> Result<Option<Entity>, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_entity(&uuid).map(|e| Entity::from_inner(e.clone())))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self
+            .inner
+            .get_entity(&cid)
+            .map(|e| Entity::from_inner(e.clone())))
     }
 
     #[wasm_bindgen(js_name = removeEntity)]
     pub fn remove_entity(&mut self, id: String) -> Result<Entity, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let entity = self.inner
-            .remove_entity(&uuid)
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        let entity = self
+            .inner
+            .remove_entity(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Entity::from_inner(entity))
     }
 
     #[wasm_bindgen(js_name = findEntityByName)]
     pub fn find_entity_by_name(&self, name: String) -> Option<String> {
-        self.inner.find_entity_by_name(&name).map(|id| id.to_string())
+        self.inner
+            .find_entity_by_name(&name)
+            .map(|id| id.to_string())
     }
 
     #[wasm_bindgen(js_name = entityCount)]
@@ -72,13 +84,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allEntities)]
-    pub fn all_entities(&self) -> JsValue {
-        let entities: Vec<Entity> = self.inner
+    pub fn all_entities(&self) -> Result<JsValue, JsValue> {
+        let entities: Vec<Entity> = self
+            .inner
             .all_entities()
             .into_iter()
             .map(|e| Entity::from_inner(e.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&entities).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&entities)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = addResource)]
@@ -90,31 +104,40 @@ impl Graph {
 
     #[wasm_bindgen(js_name = hasResource)]
     pub fn has_resource(&self, id: String) -> Result<bool, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_resource(&uuid))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_resource(&cid))
     }
 
     #[wasm_bindgen(js_name = getResource)]
     pub fn get_resource(&self, id: String) -> Result<Option<Resource>, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_resource(&uuid).map(|r| Resource::from_inner(r.clone())))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self
+            .inner
+            .get_resource(&cid)
+            .map(|r| Resource::from_inner(r.clone())))
     }
 
     #[wasm_bindgen(js_name = removeResource)]
     pub fn remove_resource(&mut self, id: String) -> Result<Resource, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let resource = self.inner
-            .remove_resource(&uuid)
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        let resource = self
+            .inner
+            .remove_resource(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Resource::from_inner(resource))
     }
 
     #[wasm_bindgen(js_name = findResourceByName)]
     pub fn find_resource_by_name(&self, name: String) -> Option<String> {
-        self.inner.find_resource_by_name(&name).map(|id| id.to_string())
+        self.inner
+            .find_resource_by_name(&name)
+            .map(|id| id.to_string())
     }
 
     #[wasm_bindgen(js_name = resourceCount)]
@@ -123,13 +146,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allResources)]
-    pub fn all_resources(&self) -> JsValue {
-        let resources: Vec<Resource> = self.inner
+    pub fn all_resources(&self) -> Result<JsValue, JsValue> {
+        let resources: Vec<Resource> = self
+            .inner
             .all_resources()
             .into_iter()
             .map(|r| Resource::from_inner(r.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&resources).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&resources)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = addFlow)]
@@ -141,24 +166,31 @@ impl Graph {
 
     #[wasm_bindgen(js_name = hasFlow)]
     pub fn has_flow(&self, id: String) -> Result<bool, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_flow(&uuid))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_flow(&cid))
     }
 
     #[wasm_bindgen(js_name = getFlow)]
     pub fn get_flow(&self, id: String) -> Result<Option<Flow>, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_flow(&uuid).map(|f| Flow::from_inner(f.clone())))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self
+            .inner
+            .get_flow(&cid)
+            .map(|f| Flow::from_inner(f.clone())))
     }
 
     #[wasm_bindgen(js_name = removeFlow)]
     pub fn remove_flow(&mut self, id: String) -> Result<Flow, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let flow = self.inner
-            .remove_flow(&uuid)
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        let flow = self
+            .inner
+            .remove_flow(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Flow::from_inner(flow))
     }
@@ -169,13 +201,15 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allFlows)]
-    pub fn all_flows(&self) -> JsValue {
-        let flows: Vec<Flow> = self.inner
+    pub fn all_flows(&self) -> Result<JsValue, JsValue> {
+        let flows: Vec<Flow> = self
+            .inner
             .all_flows()
             .into_iter()
             .map(|f| Flow::from_inner(f.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&flows).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&flows)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = addInstance)]
@@ -187,24 +221,31 @@ impl Graph {
 
     #[wasm_bindgen(js_name = hasInstance)]
     pub fn has_instance(&self, id: String) -> Result<bool, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.has_instance(&uuid))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self.inner.has_instance(&cid))
     }
 
     #[wasm_bindgen(js_name = getInstance)]
     pub fn get_instance(&self, id: String) -> Result<Option<Instance>, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        Ok(self.inner.get_instance(&uuid).map(|i| Instance::from_inner(i.clone())))
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        Ok(self
+            .inner
+            .get_instance(&cid)
+            .map(|i| Instance::from_inner(i.clone())))
     }
 
     #[wasm_bindgen(js_name = removeInstance)]
     pub fn remove_instance(&mut self, id: String) -> Result<Instance, JsValue> {
-        let uuid = Uuid::from_str(&id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let instance = self.inner
-            .remove_instance(&uuid)
+        let uuid =
+            Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let cid = crate::ConceptId::from(uuid);
+        let instance = self
+            .inner
+            .remove_instance(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Instance::from_inner(instance))
     }
@@ -215,21 +256,25 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = allInstances)]
-    pub fn all_instances(&self) -> JsValue {
-        let instances: Vec<Instance> = self.inner
+    pub fn all_instances(&self) -> Result<JsValue, JsValue> {
+        let instances: Vec<Instance> = self
+            .inner
             .all_instances()
             .into_iter()
             .map(|i| Instance::from_inner(i.clone()))
             .collect();
-        serde_wasm_bindgen::to_value(&instances).unwrap_or(JsValue::NULL)
+        serde_wasm_bindgen::to_value(&instances)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
     #[wasm_bindgen(js_name = flowsFrom)]
     pub fn flows_from(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let flows: Vec<Flow> = self.inner
-            .flows_from(&uuid)
+        let cid = crate::ConceptId::from(uuid);
+        let flows: Vec<Flow> = self
+            .inner
+            .flows_from(&cid)
             .into_iter()
             .map(|f| Flow::from_inner(f.clone()))
             .collect();
@@ -241,8 +286,10 @@ impl Graph {
     pub fn flows_to(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let flows: Vec<Flow> = self.inner
-            .flows_to(&uuid)
+        let cid = crate::ConceptId::from(uuid);
+        let flows: Vec<Flow> = self
+            .inner
+            .flows_to(&cid)
             .into_iter()
             .map(|f| Flow::from_inner(f.clone()))
             .collect();
@@ -254,8 +301,10 @@ impl Graph {
     pub fn upstream_entities(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let entities: Vec<Entity> = self.inner
-            .upstream_entities(&uuid)
+        let cid = crate::ConceptId::from(uuid);
+        let entities: Vec<Entity> = self
+            .inner
+            .upstream_entities(&cid)
             .into_iter()
             .map(|e| Entity::from_inner(e.clone()))
             .collect();
@@ -267,8 +316,10 @@ impl Graph {
     pub fn downstream_entities(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
-        let entities: Vec<Entity> = self.inner
-            .downstream_entities(&uuid)
+        let cid = crate::ConceptId::from(uuid);
+        let entities: Vec<Entity> = self
+            .inner
+            .downstream_entities(&cid)
             .into_iter()
             .map(|e| Entity::from_inner(e.clone()))
             .collect();
@@ -279,8 +330,10 @@ impl Graph {
     #[wasm_bindgen(js_name = exportCalm)]
     pub fn export_calm(&self) -> Result<String, JsValue> {
         crate::calm::export(&self.inner)
-            .and_then(|value| serde_json::to_string_pretty(&value)
-                .map_err(|e| format!("Serialization error: {}", e)))
+            .and_then(|value| {
+                serde_json::to_string_pretty(&value)
+                    .map_err(|e| format!("Serialization error: {}", e))
+            })
             .map_err(|e| JsValue::from_str(&e))
     }
 
@@ -288,10 +341,10 @@ impl Graph {
     pub fn import_calm(calm_json: String) -> Result<Graph, JsValue> {
         let value: serde_json::Value = serde_json::from_str(&calm_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {}", e)))?;
-        
+
         let graph = crate::calm::import(value)
             .map_err(|e| JsValue::from_str(&format!("Import error: {}", e)))?;
-        
+
         Ok(Self { inner: graph })
     }
 

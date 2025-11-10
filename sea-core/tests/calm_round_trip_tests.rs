@@ -1,8 +1,8 @@
-use sea_core::Graph;
-use sea_core::primitives::{Entity, Resource, Flow, Instance};
-use sea_core::units::unit_from_string;
-use sea_core::calm::{export, import};
 use rust_decimal::Decimal;
+use sea_core::calm::{export, import};
+use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::units::unit_from_string;
+use sea_core::Graph;
 
 #[test]
 fn test_round_trip_simple_graph() {
@@ -12,7 +12,6 @@ fn test_round_trip_simple_graph() {
     original_graph.add_entity(entity).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
-
     let imported_graph = import(calm_json).unwrap();
 
     assert_eq!(original_graph.entity_count(), imported_graph.entity_count());
@@ -28,7 +27,11 @@ fn test_round_trip_complex_graph() {
 
     let warehouse = Entity::new_with_namespace("Warehouse A".to_string(), "logistics".to_string());
     let factory = Entity::new_with_namespace("Factory B".to_string(), "manufacturing".to_string());
-    let cameras = Resource::new_with_namespace("Cameras".to_string(), unit_from_string("units"), "products".to_string());
+    let cameras = Resource::new_with_namespace(
+        "Cameras".to_string(),
+        unit_from_string("units"),
+        "products".to_string(),
+    );
 
     let warehouse_id = warehouse.id().clone();
     let factory_id = factory.id().clone();
@@ -38,7 +41,12 @@ fn test_round_trip_complex_graph() {
     original_graph.add_entity(factory).unwrap();
     original_graph.add_resource(cameras).unwrap();
 
-    let flow = Flow::new(cameras_id.clone(), warehouse_id.clone(), factory_id.clone(), Decimal::from(100));
+    let flow = Flow::new(
+        cameras_id.clone(),
+        warehouse_id.clone(),
+        factory_id.clone(),
+        Decimal::from(100),
+    );
     original_graph.add_flow(flow).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
@@ -46,7 +54,10 @@ fn test_round_trip_complex_graph() {
     let imported_graph = import(calm_json).unwrap();
 
     assert_eq!(original_graph.entity_count(), imported_graph.entity_count());
-    assert_eq!(original_graph.resource_count(), imported_graph.resource_count());
+    assert_eq!(
+        original_graph.resource_count(),
+        imported_graph.resource_count()
+    );
     assert_eq!(original_graph.flow_count(), imported_graph.flow_count());
 
     let entities = imported_graph.all_entities();
@@ -68,7 +79,7 @@ fn test_round_trip_complex_graph() {
 fn test_round_trip_with_instances() {
     let mut original_graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse".to_string());
+    let warehouse = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
     let cameras = Resource::new("Cameras".to_string(), unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -85,15 +96,21 @@ fn test_round_trip_with_instances() {
     let imported_graph = import(calm_json).unwrap();
 
     assert_eq!(original_graph.entity_count(), imported_graph.entity_count());
-    assert_eq!(original_graph.resource_count(), imported_graph.resource_count());
-    assert_eq!(original_graph.instance_count(), imported_graph.instance_count());
+    assert_eq!(
+        original_graph.resource_count(),
+        imported_graph.resource_count()
+    );
+    assert_eq!(
+        original_graph.instance_count(),
+        imported_graph.instance_count()
+    );
 }
 
 #[test]
 fn test_round_trip_preserves_metadata() {
     let mut original_graph = Graph::new();
 
-    let entity = Entity::new("TestEntity".to_string());
+    let entity = Entity::new_with_namespace("TestEntity".to_string(), "default".to_string());
     original_graph.add_entity(entity).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
@@ -112,7 +129,7 @@ fn test_round_trip_preserves_metadata() {
 fn test_export_structure_compliance() {
     let mut graph = Graph::new();
 
-    let entity = Entity::new("Test".to_string());
+    let entity = Entity::new_with_namespace("Test".to_string(), "default".to_string());
     graph.add_entity(entity).unwrap();
 
     let calm_json = export(&graph).unwrap();
@@ -139,7 +156,11 @@ fn test_semantic_equivalence_after_round_trip() {
 
     let e1 = Entity::new_with_namespace("Entity1".to_string(), "ns1".to_string());
     let e2 = Entity::new_with_namespace("Entity2".to_string(), "ns1".to_string());
-    let r1 = Resource::new_with_namespace("Resource1".to_string(), unit_from_string("kg"), "ns2".to_string());
+    let r1 = Resource::new_with_namespace(
+        "Resource1".to_string(),
+        unit_from_string("kg"),
+        "ns2".to_string(),
+    );
 
     let e1_id = e1.id().clone();
     let e2_id = e2.id().clone();
@@ -149,7 +170,12 @@ fn test_semantic_equivalence_after_round_trip() {
     original_graph.add_entity(e2).unwrap();
     original_graph.add_resource(r1).unwrap();
 
-    let flow = Flow::new(r1_id.clone(), e1_id.clone(), e2_id.clone(), Decimal::new(2500, 2));
+    let flow = Flow::new(
+        r1_id.clone(),
+        e1_id.clone(),
+        e2_id.clone(),
+        Decimal::new(2500, 2),
+    );
     original_graph.add_flow(flow).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
@@ -175,8 +201,16 @@ fn test_semantic_equivalence_after_round_trip() {
         );
     }
 
-    assert_eq!(original_graph.entity_count(), imported_graph.entity_count(), "Entity count mismatch after round trip");
-    assert_eq!(original_graph.resource_count(), imported_graph.resource_count(), "Resource count mismatch after round trip");
+    assert_eq!(
+        original_graph.entity_count(),
+        imported_graph.entity_count(),
+        "Entity count mismatch after round trip"
+    );
+    assert_eq!(
+        original_graph.resource_count(),
+        imported_graph.resource_count(),
+        "Resource count mismatch after round trip"
+    );
 
     assert_eq!(original_graph.flow_count(), imported_graph.flow_count());
 }

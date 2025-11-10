@@ -11,10 +11,10 @@ Python bindings for the Semantic Enterprise Architecture (SEA) Domain Specific L
 pip install maturin
 git clone https://github.com/GodSpeedAI/DomainForge.git
 cd DomainForge
-maturin develop --features python
+maturin develop
 
 # Or build wheel
-maturin build --release --features python
+maturin build --release
 pip install target/wheels/sea_dsl-*.whl
 ```
 
@@ -189,6 +189,7 @@ flow = Flow.new(
 
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit
+- `Resource.new(name, unit)` now routes through `new_with_namespace(..., "default")` so `namespace()` never returns `None` even when a namespace is not supplied
 - Flow constructor takes `ConceptId` values (not references) - must clone before passing
 
 **New Features:**
@@ -207,7 +208,7 @@ flow = Flow.new(
 pip install maturin
 
 # Build and install in development mode
-maturin develop --features python
+maturin develop
 
 # Run tests
 pytest

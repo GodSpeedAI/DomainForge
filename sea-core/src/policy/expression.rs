@@ -120,7 +120,11 @@ impl Expression {
         }
     }
 
-    pub fn comparison(var: &str, op: &str, value: impl Into<serde_json::Value>) -> Result<Self, String> {
+    pub fn comparison(
+        var: &str,
+        op: &str,
+        value: impl Into<serde_json::Value>,
+    ) -> Result<Self, String> {
         let op = match op {
             ">" => BinaryOp::GreaterThan,
             "<" => BinaryOp::LessThan,
@@ -131,7 +135,11 @@ impl Expression {
             _ => return Err(format!("Unknown operator: {}", op)),
         };
 
-        Ok(Expression::binary(op, Expression::variable(var), Expression::literal(value)))
+        Ok(Expression::binary(
+            op,
+            Expression::variable(var),
+            Expression::literal(value),
+        ))
     }
 
     pub fn aggregation(
@@ -167,18 +175,27 @@ impl fmt::Display for Expression {
             Expression::Unary { op, operand } => {
                 write!(f, "{} {}", op, operand)
             }
-            Expression::Quantifier { quantifier, variable, collection, condition } => {
-                write!(f, "{}({} in {}: {})",
-                    quantifier,
-                    variable,
-                    collection,
-                    condition
+            Expression::Quantifier {
+                quantifier,
+                variable,
+                collection,
+                condition,
+            } => {
+                write!(
+                    f,
+                    "{}({} in {}: {})",
+                    quantifier, variable, collection, condition
                 )
             }
             Expression::MemberAccess { object, member } => {
                 write!(f, "{}.{}", object, member)
             }
-            Expression::Aggregation { function, collection, field, filter } => {
+            Expression::Aggregation {
+                function,
+                collection,
+                field,
+                filter,
+            } => {
                 write!(f, "{}({}", function, collection)?;
                 if let Some(fld) = field {
                     write!(f, ".{}", fld)?;

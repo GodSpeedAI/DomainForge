@@ -98,7 +98,7 @@ class Resource:
     id: UUID
     name: str
     unit: str
-    namespace: str | None = None
+    namespace: str = "default"  # Always present, never None
 ```
 
 ### 3) Flow

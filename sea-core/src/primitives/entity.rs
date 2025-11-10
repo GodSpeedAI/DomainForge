@@ -1,8 +1,8 @@
+use crate::ConceptId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use uuid::Uuid;
-use crate::ConceptId;
 
 /// Represents a business actor, location, or organizational unit.
 ///
@@ -107,7 +107,11 @@ impl Entity {
     }
 
     /// Creates an Entity from a legacy UUID for backward compatibility.
-    pub fn from_legacy_uuid(uuid: Uuid, name: impl Into<String>, namespace: impl Into<String>) -> Self {
+    pub fn from_legacy_uuid(
+        uuid: Uuid,
+        name: impl Into<String>,
+        namespace: impl Into<String>,
+    ) -> Self {
         Self {
             id: ConceptId::from_legacy_uuid(uuid),
             name: name.into(),

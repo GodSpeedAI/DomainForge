@@ -1,11 +1,11 @@
-use sea_core::primitives::{Entity, Resource, Flow, Instance};
-use sea_core::units::unit_from_string;
 use rust_decimal::Decimal;
+use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::units::unit_from_string;
 
 #[test]
 fn test_complete_supply_chain_model() {
-    let supplier = Entity::new("Supplier");
-    let warehouse = Entity::new("Warehouse");
+    let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
 
     let steel = Resource::new("Steel", unit_from_string("kg"));
     let camera = Resource::new("Camera", unit_from_string("units"));
@@ -14,13 +14,10 @@ fn test_complete_supply_chain_model() {
         steel.id().clone(),
         supplier.id().clone(),
         warehouse.id().clone(),
-        Decimal::from(5000)
+        Decimal::from(5000),
     );
 
-    let camera_instance = Instance::new(
-        camera.id().clone(),
-        warehouse.id().clone()
-    );
+    let camera_instance = Instance::new(camera.id().clone(), warehouse.id().clone());
 
     assert!(steel_shipment.quantity() > Decimal::ZERO);
     assert_eq!(camera_instance.entity_id(), warehouse.id());
@@ -28,10 +25,10 @@ fn test_complete_supply_chain_model() {
 
 #[test]
 fn test_multi_stage_flow() {
-    let supplier = Entity::new("Steel Supplier");
-    let warehouse = Entity::new("Central Warehouse");
-    let manufacturer = Entity::new("Camera Manufacturer");
-    let retailer = Entity::new("Retail Store");
+    let supplier = Entity::new_with_namespace("Steel Supplier", "default".to_string());
+    let warehouse = Entity::new_with_namespace("Central Warehouse", "default".to_string());
+    let manufacturer = Entity::new_with_namespace("Camera Manufacturer", "default".to_string());
+    let retailer = Entity::new_with_namespace("Retail Store", "default".to_string());
 
     let steel = Resource::new("Steel", unit_from_string("kg"));
     let camera_parts = Resource::new("Camera Parts", unit_from_string("units"));
@@ -41,21 +38,21 @@ fn test_multi_stage_flow() {
         steel.id().clone(),
         supplier.id().clone(),
         warehouse.id().clone(),
-        Decimal::from(1000)
+        Decimal::from(1000),
     );
 
     let flow2 = Flow::new(
         camera_parts.id().clone(),
         warehouse.id().clone(),
         manufacturer.id().clone(),
-        Decimal::from(500)
+        Decimal::from(500),
     );
 
     let flow3 = Flow::new(
         finished_camera.id().clone(),
         manufacturer.id().clone(),
         retailer.id().clone(),
-        Decimal::from(100)
+        Decimal::from(100),
     );
 
     assert_eq!(flow1.from_id(), supplier.id());
@@ -68,19 +65,13 @@ fn test_multi_stage_flow() {
 
 #[test]
 fn test_instance_tracking_across_entities() {
-    let warehouse_a = Entity::new("Warehouse A");
-    let warehouse_b = Entity::new("Warehouse B");
+    let warehouse_a = Entity::new_with_namespace("Warehouse A", "default".to_string());
+    let warehouse_b = Entity::new_with_namespace("Warehouse B", "default".to_string());
     let camera = Resource::new("Camera Model X", unit_from_string("units"));
 
-    let instance1 = Instance::new(
-        camera.id().clone(),
-        warehouse_a.id().clone()
-    );
+    let instance1 = Instance::new(camera.id().clone(), warehouse_a.id().clone());
 
-    let instance2 = Instance::new(
-        camera.id().clone(),
-        warehouse_b.id().clone()
-    );
+    let instance2 = Instance::new(camera.id().clone(), warehouse_b.id().clone());
 
     assert_eq!(instance1.resource_id(), camera.id());
     assert_eq!(instance2.resource_id(), camera.id());
@@ -90,26 +81,20 @@ fn test_instance_tracking_across_entities() {
 
 #[test]
 fn test_resource_flow_with_instances() {
-    let origin = Entity::new("Manufacturing Plant");
-    let destination = Entity::new("Distribution Center");
+    let origin = Entity::new_with_namespace("Manufacturing Plant", "default".to_string());
+    let destination = Entity::new_with_namespace("Distribution Center", "default".to_string());
     let product = Resource::new("Smartphone", unit_from_string("units"));
 
     let transfer = Flow::new(
         product.id().clone(),
         origin.id().clone(),
         destination.id().clone(),
-        Decimal::from(50)
+        Decimal::from(50),
     );
 
-    let instance_at_origin = Instance::new(
-        product.id().clone(),
-        origin.id().clone()
-    );
+    let instance_at_origin = Instance::new(product.id().clone(), origin.id().clone());
 
-    let instance_at_destination = Instance::new(
-        product.id().clone(),
-        destination.id().clone()
-    );
+    let instance_at_destination = Instance::new(product.id().clone(), destination.id().clone());
 
     assert_eq!(transfer.resource_id(), product.id());
     assert_eq!(transfer.from_id(), instance_at_origin.entity_id());
@@ -118,18 +103,15 @@ fn test_resource_flow_with_instances() {
 
 #[test]
 fn test_all_primitives_serialization() {
-    let entity = Entity::new("Test Entity");
+    let entity = Entity::new_with_namespace("Test Entity", "default".to_string());
     let resource = Resource::new("Test Resource", unit_from_string("units"));
     let flow = Flow::new(
         resource.id().clone(),
         entity.id().clone(),
         entity.id().clone(),
-        Decimal::from(10)
+        Decimal::from(10),
     );
-    let instance = Instance::new(
-        resource.id().clone(),
-        entity.id().clone()
-    );
+    let instance = Instance::new(resource.id().clone(), entity.id().clone());
 
     let entity_json = serde_json::to_string(&entity).unwrap();
     let resource_json = serde_json::to_string(&resource).unwrap();
