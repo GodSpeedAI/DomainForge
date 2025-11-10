@@ -2,5 +2,11 @@
 members = [
     "sea-core",
 ]
-# Optional: set a default workspace edition for tooling that reads it
-# (no [package] here because this is a workspace root)
+resolver = "2"  # Explicit resolver for edition 2021
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = 'abort'

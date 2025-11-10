@@ -1,5 +1,9 @@
 name: CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, dev, release/**]
@@ -17,6 +21,7 @@ jobs:
   lint:
     name: Lint & Format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -34,20 +39,24 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
-          path: sea-core/target
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
           key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
 
       - name: Run rustfmt
         run: cargo fmt --all --check
-        working-directory: sea-core
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
-        working-directory: sea-core
 
   test-rust:
     name: Test Rust (${{ matrix.os }})
     needs: lint
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -64,22 +73,25 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/index
-            ~/.cargo/git
-            sea-core/target
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Run tests
-        run: cargo test --verbose
-        working-directory: sea-core
+        run: cargo test --verbose --workspace
 
   test-python:
     name: Test Python (${{ matrix.python-version }})
     needs: lint
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"] # Removed 3.9, 3.10 (pyproject.toml requires >=3.11)
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -97,16 +109,20 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/index
-            sea-core/target
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
           key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-
 
       - name: Create virtualenv
         run: python -m venv .venv
 
-      - name: Install maturin and pytest
+      - name: Install dependencies
         run: |
           source .venv/bin/activate
-          pip install maturin==${{ env.MATURIN_VERSION }} pytest==${{ env.PYTEST_VERSION }}
+          pip install maturin pytest
 
       - name: Build Python bindings
         run: |
@@ -121,6 +137,7 @@ jobs:
   test-typescript:
     name: Test TypeScript
     needs: lint
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -154,6 +171,7 @@ jobs:
   test-wasm:
     name: Test WASM
     needs: lint
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -168,33 +186,38 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/index
-            sea-core/target
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
           key: ${{ runner.os }}-wasm-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-wasm-
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
 
       - name: Build WASM
-        run: wasm-pack build --target web --features wasm
-        working-directory: sea-core
+        run: |
+          cd sea-core
+          wasm-pack build --target web --features wasm
 
       - name: Check bundle size
         run: |
-          SIZE=$(stat -c%s "pkg/sea_core_bg.wasm")
+          SIZE=$(stat -c%s "sea-core/pkg/sea_core_bg.wasm")
           echo "WASM bundle size: $SIZE bytes"
           if [ -z "$SIZE" ] || ! [[ "$SIZE" =~ ^[0-9]+$ ]]; then
-            echo "::error::Unable to determine WASM bundle size ('$SIZE')"
+            echo "::error::Unable to determine WASM bundle size"
             exit 1
           fi
           if [ "$SIZE" -gt 524288 ]; then
-            echo "::error::WASM bundle exceeds 512KB limit"
+            echo "::error::WASM bundle exceeds 512KB limit ($SIZE bytes)"
             exit 1
           fi
-        working-directory: sea-core
 
   security:
     name: Security Audit
     needs: lint
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
