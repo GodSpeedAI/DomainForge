@@ -16,6 +16,7 @@ env:
   CARGO_INCREMENTAL: 0
   MATURIN_VERSION: 1.7.4
   PYTEST_VERSION: 7.4.2
+  CACHE_VERSION: v2  # Increment to bust all caches
 
 jobs:
   lint:
@@ -34,7 +35,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/index
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
         uses: actions/cache@v4
@@ -43,9 +44,9 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-build-
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-
 
       - name: Run rustfmt
         run: cargo fmt --all --check
@@ -76,9 +77,9 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
 
       - name: Run tests
         run: cargo test --verbose --workspace
@@ -112,9 +113,9 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version }}-
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
 
       - name: Create virtualenv
         run: python -m venv .venv
@@ -157,7 +158,7 @@ jobs:
           path: |
             ~/.cargo/registry/index
             sea-core/target
-          key: ${{ runner.os }}-ts-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install dependencies
         run: npm ci
@@ -189,9 +190,9 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-wasm-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-wasm-
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
