@@ -79,7 +79,7 @@ fn test_round_trip_complex_graph() {
 fn test_round_trip_with_instances() {
     let mut original_graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse".to_string());
+    let warehouse = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
     let cameras = Resource::new("Cameras".to_string(), unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -110,7 +110,7 @@ fn test_round_trip_with_instances() {
 fn test_round_trip_preserves_metadata() {
     let mut original_graph = Graph::new();
 
-    let entity = Entity::new("TestEntity".to_string());
+    let entity = Entity::new_with_namespace("TestEntity".to_string(), "default".to_string());
     original_graph.add_entity(entity).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
@@ -129,7 +129,7 @@ fn test_round_trip_preserves_metadata() {
 fn test_export_structure_compliance() {
     let mut graph = Graph::new();
 
-    let entity = Entity::new("Test".to_string());
+    let entity = Entity::new_with_namespace("Test".to_string(), "default".to_string());
     graph.add_entity(entity).unwrap();
 
     let calm_json = export(&graph).unwrap();

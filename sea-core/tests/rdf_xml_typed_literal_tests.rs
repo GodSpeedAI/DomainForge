@@ -12,8 +12,8 @@ mod rdf_xml_typed_literal_tests {
     fn test_decimal_datatype_preserved() {
         let mut graph = Graph::new();
 
-        let supplier = Entity::new("Supplier");
-        let manufacturer = Entity::new("Manufacturer");
+        let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
+        let manufacturer = Entity::new_with_namespace("Manufacturer", "default".to_string());
         let money = Resource::new("Money", unit_from_string("USD"));
 
         let supplier_id = supplier.id().clone();
@@ -76,7 +76,7 @@ mod rdf_xml_typed_literal_tests {
     #[test]
     fn test_escaped_literal_in_xml() {
         let mut graph = Graph::new();
-        let warehouse = Entity::new("Warehouse");
+        let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
         let resource = Resource::new("Resource<With>&Special\"'Chars", unit_from_string("units"));
 
         graph.add_entity(warehouse).unwrap();

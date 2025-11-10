@@ -4,8 +4,8 @@ use sea_core::units::unit_from_string;
 
 #[test]
 fn test_complete_supply_chain_model() {
-    let supplier = Entity::new("Supplier");
-    let warehouse = Entity::new("Warehouse");
+    let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
 
     let steel = Resource::new("Steel", unit_from_string("kg"));
     let camera = Resource::new("Camera", unit_from_string("units"));
@@ -25,10 +25,10 @@ fn test_complete_supply_chain_model() {
 
 #[test]
 fn test_multi_stage_flow() {
-    let supplier = Entity::new("Steel Supplier");
-    let warehouse = Entity::new("Central Warehouse");
-    let manufacturer = Entity::new("Camera Manufacturer");
-    let retailer = Entity::new("Retail Store");
+    let supplier = Entity::new_with_namespace("Steel Supplier", "default".to_string());
+    let warehouse = Entity::new_with_namespace("Central Warehouse", "default".to_string());
+    let manufacturer = Entity::new_with_namespace("Camera Manufacturer", "default".to_string());
+    let retailer = Entity::new_with_namespace("Retail Store", "default".to_string());
 
     let steel = Resource::new("Steel", unit_from_string("kg"));
     let camera_parts = Resource::new("Camera Parts", unit_from_string("units"));
@@ -65,8 +65,8 @@ fn test_multi_stage_flow() {
 
 #[test]
 fn test_instance_tracking_across_entities() {
-    let warehouse_a = Entity::new("Warehouse A");
-    let warehouse_b = Entity::new("Warehouse B");
+    let warehouse_a = Entity::new_with_namespace("Warehouse A", "default".to_string());
+    let warehouse_b = Entity::new_with_namespace("Warehouse B", "default".to_string());
     let camera = Resource::new("Camera Model X", unit_from_string("units"));
 
     let instance1 = Instance::new(camera.id().clone(), warehouse_a.id().clone());
@@ -81,8 +81,8 @@ fn test_instance_tracking_across_entities() {
 
 #[test]
 fn test_resource_flow_with_instances() {
-    let origin = Entity::new("Manufacturing Plant");
-    let destination = Entity::new("Distribution Center");
+    let origin = Entity::new_with_namespace("Manufacturing Plant", "default".to_string());
+    let destination = Entity::new_with_namespace("Distribution Center", "default".to_string());
     let product = Resource::new("Smartphone", unit_from_string("units"));
 
     let transfer = Flow::new(
@@ -103,7 +103,7 @@ fn test_resource_flow_with_instances() {
 
 #[test]
 fn test_all_primitives_serialization() {
-    let entity = Entity::new("Test Entity");
+    let entity = Entity::new_with_namespace("Test Entity", "default".to_string());
     let resource = Resource::new("Test Resource", unit_from_string("units"));
     let flow = Flow::new(
         resource.id().clone(),

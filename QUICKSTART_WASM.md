@@ -121,6 +121,12 @@ wasm-pack test --firefox --features wasm
 - `examples/browser.html` - Browser demo
 - `scripts/build-wasm.sh` - Build script
 
+## API Changes (November 2025)
+
+- `Entity.new(name)` and `Resource.new(name, unit)` now flow through the namespace-aware overloads, defaulting to `"default"` when you omit the namespace; `namespace()` always returns a string.
+- `Resource.new` delegates to `Resource.newWithNamespace(..., "default")`, so the WASM bindings never expose an undefined namespace.
+- `Flow.new` takes `ConceptId` values (not references), so clone the IDs returned by `id()` before passing them to the constructor.
+
 ## Next Steps
 
 See `PHASE9_VERIFICATION.md` for complete verification checklist.

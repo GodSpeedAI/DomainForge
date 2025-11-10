@@ -439,7 +439,12 @@ graph.add_entity(factory)
 graph.add_entity(warehouse)
 graph.add_resource(camera)
 
-flow = Flow.new(camera.id(), factory.id(), warehouse.id(), Decimal("1000"))
+flow = Flow.new(
+    camera.id().clone(),
+    factory.id().clone(),
+    warehouse.id().clone(),
+    Decimal("1000")
+)
 graph.add_flow(flow)
 
 # Export to CALM JSON
@@ -512,6 +517,7 @@ imported_graph = Graph.import_calm(calm_data)
 
 - **Namespace API**: `namespace()` now returns `&str` instead of `Option<&str>` (always returns "default" if unspecified)
 - **Constructor patterns**: Use `Entity::new(name)` for default namespace, `Entity::new_with_namespace(name, ns)` for explicit
+- **Resource namespace default**: `Resource::new(name, unit)` now routes through `Resource::new_with_namespace(..., "default")`, so `namespace()` is always `"default"` when omitted
 - **Flow API**: Constructor takes `ConceptId` values (not references) - clone IDs before passing
 
 **New Features:**

@@ -1,10 +1,18 @@
 # 🧭 Task 7: fix_api.py AST-Based Transformation Implementation Plan
 
 **Status:** Ready for Execution
-**Revision Date:** 2025-01-20
+**Revision Date:** 2025-11-10
 **Aligned With:** CodeRabbit Review Tasks, tree-sitter Documentation, PRD Section 5.4 (Migration Tooling)
 
 ---
+
+## 0. Current Context Snapshot (Nov 2025)
+
+- `sea-core/fix_api.py` now exists as the baseline regex-based migration script; the rewrite needs to subsume its logic without regressing the newly introduced unit import handling.
+- `fix_unit_new.py` automatically appends `.unwrap()` to `Unit::new` invocations in the tests so that the new `units::Unit` APIs continue to compile cleanly.
+- `sea-core/src/units/mod.rs` introduces `Dimension`, `Unit`, `UnitRegistry`, and `UnitError` so `Resource::new` conversions now rely on the registry's `unit_from_string` helpers; the AST transformer must keep these dimension-aware semantics intact.
+- A large wave of new tests was added (`sea-core/tests/phase_16_unicode_tests.rs`, `phase_17_export_tests.rs`, the aggregation suites, Unicode validation, and richer SBVR/RDF export rounds) so the migration must preserve UTF-8 handling and export determinism.
+- Supporting documentation for Phases 11‑17 (`docs/plans/Phase_11_Units_Dimensions.md`, `Phase_12_Aggregations.md`, `Phase_13_Identity_Versioning.md`, `Phase_14_...`) emphasizes the expanded DSL surface and the deterministic export expectations our tool must respect.
 
 ## 1. Objectives and Context
 
@@ -25,6 +33,8 @@ Replace fragile regex-based code transformation in `fix_api.py` with robust AST-
 - Python implementation leverages prebuilt `tree_sitter_languages` parsers
 - Roundtrip guarantee: parse → transform → codegen produces valid Rust source
 - Must handle: nested parentheses, escaped quotes, inline comments, multiline strings
+- Resource/Unit pairing is now governed by `UnitRegistry`/`unit_from_string` (`sea-core/src/units/mod.rs`) and the `fix_unit_new.py` helper; the AST visitor must preserve those conversions and the `.unwrap()` policy enforced in the tests.
+- The new regression suites (`sea-core/tests/phase_16_unicode_tests.rs`, `phase_17_export_tests.rs`, the aggregation suites, and the SBVR/RDF round-trip coverage) plus the expanded Phases 11‑17 docs enforce Unicode/exports/ordering expectations that the transformer must respect.
 - Backwards compatibility: script should be idempotent (safe to run multiple times)
 
 **Traceability Requirements:**
@@ -32,6 +42,7 @@ Replace fragile regex-based code transformation in `fix_api.py` with robust AST-
 - All transformations logged with before/after diffs
 - Backup files created for rollback capability
 - Unit tests covering 20+ edge cases
+- Verify against the Nov 2025 Unicode/export/aggregation suites so the new AST-based tool doesn't regress SBVR/RDF determinism.
 - Integration tests on real migration scenarios
 
 ---
@@ -1748,4 +1759,4 @@ This plan replaces fragile regex-based code transformation in `fix_api.py` with 
 - Rust Reference — Expressions & Paths (https://doc.rust-lang.org/reference/expressions/call-expr.html) ensuring syntactic alignment with the language grammar
 - tree-sitter node type docs (https://tree-sitter.github.io/tree-sitter/using-parsers#node-types) for detailed semantics of the parsed node kinds leveraged by the transformers
 
-This plan ensures deterministic, auditable, and correct code transformation replacing the fragile regex-based approach with production-grade AST manipulation.
+This plan ensures deterministic, auditable, and correct code transformation replacing the fragile regex-based approach with production-grade AST manipulation while preserving the Nov 2025 unit/dimension expansion, the Unicode/SBVR/RDF regression suites, and the newly documented Phase 11‑17 expectations outlined in Section 0.

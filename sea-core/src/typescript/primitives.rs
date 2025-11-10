@@ -22,7 +22,7 @@ impl Entity {
     pub fn new(name: String, namespace: Option<String>) -> Self {
         let inner = match namespace {
             Some(ns) => RustEntity::new_with_namespace(name, ns),
-            None => RustEntity::new(name),
+            None => RustEntity::new_with_namespace(name, "default".to_string()),
         };
         Self { inner }
     }
@@ -100,7 +100,7 @@ impl Resource {
         let unit_obj = unit_from_string(unit);
         let inner = match namespace {
             Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
-            None => RustResource::new(name, unit_obj),
+            None => RustResource::new_with_namespace(name, unit_obj, "default".to_string()),
         };
         Self { inner }
     }

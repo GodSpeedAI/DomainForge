@@ -7,8 +7,8 @@ use sea_core::Graph;
 fn build_test_graph() -> Graph {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
     let gold = Resource::new("Gold", kg);
 
@@ -143,8 +143,8 @@ fn test_max_quantity() {
 fn test_count_mixed_resources() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
 
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
     let units = Unit::new("units", "units", Dimension::Count, Decimal::from(1)).unwrap();

@@ -24,7 +24,7 @@ impl Entity {
     fn new(name: String, namespace: Option<String>) -> Self {
         let inner = match namespace {
             Some(ns) => RustEntity::new_with_namespace(name, ns),
-            None => RustEntity::new(name),
+            None => RustEntity::new_with_namespace(name, "default".to_string()),
         };
         Self { inner }
     }
@@ -103,11 +103,10 @@ impl Resource {
     #[new]
     #[pyo3(signature = (name, unit, namespace=None))]
     fn new(name: String, unit: String, namespace: Option<String>) -> Self {
-        // Convert unit string to Unit using helper
         let unit_obj = unit_from_string(unit);
         let inner = match namespace {
             Some(ns) => RustResource::new_with_namespace(name, unit_obj, ns),
-            None => RustResource::new(name, unit_obj),
+            None => RustResource::new_with_namespace(name, unit_obj, "default".to_string()),
         };
         Self { inner }
     }

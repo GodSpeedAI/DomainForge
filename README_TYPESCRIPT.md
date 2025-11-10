@@ -243,6 +243,7 @@ npm test
 **Breaking Changes:**
 - `namespace()` now returns `string` instead of `string | undefined` (always returns "default" if unspecified)
 - Constructors changed: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
+- `Resource.new(name, unit)` now delegates to `Resource.newWithNamespace(..., "default")`, so `namespace()` is always defined even when you omit the namespace
 - Flow constructor takes `ConceptId` values (not references) - clone before passing
 - Methods now return `ConceptId` type instead of raw strings for IDs
 

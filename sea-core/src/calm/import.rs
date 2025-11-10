@@ -84,7 +84,7 @@ fn import_entity(node: &super::models::CalmNode) -> Result<Entity, String> {
     let entity = if let Some(ns) = &node.namespace {
         Entity::new_with_namespace(node.name.clone(), ns.clone())
     } else {
-        Entity::new(node.name.clone())
+        Entity::new_with_namespace(node.name.clone(), "default".to_string())
     };
 
     Ok(entity)

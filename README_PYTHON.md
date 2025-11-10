@@ -189,6 +189,7 @@ flow = Flow.new(
 
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit
+- `Resource.new(name, unit)` now routes through `new_with_namespace(..., "default")` so `namespace()` never returns `None` even when a namespace is not supplied
 - Flow constructor takes `ConceptId` values (not references) - must clone before passing
 
 **New Features:**

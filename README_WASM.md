@@ -124,6 +124,7 @@ const flow = Flow.new(
 
 - `namespace()` now returns `string` (not nullable) - always returns "default" if unspecified
 - Constructors: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
+- Resource constructors now delegate to `Resource.newWithNamespace(..., "default")`, so `namespace()` is always `"default"` when you omit the namespace
 - Flow constructor takes `ConceptId` values (not references) - clone before passing
 
 See `pkg/README.md` for complete API documentation.

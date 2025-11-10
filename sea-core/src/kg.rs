@@ -600,7 +600,7 @@ mod tests {
     fn test_export_to_rdf_xml() {
         let mut graph = Graph::new();
 
-        let entity = Entity::new("TestEntity");
+        let entity = Entity::new_with_namespace("TestEntity", "default".to_string());
         graph.add_entity(entity).unwrap();
 
         let rdf_xml = graph.export_rdf("rdf-xml").unwrap();
@@ -622,10 +622,10 @@ mod tests {
     fn test_export_rdf_turtle_encodes_special_characters_and_literals() {
         let mut graph = Graph::new();
 
-        let entity_space = Entity::new("Entity With Space");
-        let entity_colon = Entity::new("Entity:Colon");
-        let entity_slash = Entity::new("Entity/Slash");
-        let entity_hash = Entity::new("Entity#Hash");
+        let entity_space = Entity::new_with_namespace("Entity With Space", "default".to_string());
+        let entity_colon = Entity::new_with_namespace("Entity:Colon", "default".to_string());
+        let entity_slash = Entity::new_with_namespace("Entity/Slash", "default".to_string());
+        let entity_hash = Entity::new_with_namespace("Entity#Hash", "default".to_string());
 
         graph.add_entity(entity_space.clone()).unwrap();
         graph.add_entity(entity_colon.clone()).unwrap();

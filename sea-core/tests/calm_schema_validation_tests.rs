@@ -17,7 +17,7 @@ fn test_export_validates_against_schema() {
     let compiled_schema = compile_calm_schema();
 
     let mut graph = Graph::new();
-    let entity = Entity::new("TestEntity".to_string());
+    let entity = Entity::new_with_namespace("TestEntity".to_string(), "default".to_string());
     graph.add_entity(entity).unwrap();
 
     let calm_json = export(&graph).unwrap();
@@ -98,7 +98,7 @@ fn test_all_node_types_validate() {
     let mut graph = Graph::new();
 
     // Add one entity
-    let entity = Entity::new("TestEntity".to_string());
+    let entity = Entity::new_with_namespace("TestEntity".to_string(), "default".to_string());
     graph.add_entity(entity).unwrap();
 
     // Add one resource

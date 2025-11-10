@@ -9,8 +9,8 @@ mod sbvr_flow_facts_tests {
     fn test_flow_fact_includes_resource_and_destination() {
         let mut graph = Graph::new();
 
-        let warehouse = Entity::new("Warehouse");
-        let factory = Entity::new("Factory");
+        let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+        let factory = Entity::new_with_namespace("Factory", "default".to_string());
         let camera = Resource::new("Camera", unit_from_string("units"));
 
         let warehouse_id = warehouse.id().clone();

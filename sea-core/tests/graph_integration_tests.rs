@@ -10,10 +10,10 @@ use std::str::FromStr;
 fn test_complete_supply_chain_graph() {
     let mut graph = Graph::new();
 
-    let supplier = Entity::new("Steel Supplier");
-    let warehouse = Entity::new("Central Warehouse");
-    let manufacturer = Entity::new("Camera Manufacturer");
-    let retailer = Entity::new("Electronics Retailer");
+    let supplier = Entity::new_with_namespace("Steel Supplier", "default".to_string());
+    let warehouse = Entity::new_with_namespace("Central Warehouse", "default".to_string());
+    let manufacturer = Entity::new_with_namespace("Camera Manufacturer", "default".to_string());
+    let retailer = Entity::new_with_namespace("Electronics Retailer", "default".to_string());
 
     let steel = Resource::new("Steel", unit_from_string("kg"));
     let camera_parts = Resource::new("Camera Parts", unit_from_string("units"));
@@ -90,7 +90,7 @@ fn test_complete_supply_chain_graph() {
 fn test_graph_with_instances() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -112,7 +112,7 @@ fn test_graph_with_instances() {
 fn test_graph_validation_prevents_invalid_flows() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let cameras = Resource::new("Cameras", unit_from_string("units"));
 
     let warehouse_id = warehouse.id().clone();
@@ -138,8 +138,8 @@ fn test_graph_validation_prevents_invalid_flows() {
 fn test_graph_multi_resource_flows() {
     let mut graph = Graph::new();
 
-    let supplier = Entity::new("Supplier");
-    let factory = Entity::new("Factory");
+    let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
 
     let steel = Resource::new("Steel", unit_from_string("kg"));
     let plastic = Resource::new("Plastic", unit_from_string("kg"));

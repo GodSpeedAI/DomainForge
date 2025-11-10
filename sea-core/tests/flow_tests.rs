@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 #[test]
 fn test_flow_new_stores_references() {
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let product = Resource::new("Widget", unit_from_string("units"));
 
     let flow = Flow::new(

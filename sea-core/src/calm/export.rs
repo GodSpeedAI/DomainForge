@@ -163,8 +163,8 @@ mod tests {
 
         let mut graph = Graph::new();
 
-        let entity1 = Entity::new("Warehouse".to_string());
-        let entity2 = Entity::new("Factory".to_string());
+        let entity1 = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
+        let entity2 = Entity::new_with_namespace("Factory".to_string(), "default".to_string());
         let resource = Resource::new("Cameras".to_string(), unit_from_string("units"));
 
         let e1_id = entity1.id().clone();

@@ -734,7 +734,7 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                 let entity = if let Some(d) = domain {
                     Entity::new_with_namespace(name.clone(), d.clone())
                 } else {
-                    Entity::new(name.clone())
+                    Entity::new_with_namespace(name.clone(), "default".to_string())
                 };
                 let entity_id = entity.id().clone();
                 graph.add_entity(entity).map_err(|e| {

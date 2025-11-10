@@ -28,7 +28,7 @@ fn test_entity_namespace_with_newline_exports_correctly() {
 #[test]
 fn test_entity_with_backslashes_exports_correctly() {
     let mut graph = Graph::new();
-    let entity = Entity::new(r#"Entity\With\Backslashes"#);
+    let entity = Entity::new_with_namespace(r#"Entity\With\Backslashes"#, "default".to_string());
     graph.add_entity(entity).unwrap();
 
     let kg = KnowledgeGraph::from_graph(&graph).unwrap();
