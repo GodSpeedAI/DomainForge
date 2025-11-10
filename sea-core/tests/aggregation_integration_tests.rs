@@ -17,7 +17,7 @@ fn test_end_to_end_count_aggregation() {
     let mut graph = Graph::new();
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     let gold = Resource::new("Gold", kg);
 
     graph.add_entity(warehouse.clone()).unwrap();
@@ -64,7 +64,7 @@ fn test_end_to_end_sum_aggregation() {
     let mut graph = Graph::new();
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     let gold = Resource::new("Gold", kg);
 
     graph.add_entity(warehouse.clone()).unwrap();
@@ -227,7 +227,7 @@ fn test_complex_aggregation_policy() {
     let mut graph = Graph::new();
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     let gold = Resource::new("Gold", kg);
 
     graph.add_entity(warehouse.clone()).unwrap();

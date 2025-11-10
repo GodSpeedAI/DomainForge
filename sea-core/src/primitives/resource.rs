@@ -19,7 +19,7 @@ use uuid::Uuid;
 /// use sea_core::units::{Unit, Dimension};
 /// use rust_decimal::Decimal;
 ///
-/// let units = Unit::new("units", "units", Dimension::Count, Decimal::from(1)).unwrap();
+/// let units = Unit::new("units", "units", Dimension::Count, Decimal::from(1), "units");
 /// let product = Resource::new("Camera", units);
 /// assert_eq!(product.name(), "Camera");
 /// assert_eq!(product.unit().symbol(), "units");
@@ -33,7 +33,7 @@ use uuid::Uuid;
 /// use sea_core::units::{Unit, Dimension};
 /// use rust_decimal::Decimal;
 ///
-/// let currency = Unit::new("currency", "currency", Dimension::Currency, Decimal::from(1)).unwrap();
+/// let currency = Unit::new("currency", "currency", Dimension::Currency, Decimal::from(1), "currency");
 /// let usd = Resource::new_with_namespace("USD", currency, "finance");
 /// assert_eq!(usd.namespace(), "finance");
 /// ```
@@ -46,7 +46,7 @@ use uuid::Uuid;
 /// use rust_decimal::Decimal;
 /// use serde_json::json;
 ///
-/// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+/// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
 /// let mut gold = Resource::new("Gold", kg);
 /// gold.set_attribute("purity", json!(0.999));
 /// gold.set_attribute("origin", json!("South Africa"));
@@ -61,7 +61,7 @@ use uuid::Uuid;
 /// use sea_core::units::{Unit, Dimension};
 /// use rust_decimal::Decimal;
 ///
-/// let oz = Unit::new("oz", "ounce", Dimension::Mass, Decimal::new(28349523, 9)).unwrap();
+/// let oz = Unit::new("oz", "ounce", Dimension::Mass, Decimal::new(28349523, 9), "oz");
 /// let resource = Resource::new("Silver", oz);
 /// let json = serde_json::to_string(&resource).unwrap();
 /// let deserialized: Resource = serde_json::from_str(&json).unwrap();
@@ -87,7 +87,7 @@ impl Resource {
     /// use sea_core::units::{Unit, Dimension};
     /// use rust_decimal::Decimal;
     ///
-    /// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    /// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     /// let resource = Resource::new("Camera", kg);
     /// assert_eq!(resource.name(), "Camera");
     /// assert_eq!(resource.unit().symbol(), "kg");
@@ -113,7 +113,7 @@ impl Resource {
     /// use sea_core::units::{Unit, Dimension};
     /// use rust_decimal::Decimal;
     ///
-    /// let usd = Unit::new("USD", "US Dollar", Dimension::Currency, Decimal::from(1)).unwrap();
+    /// let usd = Unit::new("USD", "US Dollar", Dimension::Currency, Decimal::from(1), "USD");
     /// let resource = Resource::new_with_namespace("USD", usd, "finance");
     /// assert_eq!(resource.namespace(), "finance");
     /// ```

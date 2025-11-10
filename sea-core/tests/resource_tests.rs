@@ -36,7 +36,7 @@ fn test_resource_set_attribute() {
 
 #[test]
 fn test_resource_serializes() {
-    let oz = Unit::new("oz", "ounce", Dimension::Mass, Decimal::new(28349523, 9)).unwrap();
+    let oz = Unit::new("oz", "ounce", Dimension::Mass, Decimal::new(28349523, 9), "oz");
     let resource = Resource::new("Silver", oz);
     let json = serde_json::to_string(&resource).unwrap();
     assert!(json.contains("Silver"));

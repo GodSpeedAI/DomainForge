@@ -4,7 +4,7 @@ use sea_core::units::{Dimension, Unit};
 
 #[test]
 fn test_resource_with_unit() {
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     let gold = Resource::new("Gold", kg);
 
     assert_eq!(gold.name(), "Gold");
@@ -14,7 +14,7 @@ fn test_resource_with_unit() {
 
 #[test]
 fn test_resource_unit_serialization() {
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     let gold = Resource::new("Gold", kg);
 
     let json = serde_json::to_string(&gold).unwrap();

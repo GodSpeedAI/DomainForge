@@ -13,9 +13,42 @@ use rust_decimal::Decimal;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
+/// File-level metadata from header annotations
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct FileMetadata {
+    pub namespace: Option<String>,
+    pub version: Option<String>,
+    pub owner: Option<String>,
+}
+
+/// Policy metadata
+#[derive(Debug, Clone, PartialEq)]
+pub struct PolicyMetadata {
+    pub kind: Option<PolicyKind>,
+    pub modality: Option<PolicyModality>,
+    pub priority: Option<i32>,
+    pub rationale: Option<String>,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PolicyKind {
+    Constraint,
+    Derivation,
+    Obligation,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PolicyModality {
+    Obligation,
+    Prohibition,
+    Permission,
+}
+
 /// Abstract Syntax Tree for SEA DSL
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ast {
+    pub metadata: FileMetadata,
     pub declarations: Vec<AstNode>,
 }
 
@@ -37,9 +70,19 @@ pub enum AstNode {
         to_entity: String,
         quantity: Option<i32>,
     },
+    Dimension {
+        name: String,
+    },
+    UnitDeclaration {
+        symbol: String,
+        dimension: String,
+        factor: Decimal,
+        base_unit: String,
+    },
     Policy {
         name: String,
         version: Option<String>,
+        metadata: PolicyMetadata,
         expression: Expression,
     },
 }
@@ -52,17 +95,25 @@ pub fn parse_source(source: &str) -> ParseResult<Ast> {
 
 /// Build AST from pest pairs
 fn build_ast(pairs: Pairs<Rule>) -> ParseResult<Ast> {
+    let mut metadata = FileMetadata::default();
     let mut declarations = Vec::new();
 
     for pair in pairs {
         match pair.as_rule() {
             Rule::program => {
                 for inner in pair.into_inner() {
-                    if inner.as_rule() == Rule::declaration {
-                        for decl in inner.into_inner() {
-                            let node = parse_declaration(decl)?;
-                            declarations.push(node);
+                    match inner.as_rule() {
+                        Rule::file_header => {
+                            metadata = parse_file_header(inner)?;
                         }
+                        Rule::declaration => {
+                            for decl in inner.into_inner() {
+                                let node = parse_declaration(decl)?;
+                                declarations.push(node);
+                            }
+                        }
+                        Rule::EOI => {}
+                        _ => {}
                     }
                 }
             }
@@ -71,12 +122,51 @@ fn build_ast(pairs: Pairs<Rule>) -> ParseResult<Ast> {
         }
     }
 
-    Ok(Ast { declarations })
+    Ok(Ast {
+        metadata,
+        declarations,
+    })
+}
+
+/// Parse file header annotations
+fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
+    let mut metadata = FileMetadata::default();
+
+    for annotation in pair.into_inner() {
+        if annotation.as_rule() == Rule::annotation {
+            let mut inner = annotation.into_inner();
+            let name = inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation name".to_string()))?;
+            let value = inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
+
+            let name_str = name.as_str().to_lowercase();
+            let value_str = parse_string_literal(value)?;
+
+            match name_str.as_str() {
+                "namespace" => metadata.namespace = Some(value_str),
+                "version" => metadata.version = Some(value_str),
+                "owner" => metadata.owner = Some(value_str),
+                _ => {
+                    return Err(ParseError::GrammarError(format!(
+                        "Unknown annotation: {}",
+                        name_str
+                    )))
+                }
+            }
+        }
+    }
+
+    Ok(metadata)
 }
 
 /// Parse a single declaration
 fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
     match pair.as_rule() {
+        Rule::dimension_decl => parse_dimension(pair),
+        Rule::unit_decl => parse_unit_declaration(pair),
         Rule::entity_decl => parse_entity(pair),
         Rule::resource_decl => parse_resource(pair),
         Rule::flow_decl => parse_flow(pair),
@@ -86,6 +176,53 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
             pair.as_rule()
         ))),
     }
+}
+
+/// Parse dimension declaration
+fn parse_dimension(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected dimension name".to_string()))?,
+    )?;
+
+    Ok(AstNode::Dimension { name })
+}
+
+/// Parse unit declaration
+fn parse_unit_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let symbol = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected unit symbol".to_string()))?,
+    )?;
+
+    let dimension = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected dimension name".to_string()))?,
+    )?;
+
+    let factor_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected factor".to_string()))?;
+    let factor = parse_decimal(factor_pair)?;
+
+    let base_unit = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected base unit".to_string()))?,
+    )?;
+
+    Ok(AstNode::UnitDeclaration {
+        symbol,
+        dimension,
+        factor,
+        base_unit,
+    })
 }
 
 /// Parse entity declaration
@@ -211,25 +348,109 @@ fn parse_policy(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected policy name".to_string()))?,
     )?;
 
+    let mut metadata = PolicyMetadata {
+        kind: None,
+        modality: None,
+        priority: None,
+        rationale: None,
+        tags: Vec::new(),
+    };
     let mut version: Option<String> = None;
-    let mut next_pair = inner.next().ok_or_else(|| {
-        ParseError::GrammarError("Expected policy version or expression".to_string())
-    })?;
 
-    if next_pair.as_rule() == Rule::version {
-        version = Some(next_pair.as_str().to_string());
-        next_pair = inner
-            .next()
-            .ok_or_else(|| ParseError::GrammarError("Expected policy expression".to_string()))?;
+    for next_pair in inner {
+        match next_pair.as_rule() {
+            Rule::policy_kind => {
+                metadata.kind = Some(match next_pair.as_str().to_lowercase().as_str() {
+                    "constraint" => PolicyKind::Constraint,
+                    "derivation" => PolicyKind::Derivation,
+                    "obligation" => PolicyKind::Obligation,
+                    _ => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Unknown policy kind: {}",
+                            next_pair.as_str()
+                        )))
+                    }
+                });
+            }
+            Rule::policy_modality => {
+                metadata.modality = Some(match next_pair.as_str().to_lowercase().as_str() {
+                    "obligation" => PolicyModality::Obligation,
+                    "prohibition" => PolicyModality::Prohibition,
+                    "permission" => PolicyModality::Permission,
+                    _ => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Unknown policy modality: {}",
+                            next_pair.as_str()
+                        )))
+                    }
+                });
+            }
+            Rule::number => {
+                metadata.priority = Some(parse_number(next_pair)?);
+            }
+            Rule::policy_annotation => {
+                parse_policy_annotation(next_pair, &mut metadata)?;
+            }
+            Rule::version => {
+                version = Some(next_pair.as_str().to_string());
+            }
+            Rule::expression => {
+                let expression = parse_expression(next_pair)?;
+                return Ok(AstNode::Policy {
+                    name,
+                    version,
+                    metadata,
+                    expression,
+                });
+            }
+            _ => {}
+        }
     }
 
-    let expression = parse_expression(next_pair)?;
+    Err(ParseError::GrammarError(
+        "Policy missing expression".to_string(),
+    ))
+}
 
-    Ok(AstNode::Policy {
-        name,
-        version,
-        expression,
-    })
+fn parse_policy_annotation(
+    pair: Pair<Rule>,
+    metadata: &mut PolicyMetadata,
+) -> ParseResult<()> {
+    let mut inner = pair.into_inner();
+
+    let name = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected annotation name".to_string()))?;
+    let value = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
+
+    let name_str = name.as_str().to_lowercase();
+
+    match name_str.as_str() {
+        "rationale" => {
+            metadata.rationale = Some(parse_string_literal(value)?);
+        }
+        "tags" => {
+            if value.as_rule() == Rule::string_array {
+                for tag_pair in value.into_inner() {
+                    if tag_pair.as_rule() == Rule::string_literal {
+                        metadata.tags.push(parse_string_literal(tag_pair)?);
+                    }
+                }
+            } else {
+                metadata.tags.push(parse_string_literal(value)?);
+            }
+        }
+        _ => {
+            return Err(ParseError::GrammarError(format!(
+                "Unknown policy annotation: {}",
+                name_str
+            )))
+        }
+    }
+
+    Ok(())
 }
 
 /// Parse expression
@@ -720,7 +941,45 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     let mut entity_map = HashMap::new();
     let mut resource_map = HashMap::new();
 
-    // First pass: Add entities and resources
+    let default_namespace = ast
+        .metadata
+        .namespace
+        .as_deref()
+        .unwrap_or("default")
+        .to_string();
+
+    // First pass: Register dimensions and units
+    for node in &ast.declarations {
+        match node {
+            AstNode::Dimension { name } => {
+                use crate::units::{Dimension, UnitRegistry};
+                let dim = Dimension::Custom(name.clone());
+                UnitRegistry::global().register_dimension(dim);
+            }
+            AstNode::UnitDeclaration {
+                symbol,
+                dimension,
+                factor,
+                base_unit,
+            } => {
+                use crate::units::{Dimension, Unit, UnitRegistry};
+                let dim = Dimension::Custom(dimension.clone());
+                let unit = Unit::new(
+                    symbol.clone(),
+                    symbol.clone(),
+                    dim,
+                    *factor,
+                    base_unit.clone(),
+                );
+                UnitRegistry::global()
+                    .register(unit)
+                    .map_err(|e| ParseError::GrammarError(format!("Failed to register unit: {}", e)))?;
+            }
+            _ => {}
+        }
+    }
+
+    // Second pass: Add entities and resources
     for node in &ast.declarations {
         match node {
             AstNode::Entity { name, domain } => {
@@ -731,11 +990,8 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                     )));
                 }
 
-                let entity = if let Some(d) = domain {
-                    Entity::new_with_namespace(name.clone(), d.clone())
-                } else {
-                    Entity::new_with_namespace(name.clone(), "default".to_string())
-                };
+                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
+                let entity = Entity::new_with_namespace(name.clone(), namespace);
                 let entity_id = entity.id().clone();
                 graph.add_entity(entity).map_err(|e| {
                     ParseError::GrammarError(format!("Failed to add entity: {}", e))
@@ -754,24 +1010,9 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                     )));
                 }
 
-                let resource = match (unit_name, domain) {
-                    (Some(unit_str), Some(d)) => {
-                        let unit = unit_from_string(unit_str.clone());
-                        Resource::new_with_namespace(name.clone(), unit, d.clone())
-                    }
-                    (Some(unit_str), None) => {
-                        let unit = unit_from_string(unit_str.clone());
-                        Resource::new(name.clone(), unit)
-                    }
-                    (None, Some(d)) => {
-                        let unit = unit_from_string("units");
-                        Resource::new_with_namespace(name.clone(), unit, d.clone())
-                    }
-                    (None, None) => {
-                        let unit = unit_from_string("units");
-                        Resource::new(name.clone(), unit)
-                    }
-                };
+                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
+                let unit = unit_from_string(unit_name.as_deref().unwrap_or("units"));
+                let resource = Resource::new_with_namespace(name.clone(), unit, namespace);
                 let resource_id = resource.id().clone();
                 graph.add_resource(resource).map_err(|e| {
                     ParseError::GrammarError(format!("Failed to add resource: {}", e))
