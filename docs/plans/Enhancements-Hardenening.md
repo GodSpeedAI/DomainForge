@@ -844,3 +844,345 @@ The resulting system will provide:
 - **Production-grade tooling** via CLI with validation, projection, and testing commands
 
 All changes maintain backward compatibility where possible and include migration paths for breaking changes.
+
+---
+### Trunck-based Development
+
+Trunk-Based Development Plan: SEA DSL Enhancement Implementation
+Objective
+Complete all 22 phases of the SEA DSL enhancement plan using trunk-based development with dev as base branch. Each phase must pass all tests before merging to dev.
+
+Branch Strategy
+Base branch: dev
+Feature branches: phase-N-<description> (short-lived)
+Merge policy: Tests must pass, no CI failures
+Commits: Atomic, well-documented per phase
+Phase Implementation Sequence
+Block 1: Parser & Core Language (Phases 1.1-1.4)
+Branch: phase-1-parser-enhancements
+
+Tasks:
+
+Update sea-core/src/parser/ast.rs:
+
+Add FileMetadata struct (namespace, version, owner)
+Add AstNode::Dimension { name }
+Add AstNode::UnitDeclaration { symbol, dimension, factor, base_unit }
+Add PolicyMetadata struct (kind, modality, priority, rationale, tags)
+Extend AstNode::Policy with metadata fields
+Add aggregation comprehension variants
+Update sea-core/src/parser/ast.rs parsing functions:
+
+parse_file_header() - extract annotations
+parse_dimension(), parse_unit_decl()
+parse_policy() - handle new metadata syntax
+parse_aggregation_comprehension()
+parse_quantity_literal()
+Update sea-core/src/parser/mod.rs:
+
+Wire ast_to_graph() to apply file defaults
+Update sea-core/src/units/mod.rs:
+
+Add UnitRegistry::register_dimension(name)
+Add UnitRegistry::register_unit(unit)
+Add duplicate validation
+Update sea-core/src/policy/core.rs:
+
+Add Policy::with_metadata() builder
+Update sea-core/src/policy/expression.rs:
+
+Add Expression::AggregationComprehension variant
+Add Expression::QuantityLiteral { value, unit } variant
+Implement evaluation logic
+Tests:
+
+sea-core/tests/parser_metadata_tests.rs - file header parsing
+sea-core/tests/dimension_unit_tests.rs - dimension/unit declarations
+sea-core/tests/policy_metadata_tests.rs - policy with modality/priority
+sea-core/tests/aggregation_comprehension_tests.rs - comprehension syntax
+sea-core/tests/quantity_literal_tests.rs - unit-suffixed numbers
+All existing parser tests must pass
+Merge condition: cargo test --all passes
+
+Block 2: Type System (Phases 2.1-2.3)
+Branch: phase-2-type-system
+
+Tasks:
+
+Create sea-core/src/type_system/mod.rs:
+
+SeaType enum (Boolean, Number{dimension, unit}, String, Entity, Resource, Flow, Collection)
+TypeContext struct for variable bindings
+infer_type(expression, context) -> Result<SeaType, TypeError>
+check_dimensional_consistency(left, right, op) -> Result<SeaType, UnitError>
+Update sea-core/src/validation_error.rs:
+
+Extend TypeError with expected_type, found_type
+Add UnitError::DimensionalMismatch { left, right, operation }
+Add DeterminismError::NonDeterministicCollection
+Add DeterminismError::InfiniteExpansion
+Update sea-core/src/policy/quantifier.rs:
+
+Add QuantifierExpansionTrace struct
+Add expand_with_trace() method
+Document IndexMap determinism guarantee
+Update sea-core/src/graph/mod.rs:
+
+Add Graph::verify_deterministic() for CI checks
+Update sea-core/src/units/mod.rs:
+
+Add Dimension::is_compatible(other)
+Update sea-core/src/parser/mod.rs:
+
+Call type inference after AST construction
+Reject programs with type errors
+Tests:
+
+sea-core/tests/type_inference_tests.rs - type checking
+sea-core/tests/dimension_validation_tests.rs - dimension mismatch errors
+sea-core/tests/quantifier_trace_tests.rs - expansion logging
+sea-core/tests/determinism_tests.rs - collection ordering
+All existing tests must pass
+Merge condition: cargo test --all passes
+
+Block 3: Projections (Phases 3.1-3.3)
+Branch: phase-3-projections
+
+Tasks:
+
+Create sea-core/schemas/calm-mapping-v2.json:
+
+Formal mapping specification
+Metadata preservation rules
+Unit/dimension encoding
+Update sea-core/src/calm/export.rs:
+
+Add CalmNode::validate_schema()
+Add unit metadata to nodes
+Update sea-core/src/calm/import.rs:
+
+Implement full reverse transformation
+Parse unit metadata
+Update sea-core/src/kg.rs:
+
+Add generate_shacl_shapes(graph) -> Vec<ShaclShape>
+Create shapes for Entity/Resource/Flow
+Add cardinality/datatype constraints
+Include shapes in Turtle export
+Extend ShaclProperty:
+
+Add sh:class, sh:nodeKind fields
+Update sea-core/src/sbvr.rs:
+
+Add export_policy(policy) -> SbvrBusinessRule
+Map DeonticModality to SBVR RuleType
+Add expression_to_sbvr_text(expr) -> String
+Extend SbvrBusinessRule with modality, priority
+Tests:
+
+sea-core/tests/calm_mapping_validation_tests.rs
+sea-core/tests/kg_shacl_tests.rs
+sea-core/tests/sbvr_policy_export_tests.rs
+sea-core/tests/projection_round_trip_tests.rs
+All existing projection tests must pass
+Merge condition: cargo test --all passes
+
+Block 4: CLI Tool (Phases 4.1-4.4)
+Branch: phase-4-cli
+
+Tasks:
+
+Create sea-cli/ workspace member
+
+Add to root Cargo.toml workspace members
+
+Create sea-cli/Cargo.toml:
+
+Dependencies: clap 4.x, anyhow, env_logger, colored
+Local dependency: sea-core
+Create sea-cli/src/main.rs:
+
+Define SeaCliArgs with subcommands
+Configure logging and colored output
+Dispatch to command handlers
+Create sea-cli/src/commands/:
+
+mod.rs - re-exports
+validate.rs - parse and validate files
+project.rs - format conversion (CALM/KG/SBVR)
+test.rs - evaluate policies against graphs
+check.rs - comprehensive validation
+Create sea-cli/src/format/:
+
+error.rs - format validation errors with context
+Color-coded output (red errors, yellow warnings)
+Include source snippets with line markers
+Tests:
+
+sea-cli/tests/cli_validate_tests.rs
+sea-cli/tests/cli_project_tests.rs
+sea-cli/tests/cli_test_tests.rs
+Integration tests with example files
+Merge condition: cargo test --all --all-features passes
+
+Block 5: Refactoring (Phases 5.1-5.3)
+Branch: phase-5-refactoring
+
+Tasks:
+
+Refactor sea-core/src/parser/ast.rs:
+
+Extract parse_named_declaration() helper
+Extract parse_optional_namespace() helper
+Extract parse_metadata_fields() helper
+Add ParseError::with_suggestion()
+Create sea-core/src/projection/mod.rs:
+
+Define ProjectionExporter trait
+Implement for CalmExporter, KgExporter, SbvrExporter
+Add export_graph<E: ProjectionExporter>()
+Update projection modules to use trait:
+
+sea-core/src/calm/export.rs
+sea-core/src/kg.rs
+sea-core/src/sbvr.rs
+Create sea-core/config/units.yaml:
+
+Define dimensions and units in YAML
+Include default units (Currency, Mass, Length, etc.)
+Update sea-core/src/units/mod.rs:
+
+Add UnitRegistry::from_yaml(path)
+Embed config with include_str!
+Add register_from_config()
+Add serde_yaml dependency to sea-core/Cargo.toml
+
+Tests:
+
+Existing tests must pass with refactored code
+sea-core/tests/projection_trait_tests.rs
+sea-core/tests/units_config_tests.rs
+Merge condition: cargo test --all passes, no regressions
+
+Block 6: Optimization & Testing (Phases 5.4-5.5)
+Branch: phase-6-optimization
+
+Tasks:
+
+Create sea-core/src/policy/optimizer.rs:
+
+optimize_expression(expr) -> Expression
+Constant folding (2+3 → 5)
+Boolean simplification (true and X → X)
+Dead code elimination (false and X → false)
+Update sea-core/src/policy/core.rs:
+
+Call optimizer before evaluation
+Cache optimized expressions
+Create sea-core/benches/expression_optimization.rs:
+
+Benchmark before/after optimization
+Measure deeply nested quantifiers
+Create sea-core/tests/property_tests.rs:
+
+Use proptest for random AST generation
+Verify round-trip: AST → DSL → AST
+Verify projection round-trip
+Create sea-core/fuzz/ (optional, if time permits):
+
+Fuzzing harness for parser
+Target: no panics
+Tests:
+
+sea-core/tests/optimizer_tests.rs
+Property-based tests (10K+ inputs)
+Benchmarks show 2x+ speedup
+Merge condition: cargo test --all and cargo bench pass
+
+Block 7: Documentation & CI (Phases 6.1-6.3)
+Branch: phase-7-docs-ci
+
+Tasks:
+
+Create docs/reference/grammar-reference.md:
+
+Document each grammar rule
+Include EBNF notation
+Provide examples
+Update sea-core/grammar/sea.pest:
+
+Add comprehensive inline comments
+Link to reference doc
+Create .github/workflows/sea-validation.yml:
+
+Run sea check on example files
+Run projection round-trip tests
+Generate coverage report
+Create .github/hooks/pre-commit:
+
+Run sea check on staged .sea files
+Installation instructions
+Add module-level docs to all public modules
+
+Add examples to all public functions
+
+Add doc tests
+
+Generate API docs: cargo doc --all-features --no-deps
+
+Tests:
+
+Doc tests compile and pass
+Example files validate successfully
+CI workflow runs without errors
+Merge condition: All tests pass, docs build, CI green
+
+Testing Strategy Per Phase
+Before merge to dev:
+
+Run cargo test --all - all unit/integration tests pass
+Run cargo test --all-features - test with all feature flags
+Run cargo clippy -- -D warnings - no lints
+Run cargo fmt -- --check - code formatted
+Verify no compilation warnings
+Test on example DSL files (if applicable)
+Backward Compatibility:
+
+Maintain support for existing DSL syntax
+Add deprecation warnings for old policy syntax (no metadata)
+Provide migration examples
+Dependencies Between Phases
+Code
+
+Phase 1 (Parser) → Phase 2 (Type System)
+                → Phase 3 (Projections)
+                → Phase 4 (CLI)
+
+Phase 2 → Phase 6 (Optimization)
+
+Phase 1,2,3 → Phase 5 (Refactoring)
+
+Phase 1,2,3,4,5,6 → Phase 7 (Docs/CI)
+
+Rollback Strategy
+If phase tests fail: fix in feature branch, do not merge
+If regression discovered post-merge: revert merge commit, fix in new branch
+Maintain dev in always-releasable state
+Success Criteria
+Per phase:
+
+All tests pass (cargo test --all)
+No clippy warnings
+Code formatted
+Example files work (where applicable)
+Overall completion:
+
+All 22 phases merged to dev
+Full test suite passes
+CLI tool functional
+Documentation complete
+CI pipeline green
+Open Questions
+None - plan is comprehensive and actionable with clear merge gates.
+
+
