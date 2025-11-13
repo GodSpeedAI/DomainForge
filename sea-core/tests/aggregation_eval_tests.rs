@@ -147,7 +147,13 @@ fn test_count_mixed_resources() {
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
 
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-    let units = Unit::new("units", "units", Dimension::Count, Decimal::from(1), "units");
+    let units = Unit::new(
+        "units",
+        "units",
+        Dimension::Count,
+        Decimal::from(1),
+        "units",
+    );
     let camera = Resource::new("Camera", units);
     let gold = Resource::new("Gold", kg);
 

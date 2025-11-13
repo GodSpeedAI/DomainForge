@@ -2,10 +2,12 @@ use crate::graph::Graph;
 use crate::parser::error::{ParseError, ParseResult};
 use crate::parser::{Rule, SeaParser};
 use crate::policy::{
-    AggregateFunction, BinaryOp, Expression, Quantifier as PolicyQuantifier, UnaryOp,
+    AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
+    PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp,
 };
 use crate::primitives::{Entity, Flow, Resource};
 use crate::units::unit_from_string;
+use crate::SemanticVersion;
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use rust_decimal::prelude::ToPrimitive;
@@ -412,10 +414,7 @@ fn parse_policy(pair: Pair<Rule>) -> ParseResult<AstNode> {
     ))
 }
 
-fn parse_policy_annotation(
-    pair: Pair<Rule>,
-    metadata: &mut PolicyMetadata,
-) -> ParseResult<()> {
+fn parse_policy_annotation(pair: Pair<Rule>, metadata: &mut PolicyMetadata) -> ParseResult<()> {
     let mut inner = pair.into_inner();
 
     let name = inner
@@ -814,6 +813,18 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             let s = parse_multiline_string(inner)?;
             Ok(Expression::Literal(JsonValue::String(s)))
         }
+        Rule::quantity_literal => {
+            let mut parts = inner.into_inner();
+            let number_part = parts.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected number in quantity literal".to_string())
+            })?;
+            let unit_part = parts.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected unit string in quantity literal".to_string())
+            })?;
+            let value = parse_decimal(number_part)?;
+            let unit = parse_string_literal(unit_part)?;
+            Ok(Expression::QuantityLiteral { value, unit })
+        }
         Rule::number => {
             let n = parse_decimal(inner)?;
             // Convert Decimal to f64 for JSON Number representation
@@ -971,9 +982,9 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                     *factor,
                     base_unit.clone(),
                 );
-                UnitRegistry::global()
-                    .register(unit)
-                    .map_err(|e| ParseError::GrammarError(format!("Failed to register unit: {}", e)))?;
+                UnitRegistry::global().register(unit).map_err(|e| {
+                    ParseError::GrammarError(format!("Failed to register unit: {}", e))
+                })?;
             }
             _ => {}
         }
@@ -1053,12 +1064,62 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
         }
     }
 
-    // Third pass: Add policies (not yet implemented - skip for now)
+    // Third pass: Add policies
     for node in &ast.declarations {
-        if let AstNode::Policy { .. } = node {
-            // TODO: Add policy support to Graph
-            // For now, just skip policies to avoid breaking existing tests
-            continue;
+        if let AstNode::Policy {
+            name,
+            version,
+            metadata,
+            expression,
+        } = node
+        {
+            let namespace = ast
+                .metadata
+                .namespace
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| "default".to_string());
+
+            let kind = metadata.kind.as_ref().map(|kind| match kind {
+                PolicyKind::Constraint => CorePolicyKind::Constraint,
+                PolicyKind::Derivation => CorePolicyKind::Derivation,
+                PolicyKind::Obligation => CorePolicyKind::Obligation,
+            });
+
+            let modality = metadata.modality.as_ref().map(|modality| match modality {
+                PolicyModality::Obligation => CorePolicyModality::Obligation,
+                PolicyModality::Prohibition => CorePolicyModality::Prohibition,
+                PolicyModality::Permission => CorePolicyModality::Permission,
+            });
+
+            let mut policy =
+                Policy::new_with_namespace(name.clone(), namespace, expression.clone())
+                    .with_metadata(
+                        kind,
+                        modality,
+                        metadata.priority,
+                        metadata.rationale.clone(),
+                        metadata.tags.clone(),
+                    );
+
+            let version_to_apply = version
+                .as_ref()
+                .cloned()
+                .or_else(|| ast.metadata.version.clone());
+
+            if let Some(version_str) = version_to_apply {
+                let semantic_version = SemanticVersion::parse(&version_str).map_err(|err| {
+                    ParseError::GrammarError(format!(
+                        "Invalid policy version '{}': {}",
+                        version_str, err
+                    ))
+                })?;
+                policy = policy.with_version(semantic_version);
+            }
+
+            graph.add_policy(policy).map_err(|e| {
+                ParseError::GrammarError(format!("Failed to add policy '{}': {}", name, e))
+            })?;
         }
     }
 

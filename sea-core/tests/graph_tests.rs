@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use sea_core::{
+    policy::{Expression, Policy},
     primitives::{Entity, Flow, Instance, Resource},
     units::unit_from_string,
     Graph,
@@ -213,6 +214,19 @@ fn test_add_flow_without_resource() {
     );
 
     assert!(graph.add_flow(flow).is_err());
+}
+
+#[test]
+fn test_add_policy() {
+    let mut graph = Graph::new();
+    let policy = Policy::new("Always True", Expression::literal(true));
+    let policy_id = policy.id.clone();
+
+    graph.add_policy(policy).unwrap();
+
+    assert_eq!(graph.policy_count(), 1);
+    assert!(graph.has_policy(&policy_id));
+    assert!(graph.get_policy(&policy_id).is_some());
 }
 
 #[test]

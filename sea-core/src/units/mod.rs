@@ -147,75 +147,133 @@ impl Default for UnitRegistry {
 
         // Mass units
         registry.register_base(Dimension::Mass, "kg");
-        registry.register(
-            Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg"),
-        );
-        registry.register(
-            Unit::new("g", "gram", Dimension::Mass, Decimal::new(1, 3), "kg"),
-        );
-        registry.register(
-            Unit::new("lb", "pound", Dimension::Mass, Decimal::new(45359237, 8), "kg"),
-        );
+        registry.register_builtin(Unit::new(
+            "kg",
+            "kilogram",
+            Dimension::Mass,
+            Decimal::from(1),
+            "kg",
+        ));
+        registry.register_builtin(Unit::new(
+            "g",
+            "gram",
+            Dimension::Mass,
+            Decimal::new(1, 3),
+            "kg",
+        ));
+        registry.register_builtin(Unit::new(
+            "lb",
+            "pound",
+            Dimension::Mass,
+            Decimal::new(45359237, 8),
+            "kg",
+        ));
 
         // Length units
         registry.register_base(Dimension::Length, "m");
-        registry.register(
-            Unit::new("m", "meter", Dimension::Length, Decimal::from(1), "m"),
-        );
-        registry.register(
-            Unit::new("cm", "centimeter", Dimension::Length, Decimal::new(1, 2), "m"),
-        );
-        registry.register(
-            Unit::new("in", "inch", Dimension::Length, Decimal::new(254, 4), "m"),
-        );
+        registry.register_builtin(Unit::new(
+            "m",
+            "meter",
+            Dimension::Length,
+            Decimal::from(1),
+            "m",
+        ));
+        registry.register_builtin(Unit::new(
+            "cm",
+            "centimeter",
+            Dimension::Length,
+            Decimal::new(1, 2),
+            "m",
+        ));
+        registry.register_builtin(Unit::new(
+            "in",
+            "inch",
+            Dimension::Length,
+            Decimal::new(254, 4),
+            "m",
+        ));
 
         // Volume units
         registry.register_base(Dimension::Volume, "L");
-        registry.register(
-            Unit::new("L", "liter", Dimension::Volume, Decimal::from(1), "L"),
-        );
-        registry.register(
-            Unit::new("mL", "milliliter", Dimension::Volume, Decimal::new(1, 3), "L"),
-        );
+        registry.register_builtin(Unit::new(
+            "L",
+            "liter",
+            Dimension::Volume,
+            Decimal::from(1),
+            "L",
+        ));
+        registry.register_builtin(Unit::new(
+            "mL",
+            "milliliter",
+            Dimension::Volume,
+            Decimal::new(1, 3),
+            "L",
+        ));
 
         // Currency units (no conversion without exchange rates)
         registry.register_base(Dimension::Currency, "USD");
-        registry.register(
-            Unit::new("USD", "US Dollar", Dimension::Currency, Decimal::from(1), "USD"),
-        );
-        registry.register(
-            Unit::new("EUR", "Euro", Dimension::Currency, Decimal::from(1), "EUR"),
-        );
-        registry.register(
-            Unit::new(
-                "GBP",
-                "British Pound",
-                Dimension::Currency,
-                Decimal::from(1),
-                "GBP",
-            ),
-        );
+        registry.register_builtin(Unit::new(
+            "USD",
+            "US Dollar",
+            Dimension::Currency,
+            Decimal::from(1),
+            "USD",
+        ));
+        registry.register_builtin(Unit::new(
+            "EUR",
+            "Euro",
+            Dimension::Currency,
+            Decimal::from(1),
+            "EUR",
+        ));
+        registry.register_builtin(Unit::new(
+            "GBP",
+            "British Pound",
+            Dimension::Currency,
+            Decimal::from(1),
+            "GBP",
+        ));
 
         // Time units
         registry.register_base(Dimension::Time, "s");
-        registry.register(
-            Unit::new("s", "second", Dimension::Time, Decimal::from(1), "s"),
-        );
-        registry.register(
-            Unit::new("min", "minute", Dimension::Time, Decimal::from(60), "s"),
-        );
-        registry.register(
-            Unit::new("h", "hour", Dimension::Time, Decimal::from(3600), "s"),
-        );
+        registry.register_builtin(Unit::new(
+            "s",
+            "second",
+            Dimension::Time,
+            Decimal::from(1),
+            "s",
+        ));
+        registry.register_builtin(Unit::new(
+            "min",
+            "minute",
+            Dimension::Time,
+            Decimal::from(60),
+            "s",
+        ));
+        registry.register_builtin(Unit::new(
+            "h",
+            "hour",
+            Dimension::Time,
+            Decimal::from(3600),
+            "s",
+        ));
 
         // Count (dimensionless)
         registry.register_base(Dimension::Count, "units");
-        registry.register(
-            Unit::new("units", "units", Dimension::Count, Decimal::from(1), "units"),
-        );
-        registry.register(
-            Unit::new("items", "items", Dimension::Count, Decimal::from(1), "items"),
-        );
+        registry.register_builtin(Unit::new(
+            "units",
+            "units",
+            Dimension::Count,
+            Decimal::from(1),
+            "units",
+        ));
+        registry.register_builtin(Unit::new(
+            "items",
+            "items",
+            Dimension::Count,
+            Decimal::from(1),
+            "items",
+        ));
 
         registry
     }
@@ -235,6 +293,10 @@ impl UnitRegistry {
         }
         self.units.insert(unit.symbol.clone(), unit);
         Ok(())
+    }
+
+    fn register_builtin(&mut self, unit: Unit) {
+        let _ = self.register(unit);
     }
 
     pub fn register_dimension(&mut self, dimension: Dimension) {
@@ -285,7 +347,7 @@ impl UnitRegistry {
     pub fn global() -> &'static mut UnitRegistry {
         use std::sync::Mutex;
         static GLOBAL_REGISTRY: OnceLock<Mutex<UnitRegistry>> = OnceLock::new();
-        
+
         let mutex = GLOBAL_REGISTRY.get_or_init(|| Mutex::new(UnitRegistry::default()));
         unsafe {
             let ptr = mutex as *const Mutex<UnitRegistry> as *mut Mutex<UnitRegistry>;

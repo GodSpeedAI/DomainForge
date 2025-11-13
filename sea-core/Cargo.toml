@@ -35,6 +35,7 @@ proptest = "1.0"
 wasm-bindgen-test = "0.3"
 jsonschema = "0.18"
 roxmltree = "0.21.1"
+rust_decimal_macros = "1.33"
 
 [build-dependencies]
 napi-build = "2.1"
