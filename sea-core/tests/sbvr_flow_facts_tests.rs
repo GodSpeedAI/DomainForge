@@ -11,7 +11,7 @@ mod sbvr_flow_facts_tests {
 
         let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
         let factory = Entity::new_with_namespace("Factory", "default".to_string());
-        let camera = Resource::new("Camera", unit_from_string("units"));
+        let camera = Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
 
         let warehouse_id = warehouse.id().clone();
         let factory_id = factory.id().clone();

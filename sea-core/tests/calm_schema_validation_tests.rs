@@ -41,7 +41,7 @@ fn test_complex_export_validates_against_schema() {
 
     let warehouse = Entity::new_with_namespace("Warehouse".to_string(), "logistics".to_string());
     let factory = Entity::new_with_namespace("Factory".to_string(), "manufacturing".to_string());
-    let cameras = Resource::new("Cameras".to_string(), unit_from_string("units"));
+    let cameras = Resource::new_with_namespace("Cameras".to_string(), unit_from_string("units"), "default".to_string());
 
     let warehouse_id = warehouse.id().clone();
     let factory_id = factory.id().clone();
@@ -102,7 +102,7 @@ fn test_all_node_types_validate() {
     graph.add_entity(entity).unwrap();
 
     // Add one resource
-    let resource = Resource::new("TestResource".to_string(), unit_from_string("units"));
+    let resource = Resource::new_with_namespace("TestResource".to_string(), unit_from_string("units"), "default".to_string());
     graph.add_resource(resource).unwrap();
 
     // Add one flow

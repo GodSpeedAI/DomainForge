@@ -72,6 +72,7 @@ impl Entity {
     /// let entity = Entity::new("Warehouse");
     /// assert_eq!(entity.name(), "Warehouse");
     /// ```
+    #[deprecated(note = "use new_with_namespace instead")]
     pub fn new(name: impl Into<String>) -> Self {
         let name = name.into();
         let namespace = "default".to_string();

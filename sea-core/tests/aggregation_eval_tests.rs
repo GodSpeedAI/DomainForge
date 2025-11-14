@@ -10,7 +10,7 @@ fn build_test_graph() -> Graph {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -154,8 +154,8 @@ fn test_count_mixed_resources() {
         Decimal::from(1),
         "units",
     );
-    let camera = Resource::new("Camera", units);
-    let gold = Resource::new("Gold", kg);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();

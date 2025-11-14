@@ -311,9 +311,11 @@ impl Instance {
                 crate::ConceptId::from(entity_uuid),
                 ns,
             ),
-            None => RustInstance::new(
+            // Use explicit default namespace to match Entity/Resource behavior
+            None => RustInstance::new_with_namespace(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
+                "default".to_string(),
             ),
         };
         Ok(Self { inner })

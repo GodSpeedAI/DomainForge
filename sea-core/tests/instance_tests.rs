@@ -5,7 +5,7 @@ use sea_core::ConceptId;
 #[test]
 fn test_instance_new_stores_references() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
-    let camera = Resource::new("Camera", unit_from_string("units"));
+    let camera = Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
 
     let instance = Instance::new(camera.id().clone(), warehouse.id().clone());
 

@@ -516,8 +516,8 @@ imported_graph = Graph.import_calm(calm_data)
 **Breaking Changes:**
 
 - **Namespace API**: `namespace()` now returns `&str` instead of `Option<&str>` (always returns "default" if unspecified)
-- **Constructor patterns**: Use `Entity::new(name)` for default namespace, `Entity::new_with_namespace(name, ns)` for explicit
-- **Resource namespace default**: `Resource::new(name, unit)` now routes through `Resource::new_with_namespace(..., "default")`, so `namespace()` is always `"default"` when omitted
+- **Constructor patterns**: Use `Entity::new_with_namespace(name, ns)` for explicit namespace; when migrating from the old `Entity::new(name)` callsite, pass `"default"` as the namespace to preserve previous behavior.
+- **Resource namespace default**: Prefer `Resource::new_with_namespace(name, unit, "default")` when an explicit namespace is required; existing `Resource::new(name, unit)` callsites should be updated to pass an explicit namespace (commonly `"default"`).
 - **Flow API**: Constructor takes `ConceptId` values (not references) - clone IDs before passing
 
 **New Features:**

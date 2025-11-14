@@ -18,7 +18,7 @@ fn test_end_to_end_count_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -67,8 +67,8 @@ fn test_sum_aggregation_comprehension_filters() {
     );
     let eur = Unit::new("EUR", "Euro", Dimension::Currency, Decimal::from(1), "EUR");
 
-    let money_usd = Resource::new("MoneyUSD", usd);
-    let money_eur = Resource::new("MoneyEUR", eur);
+    let money_usd = Resource::new_with_namespace("MoneyUSD", usd, "default".to_string());
+    let money_eur = Resource::new_with_namespace("MoneyEUR", eur, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(vendor.clone()).unwrap();
@@ -147,7 +147,7 @@ fn test_end_to_end_sum_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -187,7 +187,7 @@ fn test_end_to_end_avg_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
-    let camera = Resource::new("Camera", units);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -228,7 +228,7 @@ fn test_end_to_end_min_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
-    let camera = Resource::new("Camera", units);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -269,7 +269,7 @@ fn test_end_to_end_max_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
-    let camera = Resource::new("Camera", units);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -310,7 +310,7 @@ fn test_complex_aggregation_policy() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();

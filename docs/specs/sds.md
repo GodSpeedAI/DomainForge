@@ -1134,8 +1134,8 @@ pub struct Erp5Adapter;
 
 impl Erp5Adapter {
     pub fn migrate_node(node: &Erp5Node) -> Result<Entity, Error> {
-        Entity::new(&node.title, Some(&node.portal_type))
-            .with_attributes(node.properties.clone())
+        Entity::new_with_namespace(&node.title, node.portal_type.unwrap_or("default"))
+          .with_attributes(node.properties.clone())
     }
 
     pub fn migrate_movement(movement: &Erp5Movement, graph: &Graph) -> Result<Flow, Error> {

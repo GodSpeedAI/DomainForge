@@ -20,7 +20,7 @@ use uuid::Uuid;
 /// use rust_decimal::Decimal;
 ///
 /// let units = Unit::new("units", "units", Dimension::Count, Decimal::from(1), "units");
-/// let product = Resource::new("Camera", units);
+/// let product = Resource::new_with_namespace("Camera", units, "default".to_string());
 /// assert_eq!(product.name(), "Camera");
 /// assert_eq!(product.unit().symbol(), "units");
 /// assert_eq!(product.namespace(), "default");
@@ -47,7 +47,7 @@ use uuid::Uuid;
 /// use serde_json::json;
 ///
 /// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-/// let mut gold = Resource::new("Gold", kg);
+/// let mut gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 /// gold.set_attribute("purity", json!(0.999));
 /// gold.set_attribute("origin", json!("South Africa"));
 ///
@@ -62,7 +62,7 @@ use uuid::Uuid;
 /// use rust_decimal::Decimal;
 ///
 /// let oz = Unit::new("oz", "ounce", Dimension::Mass, Decimal::new(28349523, 9), "oz");
-/// let resource = Resource::new("Silver", oz);
+/// let resource = Resource::new_with_namespace("Silver", oz, "default".to_string());
 /// let json = serde_json::to_string(&resource).unwrap();
 /// let deserialized: Resource = serde_json::from_str(&json).unwrap();
 /// assert_eq!(resource.name(), deserialized.name());
@@ -88,10 +88,11 @@ impl Resource {
     /// use rust_decimal::Decimal;
     ///
     /// let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
-    /// let resource = Resource::new("Camera", kg);
+    /// let resource = Resource::new_with_namespace("Camera", kg, "default".to_string());
     /// assert_eq!(resource.name(), "Camera");
     /// assert_eq!(resource.unit().symbol(), "kg");
     /// ```
+    #[deprecated(note = "Use new_with_namespace instead")]
     pub fn new(name: impl Into<String>, unit: Unit) -> Self {
         let name = name.into();
         let namespace = "default".to_string();
@@ -185,7 +186,7 @@ impl Resource {
     /// use sea_core::units::unit_from_string;
     /// use serde_json::json;
     ///
-    /// let mut resource = Resource::new("Gold", unit_from_string("kg"));
+    /// let mut resource = Resource::new_with_namespace("Gold", unit_from_string("kg"), "default".to_string());
     /// resource.set_attribute("purity", json!(0.999));
     /// assert_eq!(resource.get_attribute("purity"), Some(&json!(0.999)));
     /// ```
@@ -204,7 +205,7 @@ impl Resource {
     /// use sea_core::units::unit_from_string;
     /// use serde_json::json;
     ///
-    /// let mut resource = Resource::new("Gold", unit_from_string("kg"));
+    /// let mut resource = Resource::new_with_namespace("Gold", unit_from_string("kg"), "default".to_string());
     /// resource.set_attribute("purity", json!(0.999));
     /// assert_eq!(resource.get_attribute("purity"), Some(&json!(0.999)));
     /// assert_eq!(resource.get_attribute("missing"), None);
