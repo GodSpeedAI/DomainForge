@@ -1,0 +1,19 @@
+# Minimal SHACL shape for SEA Graph
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sea: <http://example.com/sea#> .
+
+sea:ResourceShape a sh:NodeShape ;
+    sh:targetClass sea:Resource ;
+    sh:property [
+        sh:path sea:unit ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+    ] .
+
+sea:EntityShape a sh:NodeShape ;
+    sh:targetClass sea:Entity ;
+    sh:property [
+        sh:path sea:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+    ] .
