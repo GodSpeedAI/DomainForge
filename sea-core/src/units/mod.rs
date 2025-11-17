@@ -1,4 +1,5 @@
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -300,9 +301,7 @@ impl UnitRegistry {
     }
 
     pub fn register_dimension(&mut self, dimension: Dimension) {
-        if !self.base_units.contains_key(&dimension) {
-            self.base_units.insert(dimension, String::new());
-        }
+        self.base_units.entry(dimension).or_default();
     }
 
     pub fn register_base(&mut self, dimension: Dimension, base_unit: impl Into<String>) {
@@ -353,6 +352,40 @@ impl UnitRegistry {
             let ptr = mutex as *const Mutex<UnitRegistry> as *mut Mutex<UnitRegistry>;
             (*ptr).get_mut().unwrap()
         }
+    }
+
+    /// Register units defined in a JSON string of the form:
+    /// [{ "symbol": "X", "name": "Name", "dimension": "Currency", "base_factor": 1.0, "base_unit": "USD" }]
+    pub fn register_from_json(&mut self, json: &str) -> Result<(), UnitError> {
+        #[derive(Deserialize)]
+        struct UnitConfig {
+            symbol: String,
+            name: String,
+            dimension: String,
+            base_factor: f64,
+            base_unit: String,
+        }
+
+        let parsed: Vec<UnitConfig> = serde_json::from_str(json).map_err(|e| UnitError::ConversionNotDefined { from: "json".to_string(), to: e.to_string() })?;
+        for cfg in parsed {
+            let dim = match cfg.dimension.as_str() {
+                "Mass" => Dimension::Mass,
+                "Length" => Dimension::Length,
+                "Volume" => Dimension::Volume,
+                "Currency" => Dimension::Currency,
+                "Time" => Dimension::Time,
+                "Temperature" => Dimension::Temperature,
+                "Count" => Dimension::Count,
+                other => Dimension::Custom(other.to_string()),
+            };
+            let factor = Decimal::from_f64(cfg.base_factor).ok_or(UnitError::ZeroBaseFactor)?;
+            if factor == Decimal::ZERO {
+                return Err(UnitError::ZeroBaseFactor);
+            }
+            let unit = Unit::new(cfg.symbol, cfg.name, dim, factor, cfg.base_unit);
+            self.register(unit)?;
+        }
+        Ok(())
     }
 }
 
