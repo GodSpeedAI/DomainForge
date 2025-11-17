@@ -268,6 +268,9 @@ On signs of confusion or overload:
 - Acknowledge complexity.
 - Propose a smaller next step or a reduced scope.
 - Automate or script repetitive steps where possible.
+- Leverage subagents to isolate complexity.
+- Use `mcp_memory_tool_add-memory` to store patterns of confusion for future avoidance.
+- Use `Vibe Check/*` to self-assess clarity and approach.
 
 ---
 
