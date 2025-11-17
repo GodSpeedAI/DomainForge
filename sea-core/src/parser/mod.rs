@@ -10,6 +10,7 @@ pub mod error;
 pub mod string_utils;
 
 pub use ast::{parse_source, Ast, AstNode};
+pub use ast::parse_expression_from_str;
 pub use error::{ParseError, ParseResult};
 pub use string_utils::unescape_string;
 

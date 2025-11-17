@@ -220,6 +220,19 @@ pytest
 pytest tests/
 ```
 
-## License
+Quick start for tests in development (recommended):
 
-MIT OR Apache-2.0
+```bash
+# Create a local virtual environment and install dev dependencies
+just python-setup
+
+# Run Python tests using the venv-managed Python
+just python-test
+```
+
+If you'd like to remove the local virtual environment and start fresh:
+
+```bash
+just python-clean
+```
+

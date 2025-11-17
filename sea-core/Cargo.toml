@@ -26,6 +26,9 @@ napi-derive = { version = "2.16", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 percent-encoding = "2.3.2"
+roxmltree = "0.21.1"
+oxigraph = { version = "0.3", optional = true }
+
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
@@ -35,6 +38,9 @@ proptest = "1.0"
 wasm-bindgen-test = "0.3"
 jsonschema = "0.18"
 roxmltree = "0.21.1"
+assert_cmd = "2.0"
+tempfile = "3.6"
+predicates = "3.1"
 rust_decimal_macros = "1.33"
 
 [build-dependencies]
@@ -50,6 +56,7 @@ default = []
 python = ["pyo3", "pythonize"]
 typescript = ["napi", "napi-derive"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
+shacl = ["oxigraph"]
 
 [profile.release]
 opt-level = "z"

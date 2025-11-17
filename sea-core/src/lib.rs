@@ -25,6 +25,7 @@
 pub const VERSION: &str = "0.0.1";
 
 pub mod calm;
+pub mod kg_import;
 pub mod concept_id;
 pub mod graph;
 pub mod kg;
@@ -60,6 +61,7 @@ pub use graph::Graph;
 pub use kg::{KgError, KnowledgeGraph};
 pub use parser::{parse, parse_to_graph};
 pub use sbvr::{SbvrError, SbvrModel};
+pub use kg_import::{import_kg_turtle, import_kg_rdfxml};
 pub use semantic_version::SemanticVersion;
 pub use units::{unit_from_string, Dimension, Unit, UnitError, UnitRegistry};
 pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};

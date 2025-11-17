@@ -59,7 +59,7 @@ mod rdf_xml_typed_literal_tests {
             .find(|node| {
                 node.is_element()
                     && node.tag_name().name() == "label"
-                    && node.tag_name().namespace() == Some("http://domainforge.ai/rdfs#")
+                    && node.tag_name().namespace() == Some("http://www.w3.org/2000/01/rdf-schema#")
             })
             .expect("Missing rdfs:label element");
 

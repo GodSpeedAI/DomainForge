@@ -477,6 +477,16 @@ fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
     }
 }
 
+/// Parse a single expression string into an Expression AST node.
+pub fn parse_expression_from_str(source: &str) -> ParseResult<Expression> {
+    let mut pairs = SeaParser::parse(Rule::expression, source)
+        .map_err(|e| ParseError::GrammarError(format!("Parse error: {}", e)))?;
+    let pair = pairs
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Empty expression".to_string()))?;
+    parse_expression(pair)
+}
+
 /// Parse OR expression
 fn parse_or_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut inner = pair.into_inner();
