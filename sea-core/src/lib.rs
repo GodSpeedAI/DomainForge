@@ -36,6 +36,7 @@ pub mod semantic_version;
 pub mod units;
 pub mod uuid_module;
 pub mod validation_error;
+pub mod validation_result;
 
 #[cfg(feature = "python")]
 pub mod python;
@@ -63,6 +64,7 @@ pub use semantic_version::SemanticVersion;
 pub use units::{unit_from_string, Dimension, Unit, UnitError, UnitRegistry};
 pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};
 pub use validation_error::ValidationError;
+pub use validation_result::ValidationResult;
 
 #[cfg(test)]
 mod test_utils;

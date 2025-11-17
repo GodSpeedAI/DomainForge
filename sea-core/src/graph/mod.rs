@@ -1,4 +1,5 @@
-use crate::policy::Policy;
+use crate::policy::{Policy, Violation, Severity};
+use crate::validation_result::ValidationResult;
 use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -296,5 +297,31 @@ impl Graph {
 
     pub fn all_policies(&self) -> Vec<&Policy> {
         self.policies.values().collect()
+    }
+
+    /// Validate the graph by evaluating all policies against it and
+    /// collecting any violations produced. Returns a `ValidationResult`.
+    pub fn validate(&self) -> ValidationResult {
+        let mut all_violations: Vec<Violation> = Vec::new();
+        for policy in self.policies.values() {
+            match policy.evaluate(self) {
+                Ok(eval) => {
+                    all_violations.extend(eval.violations);
+                }
+                Err(err) => {
+                    // If a policy evaluation fails, produce an ERROR severity
+                    // violation indicating evaluation failure so the user can
+                    // see the issue.
+                    let v = Violation::new(
+                        &policy.name,
+                        format!("Policy evaluation failed: {}", err),
+                        Severity::Error,
+                    );
+                    all_violations.push(v);
+                }
+            }
+        }
+
+        ValidationResult::new(self.policies.len(), all_violations)
     }
 }
