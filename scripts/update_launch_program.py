@@ -12,6 +12,7 @@ If the file does not exist, writes the default program path.
 import argparse
 import json
 import os
+import sys
 
 
 def find_config_index(configs, name):
@@ -34,9 +35,15 @@ def main():
     )
     # If program_path is absolute and inside the workspace, replace the prefix with ${workspaceFolder}
     workspace_prefix = os.path.abspath(".")
-    if program_path.startswith(workspace_prefix):
-        rel_path = os.path.relpath(program_path, workspace_prefix)
-        program_path = os.path.join("${workspaceFolder}", rel_path).replace("\\", "/")
+    if "${workspaceFolder}" not in program_path:
+        abs_program_path = os.path.abspath(program_path)
+        normalized_workspace = os.path.normcase(os.path.normpath(workspace_prefix))
+        normalized_program = os.path.normcase(os.path.normpath(abs_program_path))
+        if normalized_program.startswith(normalized_workspace):
+            rel_path = os.path.relpath(abs_program_path, workspace_prefix)
+            program_path = os.path.join("${workspaceFolder}", rel_path).replace("\\", "/")
+        else:
+            program_path = abs_program_path.replace("\\", "/")
     launch_path = args.launch
 
     if not os.path.exists(launch_path):
@@ -45,8 +52,12 @@ def main():
         )
         launch = {"version": "0.2.0", "configurations": []}
     else:
-        with open(launch_path, "r") as f:
-            launch = json.load(f)
+        try:
+            with open(launch_path, "r") as f:
+                launch = json.load(f)
+        except json.JSONDecodeError as err:
+            print(f"Failed to parse {launch_path}: {err}")
+            sys.exit(1)
 
     configs = launch.setdefault("configurations", [])
     idx = find_config_index(configs, args.config_name)
@@ -70,6 +81,9 @@ def main():
         configs[idx]["program"] = program_path
         print(f"Updated {args.config_name} program to {program_path}")
 
+    launch_dir = os.path.dirname(launch_path)
+    if launch_dir:
+        os.makedirs(launch_dir, exist_ok=True)
     with open(launch_path, "w") as f:
         json.dump(launch, f, indent=2)
     print(f"Wrote updated launch.json: {launch_path}")

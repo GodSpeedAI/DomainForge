@@ -1,10 +1,10 @@
+use std::str::FromStr;
 use rust_decimal::Decimal;
 use sea_core::{
     primitives::{Entity, Flow, Instance, Resource},
     units::unit_from_string,
     Graph,
 };
-use std::str::FromStr;
 
 #[test]
 fn test_complete_supply_chain_graph() {
@@ -15,9 +15,18 @@ fn test_complete_supply_chain_graph() {
     let manufacturer = Entity::new_with_namespace("Camera Manufacturer", "default".to_string());
     let retailer = Entity::new_with_namespace("Electronics Retailer", "default".to_string());
 
-    let steel = Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
-    let camera_parts = Resource::new_with_namespace("Camera Parts", unit_from_string("units"), "default".to_string());
-    let cameras = Resource::new_with_namespace("Finished Cameras", unit_from_string("units"), "default".to_string());
+    let steel =
+        Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
+    let camera_parts = Resource::new_with_namespace(
+        "Camera Parts",
+        unit_from_string("units"),
+        "default".to_string(),
+    );
+    let cameras = Resource::new_with_namespace(
+        "Finished Cameras",
+        unit_from_string("units"),
+        "default".to_string(),
+    );
 
     let supplier_id = supplier.id().clone();
     let warehouse_id = warehouse.id().clone();
@@ -91,7 +100,8 @@ fn test_graph_with_instances() {
     let mut graph = Graph::new();
 
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
-    let cameras = Resource::new_with_namespace("Cameras", unit_from_string("units"), "default".to_string());
+    let cameras =
+        Resource::new_with_namespace("Cameras", unit_from_string("units"), "default".to_string());
 
     let warehouse_id = warehouse.id().clone();
     let cameras_id = cameras.id().clone();
@@ -113,7 +123,8 @@ fn test_graph_validation_prevents_invalid_flows() {
     let mut graph = Graph::new();
 
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
-    let cameras = Resource::new_with_namespace("Cameras", unit_from_string("units"), "default".to_string());
+    let cameras =
+        Resource::new_with_namespace("Cameras", unit_from_string("units"), "default".to_string());
 
     let warehouse_id = warehouse.id().clone();
     let cameras_id = cameras.id().clone();
@@ -141,9 +152,15 @@ fn test_graph_multi_resource_flows() {
     let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
 
-    let steel = Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
-    let plastic = Resource::new_with_namespace("Plastic", unit_from_string("kg"), "default".to_string());
-    let electronics = Resource::new_with_namespace("Electronics", unit_from_string("units"), "default".to_string());
+    let steel =
+        Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
+    let plastic =
+        Resource::new_with_namespace("Plastic", unit_from_string("kg"), "default".to_string());
+    let electronics = Resource::new_with_namespace(
+        "Electronics",
+        unit_from_string("units"),
+        "default".to_string(),
+    );
 
     let supplier_id = supplier.id().clone();
     let factory_id = factory.id().clone();

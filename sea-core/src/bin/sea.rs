@@ -1,7 +1,9 @@
-use std::env;
-use std::fs::read_to_string;
 use sea_core::parser::parse_to_graph;
 use sea_core::import_kg_turtle;
+#[cfg(feature = "shacl")]
+use sea_core::ImportError;
+use std::env;
+use std::fs::read_to_string;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,15 +29,23 @@ fn main() {
                     if result.error_count > 0 {
                         println!("Validation failed: {} errors", result.error_count);
                         for v in result.violations {
-                            println!("- [{}] {}: {}", match v.severity {
-                                sea_core::policy::Severity::Error => "ERROR",
-                                sea_core::policy::Severity::Warning => "WARN",
-                                sea_core::policy::Severity::Info => "INFO",
-                            }, v.policy_name, v.message);
+                            println!(
+                                "- [{}] {}: {}",
+                                match v.severity {
+                                    sea_core::policy::Severity::Error => "ERROR",
+                                    sea_core::policy::Severity::Warning => "WARN",
+                                    sea_core::policy::Severity::Info => "INFO",
+                                },
+                                v.policy_name,
+                                v.message
+                            );
                         }
                         std::process::exit(1);
                     } else {
-                        println!("Validation succeeded: {} violations total", result.violations.len());
+                        println!(
+                            "Validation succeeded: {} violations total",
+                            result.violations.len()
+                        );
                         std::process::exit(0);
                     }
                 }
@@ -61,24 +71,27 @@ fn main() {
             };
 
             match format.as_str() {
-                "sbvr" => {
-                    match sea_core::SbvrModel::from_xmi(&source) {
-                        Ok(model) => match model.to_graph() {
-                            Ok(graph) => {
-                                println!("Imported SBVR to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
-                                std::process::exit(0);
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to convert SBVR to Graph: {}", e);
-                                std::process::exit(1);
-                            }
-                        },
+                "sbvr" => match sea_core::SbvrModel::from_xmi(&source) {
+                    Ok(model) => match model.to_graph() {
+                        Ok(graph) => {
+                            println!(
+                                "Imported SBVR to Graph: entities={} resources={} flows={}",
+                                graph.entity_count(),
+                                graph.resource_count(),
+                                graph.flow_count()
+                            );
+                            std::process::exit(0);
+                        }
                         Err(e) => {
-                            eprintln!("Failed to parse SBVR XMI: {}", e);
+                            eprintln!("Failed to convert SBVR to Graph: {}", e);
                             std::process::exit(1);
                         }
+                    },
+                    Err(e) => {
+                        eprintln!("Failed to parse SBVR XMI: {}", e);
+                        std::process::exit(1);
                     }
-                }
+                },
                 "kg" => {
                     // If the source looks like XML (starts with <), prefer RDF/XML import path
                     let src_trim = source.trim_start();
@@ -90,24 +103,25 @@ fn main() {
                                     println!("Imported KG (RDF/XML) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
                                     std::process::exit(0);
                                 }
-                                Err(err_rdf) => {
-                                    // If SHACL validation failed, treat as a hard error and do not fall back.
-                                    if err_rdf.contains("SHACL validation failed") {
-                                        eprintln!("{}", err_rdf);
+                                Err(err_rdf) => match err_rdf {
+                                    ImportError::ShaclValidation(msg) => {
+                                        eprintln!("{}", msg);
                                         std::process::exit(1);
                                     }
-                                    // Fallback: try Turtle if RDF/XML import failed for parsing/format reasons
-                                    match import_kg_turtle(&source) {
-                                        Ok(graph) => {
-                                            println!("Imported KG (Turtle) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
-                                            std::process::exit(0);
-                                        }
-                                        Err(err_turtle) => {
-                                            eprintln!("Failed to import KG as RDF/XML: {}; as Turtle: {}", err_rdf, err_turtle);
-                                            std::process::exit(1);
+                                    other => {
+                                        let err_rdf_msg = other.to_string();
+                                        match import_kg_turtle(&source) {
+                                            Ok(graph) => {
+                                                println!("Imported KG (Turtle) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
+                                                std::process::exit(0);
+                                            }
+                                            Err(err_turtle) => {
+                                                eprintln!("Failed to import KG as RDF/XML: {}; as Turtle: {}", err_rdf_msg, err_turtle);
+                                                std::process::exit(1);
+                                            }
                                         }
                                     }
-                                }
+                                },
                             }
                         }
                         #[cfg(not(feature = "shacl"))]
@@ -140,10 +154,17 @@ fn main() {
                                             println!("Imported KG (RDF/XML) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
                                             std::process::exit(0);
                                         }
-                                        Err(err_rdf) => {
-                                            eprintln!("Failed to import KG as Turtle: {}; and as RDF/XML: {}", err_turtle, err_rdf);
-                                            std::process::exit(1);
-                                        }
+                                        Err(err_rdf) => match err_rdf {
+                                            ImportError::ShaclValidation(msg) => {
+                                                eprintln!("{}", msg);
+                                                std::process::exit(1);
+                                            }
+                                            other => {
+                                                let err_rdf_msg = other.to_string();
+                                                eprintln!("Failed to import KG as Turtle: {}; and as RDF/XML: {}", err_turtle, err_rdf_msg);
+                                                std::process::exit(1);
+                                            }
+                                        },
                                     }
                                 }
                                 #[cfg(not(feature = "shacl"))]

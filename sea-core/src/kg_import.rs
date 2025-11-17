@@ -1,5 +1,11 @@
 use crate::graph::Graph;
-use crate::kg::{KnowledgeGraph, ShaclProperty, ShaclShape};
+use crate::kg::KnowledgeGraph;
+
+// These types are only used when the 'shacl' feature is enabled; make their
+// imports conditional to avoid unused-import warnings when the feature is off.
+#[cfg(feature = "shacl")]
+use crate::kg::{ShaclProperty, ShaclShape};
+use std::fmt;
 
 #[cfg(feature = "shacl")]
 use oxigraph::model::{GraphNameRef, Term};
@@ -8,14 +14,34 @@ use oxigraph::sparql::QueryResults;
 #[cfg(feature = "shacl")]
 use oxigraph::store::Store;
 
-pub fn import_kg_turtle(turtle: &str) -> Result<Graph, String> {
-    match KnowledgeGraph::from_turtle(turtle) {
-        Ok(kg) => validate_and_convert(kg),
-        Err(e) => Err(format!("Failed to parse Turtle KG: {}", e)),
+#[derive(Debug)]
+pub enum ImportError {
+    ShaclValidation(String),
+    Other(String),
+}
+
+impl fmt::Display for ImportError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImportError::ShaclValidation(msg) => write!(f, "{}", msg),
+            ImportError::Other(msg) => write!(f, "{}", msg),
+        }
     }
 }
 
-fn validate_and_convert(kg: KnowledgeGraph) -> Result<Graph, String> {
+impl std::error::Error for ImportError {}
+
+pub fn import_kg_turtle(turtle: &str) -> Result<Graph, ImportError> {
+    match KnowledgeGraph::from_turtle(turtle) {
+        Ok(kg) => validate_and_convert(kg),
+        Err(e) => Err(ImportError::Other(format!(
+            "Failed to parse Turtle KG: {}",
+            e
+        ))),
+    }
+}
+
+fn validate_and_convert(kg: KnowledgeGraph) -> Result<Graph, ImportError> {
     match kg.validate_shacl() {
         Ok(vs) => {
             if !vs.is_empty() {
@@ -24,39 +50,54 @@ fn validate_and_convert(kg: KnowledgeGraph) -> Result<Graph, String> {
                     .map(|v| format!("[{:?}] {}", v.severity, v.message))
                     .collect::<Vec<_>>()
                     .join("; ");
-                Err(format!("SHACL validation failed: {}", summary))
+                Err(ImportError::ShaclValidation(format!(
+                    "SHACL validation failed: {}",
+                    summary
+                )))
             } else {
                 match kg.to_graph() {
                     Ok(graph) => Ok(graph),
-                    Err(e) => Err(format!("Failed to convert KG to Graph: {}", e)),
+                    Err(e) => Err(ImportError::Other(format!(
+                        "Failed to convert KG to Graph: {}",
+                        e
+                    ))),
                 }
             }
         }
-        Err(e) => Err(format!("SHACL validation failed: {}", e)),
+        Err(e) => Err(ImportError::ShaclValidation(format!(
+            "SHACL validation failed: {}",
+            e
+        ))),
     }
 }
 
-pub fn import_kg_rdfxml(xml: &str) -> Result<Graph, String> {
+pub fn import_kg_rdfxml(xml: &str) -> Result<Graph, ImportError> {
     #[cfg(feature = "shacl")]
     {
-        let store = Store::new().map_err(|e| format!("Failed to create oxigraph store: {}", e))?;
+        let store = Store::new()
+            .map_err(|e| ImportError::Other(format!("Failed to create oxigraph store: {}", e)))?;
         let fmt = oxigraph::io::GraphFormat::RdfXml;
 
         // Load the RDF/XML into the default graph
         store
             .load_graph(xml.as_bytes(), fmt, GraphNameRef::DefaultGraph, None)
-            .map_err(|e| format!("Failed to parse RDF/XML with oxigraph: {}", e))?;
+            .map_err(|e| {
+                ImportError::Other(format!("Failed to parse RDF/XML with oxigraph: {}", e))
+            })?;
 
         // Serialize the parsed RDF/XML into Turtle so we can reuse KnowledgeGraph::from_turtle
         let mut writer = Vec::new();
         let turtle_fmt = oxigraph::io::GraphFormat::Turtle;
         store
             .dump_graph(&mut writer, turtle_fmt, GraphNameRef::DefaultGraph)
-            .map_err(|e| format!("Failed to serialize RDF/XML to Turtle: {}", e))?;
-        let turtle_str = String::from_utf8(writer).map_err(|e| format!("Invalid UTF-8: {}", e))?;
+            .map_err(|e| {
+                ImportError::Other(format!("Failed to serialize RDF/XML to Turtle: {}", e))
+            })?;
+        let turtle_str = String::from_utf8(writer)
+            .map_err(|e| ImportError::Other(format!("Invalid UTF-8: {}", e)))?;
 
         let mut kg = KnowledgeGraph::from_turtle(&turtle_str)
-            .map_err(|e| format!("Failed to convert RDF/XML to KG: {}", e))?;
+            .map_err(|e| ImportError::Other(format!("Failed to convert RDF/XML to KG: {}", e)))?;
 
         // If we didn't pick up any shapes from the Turtle representation, try to extract
         // SHACL shapes directly from the store via SPARQL.
@@ -69,12 +110,14 @@ pub fn import_kg_rdfxml(xml: &str) -> Result<Graph, String> {
     #[cfg(not(feature = "shacl"))]
     {
         let _ = xml;
-        Err("RDF/XML import is not supported in this build (enable feature 'shacl')".to_string())
+        Err(ImportError::Other(
+            "RDF/XML import is not supported in this build (enable feature 'shacl')".to_string(),
+        ))
     }
 }
 
 #[cfg(feature = "shacl")]
-fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(), String> {
+fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(), ImportError> {
     let q = r#"
         PREFIX sh: <http://www.w3.org/ns/shacl#>
         PREFIX sea: <http://domainforge.ai/sea#>
@@ -99,7 +142,9 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
             let mut map: HashMap<String, (Option<String>, Vec<ShaclProperty>)> = HashMap::new();
 
             while let Some(sol_res) = solutions.next() {
-                let sol = sol_res.map_err(|e| format!("Error reading SHACL SPARQL solution: {}", e))?;
+                let sol = sol_res.map_err(|e| {
+                    ImportError::Other(format!("Error reading SHACL SPARQL solution: {}", e))
+                })?;
 
                 let term_to_named_str = |t: &Term| match t {
                     Term::NamedNode(nn) => Some(nn.as_str().to_string()),
@@ -124,24 +169,24 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
                     .and_then(|t| term_to_literal_val(t))
                     .and_then(|v| v.parse::<u32>().ok());
                 // minExclusive returns a literal value (e.g., "0"^^xsd:decimal); we only use the lexical form
-                let min_exclusive =
-                    sol.get("minExclusive").and_then(|t| term_to_literal_val(t));
+                let min_exclusive = sol.get("minExclusive").and_then(|t| term_to_literal_val(t));
 
                 if let (Some(shape), Some(path)) = (shape_term.clone(), path_term.clone()) {
-                    let path_pref = if path.starts_with("http://domainforge.ai/sea#") {
-                        format!("sea:{}", &path["http://domainforge.ai/sea#".len()..])
-                    } else if path.starts_with("http://www.w3.org/2000/01/rdf-schema#") {
-                        format!("rdfs:{}", &path["http://www.w3.org/2000/01/rdf-schema#".len()..])
-                    } else {
-                        path.clone()
-                    };
+                    let path_pref =
+                        if let Some(stripped) = path.strip_prefix("http://domainforge.ai/sea#") {
+                            format!("sea:{}", stripped)
+                        } else if let Some(stripped) =
+                            path.strip_prefix("http://www.w3.org/2000/01/rdf-schema#")
+                        {
+                            format!("rdfs:{}", stripped)
+                        } else {
+                            path.clone()
+                        };
 
                     // Normalize datatype IRIs to xsd: prefixes
                     let datatype_pref = datatype_term.as_ref().map(|dt| {
-                        if dt.starts_with("http://www.w3.org/2001/XMLSchema#") {
-                            format!("xsd:{}", &dt["http://www.w3.org/2001/XMLSchema#".len()..])
-                        } else if dt.starts_with("xsd:") {
-                            dt.clone()
+                        if let Some(rest) = dt.strip_prefix("http://www.w3.org/2001/XMLSchema#") {
+                            format!("xsd:{}", rest)
                         } else {
                             dt.clone()
                         }
@@ -172,14 +217,15 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
             let mut extracted_shapes: Vec<ShaclShape> = Vec::new();
             for (shape_uri, (target_opt, props)) in map.into_iter() {
                 let target_class = if let Some(target) = target_opt {
-                    // prefer the explicit sh:targetClass IRI -> normalize to prefixed name
-                    if target.starts_with("http://domainforge.ai/sea#") {
-                        format!("sea:{}", &target["http://domainforge.ai/sea#".len()..])
+                    if let Some(stripped) = target.strip_prefix("http://domainforge.ai/sea#") {
+                        format!("sea:{}", stripped)
                     } else {
                         target
                     }
                 } else if let Some(pos) = shape_uri.find('#') {
-                    format!("sea:{}", &shape_uri[pos + 1..].replace("Shape", ""))
+                    let fragment = &shape_uri[pos + 1..];
+                    let fragment = fragment.strip_suffix("Shape").unwrap_or(fragment);
+                    format!("sea:{}", fragment)
                 } else {
                     shape_uri.clone()
                 };
@@ -191,16 +237,15 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
             }
 
             if !extracted_shapes.is_empty() {
-                if kg.shapes.is_empty() {
-                    kg.shapes = extracted_shapes;
-                } else {
-                    kg.shapes.extend(extracted_shapes);
-                }
+                kg.shapes = extracted_shapes;
             }
 
             Ok(())
         }
         Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to execute SHACL SPARQL query: {}", e)),
+        Err(e) => Err(ImportError::Other(format!(
+            "Failed to execute SHACL SPARQL query: {}",
+            e
+        ))),
     }
 }

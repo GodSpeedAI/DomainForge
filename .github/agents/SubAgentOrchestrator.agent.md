@@ -1,32 +1,32 @@
 ---
 description: "Subagent Orchestration Strategy – context-isolated workflows that maximize main chat clarity"
 tools:
-  [
-    "runSubagent",
-    "search",
-    "edit",
-    "runCommands",
-    "runTasks",
-    "Nx Mcp Server/*",
-    "Context7/*",
-    "Exa Search/*",
-    "Ref/*",
-    "Memory Tool/*",
-    "microsoftdocs/mcp/*",
-    "Vibe Check/*",
-    "github/*",
-    "usages",
-    "vscodeAPI",
-    "problems",
-    "changes",
-    "testFailure",
-    "openSimpleBrowser",
-    "fetch",
-    "githubRepo",
-    "extensions",
-    "todos",
-    "runTests"
-  ]
+  preinstalled:
+    - runSubagent
+    - search
+    - edit
+    - runCommands
+    - runTasks
+    - Nx Mcp Server/*
+    - Context7/*
+    - Exa Search/*
+    - Ref/*
+    - Memory Tool/*
+    - microsoftdocs/mcp/*
+    - github/*
+    - usages
+    - vscodeAPI
+    - problems
+    - changes
+    - testFailure
+    - openSimpleBrowser
+    - fetch
+    - githubRepo
+    - extensions
+    - todos
+    - runTests
+  optional:
+    - "Vibe Check/* (community tool; user must provide/host)"
 ---
 
 # Subagent Orchestration Strategy for Coder.agent
@@ -376,7 +376,34 @@ Next step: Review for accuracy, then publish to docs site."
 
 ## Subagent Prompt Construction Rules
 
-Every subagent prompt must follow this structure:
+Every subagent prompt must include the required sections listed below.
+
+```
+<Clear, directive goal statement in 1 sentence>                     ← **Required**
+
+Context:
+- Files/Folders: <Explicit #file: or #folder: references>            ← **Required**
+- Constraints: <Hard requirements, performance limits, backward compatibility>  (include only when applicable)
+- Current State: <Relevant system state or recent changes>          (optional, but helpful for recent changes)
+
+Deliverable:
+- <Specific output 1>
+- <Specific output 2>
+- <Specific output 3>
+[Limit to 1-5 deliverables to keep subagent focused]                ← **Required**
+
+Tools:
+- <Tool hints only when a specific capability is critical>          (optional)
+
+#runSubagent
+```
+
+Template Strictness:
+- **Always:** Goal, Context with Files/Folders scope, Deliverable list
+- **When applicable:** Constraints, Current State, Tool hints (provide tool tier if not preinstalled)
+- **Never:** Conversation history, main chat decisions, unrelated scope
+
+Format guidance: Keep nesting to 2 levels max, prefer bullet lists over prose, and keep the prompt under ~300 words to avoid context bloat.
 
 ```text
 <Clear, directive goal statement in 1 sentence>
@@ -467,7 +494,20 @@ MEMORY: Auth strategy decision - JWT chosen over OAuth2 (simpler for internal AP
 "The subagent looked at pattern 1 which was..., and pattern 2 which was..., and pattern 3..." [copy-pasting subagent output]
 ```
 
+### 5. Handle Subagent Failures Gracefully
+- **Detect & log** timeouts, crashes, and tool errors (e.g., no response within the timebox or tool calls that return errors) and capture any partial artifacts.
+- **Retry policy:** trigger one automatic retry with exponential backoff (e.g., 30s → 60s). If the failure persists or the task is blocking, escalate to main chat with the failure summary.
+- **Preserve partial results** and include them when escalating so the user benefits from the investigation even if it timed out.
+- **Recommend fallback actions** such as manual review, splitting the task, or spawning a different subagent, and explicitly mark decision-critical missing info (files, clarifications, data).
+- **Escalation template:** 
+```text
+Subagent "<name>" failed (timeout/error). Partial findings: [...]. Missing info: [...]. Flags: retry_possible=No, escalate_now=Yes, fallback=Consider manual intervention or smaller subagent.
+```
+Include these flags when reporting so main chat knows whether to retry, escalate, or handle the gap manually.
+
 ---
+
+> **Scope note:** The patterns below are tailored to DomainForge/SEA (sea-core, policy, graph, and the language bindings). Teams operating in other stacks should swap in their equivalent core modules, validation subsystems, language bindings, and performance components, and lean on the generic patterns above for framework-agnostic guidance before adapting the examples below.
 
 ## Domain-Specific Patterns (DomainForge/SEA DSL)
 
@@ -632,6 +672,13 @@ Implementing BFS traversal optimization."
 
 Use `Vibe Check/*` to validate your delegation strategy periodically:
 
+### Vibe Check Invocation Rules
+- **Trigger conditions:** After every 3+ subagent delegations within a session, every 30 minutes of active work, or at major phase transitions (research → decision, design → implementation).
+- **Invocation method:** Call the optional `Vibe Check/*` tool with the current session transcript or a summarized 1-2 paragraph digest if the log exceeds 3k tokens. Request a clarity score, 2-3 actionable recommendations, and any flagged risk areas.
+- **Expected output:** A JSON-friendly response containing `clarity_score` (1-10), `recommendations` (list of 2-3 short bullets), and `risk_areas` (key phrases to monitor).
+- **Integration rule:** If clarity_score < 7, immediately apply recommended adjustments (trim context, split investigations, tighten prompts) before continuing. Always annotate the plan with the recommendations you followed.
+- **When unavailable:** Vibe Check is optional (see frontmatter). If it's not configured, log “Vibe Check unavailable; proceeding with manual review” and rely on manual shortcuts instead. To add Vibe Check, provision the community tool and include `Vibe Check/*` in your workspace tooling configuration.
+
 ### Questions to ask via vibe_check:
 
 **Context Management:**
@@ -734,7 +781,10 @@ On first invocation in a workspace:
    - Memory recall for project conventions
    - High-level workspace structure
 
-2. **Immediate delegation to comprehensive subagent:**
+2. **Immediate delegation to a comprehensive subagent (5 minute timebox):**
+   - Timebox the run to 5 minutes. If the subagent reaches the timeout, accept the latest partial summary (label it as partial due to timeout) and move on to storage/caching.
+   - Ask the subagent to resummarize outputs over ~3k tokens down to a focused ≤500 token executive summary before returning it, and to highlight any remaining missing context or files.
+   - Capture any partial artifacts so they can be referenced or rerun later if needed.
    ```text
    Perform initial workspace deep-dive with #runSubagent.
 
@@ -754,8 +804,8 @@ On first invocation in a workspace:
 
    Tools: search, ref, github, Nx Mcp Server/*
 
-   #runSubagent
-   ```
+  #runSubagent
+  ```
 
 3. **Store compressed results to memory:**
    ```text
@@ -766,6 +816,9 @@ On first invocation in a workspace:
 
    Ready for task delegation."
    ```
+   - Cache this compressed summary keyed by the current repo HEAD (e.g., `git rev-parse HEAD`). Keep the cached payload in memory along with its timestamp.
+   - Reuse the cached summary when the workspace reopens and the HEAD hash is unchanged, provided the cached entry is younger than 4 hours. If the hash changes or the cache is stale, rerun step 2.
+   - Trigger an initialization refresh whenever the workspace opens, the cached summary is ≥4 hours old, or the HEAD hash differs from the cached hash. When re-running, compare the current `git rev-parse HEAD` value with the stored hash; only redelegate if the values differ.
 
 ---
 

@@ -136,7 +136,11 @@ fn import_instance(
     let instance = if let Some(ns) = &node.namespace {
         Instance::new_with_namespace(resource_id.clone(), entity_id.clone(), ns.clone())
     } else {
-        Instance::new_with_namespace(resource_id.clone(), entity_id.clone(), "default".to_string())
+        Instance::new_with_namespace(
+            resource_id.clone(),
+            entity_id.clone(),
+            "default".to_string(),
+        )
     };
 
     Ok(instance)

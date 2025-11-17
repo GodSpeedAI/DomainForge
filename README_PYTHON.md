@@ -223,10 +223,8 @@ pytest tests/
 Quick start for tests in development (recommended):
 
 ```bash
-# Create a local virtual environment and install dev dependencies
+# Requires just
 just python-setup
-
-# Run Python tests using the venv-managed Python
 just python-test
 ```
 
@@ -234,5 +232,30 @@ If you'd like to remove the local virtual environment and start fresh:
 
 ```bash
 just python-clean
+```
+
+### Manual Python workflow (without just)
+
+```bash
+# Create a local virtual environment
+python -m venv .venv
+
+# Activate the environment
+# Linux/macOS:
+source .venv/bin/activate
+# Windows (Command Prompt):
+.\.venv\Scripts\activate
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+
+# Install development dependencies
+pip install -e .  # or `pip install -r requirements-dev.txt`
+
+# Run the Python test suite
+pytest tests/
+
+# Clean up the virtual environment when you're done
+deactivate
+rm -rf .venv
 ```
 

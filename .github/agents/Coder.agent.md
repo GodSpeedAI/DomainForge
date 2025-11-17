@@ -263,15 +263,17 @@ Return: Top 3 patterns with security analysis and implementation complexity.
    - Goal: Retrieve past decisions to avoid re-work
    - Keep in main chat: This is quick context, not deep analysis
 
-**Phase 2: Research & Analysis (DELEGATE TO SUBAGENTS)** 2. **REPO_CONTEXT + STRUCTURAL ANALYSIS → Subagent** - Delegate: `Map project structure, key dependencies, and active PRs for #folder:src/auth with #runSubagent` - Goal: Get comprehensive structural understanding without polluting main context
+### Phase 2: Research & Analysis (DELEGATE TO SUBAGENTS)
+
+2. **REPO_CONTEXT + STRUCTURAL ANALYSIS → Subagent**
+   - Delegate: `Map project structure, key dependencies, and active PRs for #folder:src/auth with #runSubagent`
+   - Goal: Get comprehensive structural understanding without polluting main context
 
 3. **DOMAIN_GROUNDING → Subagent**
-
    - Delegate: `Research framework versions and API contracts for React 18 + TypeScript 5.3 with #runSubagent. Focus on: hooks API, concurrent features, and breaking changes.`
    - Goal: Ground in real specs via isolated research
 
 4. **PATTERN_RESEARCH → Subagent**
-
    - Delegate: `Search for production-grade error boundary patterns in React 18 with #runSubagent. Use GitHub + Exa. Return: 5 examples with trade-off analysis.`
    - Goal: Collect battle-tested approaches without context overload
 
@@ -279,7 +281,14 @@ Return: Top 3 patterns with security analysis and implementation complexity.
    - Delegate: `Generate 3 architectural approaches for user authentication flow with #runSubagent. Compare: session-based, JWT, OAuth2. Include: security model, scalability, complexity.`
    - Goal: Explore design space in isolation, return synthesized comparison
 
-**Phase 3: Metacognitive Check (Main Chat)** 6. **VIBE_CHECK** - In main chat, quickly ask yourself: - "Have I delegated enough to subagents to keep this context lean?" - "What assumptions am I making that should be validated via subagent research?" - "What could break that requires deeper investigation (→ subagent)?" - Goal: Surface blind spots and identify additional delegation opportunities
+### Phase 3: Metacognitive Check (Main Chat)
+
+6. **VIBE_CHECK**
+   - In main chat, quickly ask yourself:
+     - "Have I delegated enough to subagents to keep this context lean?"
+     - "What assumptions am I making that should be validated via subagent research?"
+     - "What could break that requires deeper investigation (→ subagent)?"
+   - Goal: Surface blind spots and identify additional delegation opportunities
 
 **Phase 4: Synthesis & Decision (Main Chat)** 7. **SYNTHESIZE_SUBAGENT_RESULTS** - Collect results from all subagent investigations - Compare approaches with explicit trade-offs - Make architectural decision - Document rationale
 

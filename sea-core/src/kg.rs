@@ -52,6 +52,74 @@ pub struct KnowledgeGraph {
 
 const URI_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b':').add(b'/').add(b'#');
 
+fn tokenize_triple_line(line: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut buffer = String::new();
+    let mut in_literal = false;
+    let mut escape = false;
+
+    for c in line.chars() {
+        if in_literal {
+            buffer.push(c);
+            if escape {
+                escape = false;
+            } else if c == '\\' {
+                escape = true;
+            } else if c == '"' {
+                in_literal = false;
+            }
+            continue;
+        }
+
+        match c {
+            '"' => {
+                in_literal = true;
+                buffer.push(c);
+            }
+            c if c.is_whitespace() => {
+                if !buffer.is_empty() {
+                    tokens.push(buffer.clone());
+                    buffer.clear();
+                }
+            }
+            _ => {
+                buffer.push(c);
+            }
+        }
+    }
+
+    if !buffer.is_empty() {
+        tokens.push(buffer);
+    }
+
+    tokens
+}
+
+fn extract_local_name(token: &str) -> String {
+    let trimmed = token.trim();
+    let stripped = trimmed.trim_matches(|c| c == '<' || c == '>');
+    stripped
+        .rsplitn(2, |c| c == '#' || c == ':')
+        .next()
+        .unwrap_or(stripped)
+        .to_string()
+}
+
+fn extract_literal_value(token: &str) -> String {
+    let trimmed = token.trim();
+    if trimmed.starts_with('"') {
+        if let Some(end_quote) = trimmed[1..].find('"') {
+            return trimmed[1..1 + end_quote].to_string();
+        }
+        return trimmed.trim_matches('"').to_string();
+    }
+
+    if let Some(idx) = trimmed.find("^^") {
+        return trimmed[..idx].trim().to_string();
+    }
+    trimmed.to_string()
+}
+
 impl KnowledgeGraph {
     pub fn new() -> Self {
         Self {
@@ -288,26 +356,30 @@ impl KnowledgeGraph {
     pub fn from_turtle(turtle: &str) -> Result<Self, KgError> {
         let mut kg = Self::new();
         for line in turtle.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('@') || line.starts_with('#') {
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('@') || trimmed.starts_with('#') {
                 continue;
             }
-                if let Some(dot_pos) = line.rfind('.') {
-                    let triple_part = &line[..dot_pos].trim();
-                    // naive split into three tokens by whitespace
-                    let mut parts = triple_part.split_whitespace();
-                    if let (Some(s), Some(p), Some(o)) = (parts.next(), parts.next(), parts.next()) {
-                        // Normalize URIs: convert <http://...> to prefixed names like rdf:type, xsd:decimal, sea:...
-                        let norm_s = Self::shorten_token(s);
-                        let norm_p = Self::shorten_token(p);
-                        let norm_o = Self::shorten_token(o);
-                        kg.triples.push(Triple {
-                            subject: norm_s,
-                            predicate: norm_p,
-                            object: norm_o,
-                        });
-                    }
-                }
+            let triple_line = if let Some(stripped) = trimmed.strip_suffix('.') {
+                stripped.trim_end()
+            } else {
+                trimmed
+            };
+            let tokens = tokenize_triple_line(triple_line);
+            if tokens.len() != 3 {
+                continue;
+            }
+            let subject = &tokens[0];
+            let predicate = &tokens[1];
+            let object = &tokens[2];
+            let norm_s = Self::shorten_token(subject);
+            let norm_p = Self::shorten_token(predicate);
+            let norm_o = Self::shorten_token(object);
+            kg.triples.push(Triple {
+                subject: norm_s,
+                predicate: norm_p,
+                object: norm_o,
+            });
         }
         // parse shapes: look for NodeShape blocks (start with 'sea:SomethingShape a sh:NodeShape')
         // We scan lines to find blocks terminating with '.' and containing 'sh:property' entries
@@ -337,14 +409,23 @@ impl KnowledgeGraph {
 
                 // Extract target class
                 let target_class = if let Some(pos) = normalized_block.find("sh:targetClass") {
-                    let rest = &block[pos + "sh:targetClass".len()..];
-                    let tok = rest.split_whitespace().next().unwrap_or("").trim().trim_end_matches(';').to_string();
+                    let rest = &normalized_block[pos + "sh:targetClass".len()..];
+                    let tok = rest
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .trim_end_matches(';')
+                        .to_string();
                     tok
                 } else {
                     continue; // ignore shapes without targetClass
                 };
 
-                let mut shape = ShaclShape { target_class, properties: Vec::new() };
+                let mut shape = ShaclShape {
+                    target_class,
+                    properties: Vec::new(),
+                };
 
                 // Find property blocks: 'sh:property [ ... ]' occurrences
                 let mut start_idx = 0;
@@ -365,17 +446,23 @@ impl KnowledgeGraph {
 
                             for tok in prop_block.split(';') {
                                 let tok = tok.trim();
-                                if tok.is_empty() { continue; }
+                                if tok.is_empty() {
+                                    continue;
+                                }
                                 if tok.starts_with("sh:path") {
                                     path = tok["sh:path".len()..].trim().to_string();
                                 } else if tok.starts_with("sh:datatype") {
                                     datatype = Some(tok["sh:datatype".len()..].trim().to_string());
                                 } else if tok.starts_with("sh:minCount") {
                                     let val = tok["sh:minCount".len()..].trim();
-                                    if let Ok(n) = val.parse::<u32>() { min_count = Some(n); }
+                                    if let Ok(n) = val.parse::<u32>() {
+                                        min_count = Some(n);
+                                    }
                                 } else if tok.starts_with("sh:maxCount") {
                                     let val = tok["sh:maxCount".len()..].trim();
-                                    if let Ok(n) = val.parse::<u32>() { max_count = Some(n); }
+                                    if let Ok(n) = val.parse::<u32>() {
+                                        max_count = Some(n);
+                                    }
                                 } else if tok.starts_with("sh:minExclusive") {
                                     let val = tok["sh:minExclusive".len()..].trim();
                                     min_exclusive = Some(val.to_string());
@@ -383,7 +470,13 @@ impl KnowledgeGraph {
                             }
 
                             if !path.is_empty() {
-                                shape.properties.push(ShaclProperty { path, datatype, min_count, max_count, min_exclusive });
+                                shape.properties.push(ShaclProperty {
+                                    path,
+                                    datatype,
+                                    min_count,
+                                    max_count,
+                                    min_exclusive,
+                                });
                             }
                             start_idx = close_idx + 1;
                             continue;
@@ -403,7 +496,7 @@ impl KnowledgeGraph {
     /// Convert the knowledge graph back into a Graph by interpreting triples exported by `to_turtle`.
     pub fn to_graph(&self) -> Result<crate::graph::Graph, KgError> {
         use crate::graph::Graph;
-        use crate::primitives::{Entity, Resource, Flow};
+        use crate::primitives::{Entity, Flow, Resource};
         use crate::units::unit_from_string;
         use rust_decimal::Decimal;
 
@@ -413,14 +506,32 @@ impl KnowledgeGraph {
         for t in &self.triples {
             if t.predicate == "rdf:type" && t.object == "sea:Entity" {
                 // subject is like sea:Name — extract after colon
-                let name = t.subject.split(':').nth(1).unwrap_or(&t.subject).to_string();
+                let name = t
+                    .subject
+                    .split(':')
+                    .nth(1)
+                    .unwrap_or(&t.subject)
+                    .to_string();
                 let entity = Entity::new_with_namespace(name.clone(), "default".to_string());
-                graph.add_entity(entity).map_err(|e| KgError::SerializationError(e))?;
+                graph
+                    .add_entity(entity)
+                    .map_err(|e| KgError::SerializationError(e))?;
             }
             if t.predicate == "rdf:type" && t.object == "sea:Resource" {
-                let name = t.subject.split(':').nth(1).unwrap_or(&t.subject).to_string();
-                let resource = Resource::new_with_namespace(name.clone(), unit_from_string("units"), "default".to_string());
-                graph.add_resource(resource).map_err(|e| KgError::SerializationError(e))?;
+                let name = t
+                    .subject
+                    .split(':')
+                    .nth(1)
+                    .unwrap_or(&t.subject)
+                    .to_string();
+                let resource = Resource::new_with_namespace(
+                    name.clone(),
+                    unit_from_string("units"),
+                    "default".to_string(),
+                );
+                graph
+                    .add_resource(resource)
+                    .map_err(|e| KgError::SerializationError(e))?;
             }
         }
 
@@ -440,29 +551,31 @@ impl KnowledgeGraph {
                     }
                     match p.predicate.as_str() {
                         "sea:from" => {
-                            from = Some(p.object.split(':').nth(1).unwrap_or(&p.object).to_string());
+                            from = Some(extract_local_name(&p.object));
                         }
                         "sea:to" => {
-                            to = Some(p.object.split(':').nth(1).unwrap_or(&p.object).to_string());
+                            to = Some(extract_local_name(&p.object));
                         }
                         "sea:hasResource" => {
-                            resource_name = Some(p.object.split(':').nth(1).unwrap_or(&p.object).to_string());
+                            resource_name = Some(extract_local_name(&p.object));
                         }
                         "sea:quantity" => {
-                            // object looks like "100"^^xsd:decimal
-                            let obj = p.object.trim();
-                            let parsed = obj.trim_matches('"').split('"').next().unwrap_or(obj);
-                            if let Ok(d) = Decimal::from_str(parsed) {
-                                quantity = Some(d);
-                            }
+                            let lexical = extract_literal_value(&p.object);
+                            let parsed = Decimal::from_str(&lexical).map_err(|e| {
+                                KgError::SerializationError(format!(
+                                    "Invalid quantity literal '{}': {}",
+                                    p.object, e
+                                ))
+                            })?;
+                            quantity = Some(parsed);
                         }
                         _ => {}
                     }
                 }
 
-                if let (Some(from_name), Some(to_name), Some(resource_name), Some(quantity_val)) = (
-                    from, to, resource_name, quantity,
-                ) {
+                if let (Some(from_name), Some(to_name), Some(resource_name), Some(quantity_val)) =
+                    (from, to, resource_name, quantity)
+                {
                     let from_id = graph.find_entity_by_name(&from_name).ok_or_else(|| {
                         KgError::SerializationError(format!("Unknown entity: {}", from_name))
                     })?;
@@ -474,7 +587,9 @@ impl KnowledgeGraph {
                     })?;
 
                     let flow = Flow::new(res_id, from_id, to_id, quantity_val);
-                    graph.add_flow(flow).map_err(|e| KgError::SerializationError(e))?;
+                    graph
+                        .add_flow(flow)
+                        .map_err(|e| KgError::SerializationError(e))?;
                 }
             }
         }
@@ -583,7 +698,11 @@ impl KnowledgeGraph {
 
                     // datatype checks (only handle basic types like xsd:decimal and xsd:string)
                     if let Some(dt) = &prop.datatype {
-                        for tr in self.triples.iter().filter(|tr| tr.subject == subject && tr.predicate == prop.path) {
+                        for tr in self
+                            .triples
+                            .iter()
+                            .filter(|tr| tr.subject == subject && tr.predicate == prop.path)
+                        {
                             let obj = tr.object.trim();
                             let (_lex, dtype_opt) = parse_literal_and_datatype(obj);
                             // look for typed literal like "123"^^xsd:decimal
@@ -609,10 +728,20 @@ impl KnowledgeGraph {
                     // minExclusive check (e.g. > 0) — interpreted for decimal numbers
                     if let Some(min_ex) = &prop.min_exclusive {
                         if prop.datatype.as_deref() == Some("xsd:decimal") {
-                            let threshold = rust_decimal::Decimal::from_str(min_ex).unwrap_or(rust_decimal::Decimal::ZERO);
-                            for tr in self.triples.iter().filter(|tr| tr.subject == subject && tr.predicate == prop.path) {
+                            let threshold =
+                                rust_decimal::Decimal::from_str(min_ex).map_err(|e| {
+                                    KgError::SerializationError(format!(
+                                        "Invalid minExclusive threshold '{}': {}",
+                                        min_ex, e
+                                    ))
+                                })?;
+                            for tr in self
+                                .triples
+                                .iter()
+                                .filter(|tr| tr.subject == subject && tr.predicate == prop.path)
+                            {
                                 let obj = tr.object.trim();
-                                let (lex, _dtype_opt) = parse_literal_and_datatype(obj);
+                                let lex = extract_literal_value(obj);
                                 if let Ok(val) = rust_decimal::Decimal::from_str(&lex) {
                                     if val <= threshold {
                                         let msg = format!(
@@ -709,8 +838,14 @@ impl KnowledgeGraph {
     fn write_shacl_shapes_xml(shape: &ShaclShape) -> String {
         let mut xml = String::new();
         let shape_name = shape.target_class.replace("sea:", "") + "Shape";
-        xml.push_str(&format!("  <sh:NodeShape rdf:about=\"http://domainforge.ai/sea#{}\">\n", shape_name));
-        xml.push_str(&format!("    <sh:targetClass rdf:resource=\"http://domainforge.ai/sea#{}\"/>\n", shape.target_class.replace("sea:", "")));
+        xml.push_str(&format!(
+            "  <sh:NodeShape rdf:about=\"http://domainforge.ai/sea#{}\">\n",
+            shape_name
+        ));
+        xml.push_str(&format!(
+            "    <sh:targetClass rdf:resource=\"http://domainforge.ai/sea#{}\"/>\n",
+            shape.target_class.replace("sea:", "")
+        ));
         for prop in &shape.properties {
             xml.push_str("    <sh:property>\n");
             xml.push_str("      <rdf:Description>\n");
@@ -732,7 +867,10 @@ impl KnowledgeGraph {
                 } else {
                     dt.clone()
                 };
-                xml.push_str(&format!("        <sh:datatype rdf:resource=\"{}\"/>\n", dt_uri));
+                xml.push_str(&format!(
+                    "        <sh:datatype rdf:resource=\"{}\"/>\n",
+                    dt_uri
+                ));
             }
             if let Some(min) = prop.min_count {
                 xml.push_str(&format!("        <sh:minCount>{}</sh:minCount>\n", min));

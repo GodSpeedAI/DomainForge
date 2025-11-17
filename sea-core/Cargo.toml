@@ -58,9 +58,7 @@ typescript = ["napi", "napi-derive"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 shacl = ["oxigraph"]
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true
-panic = 'abort'
+## NOTE: Profiles are managed at the workspace root (Cargo.toml). Please
+## update the workspace-level profiles in /Cargo.toml rather than in
+## this crate's Cargo.toml. This avoids the "profiles for the non root
+## package will be ignored" cargo warning.

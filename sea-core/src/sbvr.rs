@@ -239,10 +239,7 @@ impl SbvrModel {
                 Self::escape_xml(&rule.severity)
             ));
             if let Some(p) = rule.priority {
-                xmi.push_str(&format!(
-                    "      <sbvr:Priority>{}</sbvr:Priority>\n",
-                    p
-                ));
+                xmi.push_str(&format!("      <sbvr:Priority>{}</sbvr:Priority>\n", p));
             }
             xmi.push_str(&format!("    </sbvr:{}>\n", rule_element));
         }
@@ -376,12 +373,20 @@ impl SbvrModel {
                 };
                 let mut expression = String::new();
                 let mut severity = String::from("Info");
+                let mut parsed_priority: Option<u8> = None;
                 for child in node.children() {
                     if child.has_tag_name("Expression") {
                         expression = child.text().unwrap_or_default().to_string();
                     }
                     if child.has_tag_name("Severity") {
                         severity = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Priority") {
+                        if let Some(text) = child.text() {
+                            if let Ok(value) = text.trim().parse::<u8>() {
+                                parsed_priority = Some(value);
+                            }
+                        }
                     }
                 }
                 let mut rule = SbvrBusinessRule {
@@ -390,15 +395,16 @@ impl SbvrModel {
                     rule_type: kind,
                     expression,
                     severity,
-                    priority: None,
+                    priority: parsed_priority,
                 };
-                // Assign default priority per rule type if not explicitly provided
-                rule.priority = Some(match rule.rule_type {
-                    RuleType::Obligation => 5,
-                    RuleType::Prohibition => 5,
-                    RuleType::Permission => 1,
-                    RuleType::Derivation => 3,
-                });
+                if rule.priority.is_none() {
+                    rule.priority = Some(match rule.rule_type {
+                        RuleType::Obligation => 5,
+                        RuleType::Prohibition => 5,
+                        RuleType::Permission => 1,
+                        RuleType::Derivation => 3,
+                    });
+                }
                 model.rules.push(rule);
             }
         }
@@ -409,7 +415,7 @@ impl SbvrModel {
     /// Convert parsed SbvrModel into a Graph
     pub fn to_graph(&self) -> Result<crate::graph::Graph, SbvrError> {
         use crate::graph::Graph;
-        use crate::primitives::{Entity, Resource, Flow};
+        use crate::primitives::{Entity, Flow, Resource};
         use crate::units::unit_from_string;
         use rust_decimal::Decimal;
 
@@ -419,16 +425,38 @@ impl SbvrModel {
         for term in &self.vocabulary {
             match term.term_type {
                 TermType::GeneralConcept => {
-                    let entity = Entity::new_with_namespace(term.name.clone(), "default".to_string());
-                    graph.add_entity(entity).map_err(|e| SbvrError::SerializationError(e))?;
+                    let entity =
+                        Entity::new_with_namespace(term.name.clone(), "default".to_string());
+                    graph
+                        .add_entity(entity)
+                        .map_err(|e| SbvrError::SerializationError(e))?;
                 }
                 TermType::IndividualConcept => {
+                    let unit_symbol = term.definition.as_deref().and_then(|def| {
+                        if let Some(open) = def.rfind('(') {
+                            if let Some(close_offset) = def[open..].find(')') {
+                                let close = open + close_offset;
+                                let candidate = def[open + 1..close].trim();
+                                if !candidate.is_empty() {
+                                    return Some(candidate.to_string());
+                                }
+                            }
+                        }
+                        None
+                    });
+                    let unit_symbol = unit_symbol.unwrap_or_else(|| {
+                        // SBVR definitions currently omit explicit unit metadata, so default to "units".
+                        // Extend the SBVR model if richer unit information becomes available.
+                        "units".to_string()
+                    });
                     let res = Resource::new_with_namespace(
                         term.name.clone(),
-                        unit_from_string("units"),
+                        unit_from_string(&unit_symbol),
                         "default".to_string(),
                     );
-                    graph.add_resource(res).map_err(|e| SbvrError::SerializationError(e))?;
+                    graph
+                        .add_resource(res)
+                        .map_err(|e| SbvrError::SerializationError(e))?;
                 }
                 TermType::VerbConcept => {
                     // We don't represent verbs directly as primitives
@@ -464,38 +492,47 @@ impl SbvrModel {
                 })
                 .unwrap_or_default();
 
-            let subject_id = graph
-                .find_entity_by_name(&subject_name)
-                .ok_or_else(|| {
-                    SbvrError::UnsupportedConstruct(format!("Unknown subject entity: {}", subject_name))
-                })?;
+            let subject_id = graph.find_entity_by_name(&subject_name).ok_or_else(|| {
+                SbvrError::UnsupportedConstruct(format!("Unknown subject entity: {}", subject_name))
+            })?;
 
             let destination_id = graph
                 .find_entity_by_name(&destination_name)
                 .ok_or_else(|| {
-                    SbvrError::UnsupportedConstruct(format!("Unknown destination entity: {}", destination_name))
+                    SbvrError::UnsupportedConstruct(format!(
+                        "Unknown destination entity: {}",
+                        destination_name
+                    ))
                 })?;
 
-            let resource_id = graph
-                .find_resource_by_name(&object_name)
-                .ok_or_else(|| {
-                    SbvrError::UnsupportedConstruct(format!("Unknown resource: {}", object_name))
-                })?;
+            let resource_id = graph.find_resource_by_name(&object_name).ok_or_else(|| {
+                SbvrError::UnsupportedConstruct(format!("Unknown resource: {}", object_name))
+            })?;
 
-            // quantity is not present in SBVR fact type (use default 1)
+            // SBVR FactType does not expose an explicit quantity, so default flows to 1.
+            // This is intentional until the SBVR model is extended with quantity metadata.
             let quantity = Decimal::from(1);
 
             let flow = Flow::new(resource_id, subject_id, destination_id, quantity);
-            graph.add_flow(flow).map_err(|e| SbvrError::SerializationError(e))?;
+            graph
+                .add_flow(flow)
+                .map_err(|e| SbvrError::SerializationError(e))?;
         }
 
         // Map SBVR Business Rules into Graph Policies
         for rule in &self.rules {
             // Parse expression using SEA DSL expression parser
-            let expr = crate::parser::parse_expression_from_str(rule.expression.as_str())
-                .map_err(|e| SbvrError::SerializationError(format!("Failed to parse rule expression: {}", e)))?;
+            let expr = crate::parser::parse_expression_from_str(rule.expression.as_str()).map_err(
+                |e| {
+                    SbvrError::SerializationError(format!("Failed to parse rule expression: {}", e))
+                },
+            )?;
 
-            let mut policy = crate::policy::Policy::new_with_namespace(rule.name.clone(), "default".to_string(), expr);
+            let mut policy = crate::policy::Policy::new_with_namespace(
+                rule.name.clone(),
+                "default".to_string(),
+                expr,
+            );
 
             // Map rule type to modality/kind
             match rule.rule_type {
@@ -531,7 +568,9 @@ impl SbvrModel {
                 policy = policy.with_priority(default_p as i32);
             }
 
-            graph.add_policy(policy).map_err(|e| SbvrError::SerializationError(e))?;
+            graph
+                .add_policy(policy)
+                .map_err(|e| SbvrError::SerializationError(e))?;
         }
 
         Ok(graph)

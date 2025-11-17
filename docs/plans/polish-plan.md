@@ -21,7 +21,7 @@ Steps 2-7 remain pending (operator precedence & three-valued logic, ICU collatio
 
 **Dependencies**: Phases 0-17 complete (core primitives, graph storage, policy engine, parser, language bindings, CALM integration).
 
-**Timeline**: 10-12 weeks (assuming 1 developer, 30-40 hours/week)
+**Timeline**: 15.5 weeks (assuming 1 developer, 30-40 hours/week); this matches the summed step durations and explicitly includes the cross-language parity verification work (Rust, Python, TypeScript, WASM) built into each phase.
 
 ---
 
@@ -335,6 +335,7 @@ path = "./vendor/acme/*/"
     1. Exact match (`com.acme.finance`)
     2. Longest glob prefix (`com.acme.*` > `com.*`)
     3. Filesystem fallback (default mapping)
+      - Clarify: "Longest glob prefix" refers to the longest literal (non-wildcard) left-to-right path segment prefix. Example: `com.acme.` outranks `com.` for `com.acme.finance`. When two patterns tie on literal prefix length but both match (e.g., `com.` vs `.acme` for `com.acme`), flag the configuration as ambiguous and surface a validation error instead of picking based on lexicographic order or discovery time.
   - Version field usage (metadata-only, defer enforcement to Phase 19+)
   - Remote registry preparation (document future API)
 
@@ -342,7 +343,7 @@ path = "./vendor/acme/*/"
   - Cross-file imports: `import com.acme.finance` → loads `com/acme/finance.sea`
   - Circular dependency detection: A imports B imports A → error
   - Glob pattern precedence: `com.acme.*` vs `com.acme.finance` → use specific
-  - Ambiguous patterns: `com.*` and `*.acme` both match `com.acme` → error
+  - Ambiguous patterns: `com.*` and `*.acme` both match `com.acme` with equal literal prefix lengths → validation error (no silent tie-breaking)
   - Missing modules: `import nonexistent.module` → clear error with "did you mean?"
   - Export/import round-trip: export from A, import in B, verify UUIDs stable
 
@@ -715,6 +716,8 @@ enum Commands {
 **Duration**: 2 weeks | **Priority**: P2 | **Complexity**: High
 
 Implement temporal policy support with hexagonal storage architecture and redb backend.
+
+**Benchmark gating:** Before committing to Step 8, run the redb benchmark against a 1M-flow workload (simulate export from `sea-core/tests/temporal`). If the <50ms target holds, proceed. If not, escalate to building the PostgreSQL adapter within Phase 18 (or, if necessary, temporarily reduce the acceptance dataset) and log the decision criteria so the risk mitigation section records the fallback path.
 
 **Grammar**: `sea.pest`
 
@@ -1337,7 +1340,7 @@ For each Rust feature, verify equivalence in:
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|------------|
 | ICU data size bloat | Medium | Medium | Minimal locale bundle, slim build option |
-| Redb performance issues | Low | High | Benchmark early, provide PostgreSQL adapter interface |
+| Redb performance issues | Low | High | Benchmark early (1M-flow redb run); if <50ms target fails, escalate to the PostgreSQL adapter implementation or lower the acceptance scale and document the decision path. |
 | SBVR XMI parsing complexity | Medium | Medium | Start with minimal subset, defer extensions |
 | Three-valued logic bugs | High | High | Extensive property-based tests, truth table validation |
 | Namespace collision | Medium | Low | Longest-prefix matching, clear error messages |

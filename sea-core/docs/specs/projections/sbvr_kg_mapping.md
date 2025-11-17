@@ -28,7 +28,7 @@ Given SBVR XMI with a FactType referencing a `Subject` (GeneralConcept), `Verb` 
 
 - Subject `Warehouse` → SEA `Entity` named "Warehouse"
 - Verb `transfers` → recognized but not materialized
-- Object `Cameras` → SEA `Resource` named "Cameras" (units default to `units`)
+- Object `Cameras` → SEA `Resource` named "Cameras"; the importer calls `sea_core::units::unit_from_string("units")` (see `sea-core/src/units/mod.rs`), so the default unit literal `"units"` maps to a `Unit` whose `symbol` and `base_unit` are `"units"`, `dimension` is `Dimension::Count`, and `base_factor` is `Decimal::ONE`.
 - Destination `Factory` → SEA `Entity` named "Factory"
 - The resulting Flow will be added with quantity `1` unless a quantity fact is present (Phase 19+)
 

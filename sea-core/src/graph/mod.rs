@@ -1,6 +1,6 @@
-use crate::policy::{Policy, Violation, Severity};
-use crate::validation_result::ValidationResult;
+use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{Entity, Flow, Instance, Resource};
+use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
