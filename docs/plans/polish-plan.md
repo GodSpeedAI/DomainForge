@@ -9,6 +9,12 @@ This plan implements 7 priority enhancements plus polish items to strengthen Dom
 
 ---
 
+### Current Status
+
+Step 1 is complete (SBVR/KG import implemented, validated, and merged). The RDF/Turtle and RDF/XML KG import paths now both work end-to-end; SBVR (XMI) import converts BusinessRule → Policy with modality and priority mapping; SHACL validation runs on KG imports and flags violations like sh:minExclusive (e.g., quantity > 0 checks). Automated tests for SBVR imports, KG imports (Turtle & RDF/XML), and SHACL validation were added and pass with the `shacl` feature enabled.
+
+Steps 2-7 remain pending (operator precedence & three-valued logic, ICU collation, logical namespace system, severity mapping, enhanced diagnostics, CLI polish, temporal policies), and are planned next in the order and schedules below.
+
 ### Implementation Strategy
 
 **Approach**: Sequential implementation following TDD RED-GREEN-REFACTOR pattern established in Phases 0-17. Each step includes comprehensive tests, documentation, and cross-language parity verification (Rust, Python, TypeScript, WASM).
@@ -63,6 +69,7 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
   - Test ambiguous cases (multiple SBVR interpretations)
 
 **Documentation**:
+
 - Normative mapping tables with examples in README.md
 - Migration guide for existing CALM/SBVR/KG assets
 - Known limitations (SBVR vocabulary extensions deferred)
@@ -76,6 +83,7 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
 Document operator precedence and implement three-valued logic behind compile-time feature flag.
 
 **Precedence Table** (in `docs/specs/semantics.md`):
+
 1. **Primary**: Literals, identifiers, member access (`.`), parentheses `()`
 2. **Unary**: `-` (negation), `not`
 3. **Multiplicative**: `*`, `/`
@@ -124,6 +132,7 @@ Document operator precedence and implement three-valued logic behind compile-tim
   - Edge case: `forall x in flows where x.attr = NULL: ...` (should match nothing)
 
 **Documentation**:
+
 - Precedence examples with parentheses overrides
 - NULL semantics FAQ ("Why does `NULL = NULL` return `NULL`?")
 - Performance guidance (when to enable three-valued logic)
@@ -137,6 +146,7 @@ Document operator precedence and implement three-valued logic behind compile-tim
 Implement full ICU collation support with minimal locale bundle and flexible data discovery.
 
 **Locale Bundle** (~2MB for 5 locales):
+
 - English (`en`)
 - German (`de`) - handles umlauts, ß
 - French (`fr`) - handles accented characters
@@ -151,6 +161,7 @@ Implement full ICU collation support with minimal locale bundle and flexible dat
   - Embed in binary or write to `target/icu_data/`
 
 - **Dependencies**: `Cargo.toml`
+
   ```toml
   [dependencies]
   icu = "1.5"
@@ -174,22 +185,27 @@ Implement full ICU collation support with minimal locale bundle and flexible dat
   - Document restart requirement in error message
 
 - **Grammar**: `sea.pest`
+
   ```pest
   file_header = { ... | collation_directive }
   collation_directive = { "@collation" ~ string_literal }
   ```
+
   - Example: `@collation "en-US:ci"` (case-insensitive)
   - Example: `@collation "de:phonebook"` (German phonebook ordering)
 
 - **Operators**: `policy/core.rs`
   - Add case-insensitive variants: `icontains`, `istartswith`, `iendswith`
   - Grammar:
+
     ```pest
     comparison_op = { "=" | "!=" | ... | "icontains" | "istartswith" | "iendswith" }
     ```
+
   - Unicode normalization (NFC) preprocessing before comparison
 
 - **Slim Build**: Document in README.md
+
   ```bash
   # Without ICU (no collation support)
   cargo build --no-default-features --features core
@@ -206,6 +222,7 @@ Implement full ICU collation support with minimal locale bundle and flexible dat
   - Unsupported locale fallback: `@collation "pt-BR:ci"` → warning + root UCA
 
 **Documentation**:
+
 - Supported locales and sensitivity levels (`:ci`, `:phonebook`, etc.)
 - Custom ICU data directory setup guide
 - Slim build instructions for embedded systems
@@ -220,6 +237,7 @@ Implement full ICU collation support with minimal locale bundle and flexible dat
 Build module/import system with logical namespace resolution and hexagonal adapter architecture.
 
 **Grammar**: `sea.pest`
+
 ```pest
 file = { SOI ~ file_header* ~ namespace_decl? ~ import_decl* ~ declaration* ~ EOI }
 namespace_decl = { "namespace" ~ qualified_name }
@@ -229,6 +247,7 @@ qualified_name = { identifier ~ ("." ~ identifier)* }
 ```
 
 **Registry Format**: `.sea-registry.toml` (TOML table structure)
+
 ```toml
 [namespace."com.acme"]
 path = "./vendor/acme/"
@@ -248,6 +267,7 @@ path = "./vendor/acme/*/"
 - **Hexagonal Architecture**: `src/module/`
 
   - **Port**: `ports.rs`
+
     ```rust
     pub trait ModuleResolver: Send + Sync {
         fn resolve(&self, namespace: &str) -> Result<ModuleSource, ResolveError>;
@@ -282,6 +302,7 @@ path = "./vendor/acme/*/"
     - Cache resolved modules to avoid redundant parsing
 
 - **ConceptId Extension**: `concept_id.rs`
+
   ```rust
   pub struct ConceptId {
       uuid: Uuid,
@@ -326,6 +347,7 @@ path = "./vendor/acme/*/"
   - Export/import round-trip: export from A, import in B, verify UUIDs stable
 
 **Documentation**:
+
 - Namespace best practices (avoid deep nesting, use domain-driven structure)
 - `.sea-registry.toml` examples for monorepos
 - Migration guide from single-file to multi-module projects
@@ -360,12 +382,14 @@ pub fn compute_severity(policy: &Policy) -> Severity {
 **Implementation**:
 
 - **Grammar**: `sea.pest`
+
   ```pest
   policy_decl = { "@severity" ~ severity_level ~ policy_header ~ policy_expr }
   severity_level = { "Error" | "Warning" | "Info" }
   ```
 
 - **File**: `policy/severity.rs`
+
   ```rust
   pub struct SeverityResolver {
       rationale: HashMap<ConceptId, String>,  // Debug info
@@ -385,6 +409,7 @@ pub fn compute_severity(policy: &Policy) -> Severity {
   ```
 
 - **CLI**: `bin/sea.rs`
+
   ```rust
   fn main() -> ExitCode {
       let result = validate(input);
@@ -409,6 +434,7 @@ pub fn compute_severity(policy: &Policy) -> Severity {
   - Rationale tracking: verify debug messages explain severity derivation
 
 **Documentation**:
+
 - Severity mapping table in `docs/specs/policy_semantics.md`
 - CLI exit code contract for CI/CD integration
 - Best practices: when to use explicit severity overrides
@@ -424,6 +450,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
 **Implementation**:
 
 - **Error Extension**: `error.rs`
+
   ```rust
   pub struct ValidationError {
       pub code: ErrorCode,           // NEW: E001, E002, etc.
@@ -448,6 +475,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
   ```
 
 - **Fuzzy Matching**: `error/fuzzy.rs`
+
   ```rust
   pub fn levenshtein_distance(a: &str, b: &str) -> usize {
       // Wagner-Fischer algorithm (O(mn) dynamic programming)
@@ -482,6 +510,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
   ```
 
   - **JSON**: Structured for machine parsing
+
     ```json
     {
       "code": "E001",
@@ -493,6 +522,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
     ```
 
   - **Human**: Color-coded with source snippets (use `annotate-snippets` crate)
+
     ```
     error[E001]: Undefined entity 'Warehous'
       --> example.sea:10:5
@@ -504,6 +534,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
     ```
 
   - **LSP**: Compatible with Language Server Protocol
+
     ```json
     {
       "range": {...},
@@ -518,6 +549,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
   - Use `insta` crate for snapshot testing
   - One test per error code with expected output
   - Example:
+
     ```rust
     #[test]
     fn test_e003_unit_mismatch_diagnostic() {
@@ -531,6 +563,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
     ```
 
 **Documentation**:
+
 - Error code catalog in `docs/specs/error_codes.md`
 - Diagnostic format examples for CI integration
 - IDE extension guide (LSP protocol implementation)
@@ -633,6 +666,7 @@ enum Commands {
   - `validate_kg.rs` - SHACL validation (uses `oxigraph` crate)
 
 - **SHACL Validation**: `cli/validate_kg.rs`
+
   ```rust
   pub fn validate_kg(turtle: &str) -> Result<Vec<Violation>, KgError> {
       let store = Store::new()?;
@@ -651,6 +685,7 @@ enum Commands {
   ```
 
 - **Round-Trip Validation**:
+
   ```bash
   sea validate --round-trip calm input.sea
   # 1. Parse input.sea → Graph
@@ -661,12 +696,14 @@ enum Commands {
   ```
 
 **Tests**: `tests/cli_tests.rs`
+
 - Test each subcommand with valid/invalid inputs
 - Verify exit codes (0, 1, 2)
 - Check JSON output format
 - Round-trip tests for all formats
 
 **Documentation**:
+
 - CLI reference in README.md and `sea --help`
 - CI/CD integration examples (GitHub Actions, GitLab CI)
 - Test runner usage guide
@@ -680,6 +717,7 @@ enum Commands {
 Implement temporal policy support with hexagonal storage architecture and redb backend.
 
 **Grammar**: `sea.pest`
+
 ```pest
 file_header = { ... | asof_directive }
 asof_directive = { "@asof" ~ iso8601_timestamp }
@@ -691,6 +729,7 @@ time_unit = { "days" | "hours" | "minutes" | "seconds" }
 ```
 
 **Primitive Extension**: `primitives/flow.rs`
+
 ```rust
 pub struct Flow {
     // ... existing fields ...
@@ -701,6 +740,7 @@ pub struct Flow {
 **Hexagonal Architecture**: `src/temporal/`
 
 - **Port**: `ports.rs`
+
   ```rust
   pub trait TemporalStore: Send + Sync {
       fn insert_flow(&mut self, flow: &Flow) -> Result<(), TemporalError>;
@@ -747,6 +787,7 @@ pub struct Flow {
   - Capabilities: `{ concurrent_writes: true, transactions: false, retention: None }`
 
 - **Schema**: `temporal/schema.rs`
+
   ```rust
   // Redb table definitions
   pub const FLOW_TABLE: TableDefinition<(u64, [u8; 16]), [u8]> =
@@ -762,6 +803,7 @@ pub struct Flow {
   ```
 
 - **CLI Commands**: `cli/temporal.rs`
+
   ```bash
   sea temporal migrate --from-version 0 --to-version 1
   sea temporal reindex --force  # Immediate rebuild
@@ -769,6 +811,7 @@ pub struct Flow {
   ```
 
 - **Policy Integration**: `policy/quantifier.rs`
+
   ```rust
   // New syntax: sum(f in flows where f.timestamp in last 30 days: f.quantity)
   pub enum TemporalFilter {
@@ -779,6 +822,7 @@ pub struct Flow {
   ```
 
 **Feature Flag**: `Cargo.toml`
+
 ```toml
 [features]
 temporal = ["redb", "chrono"]
@@ -788,6 +832,7 @@ redb = { version = "2.0", optional = true }
 ```
 
 **Tests**: `tests/temporal_policies_tests.rs`
+
 ```rust
 #[cfg(feature = "temporal")]
 mod tests {
@@ -825,7 +870,9 @@ mod tests {
 ```
 
 **Documentation**: `docs/specs/temporal_storage.md`
+
 - Adapter interface guide with RocksDB/PostgreSQL examples:
+
   ```rust
   // Example: PostgreSQL adapter for multi-writer scenarios
   pub struct PostgresAdapter {
@@ -843,6 +890,7 @@ mod tests {
       // ...
   }
   ```
+
 - Migration strategy (versioning, backward compatibility)
 - Performance tuning (index optimization, query patterns)
 
@@ -855,6 +903,7 @@ mod tests {
 Polish quantity rendering, enforce type safety, add linting, and export AST schema.
 
 **Quantity Rendering**: `primitives/quantity.rs`
+
 ```rust
 use icu::decimal::FixedDecimalFormatter;
 use icu::locid::Locale;
@@ -878,6 +927,7 @@ impl QuantityFormatter {
 ```
 
 **Type Inference**: `policy/type_inference.rs`
+
 ```rust
 pub enum ExprType {
     Quantity { dimension: Dimension },  // NEW: Separate from Numeric
@@ -911,6 +961,7 @@ pub fn check_comparison(left: &ExprType, right: &ExprType) -> Result<(), TypeErr
 ```
 
 **Linter**: `parser/lint.rs`
+
 ```rust
 pub struct Linter {
     keywords: HashSet<String>,
@@ -939,6 +990,7 @@ impl Linter {
 ```
 
 **AST Schema**: `schemas/ast-v1.schema.json`
+
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -962,6 +1014,7 @@ impl Linter {
 ```
 
 **Pretty-Printer**: `parser/printer.rs`
+
 ```rust
 pub struct PrettyPrinter {
     indent_width: usize,
@@ -997,6 +1050,7 @@ impl PrettyPrinter {
 ```
 
 **Tests**:
+
 - Quantity formatter locale tests: en/de/fr/zh/ar
 - Type inference: mixed Quantity/Numeric → error
 - Linter: keyword collision detection
@@ -1004,6 +1058,7 @@ impl PrettyPrinter {
 - Pretty-printer: parse → print → parse → compare ASTs
 
 **Documentation**:
+
 - Quantity rendering guide with locale examples
 - Type system specification (Quantity vs Numeric)
 - Linting rules and keyword list
@@ -1018,6 +1073,7 @@ impl PrettyPrinter {
 Implement comprehensive CI/CD guardrails for quality gates and semver enforcement.
 
 **GitHub Actions**: `.github/workflows/guardrails.yml`
+
 ```yaml
 name: CI Guardrails
 
@@ -1097,6 +1153,7 @@ jobs:
 ```
 
 **Semver Diff**: `src/cli/semver.rs`
+
 ```rust
 pub enum SemverChange {
     Major,  // Breaking: removed primitives, changed types
@@ -1151,6 +1208,7 @@ pub fn enforce_version_bump(
 ```
 
 **Validate JSON Output**: `src/cli/validate.rs`
+
 ```rust
 pub fn validate_json(input: &Path, exit_code: bool) -> ExitCode {
     let result = parse_and_validate(input);
@@ -1185,12 +1243,14 @@ pub fn validate_json(input: &Path, exit_code: bool) -> ExitCode {
 ```
 
 **Tests**: `tests/ci_guardrails_tests.rs`
+
 - Semver diff: MAJOR (removed entity), MINOR (added resource), PATCH (comment change)
 - Version enforcement: detect missing version bump
 - JSON output: validate schema
 - Projection drift: CALM round-trip failure detection
 
 **Documentation**: `docs/specs/ci_cd_guardrails.md`
+
 - GitHub Actions workflow setup
 - Semver enforcement policy
 - Security scanning configuration
@@ -1203,6 +1263,7 @@ pub fn validate_json(input: &Path, exit_code: bool) -> ExitCode {
 #### Testing Strategy
 
 **Test Pyramid**:
+
 1. **Unit Tests** (70%): Individual functions, pure logic
    - `tests/*_tests.rs` files
    - Property-based tests with `proptest` for invariants
@@ -1214,6 +1275,7 @@ pub fn validate_json(input: &Path, exit_code: bool) -> ExitCode {
    - Golden file tests with snapshots
 
 **TDD RED-GREEN-REFACTOR**:
+
 - RED: Write failing test first
 - GREEN: Implement minimal code to pass
 - REFACTOR: Improve code quality without changing behavior
@@ -1222,6 +1284,7 @@ pub fn validate_json(input: &Path, exit_code: bool) -> ExitCode {
 #### Documentation Requirements
 
 Each step must include:
+
 1. **Normative Specifications**: Formal behavior definitions in specs
 2. **API Documentation**: Rustdoc comments with examples
 3. **User Guides**: Tutorial-style docs in `docs/guides/`
@@ -1230,6 +1293,7 @@ Each step must include:
 #### Performance Benchmarks
 
 Add benchmarks for:
+
 - Three-valued logic overhead (target: 5-10%)
 - ICU collation impact (target: 1-3%)
 - Temporal query performance (target: <50ms for 1M flows)
@@ -1238,6 +1302,7 @@ Add benchmarks for:
 #### Cross-Language Parity
 
 For each Rust feature, verify equivalence in:
+
 - **Python** (PyO3 bindings): `tests/test_*.py`
 - **TypeScript** (napi-rs bindings): `typescript-tests/*.test.ts`
 - **WASM** (wasm-bindgen): `sea-core/tests/*_wasm_tests.rs`
@@ -1247,6 +1312,7 @@ For each Rust feature, verify equivalence in:
 ### Success Criteria
 
 **Phase 18 Complete When**:
+
 1. ✅ All 10 steps implemented with passing tests
 2. ✅ Documentation complete (specs + guides + API docs)
 3. ✅ Cross-language parity verified (342+ tests passing)
@@ -1256,6 +1322,7 @@ For each Rust feature, verify equivalence in:
 7. ✅ Code review completed by maintainers
 
 **Acceptance Tests**:
+
 - Complex enterprise model (1000+ entities, 5000+ flows) validates in <500ms
 - Round-trip tests (DSL → CALM/KG/SBVR → DSL) preserve semantics
 - Three-valued logic handles NULL correctly (20+ edge cases)
@@ -1281,6 +1348,7 @@ For each Rust feature, verify equivalence in:
 ### Phase 19+ Roadmap (Future Work)
 
 **Deferred Items**:
+
 1. SBVR vocabulary extensions (synonyms, definitions, structured glossaries)
 2. Remote namespace registry (HTTP/Git with version constraints)
 3. Multi-writer temporal storage (PostgreSQL/CockroachDB adapters)
