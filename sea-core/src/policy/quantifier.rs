@@ -56,11 +56,15 @@ impl Expression {
                     }
                 }
             }
-            Expression::Binary { op, left, right } => Ok(Expression::binary(
-                op.clone(),
-                left.expand(graph)?,
-                right.expand(graph)?,
-            )),
+            Expression::Binary { op, left, right } => {
+                let left_expanded = left.expand(graph)?;
+                let right_expanded = right.expand(graph)?;
+                Ok(Self::reduce_binary_expression(
+                    op,
+                    left_expanded,
+                    right_expanded,
+                )?)
+            }
             Expression::Unary { op, operand } => {
                 Ok(Expression::unary(op.clone(), operand.expand(graph)?))
             }
@@ -74,6 +78,25 @@ impl Expression {
                 // Evaluate the aggregation and return a literal
                 let result =
                     Self::evaluate_aggregation(function, collection, field, filter, graph)?;
+                Ok(Expression::Literal(result))
+            }
+            Expression::AggregationComprehension {
+                function,
+                variable,
+                collection,
+                predicate,
+                projection,
+                target_unit,
+            } => {
+                let result = Self::evaluate_aggregation_comprehension(
+                    function,
+                    variable,
+                    collection,
+                    predicate,
+                    projection,
+                    target_unit.as_deref(),
+                    graph,
+                )?;
                 Ok(Expression::Literal(result))
             }
             _ => Ok(self.clone()),
@@ -130,7 +153,17 @@ impl Expression {
                     ))
                 }
             }
-            Expression::MemberAccess { .. } => Ok(self.clone()),
+            Expression::MemberAccess { object, member } => {
+                if object == var {
+                    if let Some(field_value) = value.get(member) {
+                        Ok(Expression::Literal(field_value.clone()))
+                    } else {
+                        Err(format!("Field '{}' not found in value", member))
+                    }
+                } else {
+                    Ok(self.clone())
+                }
+            }
             Expression::Aggregation {
                 function,
                 collection,
@@ -145,6 +178,21 @@ impl Expression {
                     .map(|f| f.substitute(var, value))
                     .transpose()?,
             )),
+            Expression::AggregationComprehension {
+                function,
+                variable,
+                collection,
+                predicate,
+                projection,
+                target_unit,
+            } => Ok(Expression::AggregationComprehension {
+                function: function.clone(),
+                variable: variable.clone(),
+                collection: Box::new(collection.substitute(var, value)?),
+                predicate: Box::new(predicate.substitute(var, value)?),
+                projection: Box::new(projection.substitute(var, value)?),
+                target_unit: target_unit.clone(),
+            }),
             _ => Ok(self.clone()),
         }
     }
@@ -393,5 +441,207 @@ impl Expression {
                 }
             }
         }
+    }
+
+    fn evaluate_aggregation_comprehension(
+        function: &AggregateFunction,
+        variable: &str,
+        collection: &Expression,
+        predicate: &Expression,
+        projection: &Expression,
+        target_unit: Option<&str>,
+        graph: &Graph,
+    ) -> Result<serde_json::Value, String> {
+        let items = Self::get_collection(collection, graph)?;
+
+        let mut projected_values = Vec::new();
+        for item in items {
+            let substituted_predicate = predicate.substitute(variable, &item)?;
+            let predicate_result = substituted_predicate.expand(graph)?;
+            if !Self::is_true_literal(&predicate_result) {
+                continue;
+            }
+
+            let substituted_projection = projection.substitute(variable, &item)?;
+            let projection_result = substituted_projection.expand(graph)?;
+            match projection_result {
+                Expression::Literal(value) => projected_values.push(value),
+                Expression::QuantityLiteral { value, unit } => {
+                    projected_values.push(serde_json::json!({
+                        "__quantity_value": value.to_string(),
+                        "__quantity_unit": unit,
+                    }));
+                }
+                _ => {
+                    return Err(
+                        "Projection in aggregation comprehension must reduce to a literal"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+
+        match function {
+            AggregateFunction::Count => Ok(serde_json::json!(projected_values.len())),
+            AggregateFunction::Sum
+            | AggregateFunction::Avg
+            | AggregateFunction::Min
+            | AggregateFunction::Max => {
+                Self::fold_numeric(function, &projected_values, target_unit)
+            }
+        }
+    }
+
+    fn fold_numeric(
+        function: &AggregateFunction,
+        values: &[serde_json::Value],
+        target_unit: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        use crate::units::UnitRegistry;
+
+        let mut decimals: Vec<Decimal> = Vec::new();
+        let mut source_unit: Option<String> = None;
+        for value in values {
+            if let Some(num) = value.as_f64() {
+                decimals.push(Decimal::from_str(&num.to_string()).map_err(|e| e.to_string())?);
+            } else if let Some(s) = value.as_str() {
+                decimals.push(Decimal::from_str(s).map_err(|e| e.to_string())?);
+            } else if value.is_object() {
+                let map = value
+                    .as_object()
+                    .ok_or_else(|| "Invalid quantity object".to_string())?;
+                if let Some(val) = map.get("__quantity_value") {
+                    let s = val
+                        .as_str()
+                        .ok_or_else(|| "Quantity value must be a string".to_string())?;
+                    decimals.push(Decimal::from_str(s).map_err(|e| e.to_string())?);
+                }
+                if let Some(unit) = map.get("__quantity_unit") {
+                    if source_unit.is_none() {
+                        if let Some(unit_str) = unit.as_str() {
+                            source_unit = Some(unit_str.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        if decimals.is_empty() {
+            return Ok(serde_json::json!(null));
+        }
+
+        if let Some(target_unit) = target_unit {
+            if let Some(unit) = source_unit.clone() {
+                let registry = UnitRegistry::global();
+                let from = registry
+                    .get_unit(&unit)
+                    .map_err(|e| format!("{}", e))?
+                    .clone();
+                let to = registry
+                    .get_unit(target_unit)
+                    .map_err(|e| format!("{}", e))?
+                    .clone();
+                decimals = decimals
+                    .into_iter()
+                    .map(|value| registry.convert(value, &from, &to))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| format!("{}", e))?;
+            }
+        }
+
+        let result = match function {
+            AggregateFunction::Sum => decimals.iter().copied().sum(),
+            AggregateFunction::Avg => {
+                let sum: Decimal = decimals.iter().copied().sum();
+                sum / Decimal::from(decimals.len())
+            }
+            AggregateFunction::Min => decimals
+                .into_iter()
+                .min()
+                .ok_or_else(|| "No values available for min".to_string())?,
+            AggregateFunction::Max => decimals
+                .into_iter()
+                .max()
+                .ok_or_else(|| "No values available for max".to_string())?,
+            AggregateFunction::Count => Decimal::from(values.len() as i64),
+        };
+
+        let as_f64 = result
+            .to_f64()
+            .ok_or_else(|| format!("Failed to convert aggregated value {} to f64", result))?;
+
+        Ok(serde_json::json!(as_f64))
+    }
+
+    fn reduce_binary_expression(
+        op: &BinaryOp,
+        left: Expression,
+        right: Expression,
+    ) -> Result<Expression, String> {
+        match (&left, &right) {
+            (Expression::Literal(left_value), Expression::Literal(right_value)) => {
+                let reduced = match op {
+                    BinaryOp::Equal => serde_json::json!(left_value == right_value),
+                    BinaryOp::NotEqual => serde_json::json!(left_value != right_value),
+                    BinaryOp::GreaterThan
+                    | BinaryOp::LessThan
+                    | BinaryOp::GreaterThanOrEqual
+                    | BinaryOp::LessThanOrEqual => {
+                        let left_num = Self::value_to_f64(left_value)
+                            .ok_or_else(|| "Left operand is not numeric".to_string())?;
+                        let right_num = Self::value_to_f64(right_value)
+                            .ok_or_else(|| "Right operand is not numeric".to_string())?;
+                        match op {
+                            BinaryOp::GreaterThan => serde_json::json!(left_num > right_num),
+                            BinaryOp::LessThan => serde_json::json!(left_num < right_num),
+                            BinaryOp::GreaterThanOrEqual => {
+                                serde_json::json!(left_num >= right_num)
+                            }
+                            BinaryOp::LessThanOrEqual => serde_json::json!(left_num <= right_num),
+                            _ => unreachable!(),
+                        }
+                    }
+                    BinaryOp::And | BinaryOp::Or => {
+                        let left_bool = left_value
+                            .as_bool()
+                            .ok_or_else(|| "Left operand is not boolean".to_string())?;
+                        let right_bool = right_value
+                            .as_bool()
+                            .ok_or_else(|| "Right operand is not boolean".to_string())?;
+                        match op {
+                            BinaryOp::And => serde_json::json!(left_bool && right_bool),
+                            BinaryOp::Or => serde_json::json!(left_bool || right_bool),
+                            _ => unreachable!(),
+                        }
+                    }
+                    BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => {
+                        let left_str = left_value
+                            .as_str()
+                            .ok_or_else(|| "Left operand is not string".to_string())?;
+                        let right_str = right_value
+                            .as_str()
+                            .ok_or_else(|| "Right operand is not string".to_string())?;
+                        match op {
+                            BinaryOp::Contains => serde_json::json!(left_str.contains(right_str)),
+                            BinaryOp::StartsWith => {
+                                serde_json::json!(left_str.starts_with(right_str))
+                            }
+                            BinaryOp::EndsWith => serde_json::json!(left_str.ends_with(right_str)),
+                            _ => unreachable!(),
+                        }
+                    }
+                    _ => return Ok(Expression::binary(op.clone(), left.clone(), right.clone())),
+                };
+                Ok(Expression::Literal(reduced))
+            }
+            _ => Ok(Expression::binary(op.clone(), left, right)),
+        }
+    }
+
+    fn value_to_f64(value: &serde_json::Value) -> Option<f64> {
+        value
+            .as_f64()
+            .or_else(|| value.as_i64().map(|v| v as f64))
+            .or_else(|| value.as_u64().map(|v| v as f64))
     }
 }

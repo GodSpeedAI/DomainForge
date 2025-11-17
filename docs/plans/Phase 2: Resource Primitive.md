@@ -26,7 +26,7 @@
 - **Prerequisite:** Phase 1 complete (Entity pattern established)
 - **Blocks:** Phase 3 (Flow requires Resource)
 
-**Key Deliverable:** Working `Resource::new()` with unit tracking
+**Key Deliverable:** Working `Resource::new_with_namespace()` with unit tracking (use `"default"` when no namespace intended)
 
 ---
 
@@ -103,13 +103,13 @@ use uuid::Uuid;
 
 #[test]
 fn test_resource_new_creates_valid_uuid() {
-    let resource = Resource::new("Camera", "units");
+    let resource = Resource::new_with_namespace("Camera", "units", "default");
     assert!(Uuid::parse_str(&resource.id().to_string()).is_ok());
 }
 
 #[test]
 fn test_resource_name_and_unit_stored() {
-    let resource = Resource::new("Steel Beam", "kg");
+    let resource = Resource::new_with_namespace("Steel Beam", "kg", "default");
     assert_eq!(resource.name(), "Steel Beam");
     assert_eq!(resource.unit(), "kg");
 }
@@ -139,7 +139,7 @@ use uuid::Uuid;
 /// ```
 /// use sea_core::primitives::Resource;
 ///
-/// let product = Resource::new("Camera", "units");
+/// let product = Resource::new_with_namespace("Camera", "units", "default");
 /// assert_eq!(product.unit(), "units");
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -240,14 +240,14 @@ use serde_json::json;
 
 #[test]
 fn test_resource_set_attribute() {
-    let mut resource = Resource::new("Gold", "kg");
+    let mut resource = Resource::new_with_namespace("Gold", "kg", "default");
     resource.set_attribute("purity", json!(0.999));
     assert_eq!(resource.get_attribute("purity"), Some(&json!(0.999)));
 }
 
 #[test]
 fn test_resource_serializes() {
-    let resource = Resource::new("Silver", "oz");
+    let resource = Resource::new_with_namespace("Silver", "oz", "default");
     let json = serde_json::to_string(&resource).unwrap();
     assert!(json.contains("Silver"));
     assert!(json.contains("oz"));

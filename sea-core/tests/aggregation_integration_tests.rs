@@ -17,8 +17,8 @@ fn test_end_to_end_count_aggregation() {
     let mut graph = Graph::new();
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
-    let gold = Resource::new("Gold", kg);
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -53,6 +53,88 @@ fn test_end_to_end_count_aggregation() {
 }
 
 #[test]
+fn test_sum_aggregation_comprehension_filters() {
+    let mut graph = Graph::new();
+    let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
+    let vendor = Entity::new_with_namespace("Vendor", "default".to_string());
+
+    let usd = Unit::new(
+        "USD",
+        "US Dollar",
+        Dimension::Currency,
+        Decimal::from(1),
+        "USD",
+    );
+    let eur = Unit::new("EUR", "Euro", Dimension::Currency, Decimal::from(1), "EUR");
+
+    let money_usd = Resource::new_with_namespace("MoneyUSD", usd, "default".to_string());
+    let money_eur = Resource::new_with_namespace("MoneyEUR", eur, "default".to_string());
+
+    graph.add_entity(warehouse.clone()).unwrap();
+    graph.add_entity(vendor.clone()).unwrap();
+    graph.add_resource(money_usd.clone()).unwrap();
+    graph.add_resource(money_eur.clone()).unwrap();
+
+    let usd_flow = Flow::new(
+        money_usd.id().clone(),
+        warehouse.id().clone(),
+        vendor.id().clone(),
+        Decimal::from(500),
+    );
+    graph.add_flow(usd_flow).unwrap();
+
+    let eur_flow = Flow::new(
+        money_eur.id().clone(),
+        warehouse.id().clone(),
+        vendor.id().clone(),
+        Decimal::from(300),
+    );
+    graph.add_flow(eur_flow).unwrap();
+
+    let predicate = Expression::binary(
+        BinaryOp::Equal,
+        Expression::member_access("f", "resource"),
+        Expression::literal(money_usd.id().to_string()),
+    );
+    let projection = Expression::member_access("f", "quantity");
+
+    let comprehension = Expression::AggregationComprehension {
+        function: AggregateFunction::Sum,
+        variable: "f".to_string(),
+        collection: Box::new(Expression::variable("flows")),
+        predicate: Box::new(predicate),
+        projection: Box::new(projection),
+        target_unit: None,
+    };
+
+    let expanded = comprehension.clone().expand(&graph).unwrap();
+    match expanded {
+        Expression::Literal(ref value) => {
+            assert!(
+                value.as_f64().is_some(),
+                "Comprehension should reduce to numeric value"
+            );
+        }
+        other => panic!(
+            "Expected comprehension to expand to literal, got {:?}",
+            other
+        ),
+    }
+
+    let policy = Policy::new(
+        "usd_cap",
+        Expression::binary(
+            BinaryOp::LessThanOrEqual,
+            comprehension,
+            Expression::literal(600.0),
+        ),
+    );
+
+    let result = policy.evaluate(&graph).unwrap();
+    assert!(result.is_satisfied, "Only USD flow should be aggregated");
+}
+
+#[test]
 fn test_end_to_end_sum_aggregation() {
     let source = r#"
         Policy total_quantity as: sum(flows.quantity) > 500
@@ -64,8 +146,8 @@ fn test_end_to_end_sum_aggregation() {
     let mut graph = Graph::new();
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
-    let gold = Resource::new("Gold", kg);
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -105,7 +187,7 @@ fn test_end_to_end_avg_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
-    let camera = Resource::new("Camera", units);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -146,7 +228,7 @@ fn test_end_to_end_min_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
-    let camera = Resource::new("Camera", units);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -187,7 +269,7 @@ fn test_end_to_end_max_aggregation() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let units = unit_from_string("units");
-    let camera = Resource::new("Camera", units);
+    let camera = Resource::new_with_namespace("Camera", units, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -227,8 +309,8 @@ fn test_complex_aggregation_policy() {
     let mut graph = Graph::new();
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
-    let gold = Resource::new("Gold", kg);
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();

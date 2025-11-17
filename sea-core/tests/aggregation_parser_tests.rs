@@ -69,3 +69,23 @@ fn test_parse_aggregation_in_complex_expression() {
     let ast = parse(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
 }
+
+#[test]
+fn test_parse_aggregation_comprehension_with_filter() {
+    let source = r#"
+        Policy flow_filter as: sum(f in flows where f.resource = "Money": f.quantity) > 1000
+    "#;
+
+    let ast = parse(source).unwrap();
+    assert_eq!(ast.declarations.len(), 1);
+}
+
+#[test]
+fn test_parse_aggregation_comprehension_with_unit() {
+    let source = r#"
+        Policy coerced as: sum(f in flows where f.resource = "Money": f.quantity as "USD") > 1000 "USD"
+    "#;
+
+    let ast = parse(source).unwrap();
+    assert_eq!(ast.declarations.len(), 1);
+}

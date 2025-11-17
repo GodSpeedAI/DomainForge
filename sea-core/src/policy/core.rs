@@ -5,11 +5,15 @@ use crate::{ConceptId, SemanticVersion};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DeonticModality {
+pub enum PolicyModality {
     Obligation,
     Prohibition,
     Permission,
 }
+
+/// Backwards-compatible alias used by existing tests and documentation
+#[allow(unused_imports)]
+pub use PolicyModality as DeonticModality;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PolicyKind {
@@ -25,9 +29,11 @@ pub struct Policy {
     pub namespace: String,
     pub version: SemanticVersion,
     pub expression: Expression,
-    pub modality: DeonticModality,
+    pub modality: PolicyModality,
     pub kind: PolicyKind,
     pub priority: i32,
+    pub rationale: Option<String>,
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,9 +51,11 @@ impl Policy {
             namespace: "default".to_string(),
             version: SemanticVersion::default(),
             expression,
-            modality: DeonticModality::Obligation,
+            modality: PolicyModality::Obligation,
             kind: PolicyKind::Constraint,
             priority: 0,
+            rationale: None,
+            tags: Vec::new(),
         }
     }
 
@@ -66,13 +74,15 @@ impl Policy {
             namespace,
             version: SemanticVersion::default(),
             expression,
-            modality: DeonticModality::Obligation,
+            modality: PolicyModality::Obligation,
             kind: PolicyKind::Constraint,
             priority: 0,
+            rationale: None,
+            tags: Vec::new(),
         }
     }
 
-    pub fn with_modality(mut self, modality: DeonticModality) -> Self {
+    pub fn with_modality(mut self, modality: PolicyModality) -> Self {
         self.modality = modality;
         self
     }
@@ -89,6 +99,44 @@ impl Policy {
 
     pub fn with_priority(mut self, priority: i32) -> Self {
         self.priority = priority;
+        self
+    }
+
+    pub fn with_rationale(mut self, rationale: impl Into<String>) -> Self {
+        self.rationale = Some(rationale.into());
+        self
+    }
+
+    pub fn with_tags<I, S>(mut self, tags: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.tags = tags.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn with_metadata(
+        mut self,
+        kind: Option<PolicyKind>,
+        modality: Option<PolicyModality>,
+        priority: Option<i32>,
+        rationale: Option<String>,
+        tags: Vec<String>,
+    ) -> Self {
+        if let Some(kind) = kind {
+            self.kind = kind;
+        }
+        if let Some(modality) = modality {
+            self.modality = modality;
+        }
+        if let Some(priority) = priority {
+            self.priority = priority;
+        }
+        self.rationale = rationale;
+        if !tags.is_empty() {
+            self.tags = tags;
+        }
         self
     }
 
@@ -184,6 +232,12 @@ impl Policy {
             Expression::Aggregation { .. } => {
                 Err("Cannot evaluate non-expanded aggregation".to_string())
             }
+            Expression::AggregationComprehension { .. } => {
+                Err("Cannot evaluate non-expanded aggregation comprehension".to_string())
+            }
+            Expression::QuantityLiteral { .. } => {
+                Err("Cannot evaluate quantity literal in boolean context".to_string())
+            }
         }
     }
 
@@ -260,7 +314,7 @@ impl Policy {
     }
 }
 
-impl DeonticModality {
+impl PolicyModality {
     pub fn to_severity(&self) -> Severity {
         match self {
             Self::Obligation => Severity::Error,

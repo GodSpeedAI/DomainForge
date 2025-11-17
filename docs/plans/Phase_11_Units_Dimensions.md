@@ -446,7 +446,7 @@ use rust_decimal::Decimal;
 #[test]
 fn test_resource_with_unit() {
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default");
 
     assert_eq!(gold.name(), "Gold");
     assert_eq!(gold.unit().symbol(), "kg");
@@ -456,7 +456,7 @@ fn test_resource_with_unit() {
 #[test]
 fn test_resource_unit_serialization() {
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default");
 
     let json = serde_json::to_string(&gold).unwrap();
     let deserialized: Resource = serde_json::from_str(&json).unwrap();
@@ -553,10 +553,10 @@ use rust_decimal::Decimal;
 fn test_flow_validates_compatible_units() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default");
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -577,12 +577,12 @@ fn test_flow_validates_compatible_units() {
 fn test_flow_rejects_unit_mismatch() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
 
     // Resource expects kg (mass)
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default");
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();

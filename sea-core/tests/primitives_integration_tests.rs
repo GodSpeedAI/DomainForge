@@ -7,8 +7,8 @@ fn test_complete_supply_chain_model() {
     let supplier = Entity::new_with_namespace("Supplier", "default".to_string());
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
 
-    let steel = Resource::new("Steel", unit_from_string("kg"));
-    let camera = Resource::new("Camera", unit_from_string("units"));
+    let steel = Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
+    let camera = Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
 
     let steel_shipment = Flow::new(
         steel.id().clone(),
@@ -30,9 +30,9 @@ fn test_multi_stage_flow() {
     let manufacturer = Entity::new_with_namespace("Camera Manufacturer", "default".to_string());
     let retailer = Entity::new_with_namespace("Retail Store", "default".to_string());
 
-    let steel = Resource::new("Steel", unit_from_string("kg"));
-    let camera_parts = Resource::new("Camera Parts", unit_from_string("units"));
-    let finished_camera = Resource::new("Camera", unit_from_string("units"));
+    let steel = Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
+    let camera_parts = Resource::new_with_namespace("Camera Parts", unit_from_string("units"), "default".to_string());
+    let finished_camera = Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
 
     let flow1 = Flow::new(
         steel.id().clone(),
@@ -67,7 +67,7 @@ fn test_multi_stage_flow() {
 fn test_instance_tracking_across_entities() {
     let warehouse_a = Entity::new_with_namespace("Warehouse A", "default".to_string());
     let warehouse_b = Entity::new_with_namespace("Warehouse B", "default".to_string());
-    let camera = Resource::new("Camera Model X", unit_from_string("units"));
+    let camera = Resource::new_with_namespace("Camera Model X", unit_from_string("units"), "default".to_string());
 
     let instance1 = Instance::new(camera.id().clone(), warehouse_a.id().clone());
 
@@ -83,7 +83,7 @@ fn test_instance_tracking_across_entities() {
 fn test_resource_flow_with_instances() {
     let origin = Entity::new_with_namespace("Manufacturing Plant", "default".to_string());
     let destination = Entity::new_with_namespace("Distribution Center", "default".to_string());
-    let product = Resource::new("Smartphone", unit_from_string("units"));
+    let product = Resource::new_with_namespace("Smartphone", unit_from_string("units"), "default".to_string());
 
     let transfer = Flow::new(
         product.id().clone(),
@@ -104,7 +104,7 @@ fn test_resource_flow_with_instances() {
 #[test]
 fn test_all_primitives_serialization() {
     let entity = Entity::new_with_namespace("Test Entity", "default".to_string());
-    let resource = Resource::new("Test Resource", unit_from_string("units"));
+    let resource = Resource::new_with_namespace("Test Resource", unit_from_string("units"), "default".to_string());
     let flow = Flow::new(
         resource.id().clone(),
         entity.id().clone(),

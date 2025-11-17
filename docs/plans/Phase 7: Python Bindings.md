@@ -156,7 +156,7 @@ impl Entity {
     #[new]
     fn new(name: String) -> Self {
         Self {
-            inner: RustEntity::new(name),
+            inner: RustEntity::new_with_namespace(name, "default"),
         }
     }
 

@@ -9,7 +9,7 @@ fn test_dimension_equality() {
 
 #[test]
 fn test_unit_creation() {
-    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).unwrap();
+    let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1), "kg");
     assert_eq!(kg.symbol(), "kg");
     assert_eq!(kg.dimension(), &Dimension::Mass);
     assert_eq!(kg.base_factor(), Decimal::from(1));

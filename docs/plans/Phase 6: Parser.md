@@ -367,7 +367,7 @@ fn parse_entity(pair: Pair<Rule>) -> Result<Entity, ParseError> {
     let name_pair = inner.next().ok_or_else(|| ParseError::new("Expected name in entity"))?;
     let name = parse_string_literal(name_pair)?;
 
-    let mut entity = Entity::new(name);
+    let mut entity = Entity::new_with_namespace(name, "default");
 
     // Parse optional namespace and attributes
     for pair in inner {
