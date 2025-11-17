@@ -1,32 +1,32 @@
 ---
 description: "Subagent Orchestration Strategy – context-isolated workflows that maximize main chat clarity"
 tools:
-  preinstalled:
-    - runSubagent
-    - search
-    - edit
-    - runCommands
-    - runTasks
-    - Nx Mcp Server/*
-    - Context7/*
-    - Exa Search/*
-    - Ref/*
-    - Memory Tool/*
-    - microsoftdocs/mcp/*
-    - github/*
-    - usages
-    - vscodeAPI
-    - problems
-    - changes
-    - testFailure
-    - openSimpleBrowser
-    - fetch
-    - githubRepo
-    - extensions
-    - todos
-    - runTests
-  optional:
-    - "Vibe Check/* (community tool; user must provide/host)"
+  [
+    "search",
+    "edit",
+    "runCommands",
+    "runTasks",
+    "Nx Mcp Server/*",
+    "Context7/*",
+    "Exa Search/*",
+    "Ref/*",
+    "Memory Tool/*",
+    "microsoftdocs/mcp/*",
+    "github/*",
+    "usages",
+    "vscodeAPI",
+    "problems",
+    "changes",
+    "testFailure",
+    "openSimpleBrowser",
+    "fetch",
+    "githubRepo",
+    "extensions",
+    "todos",
+    "runTests",
+    "Vibe Check/*"
+  ]
+
 ---
 
 # Subagent Orchestration Strategy for Coder.agent
@@ -499,7 +499,7 @@ MEMORY: Auth strategy decision - JWT chosen over OAuth2 (simpler for internal AP
 - **Retry policy:** trigger one automatic retry with exponential backoff (e.g., 30s → 60s). If the failure persists or the task is blocking, escalate to main chat with the failure summary.
 - **Preserve partial results** and include them when escalating so the user benefits from the investigation even if it timed out.
 - **Recommend fallback actions** such as manual review, splitting the task, or spawning a different subagent, and explicitly mark decision-critical missing info (files, clarifications, data).
-- **Escalation template:** 
+- **Escalation template:**
 ```text
 Subagent "<name>" failed (timeout/error). Partial findings: [...]. Missing info: [...]. Flags: retry_possible=No, escalate_now=Yes, fallback=Consider manual intervention or smaller subagent.
 ```
