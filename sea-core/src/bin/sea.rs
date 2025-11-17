@@ -1,5 +1,5 @@
-use sea_core::parser::parse_to_graph;
 use sea_core::import_kg_turtle;
+use sea_core::parser::parse_to_graph;
 #[cfg(feature = "shacl")]
 use sea_core::ImportError;
 use std::env;

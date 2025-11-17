@@ -1,10 +1,10 @@
-use std::str::FromStr;
 use rust_decimal::Decimal;
 use sea_core::{
     primitives::{Entity, Flow, Instance, Resource},
     units::unit_from_string,
     Graph,
 };
+use std::str::FromStr;
 
 #[test]
 fn test_complete_supply_chain_graph() {

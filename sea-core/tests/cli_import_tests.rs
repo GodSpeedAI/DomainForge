@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use sea_core::ImportError;
 use std::fs::write;
 use std::path::PathBuf;
 use tempfile::tempdir;

@@ -135,13 +135,13 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
     "#;
 
     match store.query(q) {
-        Ok(QueryResults::Solutions(mut solutions)) => {
+        Ok(QueryResults::Solutions(solutions)) => {
             use std::collections::HashMap;
 
             // Map: shape URI -> (optional target class IRI, properties)
             let mut map: HashMap<String, (Option<String>, Vec<ShaclProperty>)> = HashMap::new();
 
-            while let Some(sol_res) = solutions.next() {
+            for sol_res in solutions {
                 let sol = sol_res.map_err(|e| {
                     ImportError::Other(format!("Error reading SHACL SPARQL solution: {}", e))
                 })?;
@@ -155,21 +155,21 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
                     _ => None,
                 };
 
-                let shape_term = sol.get("shape").and_then(|t| term_to_named_str(t));
-                let target_term = sol.get("target").and_then(|t| term_to_named_str(t));
-                let path_term = sol.get("path").and_then(|t| term_to_named_str(t));
+                let shape_term = sol.get("shape").and_then(term_to_named_str);
+                let target_term = sol.get("target").and_then(term_to_named_str);
+                let path_term = sol.get("path").and_then(term_to_named_str);
                 // datatype can be an IRI like http://www.w3.org/2001/XMLSchema#decimal
-                let datatype_term = sol.get("datatype").and_then(|t| term_to_named_str(t));
+                let datatype_term = sol.get("datatype").and_then(term_to_named_str);
                 let min_count = sol
                     .get("minCount")
-                    .and_then(|t| term_to_literal_val(t))
+                    .and_then(term_to_literal_val)
                     .and_then(|v| v.parse::<u32>().ok());
                 let max_count = sol
                     .get("maxCount")
-                    .and_then(|t| term_to_literal_val(t))
+                    .and_then(term_to_literal_val)
                     .and_then(|v| v.parse::<u32>().ok());
                 // minExclusive returns a literal value (e.g., "0"^^xsd:decimal); we only use the lexical form
-                let min_exclusive = sol.get("minExclusive").and_then(|t| term_to_literal_val(t));
+                let min_exclusive = sol.get("minExclusive").and_then(term_to_literal_val);
 
                 if let (Some(shape), Some(path)) = (shape_term.clone(), path_term.clone()) {
                     let path_pref =

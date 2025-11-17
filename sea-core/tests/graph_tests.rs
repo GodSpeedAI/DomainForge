@@ -5,8 +5,8 @@ use sea_core::{
     units::unit_from_string,
     Graph,
 };
-use uuid::Uuid;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[test]
 fn test_graph_creation() {

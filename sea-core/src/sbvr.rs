@@ -429,7 +429,7 @@ impl SbvrModel {
                         Entity::new_with_namespace(term.name.clone(), "default".to_string());
                     graph
                         .add_entity(entity)
-                        .map_err(|e| SbvrError::SerializationError(e))?;
+                        .map_err(SbvrError::SerializationError)?;
                 }
                 TermType::IndividualConcept => {
                     let unit_symbol = term.definition.as_deref().and_then(|def| {
@@ -456,7 +456,7 @@ impl SbvrModel {
                     );
                     graph
                         .add_resource(res)
-                        .map_err(|e| SbvrError::SerializationError(e))?;
+                        .map_err(SbvrError::SerializationError)?;
                 }
                 TermType::VerbConcept => {
                     // We don't represent verbs directly as primitives
@@ -516,7 +516,7 @@ impl SbvrModel {
             let flow = Flow::new(resource_id, subject_id, destination_id, quantity);
             graph
                 .add_flow(flow)
-                .map_err(|e| SbvrError::SerializationError(e))?;
+                .map_err(SbvrError::SerializationError)?;
         }
 
         // Map SBVR Business Rules into Graph Policies
@@ -565,12 +565,12 @@ impl SbvrModel {
                     RuleType::Permission => 1,
                     RuleType::Derivation => 3,
                 };
-                policy = policy.with_priority(default_p as i32);
+                policy = policy.with_priority(default_p);
             }
 
             graph
                 .add_policy(policy)
-                .map_err(|e| SbvrError::SerializationError(e))?;
+                .map_err(SbvrError::SerializationError)?;
         }
 
         Ok(graph)
