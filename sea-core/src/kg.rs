@@ -516,7 +516,7 @@ impl KnowledgeGraph {
                 let entity = Entity::new_with_namespace(name.clone(), "default".to_string());
                 graph
                     .add_entity(entity)
-                    .map_err(KgError::SerializationError)?;
+                    .map_err(|e| KgError::SerializationError(e.to_string()))?;
             }
             if t.predicate == "rdf:type" && t.object == "sea:Resource" {
                 let name = t
@@ -532,7 +532,7 @@ impl KnowledgeGraph {
                 );
                 graph
                     .add_resource(resource)
-                    .map_err(KgError::SerializationError)?;
+                    .map_err(|e| KgError::SerializationError(e.to_string()))?;
             }
         }
 
@@ -588,7 +588,9 @@ impl KnowledgeGraph {
                     })?;
 
                     let flow = Flow::new(res_id, from_id, to_id, quantity_val);
-                    graph.add_flow(flow).map_err(KgError::SerializationError)?;
+                    graph
+                        .add_flow(flow)
+                        .map_err(|e| KgError::SerializationError(e.to_string()))?;
                 }
             }
         }
