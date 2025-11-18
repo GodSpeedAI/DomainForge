@@ -335,7 +335,7 @@ path = "./vendor/acme/*/"
     1. Exact match (`com.acme.finance`)
     2. Longest glob prefix (`com.acme.*` > `com.*`)
     3. Filesystem fallback (default mapping)
-      - Clarify: "Longest glob prefix" refers to the longest literal (non-wildcard) left-to-right path segment prefix. Example: `com.acme.` outranks `com.` for `com.acme.finance`. When two patterns tie on literal prefix length but both match (e.g., `com.` vs `.acme` for `com.acme`), flag the configuration as ambiguous and surface a validation error instead of picking based on lexicographic order or discovery time.
+  - Clarify: "Longest glob prefix" refers to the longest literal (non-wildcard) left-to-right path segment prefix. Example: `com.acme.` outranks `com.` for `com.acme.finance`. When two patterns tie on literal prefix length but both match (e.g., `com.` vs `.acme` for `com.acme`), flag the configuration as ambiguous and surface a validation error instead of picking based on lexicographic order or discovery time.
   - Version field usage (metadata-only, defer enforcement to Phase 19+)
   - Remote registry preparation (document future API)
 

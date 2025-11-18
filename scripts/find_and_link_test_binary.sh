@@ -2,9 +2,8 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-# This script builds tests (cargo test --no-run), finds a test binary that includes
-# the given test file name (or test binary stem), and creates a stable symlink
-# at target/debug/deps/sea_debug_test which can be used by debuggers.
+# Build the requested test binary, locate the hashed executable, and ensure
+# a stable path (`target/debug/deps/sea_debug_test`) exists for codelldb.
 
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <test-file-stem-or-binary-name>"
@@ -12,52 +11,56 @@ if [ "$#" -lt 1 ]; then
   exit 2
 fi
 
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
+  if command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+  else
+    echo "python3 (or python) is required to locate the test binary" >&2
+    exit 1
+  fi
+fi
+
 TEST_NAME="$1"
 CRATE_PATH="sea-core"
-BIN_DIR="target/debug/deps"
-ESCAPED_TEST_NAME="$(
-  python3 -c 'import re,sys; print(re.escape(sys.argv[1]))' -- "$TEST_NAME"
-)"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPTS_DIR="${ROOT_DIR}/scripts"
+STABLE_DEST_DIR="${ROOT_DIR}/target/debug/deps"
+DEST="${STABLE_DEST_DIR}/sea_debug_test"
 
 echo "Building test binaries for crate: ${CRATE_PATH}"
+pushd "${ROOT_DIR}" >/dev/null
 cargo test -p "${CRATE_PATH}" --no-run
 
-if [ ! -d "${BIN_DIR}" ]; then
-  echo "Error: ${BIN_DIR} not found; make sure build succeeded" >&2
+echo "Locating compiled binary for: ${TEST_NAME}"
+FOUND_BIN="$(
+  "${PYTHON_BIN}" "${SCRIPTS_DIR}/resolve_rust_binary.py" \
+    --workspace "${ROOT_DIR}" \
+    --name "${TEST_NAME}" \
+    --profile debug \
+    --match-mode prefix \
+    --fallback-mode contains \
+    --deps-subdir deps \
+    --require-executable
+)"
+popd >/dev/null
+
+if [ -z "${FOUND_BIN}" ]; then
+  echo "Error: resolver did not return a binary path" >&2
   exit 1
 fi
 
-echo "Searching for test binary matching: ${TEST_NAME}"
-# Attempt to match the test binary by stem (binary names are typically 'testname-<hash>')
-FOUND_BIN=$(ls "${BIN_DIR}" 2>/dev/null | grep -E "^${ESCAPED_TEST_NAME}(-[0-9a-f]+)?(\\.exe)?$" | head -n 1 || true)
-
-if [ -z "${FOUND_BIN}" ]; then
-  # Not found by exact match; try contains
-  FOUND_BIN=$(ls "${BIN_DIR}" 2>/dev/null | grep -E "${ESCAPED_TEST_NAME}" | head -n 1 || true)
-fi
-
-if [ -z "${FOUND_BIN}" ]; then
-  echo "Could not locate test binary in ${BIN_DIR} for test name: ${TEST_NAME}" >&2
-  echo "Available candidates:" >&2
-  ls -1 "${BIN_DIR}" >&2
-  exit 1
-fi
-
-SRC="${BIN_DIR}/${FOUND_BIN}"
-DEST="${BIN_DIR}/sea_debug_test"
-
-echo "Found binary: ${SRC}"
-# Remove old link if present
+echo "Found binary: ${FOUND_BIN}"
+mkdir -p "${STABLE_DEST_DIR}"
 if [ -e "${DEST}" ] || [ -L "${DEST}" ]; then
   rm -f "${DEST}"
 fi
 
-echo "Linking ${SRC} -> ${DEST}"
-# Prefer symlink; fallback to copy on Windows/other filesystems
-if ln -s "${SRC}" "${DEST}" 2>/dev/null; then
-  echo "Created symlink: ${DEST} -> ${SRC}"
+echo "Linking ${FOUND_BIN} -> ${DEST}"
+if ln -s "${FOUND_BIN}" "${DEST}" 2>/dev/null; then
+  echo "Created symlink: ${DEST} -> ${FOUND_BIN}"
 else
-  cp "${SRC}" "${DEST}"
+  cp "${FOUND_BIN}" "${DEST}"
   chmod +x "${DEST}"
   echo "Copied binary to: ${DEST}"
 fi

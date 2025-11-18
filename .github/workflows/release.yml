@@ -39,25 +39,37 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }} --features cli
         working-directory: sea-core
 
+      - name: Resolve CLI binary path
+        if: matrix.os != 'windows-latest'
+        run: |
+          CLI_BIN=$(python3 scripts/resolve_rust_binary.py --workspace "$(pwd)" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable)
+          echo "Resolved CLI binary: $CLI_BIN"
+          echo "CLI_BIN=$CLI_BIN" >> "$GITHUB_ENV"
+          echo "CLI_BIN_DIR=$(dirname "$CLI_BIN")" >> "$GITHUB_ENV"
+
+      - name: Resolve CLI binary path (windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $workspace = (Get-Location).Path
+          $cliBin = python scripts/resolve_rust_binary.py --workspace "$workspace" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable
+          Write-Host "Resolved CLI binary: $cliBin"
+          "CLI_BIN=$cliBin" >> $env:GITHUB_ENV
+          $cliDir = Split-Path -Parent $cliBin
+          "CLI_BIN_DIR=$cliDir" >> $env:GITHUB_ENV
+
       - name: Run built CLI binary (--version) to verify runtime (non-windows)
         if: matrix.os != 'windows-latest'
         run: |
-          BIN_DIR="sea-core/target/${{ matrix.target }}/release"
-          if [ ! -f "$BIN_DIR/sea" ] && [ -f "sea-core/target/release/sea" ]; then BIN_DIR="sea-core/target/release"; fi
-          if [ ! -f "$BIN_DIR/sea" ] && [ -f "target/release/sea" ]; then BIN_DIR="target/release"; fi
-          echo "Using binary dir: $BIN_DIR"
-          export LD_LIBRARY_PATH="$BIN_DIR:$LD_LIBRARY_PATH"
-          export DYLD_LIBRARY_PATH="$BIN_DIR:$DYLD_LIBRARY_PATH"
-           "$BIN_DIR/sea" --version || (echo "::error::Failed to run built CLI binary"; ls -la "$BIN_DIR"; exit 1)
-           # placeholder for windows fallback (no-op on non-windows)
+          echo "Using CLI binary: $CLI_BIN"
+          export LD_LIBRARY_PATH="$CLI_BIN_DIR:$LD_LIBRARY_PATH"
+          export DYLD_LIBRARY_PATH="$CLI_BIN_DIR:$DYLD_LIBRARY_PATH"
+          "$CLI_BIN" --version || (echo "::error::Failed to run built CLI binary"; ls -la "$CLI_BIN_DIR"; exit 1)
 
       - name: Check CLI binary size (non-windows)
         if: matrix.os != 'windows-latest'
         run: |
-          BIN_DIR="sea-core/target/${{ matrix.target }}/release"
-          if [ ! -f "$BIN_DIR/sea" ] && [ -f "sea-core/target/release/sea" ]; then BIN_DIR="sea-core/target/release"; fi
-          if [ ! -f "$BIN_DIR/sea" ] && [ -f "target/release/sea" ]; then BIN_DIR="target/release"; fi
-          SIZE=$(stat -c%s "$BIN_DIR/sea")
+          SIZE=$(python3 -c 'import os; print(os.path.getsize(os.environ["CLI_BIN"]))')
           echo "CLI binary size: $SIZE bytes"
           if [ "$SIZE" -gt ${{ env.CLI_MAX_BYTES }} ]; then
             echo "::error::CLI binary exceeds ${CLI_MAX_BYTES} bytes ($SIZE)";
@@ -68,20 +80,15 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $binDir = "sea-core/target/${{ matrix.target }}/release"
-          if (-not (Test-Path "$binDir/sea.exe")) { $binDir = "sea-core/target/release" }
-          if (-not (Test-Path "$binDir/sea.exe")) { $binDir = "target/release" }
-          Write-Host "Using binary dir: $binDir"
-          $env:PATH = "$binDir;$env:PATH"
-          & "$binDir/sea.exe" --version
+          Write-Host "Using CLI binary: $env:CLI_BIN"
+          $env:PATH = "$env:CLI_BIN_DIR;$env:PATH"
+          & "$env:CLI_BIN" --version
 
       - name: Check CLI binary size (windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $binDir = "sea-core/target/${{ matrix.target }}/release"
-          if (-not (Test-Path "$binDir/sea.exe")) { $binDir = "sea-core/target/release" }
-          $size = (Get-Item "$binDir/sea.exe").Length
+          $size = (Get-Item "$env:CLI_BIN").Length
           Write-Host "CLI binary size: $size bytes"
           if ($size -gt $env:CLI_MAX_BYTES) { Write-Error "CLI binary exceeds $env:CLI_MAX_BYTES bytes ($size)"; exit 1 }
 
@@ -89,20 +96,24 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          cd sea-core/target/${{ matrix.target }}/release
-          7z a ../../../../sea-core-${{ matrix.target }}.zip sea.exe
+          $artifact = "sea-core-${{ matrix.target }}.zip"
+          $binaryName = Split-Path -Leaf $env:CLI_BIN
+          Push-Location $env:CLI_BIN_DIR
+          7z a "$env:GITHUB_WORKSPACE/$artifact" $binaryName
+          Pop-Location
 
       - name: Verify packaged CLI artifact runs (windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           $zipPath = "sea-core-${{ matrix.target }}.zip"
+          $binaryName = Split-Path -Leaf $env:CLI_BIN
           Write-Host "Testing package: $zipPath"
           Expand-Archive -LiteralPath $zipPath -DestinationPath ./tmp_unpacked -Force
-          Set-Location ./tmp_unpacked
+          Push-Location ./tmp_unpacked
           $env:PATH = (Get-Location).Path + ";$env:PATH"
-          & .\sea.exe --version
-          Set-Location ../../../../
+          & .\$binaryName --version
+          Pop-Location
 
       - name: Check packaged artifact size (windows)
         if: matrix.os == 'windows-latest'
@@ -117,21 +128,23 @@ jobs:
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
-          cd sea-core/target/${{ matrix.target }}/release
-          tar czf ../../../../sea-core-${{ matrix.target }}.tar.gz sea
+          ART="sea-core-${{ matrix.target }}.tar.gz"
+          BIN_NAME="$(basename "$CLI_BIN")"
+          tar czf "$ART" -C "$CLI_BIN_DIR" "$BIN_NAME"
 
       - name: Verify packaged CLI artifact runs (non-windows)
         if: matrix.os != 'windows-latest'
         run: |
           ART=sea-core-${{ matrix.target }}.tar.gz
+          BIN_NAME="$(basename "$CLI_BIN")"
           echo "Testing package: $ART"
           mkdir -p tmp_unpacked
-          tar -xzf $ART -C tmp_unpacked
-          cd tmp_unpacked
+          tar -xzf "$ART" -C tmp_unpacked
+          pushd tmp_unpacked >/dev/null
           export LD_LIBRARY_PATH="$(pwd):$LD_LIBRARY_PATH"
           export DYLD_LIBRARY_PATH="$(pwd):$DYLD_LIBRARY_PATH"
-          ./sea --version || (echo "::error::Failed to run packaged CLI binary"; ls -la; exit 1)
-          cd ../../../../
+          "./$BIN_NAME" --version || (echo "::error::Failed to run packaged CLI binary"; ls -la; exit 1)
+          popd >/dev/null
 
       - name: Check packaged artifact size (non-windows)
         if: matrix.os != 'windows-latest'
