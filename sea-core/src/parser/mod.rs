@@ -13,6 +13,11 @@ pub use ast::{parse_source, Ast, AstNode};
 pub use error::{ParseError, ParseResult};
 pub use string_utils::unescape_string;
 
+#[derive(Debug, Clone, Default)]
+pub struct ParseOptions {
+    pub default_namespace: Option<String>,
+}
+
 /// Parse SEA DSL source code into an AST
 pub fn parse(source: &str) -> ParseResult<Ast> {
     ast::parse_source(source)
@@ -21,7 +26,12 @@ pub fn parse(source: &str) -> ParseResult<Ast> {
 /// Parse SEA DSL source code directly into a Graph
 pub fn parse_to_graph(source: &str) -> ParseResult<Graph> {
     let ast = parse(source)?;
-    ast::ast_to_graph(ast)
+    ast::ast_to_graph_with_options(ast, &ParseOptions::default())
+}
+
+pub fn parse_to_graph_with_options(source: &str, options: &ParseOptions) -> ParseResult<Graph> {
+    let ast = parse(source)?;
+    ast::ast_to_graph_with_options(ast, options)
 }
 
 #[cfg(test)]

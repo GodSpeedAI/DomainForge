@@ -1,6 +1,6 @@
-use crate::policy::{Policy, Violation, Severity};
-use crate::validation_result::ValidationResult;
+use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{Entity, Flow, Instance, Resource};
+use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -297,6 +297,41 @@ impl Graph {
 
     pub fn all_policies(&self) -> Vec<&Policy> {
         self.policies.values().collect()
+    }
+
+    /// Extend this graph with all nodes and policies from another graph.
+    /// Duplicate identifiers result in an error so that callers can surface
+    /// clear diagnostics when two files describe the same concept.
+    pub fn extend(&mut self, other: Graph) -> Result<(), String> {
+        let Graph {
+            entities,
+            resources,
+            flows,
+            instances,
+            policies,
+        } = other;
+
+        for entity in entities.into_values() {
+            self.add_entity(entity)?;
+        }
+
+        for resource in resources.into_values() {
+            self.add_resource(resource)?;
+        }
+
+        for instance in instances.into_values() {
+            self.add_instance(instance)?;
+        }
+
+        for flow in flows.into_values() {
+            self.add_flow(flow)?;
+        }
+
+        for policy in policies.into_values() {
+            self.add_policy(policy)?;
+        }
+
+        Ok(())
     }
 
     /// Validate the graph by evaluating all policies against it and

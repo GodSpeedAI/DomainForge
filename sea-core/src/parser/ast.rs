@@ -1,6 +1,6 @@
 use crate::graph::Graph;
 use crate::parser::error::{ParseError, ParseResult};
-use crate::parser::{Rule, SeaParser};
+use crate::parser::{ParseOptions, Rule, SeaParser};
 use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp,
@@ -948,6 +948,10 @@ fn parse_decimal(pair: Pair<Rule>) -> ParseResult<Decimal> {
 
 /// Convert AST to Graph
 pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
+    ast_to_graph_with_options(ast, &ParseOptions::default())
+}
+
+pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
     let mut graph = Graph::new();
     let mut entity_map = HashMap::new();
     let mut resource_map = HashMap::new();
@@ -955,9 +959,9 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     let default_namespace = ast
         .metadata
         .namespace
-        .as_deref()
-        .unwrap_or("default")
-        .to_string();
+        .clone()
+        .or_else(|| options.default_namespace.clone())
+        .unwrap_or_else(|| "default".to_string());
 
     // First pass: Register dimensions and units
     for node in &ast.declarations {
@@ -1078,6 +1082,7 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
                 .namespace
                 .as_ref()
                 .cloned()
+                .or_else(|| options.default_namespace.clone())
                 .unwrap_or_else(|| "default".to_string());
 
             let kind = metadata.kind.as_ref().map(|kind| match kind {

@@ -1,0 +1,10 @@
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "logistics"
+patterns = ["examples/namespaces/logistics/**/*.sea"]
+
+[[namespaces]]
+namespace = "finance"
+patterns = ["examples/namespaces/finance/**/*.sea"]

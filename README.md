@@ -510,6 +510,7 @@ imported_graph = Graph.import_calm(calm_data)
 | 📋 [**Implementation Plans**](docs/plans/) | Phase-by-phase TDD implementation guides |
 | 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md) | SEA ↔ CALM conversion specification |
 | 🎓 [**Examples**](examples/) | Browser demo and parser examples |
+| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md) | Configure `.sea-registry.toml` and workspace glob patterns |
 
 ### 🆕 Recent API Changes (November 2025)
 

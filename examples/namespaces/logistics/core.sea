@@ -1,0 +1,7 @@
+Entity "Warehouse"
+Entity "Factory"
+Resource "Camera" units
+Flow "Camera" from "Warehouse" to "Factory" quantity 100
+
+Policy logistics_flow as:
+    Entity.name != ""
