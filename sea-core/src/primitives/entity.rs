@@ -162,7 +162,7 @@ impl Entity {
     /// use sea_core::primitives::Entity;
     /// use serde_json::json;
     ///
-    /// let mut entity = Entity::new("Factory");
+    /// let mut entity = Entity::new_with_namespace("Factory", "default");
     /// entity.set_attribute("capacity", json!(5000));
     /// assert_eq!(entity.get_attribute("capacity"), Some(&json!(5000)));
     /// assert_eq!(entity.get_attribute("missing"), None);

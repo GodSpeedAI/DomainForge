@@ -80,7 +80,11 @@ fn test_round_trip_with_instances() {
     let mut original_graph = Graph::new();
 
     let warehouse = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
-    let cameras = Resource::new_with_namespace("Cameras".to_string(), unit_from_string("units"), "default".to_string());
+    let cameras = Resource::new_with_namespace(
+        "Cameras".to_string(),
+        unit_from_string("units"),
+        "default".to_string(),
+    );
 
     let warehouse_id = warehouse.id().clone();
     let cameras_id = cameras.id().clone();

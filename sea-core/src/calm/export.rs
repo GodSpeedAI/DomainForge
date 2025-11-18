@@ -145,7 +145,11 @@ mod tests {
         use crate::units::unit_from_string;
 
         let mut graph = Graph::new();
-        let resource = Resource::new_with_namespace("Cameras".to_string(), unit_from_string("units"), "default".to_string());
+        let resource = Resource::new_with_namespace(
+            "Cameras".to_string(),
+            unit_from_string("units"),
+            "default".to_string(),
+        );
         graph.add_resource(resource).unwrap();
 
         let result = export(&graph).unwrap();
@@ -165,7 +169,11 @@ mod tests {
 
         let entity1 = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
         let entity2 = Entity::new_with_namespace("Factory".to_string(), "default".to_string());
-        let resource = Resource::new_with_namespace("Cameras".to_string(), unit_from_string("units"), "default".to_string());
+        let resource = Resource::new_with_namespace(
+            "Cameras".to_string(),
+            unit_from_string("units"),
+            "default".to_string(),
+        );
 
         let e1_id = entity1.id().clone();
         let e2_id = entity2.id().clone();

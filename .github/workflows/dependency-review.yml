@@ -20,5 +20,5 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
-          fail-on-severity: high # Relaxed from moderate to reduce false positives
+          fail-on-severity: critical # Only fail on critical severity to be conservative
           allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC

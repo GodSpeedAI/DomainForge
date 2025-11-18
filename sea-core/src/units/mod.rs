@@ -1,5 +1,5 @@
-use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -366,7 +366,11 @@ impl UnitRegistry {
             base_unit: String,
         }
 
-        let parsed: Vec<UnitConfig> = serde_json::from_str(json).map_err(|e| UnitError::ConversionNotDefined { from: "json".to_string(), to: e.to_string() })?;
+        let parsed: Vec<UnitConfig> =
+            serde_json::from_str(json).map_err(|e| UnitError::ConversionNotDefined {
+                from: "json".to_string(),
+                to: e.to_string(),
+            })?;
         for cfg in parsed {
             let dim = match cfg.dimension.as_str() {
                 "Mass" => Dimension::Mass,

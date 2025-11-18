@@ -13,10 +13,6 @@
 
 ---
 
-> **🎉 November 2025 Update**: 342 tests passing, IndexMap for deterministic iteration, multiline string support, CALM integration complete, comprehensive AI coding agent instructions available!
-
----
-
 ## 🎯 What is SEA DSL?
 
 **SEA (Semantic Enterprise Architecture) DSL** is a domain modeling language that lets you describe your business in plain terms while creating a mathematically rigorous, executable model behind the scenes.
@@ -60,6 +56,10 @@ cargo add sea-core --path ./sea-core
 # WebAssembly (browser/edge)
 ./scripts/build-wasm.sh
 # Output in pkg/ directory
+
+## ✍️ Contributing
+
+Please see `docs/CONTRIBUTING.md` for developer notes on building the CLI, TypeScript (N-API), and WASM. If you experience CI failures, attach logs and a minimal reproduction in your PR and we will help diagnose the issue.
 ```
 
 **Note**: Pre-built packages for PyPI and npm are not yet published. Build from source as shown above.
@@ -78,6 +78,87 @@ cargo test --package sea-core
 
 # WASM
 # Check pkg/ directory for sea_core_bg.wasm
+```
+
+### 🔁 Running Tests (Justfile & VS Code Tasks)
+
+We provide `just` targets that run per-language test suites as well as a combined target:
+
+```bash
+# per-language
+just rust-test
+just python-test
+just ts-test
+
+# run all tests
+just all-tests
+```
+
+We've also added VS Code tasks that call these `just` targets so you can run them via the VS Code `Run Task` UI:
+
+- `Run Rust tests (just)` — runs `just rust-test`
+- `Run Python tests (just)` — runs `just python-test`
+- `Run TypeScript tests (just)` — runs `just ts-test`
+- `Run All Tests (just)` — runs `just all-tests`
+
+If you'd rather not install `just`, we've added direct-run VS Code tasks for the underlying commands:
+
+- `Run Rust tests (cargo)` — runs `cargo test -p sea-core`;
+- `Run Python tests (pytest)` — runs `python -m pytest -q` (or `python3 -m pytest -q` fallback);
+- `Run TypeScript tests (npm)` — runs `npm test --silent` (Vitest);
+- `Run All Tests (direct)` — runs the three commands sequentially.
+
+Note: If you don't have `just` installed, run the underlying commands directly (`cargo test`, `python -m pytest`, `npm test`).
+
+You can install `just` using:
+
+```bash
+# Using cargo:
+cargo install just --locked
+
+# macOS (Homebrew):
+brew install just
+
+# Debian/Ubuntu (apt):
+sudo apt-get install just
+
+# or use the `just` install recipe included in the repository:
+just install-just
+```
+
+We've added a `pytest.ini` to the repository root to ensure test discovery and consistent pytest behavior across environments.
+
+Python notes:
+
+- On some Linux distributions, global pip is blocked by the OS (PEP 668). If you see an "externally-managed-environment" error when installing dependencies, create and activate a virtual environment before running `just setup`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+just setup
+```
+
+### 🔧 Debugging Tests in VS Code
+
+We added a `launch.json` with debug profiles for Python (pytest), TypeScript (Vitest), and a Rust template using CodeLLDB.
+
+Usage notes:
+
+- Python: set the `-k` pytest argument or pass specific test names in the `args` array and run the `Debug Python Tests (pytest)` configuration.
+- TypeScript (Vitest): update the `-t` test name value to a test pattern and run `Debug TypeScript Tests (Vitest)`.
+- Rust: we've automated this. Use the `Prepare Rust test binary` task (or `just prepare-rust-debug`) to build the tests, symlink the selected test binary to `target/debug/deps/sea_debug_test`, and update `.vscode/launch.json` `program` path automatically. Then run the `Debug Rust Test (auto)` configuration in VS Code. The task also updates the `program` path so codelldb attaches to the correct binary.
+
+How to use it:
+
+```bash
+# Using direct script
+./scripts/prepare_rust_debug.sh entity_tests
+
+# Or via just (uses RUST_TEST_NAME env var):
+RUST_TEST_NAME=entity_tests just prepare-rust-debug
+
+# After this, run the Debug Rust Test (auto) profile in VS Code
 ```
 
 ### 💡 Your First Model (5 Minutes)
@@ -530,6 +611,7 @@ imported_graph = Graph.import_calm(calm_data)
 
 ---
 
+
 ## 🏗️ Architecture
 
 SEA DSL uses a high-performance Rust core with idiomatic language bindings:
@@ -711,7 +793,7 @@ sea-core/tests/
 
 ## 📄 License
 
-SEA DSL is open source under the [MIT License](LICENSE).
+SEA DSL is open source under the [Apache License 2.0](LICENSE).
 
 ---
 

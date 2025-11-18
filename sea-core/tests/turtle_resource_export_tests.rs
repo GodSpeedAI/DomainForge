@@ -22,7 +22,8 @@ mod turtle_resource_export_tests {
     #[test]
     fn test_resource_unit_display_format() {
         let mut graph = Graph::new();
-        let resource = Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
+        let resource =
+            Resource::new_with_namespace("Steel", unit_from_string("kg"), "default".to_string());
         graph.add_resource(resource).unwrap();
 
         let kg = KnowledgeGraph::from_graph(&graph).unwrap();

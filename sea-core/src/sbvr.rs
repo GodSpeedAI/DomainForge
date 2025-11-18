@@ -58,6 +58,8 @@ pub struct SbvrBusinessRule {
     pub rule_type: RuleType,
     pub expression: String,
     pub severity: String,
+    #[serde(default)]
+    pub priority: Option<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -236,6 +238,9 @@ impl SbvrModel {
                 "      <sbvr:Severity>{}</sbvr:Severity>\n",
                 Self::escape_xml(&rule.severity)
             ));
+            if let Some(p) = rule.priority {
+                xmi.push_str(&format!("      <sbvr:Priority>{}</sbvr:Priority>\n", p));
+            }
             xmi.push_str(&format!("    </sbvr:{}>\n", rule_element));
         }
 
@@ -251,6 +256,324 @@ impl SbvrModel {
             .replace('>', "&gt;")
             .replace('"', "&quot;")
             .replace('\'', "&apos;")
+    }
+
+    /// Parse an SBVR XMI document and return a SbvrModel
+    pub fn from_xmi(xmi: &str) -> Result<Self, SbvrError> {
+        let doc = roxmltree::Document::parse(xmi)
+            .map_err(|e| SbvrError::SerializationError(format!("Failed to parse XMI: {}", e)))?;
+
+        let mut model = SbvrModel::new();
+
+        // Find vocabulary node
+        for node in doc.descendants() {
+            if node.has_tag_name("GeneralConcept") {
+                let id = node.attribute("id").unwrap_or_default().to_string();
+                let name = node.attribute("name").unwrap_or_default().to_string();
+                let mut definition = None;
+                for child in node.children() {
+                    if child.has_tag_name("Definition") {
+                        definition = Some(child.text().unwrap_or_default().to_string());
+                    }
+                }
+                model.vocabulary.push(SbvrTerm {
+                    id,
+                    name,
+                    term_type: TermType::GeneralConcept,
+                    definition,
+                });
+            }
+
+            if node.has_tag_name("IndividualConcept") {
+                let id = node.attribute("id").unwrap_or_default().to_string();
+                let name = node.attribute("name").unwrap_or_default().to_string();
+                let mut definition = None;
+                for child in node.children() {
+                    if child.has_tag_name("Definition") {
+                        definition = Some(child.text().unwrap_or_default().to_string());
+                    }
+                }
+                model.vocabulary.push(SbvrTerm {
+                    id,
+                    name,
+                    term_type: TermType::IndividualConcept,
+                    definition,
+                });
+            }
+
+            if node.has_tag_name("VerbConcept") {
+                let id = node.attribute("id").unwrap_or_default().to_string();
+                let name = node.attribute("name").unwrap_or_default().to_string();
+                let mut definition = None;
+                for child in node.children() {
+                    if child.has_tag_name("Definition") {
+                        definition = Some(child.text().unwrap_or_default().to_string());
+                    }
+                }
+                model.vocabulary.push(SbvrTerm {
+                    id,
+                    name,
+                    term_type: TermType::VerbConcept,
+                    definition,
+                });
+            }
+
+            if node.has_tag_name("FactType") {
+                let id = node.attribute("id").unwrap_or_default().to_string();
+                let mut subject = String::new();
+                let mut verb = String::new();
+                let mut object = String::new();
+                let mut destination = None;
+                let mut schema_version = SbvrFactType::default_schema_version();
+
+                for child in node.children() {
+                    if child.has_tag_name("SchemaVersion") {
+                        schema_version = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Subject") {
+                        subject = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Verb") {
+                        verb = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Object") {
+                        object = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Destination") {
+                        destination = Some(child.text().unwrap_or_default().to_string());
+                    }
+                }
+
+                model.facts.push(SbvrFactType {
+                    id,
+                    subject,
+                    verb,
+                    object,
+                    destination,
+                    schema_version,
+                });
+            }
+
+            // Parse basic rules (Obligation/Prohibition/Permission/Derivation)
+            if node.has_tag_name("Obligation")
+                || node.has_tag_name("Prohibition")
+                || node.has_tag_name("Permission")
+                || node.has_tag_name("Derivation")
+            {
+                let id = node.attribute("id").unwrap_or_default().to_string();
+                let name = node.attribute("name").unwrap_or_default().to_string();
+                let kind = if node.has_tag_name("Obligation") {
+                    RuleType::Obligation
+                } else if node.has_tag_name("Prohibition") {
+                    RuleType::Prohibition
+                } else if node.has_tag_name("Permission") {
+                    RuleType::Permission
+                } else {
+                    RuleType::Derivation
+                };
+                let mut expression = String::new();
+                let mut severity = String::from("Info");
+                let mut parsed_priority: Option<u8> = None;
+                for child in node.children() {
+                    if child.has_tag_name("Expression") {
+                        expression = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Severity") {
+                        severity = child.text().unwrap_or_default().to_string();
+                    }
+                    if child.has_tag_name("Priority") {
+                        if let Some(text) = child.text() {
+                            if let Ok(value) = text.trim().parse::<u8>() {
+                                parsed_priority = Some(value);
+                            }
+                        }
+                    }
+                }
+                let mut rule = SbvrBusinessRule {
+                    id,
+                    name,
+                    rule_type: kind,
+                    expression,
+                    severity,
+                    priority: parsed_priority,
+                };
+                if rule.priority.is_none() {
+                    rule.priority = Some(match rule.rule_type {
+                        RuleType::Obligation => 5,
+                        RuleType::Prohibition => 5,
+                        RuleType::Permission => 1,
+                        RuleType::Derivation => 3,
+                    });
+                }
+                model.rules.push(rule);
+            }
+        }
+
+        Ok(model)
+    }
+
+    /// Convert parsed SbvrModel into a Graph
+    pub fn to_graph(&self) -> Result<crate::graph::Graph, SbvrError> {
+        use crate::graph::Graph;
+        use crate::primitives::{Entity, Flow, Resource};
+        use crate::units::unit_from_string;
+        use rust_decimal::Decimal;
+
+        let mut graph = Graph::new();
+
+        // Create vocabulary terms first
+        for term in &self.vocabulary {
+            match term.term_type {
+                TermType::GeneralConcept => {
+                    let entity =
+                        Entity::new_with_namespace(term.name.clone(), "default".to_string());
+                    graph
+                        .add_entity(entity)
+                        .map_err(SbvrError::SerializationError)?;
+                }
+                TermType::IndividualConcept => {
+                    let unit_symbol = term.definition.as_deref().and_then(|def| {
+                        if let Some(open) = def.rfind('(') {
+                            if let Some(close_offset) = def[open..].find(')') {
+                                let close = open + close_offset;
+                                let candidate = def[open + 1..close].trim();
+                                if !candidate.is_empty() {
+                                    return Some(candidate.to_string());
+                                }
+                            }
+                        }
+                        None
+                    });
+                    let unit_symbol = unit_symbol.unwrap_or_else(|| {
+                        // SBVR definitions currently omit explicit unit metadata, so default to "units".
+                        // Extend the SBVR model if richer unit information becomes available.
+                        "units".to_string()
+                    });
+                    let res = Resource::new_with_namespace(
+                        term.name.clone(),
+                        unit_from_string(&unit_symbol),
+                        "default".to_string(),
+                    );
+                    graph
+                        .add_resource(res)
+                        .map_err(SbvrError::SerializationError)?;
+                }
+                TermType::VerbConcept => {
+                    // We don't represent verbs directly as primitives
+                }
+            }
+        }
+
+        // Now create flows
+        for fact in &self.facts {
+            // find subject (entity)
+            let subject_name = self
+                .vocabulary
+                .iter()
+                .find(|t| t.id == fact.subject)
+                .map(|t| t.name.clone())
+                .unwrap_or(fact.subject.clone());
+
+            let object_name = self
+                .vocabulary
+                .iter()
+                .find(|t| t.id == fact.object)
+                .map(|t| t.name.clone())
+                .unwrap_or(fact.object.clone());
+
+            let destination_name = fact
+                .destination
+                .clone()
+                .and_then(|d| {
+                    self.vocabulary
+                        .iter()
+                        .find(|t| t.id == d)
+                        .map(|t| t.name.clone())
+                })
+                .unwrap_or_default();
+
+            let subject_id = graph.find_entity_by_name(&subject_name).ok_or_else(|| {
+                SbvrError::UnsupportedConstruct(format!("Unknown subject entity: {}", subject_name))
+            })?;
+
+            let destination_id = graph
+                .find_entity_by_name(&destination_name)
+                .ok_or_else(|| {
+                    SbvrError::UnsupportedConstruct(format!(
+                        "Unknown destination entity: {}",
+                        destination_name
+                    ))
+                })?;
+
+            let resource_id = graph.find_resource_by_name(&object_name).ok_or_else(|| {
+                SbvrError::UnsupportedConstruct(format!("Unknown resource: {}", object_name))
+            })?;
+
+            // SBVR FactType does not expose an explicit quantity, so default flows to 1.
+            // This is intentional until the SBVR model is extended with quantity metadata.
+            let quantity = Decimal::from(1);
+
+            let flow = Flow::new(resource_id, subject_id, destination_id, quantity);
+            graph
+                .add_flow(flow)
+                .map_err(SbvrError::SerializationError)?;
+        }
+
+        // Map SBVR Business Rules into Graph Policies
+        for rule in &self.rules {
+            // Parse expression using SEA DSL expression parser
+            let expr = crate::parser::parse_expression_from_str(rule.expression.as_str()).map_err(
+                |e| {
+                    SbvrError::SerializationError(format!("Failed to parse rule expression: {}", e))
+                },
+            )?;
+
+            let mut policy = crate::policy::Policy::new_with_namespace(
+                rule.name.clone(),
+                "default".to_string(),
+                expr,
+            );
+
+            // Map rule type to modality/kind
+            match rule.rule_type {
+                RuleType::Obligation => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Obligation);
+                    policy = policy.with_kind(crate::policy::PolicyKind::Constraint);
+                }
+                RuleType::Prohibition => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Prohibition);
+                    policy = policy.with_kind(crate::policy::PolicyKind::Constraint);
+                }
+                RuleType::Permission => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Permission);
+                    policy = policy.with_kind(crate::policy::PolicyKind::Constraint);
+                }
+                RuleType::Derivation => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Permission);
+                    policy = policy.with_kind(crate::policy::PolicyKind::Derivation);
+                }
+            }
+
+            // Priority mapping
+            if let Some(p) = rule.priority {
+                policy = policy.with_priority(p as i32);
+            } else {
+                // Default based on rule type
+                let default_p = match rule.rule_type {
+                    RuleType::Obligation => 5,
+                    RuleType::Prohibition => 5,
+                    RuleType::Permission => 1,
+                    RuleType::Derivation => 3,
+                };
+                policy = policy.with_priority(default_p);
+            }
+
+            graph
+                .add_policy(policy)
+                .map_err(SbvrError::SerializationError)?;
+        }
+
+        Ok(graph)
     }
 }
 
@@ -318,5 +641,46 @@ mod tests {
         assert_eq!(SbvrModel::escape_xml("A&B"), "A&amp;B");
         assert_eq!(SbvrModel::escape_xml("<tag>"), "&lt;tag&gt;");
         assert_eq!(SbvrModel::escape_xml("\"quote\""), "&quot;quote&quot;");
+    }
+
+    #[test]
+    fn test_sbvr_rule_to_policy() {
+        let mut model = SbvrModel::new();
+
+        // minimal vocabulary
+        model.vocabulary.push(SbvrTerm {
+            id: "e1".to_string(),
+            name: "Warehouse".to_string(),
+            term_type: TermType::GeneralConcept,
+            definition: None,
+        });
+        model.vocabulary.push(SbvrTerm {
+            id: "e2".to_string(),
+            name: "Factory".to_string(),
+            term_type: TermType::GeneralConcept,
+            definition: None,
+        });
+        model.vocabulary.push(SbvrTerm {
+            id: "r1".to_string(),
+            name: "Cameras".to_string(),
+            term_type: TermType::IndividualConcept,
+            definition: None,
+        });
+
+        model.rules.push(SbvrBusinessRule {
+            id: "rule1".to_string(),
+            name: "MustHavePositiveQuantity".to_string(),
+            rule_type: RuleType::Obligation,
+            expression: "forall f in Flow where f.quantity > 0: true".to_string(),
+            severity: "Info".to_string(),
+            priority: None,
+        });
+
+        let graph = model.to_graph().expect("SBVR to Graph conversion failed");
+        assert_eq!(graph.policy_count(), 1);
+        let policy = graph.all_policies().into_iter().next().unwrap();
+        assert_eq!(policy.name, "MustHavePositiveQuantity");
+        assert_eq!(policy.priority, 5); // default for Obligation
+        assert_eq!(policy.modality, crate::policy::PolicyModality::Obligation);
     }
 }

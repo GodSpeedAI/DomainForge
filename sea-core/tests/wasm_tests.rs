@@ -56,7 +56,13 @@ mod wasm_tests {
         let entity2 = Entity::new("Dest".to_string(), None);
         let resource = Resource::new("Product".to_string(), "units".to_string(), None);
 
-        let flow = Flow::new(resource.id(), entity1.id(), entity2.id(), "100".to_string(), None);
+        let flow = Flow::new(
+            resource.id(),
+            entity1.id(),
+            entity2.id(),
+            "100".to_string(),
+            None,
+        );
 
         assert!(flow.is_ok());
         let flow = flow.unwrap();
@@ -144,7 +150,14 @@ mod wasm_tests {
         graph.add_entity(&entity2).unwrap();
         graph.add_resource(&resource).unwrap();
 
-        let flow = Flow::new(resource.id(), entity1.id(), entity2.id(), "50".to_string(), None).unwrap();
+        let flow = Flow::new(
+            resource.id(),
+            entity1.id(),
+            entity2.id(),
+            "50".to_string(),
+            None,
+        )
+        .unwrap();
 
         let result = graph.add_flow(&flow);
         assert!(result.is_ok());
@@ -162,7 +175,14 @@ mod wasm_tests {
         graph.add_entity(&entity2).unwrap();
         graph.add_resource(&resource).unwrap();
 
-        let flow = Flow::new(resource.id(), entity1.id(), entity2.id(), "100".to_string(), None).unwrap();
+        let flow = Flow::new(
+            resource.id(),
+            entity1.id(),
+            entity2.id(),
+            "100".to_string(),
+            None,
+        )
+        .unwrap();
         graph.add_flow(&flow).unwrap();
 
         let flows = graph.flows_from(entity1.id());
