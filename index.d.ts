@@ -109,8 +109,8 @@ export declare class NamespaceBinding {
 export declare class NamespaceRegistry {
   static from_file(path: string): NamespaceRegistry
   static discover(path: string): NamespaceRegistry | null
-  resolve_files(): Array<NamespaceBinding>
-  namespace_for(path: string): string
+  resolve_files(fail_on_ambiguity?: boolean): Array<NamespaceBinding>
+  namespace_for(path: string, fail_on_ambiguity?: boolean): string
   get root(): string
   get default_namespace(): string
 }

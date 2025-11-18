@@ -53,10 +53,11 @@ impl NamespaceRegistry {
     }
 
     #[napi]
-    pub fn resolve_files(&self) -> Result<Vec<NamespaceBinding>> {
+    pub fn resolve_files(&self, fail_on_ambiguity: Option<bool>) -> Result<Vec<NamespaceBinding>> {
+        let fail = fail_on_ambiguity.unwrap_or(false);
         let bindings = self
             .inner
-            .resolve_files()
+            .resolve_files_with_options(fail)
             .map_err(|e| Error::from_reason(format!("{}", e)))?;
         Ok(bindings
             .into_iter()
@@ -65,11 +66,14 @@ impl NamespaceRegistry {
     }
 
     #[napi]
-    pub fn namespace_for(&self, path: String) -> Result<String> {
-        let res = self.inner.namespace_for(Path::new(&path));
-        Ok(res
+    pub fn namespace_for(&self, path: String, fail_on_ambiguity: Option<bool>) -> Result<String> {
+        let fail = fail_on_ambiguity.unwrap_or(false);
+        let res = self
+            .inner
+            .namespace_for_with_options(Path::new(&path), fail)
             .map(|s| s.to_string())
-            .unwrap_or_else(|| self.inner.default_namespace().to_string()))
+            .map_err(|e| Error::from_reason(format!("{}", e)))?;
+        Ok(res)
     }
 
     #[napi(getter)]

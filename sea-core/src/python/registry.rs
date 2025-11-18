@@ -51,10 +51,14 @@ impl NamespaceRegistry {
         Ok(res.map(|r| NamespaceRegistry { inner: r }))
     }
 
-    pub fn resolve_files(&self) -> PyResult<Vec<NamespaceBinding>> {
+    pub fn resolve_files(
+        &self,
+        fail_on_ambiguity: Option<bool>,
+    ) -> PyResult<Vec<NamespaceBinding>> {
+        let fail = fail_on_ambiguity.unwrap_or(false);
         let bindings = self
             .inner
-            .resolve_files()
+            .resolve_files_with_options(fail)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("{}", e)))?;
         Ok(bindings
             .into_iter()
@@ -62,11 +66,20 @@ impl NamespaceRegistry {
             .collect())
     }
 
-    pub fn namespace_for(&self, path: String) -> PyResult<String> {
-        let res = self.inner.namespace_for(std::path::Path::new(&path));
-        Ok(res
+    #[args(fail_on_ambiguity = "false")]
+    pub fn namespace_for(&self, path: String, fail_on_ambiguity: bool) -> PyResult<String> {
+        let res = self
+            .inner
+            .namespace_for_with_options(std::path::Path::new(&path), fail_on_ambiguity)
             .map(|s| s.to_string())
-            .unwrap_or_else(|| self.inner.default_namespace().to_string()))
+            .or_else(|err| match err {
+                // Return an error to Python if ambiguous and caller requested it
+                _ => Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "{}",
+                    err
+                ))),
+            })?;
+        Ok(res)
     }
 
     #[getter]

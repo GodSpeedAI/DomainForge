@@ -112,6 +112,40 @@ patterns = ["domains/*/warehouse.sea"]
 }
 
 #[test]
+fn namespace_precedence_error_on_ambiguity() {
+    let temp = tempdir().unwrap();
+    let base = temp.path();
+
+    let logistics_dir = base.join("domains/logistics");
+    fs::create_dir_all(&logistics_dir).unwrap();
+    let file_path = logistics_dir.join("warehouse.sea");
+    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
+
+    let registry_path = base.join(".sea-registry.toml");
+    fs::write(
+        &registry_path,
+        r#"
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "logistics"
+patterns = ["domains/*/warehouse.sea"]
+
+[[namespaces]]
+namespace = "finance"
+patterns = ["domains/*/warehouse.sea"]
+"#,
+    )
+    .unwrap();
+
+    let registry = NamespaceRegistry::from_file(&registry_path).unwrap();
+    // fail_on_ambiguity should cause an error
+    let res = registry.namespace_for_with_options(&file_path, true);
+    assert!(res.is_err());
+}
+
+#[test]
 fn registry_detects_conflict() {
     let temp = tempdir().unwrap();
     let base = temp.path();
@@ -144,6 +178,39 @@ patterns = ["domains/logistics/**/*.sea"]
     // With longest literal prefix precedence, the logistics pattern should win
     assert_eq!(files.len(), 1);
     assert_eq!(files[0].namespace, "logistics");
+}
+
+#[test]
+fn registry_resolve_files_error_on_ambiguity() {
+    let temp = tempdir().unwrap();
+    let base = temp.path();
+
+    let logistics_dir = base.join("domains/logistics");
+    fs::create_dir_all(&logistics_dir).unwrap();
+    let file_path = logistics_dir.join("warehouse.sea");
+    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
+
+    let registry_path = base.join(".sea-registry.toml");
+    fs::write(
+        &registry_path,
+        r#"
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "logistics"
+patterns = ["domains/*/warehouse.sea"]
+
+[[namespaces]]
+namespace = "finance"
+patterns = ["domains/*/warehouse.sea"]
+"#,
+    )
+    .unwrap();
+
+    let registry = NamespaceRegistry::from_file(&registry_path).unwrap();
+    let res = registry.resolve_files_with_options(true);
+    assert!(res.is_err());
 }
 
 #[test]

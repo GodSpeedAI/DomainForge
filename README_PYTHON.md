@@ -194,6 +194,12 @@ for binding in files:
 
 ns = reg.namespace_for('/path/to/file.sea')
 print('Namespace:', ns)
+
+# You can also pass `True` as an optional second argument to make resolution fail on ambiguity:
+try:
+    reg.namespace_for(str('/path/to/file.sea'), True)
+except Exception as e:
+    print('Ambiguity detected:', e)
 ```
 
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)

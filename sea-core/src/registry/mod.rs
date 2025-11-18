@@ -70,6 +70,10 @@ pub enum RegistryError {
         existing: String,
         requested: String,
     },
+    Ambiguous {
+        path: PathBuf,
+        namespaces: Vec<String>,
+    },
 }
 
 impl fmt::Display for RegistryError {
@@ -103,6 +107,12 @@ impl fmt::Display for RegistryError {
                 write!(f, "Failed to build glob '{}': {}", pattern, message)
             }
             RegistryError::Walk(err) => write!(f, "Failed to walk globbed files: {}", err),
+            RegistryError::Ambiguous { path, namespaces } => write!(
+                f,
+                "File '{}' matched multiple namespaces: {}",
+                path.display(),
+                namespaces.join(", "),
+            ),
             RegistryError::Conflict {
                 path,
                 existing,
@@ -260,6 +270,14 @@ impl NamespaceRegistry {
     }
 
     pub fn namespace_for(&self, path: impl AsRef<Path>) -> Option<&str> {
+        self.namespace_for_with_options(path, false).ok()
+    }
+
+    pub fn namespace_for_with_options(
+        &self,
+        path: impl AsRef<Path>,
+        fail_on_ambiguity: bool,
+    ) -> Result<&str, RegistryError> {
         let mut absolute = path.as_ref().to_path_buf();
         if !absolute.is_absolute() {
             absolute = self.root.join(absolute);
@@ -267,38 +285,68 @@ impl NamespaceRegistry {
         let absolute = absolute.canonicalize().ok().unwrap_or(absolute);
         let relative = match absolute.strip_prefix(&self.root) {
             Ok(rel) => rel,
-            Err(_) => return Some(self.default_namespace.as_str()),
+            Err(_) => return Ok(self.default_namespace.as_str()),
         };
         let normalized = normalize_path(relative);
 
-        // Choose the best matching entry using longest literal prefix precedence
-        let mut best: Option<(&CompiledRule, usize)> = None;
+        // Collect all matches and pick the best candidate(s) using longest literal
+        // prefix precedence. If more than one candidate exist with equal prefix
+        // length and 'fail_on_ambiguity' is true, return an error.
+        let mut candidates: Vec<(&CompiledRule, usize)> = vec![];
+        let mut best_len: usize = 0;
         for entry in &self.entries {
             if entry.matcher.is_match(normalized.as_str()) {
                 let len = entry.literal_prefix_len;
-                match best {
-                    None => best = Some((entry, len)),
-                    Some((best_entry, best_len)) => {
-                        if len > best_len {
-                            best = Some((entry, len));
-                        } else if len == best_len {
-                            // tie-breaker: deterministic alphabetical namespace
-                            if entry.namespace < best_entry.namespace {
-                                best = Some((entry, len));
-                            }
-                        }
-                    }
+                if len > best_len {
+                    candidates.clear();
+                    candidates.push((entry, len));
+                    best_len = len;
+                } else if len == best_len {
+                    candidates.push((entry, len));
                 }
             }
         }
 
-        best.map(|(entry, _)| entry.namespace.as_str())
-              .or(Some(self.default_namespace.as_str()))
-           // The above line has been modified to replace or_else with or
-           // to satisfy clippy warnings.
+        if candidates.is_empty() {
+            return Ok(self.default_namespace.as_str());
+        }
+
+        if candidates.len() == 1 {
+            return Ok(candidates[0].0.namespace.as_str());
+        }
+
+        // multiple candidates with equal prefix length
+        if fail_on_ambiguity {
+            let mut names: Vec<String> = candidates
+                .into_iter()
+                .map(|(e, _)| e.namespace.clone())
+                .collect();
+            names.sort();
+            return Err(RegistryError::Ambiguous {
+                path: path.as_ref().to_path_buf(),
+                namespaces: names,
+            });
+        }
+
+        // alphabetical fallback determination
+        let mut chosen_entry: &CompiledRule = candidates[0].0;
+        for (entry, _) in candidates.into_iter().skip(1) {
+            if entry.namespace < chosen_entry.namespace {
+                chosen_entry = entry;
+            }
+        }
+
+        Ok(chosen_entry.namespace.as_str())
     }
 
     pub fn resolve_files(&self) -> Result<Vec<NamespaceBinding>, RegistryError> {
+        self.resolve_files_with_options(false)
+    }
+
+    pub fn resolve_files_with_options(
+        &self,
+        fail_on_ambiguity: bool,
+    ) -> Result<Vec<NamespaceBinding>, RegistryError> {
         // Map a file to (namespace, literal_prefix_len) and pick the best namespace for a file
         let mut matches: HashMap<PathBuf, (String, usize)> = HashMap::new();
 
@@ -330,6 +378,16 @@ impl NamespaceRegistry {
                             if current_len > existing_len {
                                 occupied.insert((entry.namespace.clone(), current_len));
                             } else if current_len == existing_len {
+                                if fail_on_ambiguity {
+                                    // collect ambiguous namespaces
+                                    let mut conflicted = vec![existing_ns.clone()];
+                                    conflicted.push(entry.namespace.clone());
+                                    conflicted.sort();
+                                    return Err(RegistryError::Ambiguous {
+                                        path: path.clone(),
+                                        namespaces: conflicted,
+                                    });
+                                }
                                 // deterministic tie-breaker: choose alphabetically smallest namespace
                                 if entry.namespace < *existing_ns {
                                     occupied.insert((entry.namespace.clone(), current_len));

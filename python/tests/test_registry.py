@@ -28,6 +28,9 @@ def test_registry_discover_and_resolve(tmp_path):
     assert len(files) == 1
     assert files[0].path.endswith("warehouse.sea")
     assert files[0].namespace == "logistics"
+    # fail_on_ambiguity for trivial case should still succeed (no ambiguity)
+    files = reg.resolve_files(False)
+    assert len(files) == 1
 
 
 def test_registry_precedence_long_and_tie(tmp_path):
@@ -62,3 +65,16 @@ def test_registry_precedence_long_and_tie(tmp_path):
     registry_path.write_text(registry_content)
     reg = sea_dsl.NamespaceRegistry.from_file(str(registry_path))
     assert reg.namespace_for(str(file_path)) == "finance"
+
+    # When asking to fail on ambiguity, an exception should be raised
+    try:
+        reg.namespace_for(str(file_path), True)
+        assert False, "Expected namespace_for to raise on ambiguity"
+    except Exception:
+        pass
+    # resolve_files should raise when fail_on_ambiguity True
+    try:
+        reg.resolve_files(True)
+        assert False, "Expected resolve_files to raise on ambiguity"
+    except Exception:
+        pass

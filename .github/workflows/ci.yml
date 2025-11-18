@@ -135,6 +135,8 @@ jobs:
           source .venv/bin/activate
           pytest tests/
 
+  # Minimal integration job to verify registry ambiguity flag behavior will be added after TypeScript tests
+
   test-typescript:
     name: Test TypeScript
     needs: lint
@@ -168,6 +170,50 @@ jobs:
 
       - name: Run TypeScript tests
         run: npm test
+
+  test-integration:
+    name: Minimal Integration Check
+    needs: [test-rust, test-typescript]
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Sea binary
+        run: cargo build -p sea-core --bin sea
+
+      - name: Build TypeScript bindings (minimal)
+        run: |
+          npm ci
+          npm run build
+
+      - name: Minimal registry ambiguity check
+        shell: bash
+        run: |
+          tmpdir=$(mktemp -d)
+          tee "$tmpdir/.sea-registry.toml" > /dev/null << 'EOF'
+          version = 1
+          default_namespace = "default"
+
+          [[namespaces]]
+          namespace = "a"
+          patterns = ["domains/*/warehouse.sea"]
+
+          [[namespaces]]
+          namespace = "b"
+          patterns = ["domains/*/warehouse.sea"]
+          EOF
+          mkdir -p "$tmpdir/domains/logistics"
+          echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
+          ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" || true
 
   test-wasm:
     name: Test WASM

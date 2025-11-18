@@ -44,8 +44,12 @@ namespace with the longest literal prefix match among the matching patterns.
 This resolves common overlap cases when one pattern is more specific than
 another (e.g., `domains/logistics/**/*.sea` is more specific than
 `domains/**/*.sea`). If two matching patterns share a literal prefix of equal
-length, a deterministic alphabetical tie-breaker is used to pick a namespace.
-Prefer more specific glob patterns to avoid ambiguity and improve maintainability.
+length, a deterministic alphabetical tie-breaker is used by default to pick a
+namespace; however, the CLI and API support an optional `--fail-on-ambiguity`
+flag that will make resolution fail with an error when equal-prefix ambiguity
+is encountered. Prefer using specific glob patterns to avoid ambiguity and
+improve maintainability, or explicitly enable the `--fail-on-ambiguity` flag
+to make ambiguous matches fail loudly.
 
 ## CLI Workflow
 

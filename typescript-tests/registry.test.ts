@@ -81,4 +81,42 @@ describe('NamespaceRegistry (TS)', () => {
         const ns = reg.namespace_for(filePath);
         expect(ns).toBe('finance');
     });
+
+    it('errors on ambiguous match when fail flag set', () => {
+        if ((global as any).NamespaceRegistry === undefined) {
+            const index = require('../index');
+            if (!index.NamespaceRegistry) {
+                return;
+            }
+        }
+        const base = fs.mkdtempSync(path.join(tmpdir(), 'sea-test-'));
+        const dir = path.join(base, 'domains', 'logistics');
+        fs.mkdirSync(dir, { recursive: true });
+        const filePath = path.join(dir, 'warehouse.sea');
+        fs.writeFileSync(filePath, 'Entity "Warehouse"');
+
+        const registryPath = path.join(base, '.sea-registry.toml');
+        const content = `version = 1\ndefault_namespace = "default"\n\n[[namespaces]]\nnamespace = "logistics"\npatterns = ["domains/*/warehouse.sea"]\n\n[[namespaces]]\nnamespace = "finance"\npatterns = ["domains/*/warehouse.sea"]\n`;
+        fs.writeFileSync(registryPath, content);
+
+        const reg = NamespaceRegistry.from_file(registryPath);
+        expect(reg).toBeDefined();
+        let threw = false;
+        try {
+            // pass true to indicate failing on ambiguity
+            reg.namespace_for(filePath, true);
+        } catch (err) {
+            threw = true;
+        }
+        expect(threw).toBe(true);
+
+        // resolve_files should error as well
+        threw = false;
+        try {
+            reg.resolve_files(true);
+        } catch (err) {
+            threw = true;
+        }
+        expect(threw).toBe(true);
+    });
 });

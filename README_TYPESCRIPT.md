@@ -195,13 +195,13 @@ import { NamespaceRegistry } from '@domainforge/sea';
 const reg = NamespaceRegistry.from_file('./.sea-registry.toml');
 
 // Expand files and get bindings
-const files = reg.resolve_files();
+const files = reg.resolve_files(); // or reg.resolve_files(true) to fail on ambiguity
 for (const f of files) {
   console.log(f.path, '=>', f.namespace);
 }
 
 // Query namespace for a single file
-const ns = reg.namespace_for('/path/to/file.sea');
+const ns = reg.namespace_for('/path/to/file.sea'); // or pass true as second arg to fail on ambiguity
 console.log('Namespace:', ns);
 ```
 

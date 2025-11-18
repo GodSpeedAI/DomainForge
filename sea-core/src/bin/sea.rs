@@ -29,21 +29,52 @@ fn main() {
             let sub = &args[2];
             match sub.as_str() {
                 "list" => {
-                    let path = if args.len() > 3 { PathBuf::from(&args[3]) } else { PathBuf::from("") };
-                    if let Err(err) = registry_list(&path) {
+                    // accept an optional flag: --fail-on-ambiguity
+                    let mut fail_on_ambiguity = false;
+                    let path: Option<PathBuf> = if args.len() > 3 {
+                        if args[3] == "--fail-on-ambiguity" {
+                            fail_on_ambiguity = true;
+                            if args.len() > 4 {
+                                Some(PathBuf::from(&args[4]))
+                            } else {
+                                None
+                            }
+                        } else {
+                            Some(PathBuf::from(&args[3]))
+                        }
+                    } else {
+                        None
+                    };
+                    let path_ref = path.as_deref().unwrap_or_else(|| Path::new("."));
+                    if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
                         eprintln!("{}", err);
                         std::process::exit(1);
                     }
                 }
                 "resolve" => {
                     if args.len() < 4 {
-                        eprintln!("Usage: sea registry resolve <file>");
+                        eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
                         std::process::exit(2);
                     }
-                    let file = PathBuf::from(&args[3]);
-                    if let Err(err) = registry_resolve(&file) {
-                        eprintln!("{}", err);
-                        std::process::exit(1);
+                    let mut fail_on_ambiguity = false;
+                    let file: Option<PathBuf> = if args[3] == "--fail-on-ambiguity" {
+                        fail_on_ambiguity = true;
+                        if args.len() < 5 {
+                            eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
+                            std::process::exit(2);
+                        }
+                        Some(PathBuf::from(&args[4]))
+                    } else {
+                        Some(PathBuf::from(&args[3]))
+                    };
+                    if let Some(fpath) = file {
+                        if let Err(err) = registry_resolve(&fpath, fail_on_ambiguity) {
+                            eprintln!("{}", err);
+                            std::process::exit(1);
+                        }
+                    } else {
+                        eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
+                        std::process::exit(2);
                     }
                 }
                 _ => {
@@ -151,31 +182,33 @@ fn report_validation(graph: Graph) -> Result<(), String> {
 
 fn print_registry_usage() {
     eprintln!("Usage:");
-    eprintln!("  sea registry list [<path>]");
-    eprintln!("  sea registry resolve <file>");
+    eprintln!("  sea registry list [--fail-on-ambiguity] [<path>]");
+    eprintln!("  sea registry resolve [--fail-on-ambiguity] <file>");
 }
 
-fn registry_list(path: &Path) -> Result<(), String> {
+fn registry_list(path: &Path, fail_on_ambiguity: bool) -> Result<(), String> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| format!("Failed to load registry near {}: {}", path.display(), e))?
         .ok_or_else(|| format!("No .sea-registry.toml found for {}", path.display()))?;
 
-    let files = registry.resolve_files().map_err(|e| format!("Failed to expand registry: {}", e))?;
+    let files = registry
+        .resolve_files_with_options(fail_on_ambiguity)
+        .map_err(|e| format!("Failed to expand registry: {}", e))?;
     for binding in files {
         println!("{} => {}", binding.path.display(), binding.namespace);
     }
     Ok(())
 }
 
-fn registry_resolve(path: &Path) -> Result<(), String> {
+fn registry_resolve(path: &Path, fail_on_ambiguity: bool) -> Result<(), String> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| format!("Failed to load registry near {}: {}", path.display(), e))?
         .ok_or_else(|| format!("No .sea-registry.toml found for {}", path.display()))?;
 
-    let ns = registry
-        .namespace_for(path)
-        .unwrap_or_else(|| registry.default_namespace())
-        .to_string();
+    let ns = match registry.namespace_for_with_options(path, fail_on_ambiguity) {
+        Ok(s) => s.to_string(),
+        Err(e) => return Err(e.to_string()),
+    };
     println!("{} => {}", path.display(), ns);
     Ok(())
 }
