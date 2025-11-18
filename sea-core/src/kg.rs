@@ -356,7 +356,6 @@ impl KnowledgeGraph {
     #[allow(clippy::while_let_on_iterator)]
     pub fn from_turtle(turtle: &str) -> Result<Self, KgError> {
         let mut kg = Self::new();
-        
         for line in turtle.lines() {
             let trimmed = line.trim();
             if trimmed.is_empty() || trimmed.starts_with('@') || trimmed.starts_with('#') {
@@ -589,9 +588,7 @@ impl KnowledgeGraph {
                     })?;
 
                     let flow = Flow::new(res_id, from_id, to_id, quantity_val);
-                    graph
-                        .add_flow(flow)
-                        .map_err(KgError::SerializationError)?;
+                    graph.add_flow(flow).map_err(KgError::SerializationError)?;
                 }
             }
         }
