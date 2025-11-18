@@ -57,8 +57,14 @@ python = ["pyo3", "pythonize"]
 typescript = ["napi", "napi-derive"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 shacl = ["oxigraph"]
+cli = []
 
 ## NOTE: Profiles are managed at the workspace root (Cargo.toml). Please
 ## update the workspace-level profiles in /Cargo.toml rather than in
 ## this crate's Cargo.toml. This avoids the "profiles for the non root
 ## package will be ignored" cargo warning.
+
+[[bin]]
+name = "sea"
+path = "src/bin/sea.rs"
+required-features = ["cli"]

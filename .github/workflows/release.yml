@@ -8,6 +8,12 @@ on:
 permissions:
   contents: write
 
+env:
+  CACHE_VERSION: v2
+  WASM_MAX_BYTES: 524288
+  CLI_MAX_BYTES: 52428800
+  CLI_ARTIFACT_MAX_BYTES: 73400320
+
 jobs:
   build-release:
     name: Build Release (${{ matrix.target }})
@@ -30,22 +36,112 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} --features cli
         working-directory: sea-core
+
+      - name: Run built CLI binary (--version) to verify runtime (non-windows)
+        if: matrix.os != 'windows-latest'
+        run: |
+          BIN_DIR="sea-core/target/${{ matrix.target }}/release"
+          if [ ! -f "$BIN_DIR/sea" ] && [ -f "sea-core/target/release/sea" ]; then BIN_DIR="sea-core/target/release"; fi
+          if [ ! -f "$BIN_DIR/sea" ] && [ -f "target/release/sea" ]; then BIN_DIR="target/release"; fi
+          echo "Using binary dir: $BIN_DIR"
+          export LD_LIBRARY_PATH="$BIN_DIR:$LD_LIBRARY_PATH"
+          export DYLD_LIBRARY_PATH="$BIN_DIR:$DYLD_LIBRARY_PATH"
+           "$BIN_DIR/sea" --version || (echo "::error::Failed to run built CLI binary"; ls -la "$BIN_DIR"; exit 1)
+           # placeholder for windows fallback (no-op on non-windows)
+
+      - name: Check CLI binary size (non-windows)
+        if: matrix.os != 'windows-latest'
+        run: |
+          BIN_DIR="sea-core/target/${{ matrix.target }}/release"
+          if [ ! -f "$BIN_DIR/sea" ] && [ -f "sea-core/target/release/sea" ]; then BIN_DIR="sea-core/target/release"; fi
+          if [ ! -f "$BIN_DIR/sea" ] && [ -f "target/release/sea" ]; then BIN_DIR="target/release"; fi
+          SIZE=$(stat -c%s "$BIN_DIR/sea")
+          echo "CLI binary size: $SIZE bytes"
+          if [ "$SIZE" -gt ${{ env.CLI_MAX_BYTES }} ]; then
+            echo "::error::CLI binary exceeds ${CLI_MAX_BYTES} bytes ($SIZE)";
+            exit 1
+          fi
+
+      - name: Run built CLI binary (--version) to verify runtime (windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $binDir = "sea-core/target/${{ matrix.target }}/release"
+          if (-not (Test-Path "$binDir/sea.exe")) { $binDir = "sea-core/target/release" }
+          if (-not (Test-Path "$binDir/sea.exe")) { $binDir = "target/release" }
+          Write-Host "Using binary dir: $binDir"
+          $env:PATH = "$binDir;$env:PATH"
+          & "$binDir/sea.exe" --version
+
+      - name: Check CLI binary size (windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $binDir = "sea-core/target/${{ matrix.target }}/release"
+          if (-not (Test-Path "$binDir/sea.exe")) { $binDir = "sea-core/target/release" }
+          $size = (Get-Item "$binDir/sea.exe").Length
+          Write-Host "CLI binary size: $size bytes"
+          if ($size -gt $env:CLI_MAX_BYTES) { Write-Error "CLI binary exceeds $env:CLI_MAX_BYTES bytes ($size)"; exit 1 }
 
       - name: Package artifacts (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           cd sea-core/target/${{ matrix.target }}/release
-          7z a ../../../../sea-core-${{ matrix.target }}.zip sea_core.exe
+          7z a ../../../../sea-core-${{ matrix.target }}.zip sea.exe
+
+      - name: Verify packaged CLI artifact runs (windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $zipPath = "sea-core-${{ matrix.target }}.zip"
+          Write-Host "Testing package: $zipPath"
+          Expand-Archive -LiteralPath $zipPath -DestinationPath ./tmp_unpacked -Force
+          Set-Location ./tmp_unpacked
+          $env:PATH = (Get-Location).Path + ";$env:PATH"
+          & .\sea.exe --version
+          Set-Location ../../../../
+
+      - name: Check packaged artifact size (windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $zipPath = "sea-core-${{ matrix.target }}.zip"
+          $size = (Get-Item $zipPath).Length
+          Write-Host "Packaged artifact size (zip): $size bytes"
+          if ($size -gt $env:CLI_ARTIFACT_MAX_BYTES) { Write-Error "Packaged CLI artifact exceeds $env:CLI_ARTIFACT_MAX_BYTES bytes ($size)"; exit 1 }
 
       - name: Package artifacts (Unix)
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           cd sea-core/target/${{ matrix.target }}/release
-          tar czf ../../../../sea-core-${{ matrix.target }}.tar.gz sea_core
+          tar czf ../../../../sea-core-${{ matrix.target }}.tar.gz sea
+
+      - name: Verify packaged CLI artifact runs (non-windows)
+        if: matrix.os != 'windows-latest'
+        run: |
+          ART=sea-core-${{ matrix.target }}.tar.gz
+          echo "Testing package: $ART"
+          mkdir -p tmp_unpacked
+          tar -xzf $ART -C tmp_unpacked
+          cd tmp_unpacked
+          export LD_LIBRARY_PATH="$(pwd):$LD_LIBRARY_PATH"
+          export DYLD_LIBRARY_PATH="$(pwd):$DYLD_LIBRARY_PATH"
+          ./sea --version || (echo "::error::Failed to run packaged CLI binary"; ls -la; exit 1)
+          cd ../../../../
+
+      - name: Check packaged artifact size (non-windows)
+        if: matrix.os != 'windows-latest'
+        run: |
+          ART=sea-core-${{ matrix.target }}.tar.gz
+          SIZE=$(stat -c%s "$ART")
+          echo "Packaged artifact size (tar.gz): $SIZE bytes"
+          if [ "$SIZE" -gt ${{ env.CLI_ARTIFACT_MAX_BYTES }} ]; then
+            echo "::error::Packaged CLI artifact exceeds ${CLI_ARTIFACT_MAX_BYTES} bytes ($SIZE)"; exit 1
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -90,6 +186,62 @@ jobs:
         with:
           name: wheels-${{ matrix.target }}
           path: sea-core/target/wheels/*.whl
+
+  build-wasm-release:
+    name: Build WASM Release
+    runs-on: ubuntu-latest
+    needs: build-release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - name: Build WASM
+        run: |
+          cd sea-core
+          wasm-pack build --target web --release --features wasm
+
+      - name: Check WASM bundle size
+        run: |
+          SIZE=$(stat -c%s "sea-core/pkg/sea_core_bg.wasm")
+          echo "WASM bundle size: $SIZE bytes"
+          if [ -z "$SIZE" ] || ! [[ "$SIZE" =~ ^[0-9]+$ ]]; then
+            echo "::error::Unable to determine WASM bundle size"
+            exit 1
+          fi
+          if [ "$SIZE" -gt ${{ env.WASM_MAX_BYTES }} ]; then
+            echo "::error::WASM bundle exceeds ${WASM_MAX_BYTES} limit ($SIZE bytes)"
+            exit 1
+          fi
+
+      - name: Package WASM artifacts
+        run: |
+          cd sea-core/pkg
+          tar czf ../../sea-core-wasm.tar.gz * || true
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sea-core-wasm
+          path: sea-core-wasm.tar.gz
 
   create-release:
     name: Create GitHub Release

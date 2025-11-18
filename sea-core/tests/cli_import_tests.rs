@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+#[cfg(feature = "shacl")]
 use sea_core::ImportError;
 use std::fs::write;
 use std::path::PathBuf;

@@ -56,6 +56,10 @@ cargo add sea-core --path ./sea-core
 # WebAssembly (browser/edge)
 ./scripts/build-wasm.sh
 # Output in pkg/ directory
+
+## ✍️ Contributing
+
+Please see `docs/CONTRIBUTING.md` for developer notes on building the CLI, TypeScript (N-API), and WASM. If you experience CI failures, attach logs and a minimal reproduction in your PR and we will help diagnose the issue.
 ```
 
 **Note**: Pre-built packages for PyPI and npm are not yet published. Build from source as shown above.

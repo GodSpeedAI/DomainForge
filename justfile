@@ -2,16 +2,16 @@ default := "ai-validate"
 
 # Run all validation checks required for CI and AI agents
 ai-validate:
-    cargo test -p sea-core
+    cargo test -p sea-core --features cli
 
 # Test tasks - run per-language test suites
 rust-test:
     @echo "Running Rust tests..."
-    cargo test -p sea-core
+    cargo test -p sea-core --features cli
 
 build-rust-tests:
     @echo "Build Rust tests without running them (to prepare debug binaries)"
-    cargo test -p sea-core --no-run
+    cargo test -p sea-core --features cli --no-run
 
 python-test:
     @echo "Running Python tests..."
