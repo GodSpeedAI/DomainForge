@@ -49,7 +49,7 @@ graph TD
 | 7 | [Python Bindings (PyO3)](./Phase%207:%20Python%20Bindings.md) | 🔜 Planned | ✅ | 8-10h | Phase 6 | ADR-002, ADR-007, PRD-006, SDS-009 |
 | 8 | [TypeScript Bindings](./Phase%208:%20TypeScript%20Bindings.md) | 🔜 Planned | ✅ | 8-10h | Phase 6 | ADR-002, ADR-007, PRD-007, SDS-010 |
 | 9 | [WASM Bindings](./Phase%209:%20WASM%20Bindings.md) | 🔜 Planned | ✅ | 6-8h | Phase 6 | ADR-002, ADR-007, PRD-008, SDS-011 |
-| 10 | [CALM Integration](./Phase%2010:%20CALM%20Integration.md) | 🔜 Planned | ⬜ Post-MVP | 10-12h | Phases 7,8,9 | ADR-006, PRD-014, SDS-013 |
+| 10 | [CALM Integration](./Phase%2010%20-%20CALM%20Integration.md) | 🔜 Planned | ⬜ Post-MVP | 10-12h | Phases 7,8,9 | ADR-006, PRD-014, SDS-013 |
 
 **Total MVP Effort Estimate:** 68-88 hours
 

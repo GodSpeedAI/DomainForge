@@ -611,6 +611,19 @@ imported_graph = Graph.import_calm(calm_data)
 
 ---
 
+## 🤖 AI Agent Guidance
+
+If you are integrating or authoring AI agent-driven changes (Copilot, subagents, etc.), please read and follow the short agent guide in:
+
+- `.github/copilot-instructions.md` — contains concise rules and the `just` command list. In brief:
+  - Rust (`sea-core`) is the canonical implementation — do not duplicate business logic in bindings.
+  - Run `just all-tests` and the per-language `just` tasks before pushing changes.
+  - When modifying core types or parser grammar, update all bindings and run cross-language tests.
+
+These points are summarized in the Copilot instructions; the file also contains useful debugging and PR guidance for AI-driven commits and code generation.
+
+---
+
 ## 🏗️ Architecture
 
 SEA DSL uses a high-performance Rust core with idiomatic language bindings:
