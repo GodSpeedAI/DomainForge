@@ -1,11 +1,11 @@
-use sea_core::Graph;
-use sea_core::policy::Policy;
+use rust_decimal::Decimal;
 use sea_core::policy::Expression;
-use sea_core::primitives::Flow;
+use sea_core::policy::Policy;
 use sea_core::primitives::Entity;
+use sea_core::primitives::Flow;
 use sea_core::primitives::Resource;
 use sea_core::units::unit_from_string;
-use rust_decimal::Decimal;
+use sea_core::Graph;
 
 #[test]
 fn test_graph_validate_collects_violations() {
@@ -20,7 +20,12 @@ fn test_graph_validate_collects_violations() {
     let resource_id = resource.id().clone();
     graph.add_resource(resource).unwrap();
 
-    let flow = Flow::new(resource_id.clone(), e1.id().clone(), e2.id().clone(), Decimal::from(100));
+    let flow = Flow::new(
+        resource_id.clone(),
+        e1.id().clone(),
+        e2.id().clone(),
+        Decimal::from(100),
+    );
     graph.add_flow(flow).unwrap();
 
     // This policy checks that sum of flow quantities should be less than 50 (violated)

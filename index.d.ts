@@ -99,3 +99,18 @@ export declare class Instance {
   getAttribute(key: string): string | null
   toString(): string
 }
+
+export declare class NamespaceBinding {
+  constructor(path: string, namespace: string)
+  get path(): string
+  get namespace(): string
+}
+
+export declare class NamespaceRegistry {
+  static from_file(path: string): NamespaceRegistry
+  static discover(path: string): NamespaceRegistry | null
+  resolve_files(): Array<NamespaceBinding>
+  namespace_for(path: string): string
+  get root(): string
+  get default_namespace(): string
+}

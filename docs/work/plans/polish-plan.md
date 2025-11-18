@@ -29,9 +29,11 @@ stable, even when files omit `in <namespace>` clauses.
 - Workspace-level `.sea-registry.toml` that maps glob patterns to namespaces.
 - `NamespaceRegistry` loader in `sea_core` with glob validation, duplicate-match
   detection, and helper APIs for both per-file lookups and registry expansion.
+  - Implemented longest-literal-prefix precedence when multiple patterns match a file. A deterministic alphabetical tie-breaker is used when literal prefixes have equal length.
 - CLI support for validating directories: the `sea` binary now discovers the
   registry, expands all matching `.sea` files, applies the correct namespace
   defaults, and merges the resulting graphs before running validation.
+  - The CLI adds `sea registry list [<path>]` and `sea registry resolve <file>` for exploration and automation.
 - Documentation under `docs/reference/sea-registry.md` detailing the registry
   format and CLI workflow, plus sample `.sea` files in `examples/namespaces`.
 

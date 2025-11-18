@@ -27,7 +27,17 @@ pub fn infer_expression_type(expr: &Expression, _graph: &Graph) -> ExpressionTyp
         Expression::QuantityLiteral { .. } => ExpressionType::Quantity,
         Expression::Variable(_) => ExpressionType::Unknown,
         Expression::Binary { op, .. } => match op {
-            BinaryOp::Equal | BinaryOp::NotEqual | BinaryOp::GreaterThan | BinaryOp::LessThan | BinaryOp::GreaterThanOrEqual | BinaryOp::LessThanOrEqual | BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith | BinaryOp::And | BinaryOp::Or => {
+            BinaryOp::Equal
+            | BinaryOp::NotEqual
+            | BinaryOp::GreaterThan
+            | BinaryOp::LessThan
+            | BinaryOp::GreaterThanOrEqual
+            | BinaryOp::LessThanOrEqual
+            | BinaryOp::Contains
+            | BinaryOp::StartsWith
+            | BinaryOp::EndsWith
+            | BinaryOp::And
+            | BinaryOp::Or => {
                 // Comparisons and boolean ops typically yield boolean
                 ExpressionType::Boolean
             }
@@ -44,7 +54,10 @@ pub fn infer_expression_type(expr: &Expression, _graph: &Graph) -> ExpressionTyp
         Expression::MemberAccess { .. } => ExpressionType::Unknown,
         Expression::Aggregation { function, .. } => match function {
             AggregateFunction::Count => ExpressionType::Numeric,
-            AggregateFunction::Sum | AggregateFunction::Avg | AggregateFunction::Min | AggregateFunction::Max => ExpressionType::Numeric,
+            AggregateFunction::Sum
+            | AggregateFunction::Avg
+            | AggregateFunction::Min
+            | AggregateFunction::Max => ExpressionType::Numeric,
         },
         Expression::AggregationComprehension { .. } => ExpressionType::Numeric,
         // All expression kinds are covered above

@@ -20,6 +20,38 @@ fn main() {
                 std::process::exit(1);
             }
         }
+        "registry" => {
+            // subcommands: list, resolve
+            if args.len() < 3 {
+                print_registry_usage();
+                std::process::exit(2);
+            }
+            let sub = &args[2];
+            match sub.as_str() {
+                "list" => {
+                    let path = if args.len() > 3 { PathBuf::from(&args[3]) } else { PathBuf::from("") };
+                    if let Err(err) = registry_list(&path) {
+                        eprintln!("{}", err);
+                        std::process::exit(1);
+                    }
+                }
+                "resolve" => {
+                    if args.len() < 4 {
+                        eprintln!("Usage: sea registry resolve <file>");
+                        std::process::exit(2);
+                    }
+                    let file = PathBuf::from(&args[3]);
+                    if let Err(err) = registry_resolve(&file) {
+                        eprintln!("{}", err);
+                        std::process::exit(1);
+                    }
+                }
+                _ => {
+                    print_registry_usage();
+                    std::process::exit(2);
+                }
+            }
+        }
         _ => {
             print_usage();
             std::process::exit(2);
@@ -115,4 +147,35 @@ fn report_validation(graph: Graph) -> Result<(), String> {
         );
         Ok(())
     }
+}
+
+fn print_registry_usage() {
+    eprintln!("Usage:");
+    eprintln!("  sea registry list [<path>]");
+    eprintln!("  sea registry resolve <file>");
+}
+
+fn registry_list(path: &Path) -> Result<(), String> {
+    let registry = NamespaceRegistry::discover(path)
+        .map_err(|e| format!("Failed to load registry near {}: {}", path.display(), e))?
+        .ok_or_else(|| format!("No .sea-registry.toml found for {}", path.display()))?;
+
+    let files = registry.resolve_files().map_err(|e| format!("Failed to expand registry: {}", e))?;
+    for binding in files {
+        println!("{} => {}", binding.path.display(), binding.namespace);
+    }
+    Ok(())
+}
+
+fn registry_resolve(path: &Path) -> Result<(), String> {
+    let registry = NamespaceRegistry::discover(path)
+        .map_err(|e| format!("Failed to load registry near {}: {}", path.display(), e))?
+        .ok_or_else(|| format!("No .sea-registry.toml found for {}", path.display()))?;
+
+    let ns = registry
+        .namespace_for(path)
+        .unwrap_or_else(|| registry.default_namespace())
+        .to_string();
+    println!("{} => {}", path.display(), ns);
+    Ok(())
 }

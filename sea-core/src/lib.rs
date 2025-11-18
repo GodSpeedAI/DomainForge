@@ -52,6 +52,10 @@ pub use typescript::primitives::{
 
 #[cfg(feature = "typescript")]
 pub use typescript::graph::Graph as TsGraph;
+#[cfg(feature = "typescript")]
+pub use typescript::registry::{
+    NamespaceBinding as TsNamespaceBinding, NamespaceRegistry as TsNamespaceRegistry,
+};
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
@@ -94,6 +98,8 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::primitives::Flow>()?;
     m.add_class::<python::primitives::Instance>()?;
     m.add_class::<python::graph::Graph>()?;
+    m.add_class::<python::registry::NamespaceRegistry>()?;
+    m.add_class::<python::registry::NamespaceBinding>()?;
 
     Ok(())
 }

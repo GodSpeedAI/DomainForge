@@ -31,6 +31,22 @@ The registry loader validates the file at startup. Invalid glob patterns, empty
 rule sets, and files that match multiple namespaces cause descriptive errors so
 broken configurations fail fast.
 
+## Validation & Schema
+
+The registry loader validates the registry content against a JSON schema
+available in the repository at `schemas/sea-registry.schema.json`. This schema
+is used by tests to ensure the structure remains stable across changes.
+
+## Ambiguous Matches
+
+If a file matches multiple namespace entries, the registry loader picks the
+namespace with the longest literal prefix match among the matching patterns.
+This resolves common overlap cases when one pattern is more specific than
+another (e.g., `domains/logistics/**/*.sea` is more specific than
+`domains/**/*.sea`). If two matching patterns share a literal prefix of equal
+length, a deterministic alphabetical tie-breaker is used to pick a namespace.
+Prefer more specific glob patterns to avoid ambiguity and improve maintainability.
+
 ## CLI Workflow
 
 1. Place `.sea-registry.toml` at the workspace root.

@@ -40,6 +40,8 @@ jsonschema = "0.18"
 roxmltree = "0.21.1"
 rust_decimal_macros = "1.33"
 tempfile = "3.12"
+assert_cmd = "2.0"
+predicates = "3"
 
 [build-dependencies]
 napi-build = "2.1"

@@ -42,3 +42,138 @@ patterns = ["domains/logistics/**/*.sea"]
     let fallback = registry.namespace_for(&fallback_path).unwrap();
     assert_eq!(fallback, "default");
 }
+
+#[test]
+fn namespace_precedence_longest_prefix() {
+    let temp = tempdir().unwrap();
+    let base = temp.path();
+
+    let logistics_dir = base.join("domains/logistics");
+    fs::create_dir_all(&logistics_dir).unwrap();
+    let file_path = logistics_dir.join("warehouse.sea");
+    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
+
+    let registry_path = base.join(".sea-registry.toml");
+    fs::write(
+        &registry_path,
+        r#"
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "short"
+patterns = ["domains/**/*.sea"]
+
+[[namespaces]]
+namespace = "long"
+patterns = ["domains/logistics/**/*.sea"]
+"#,
+    )
+    .unwrap();
+
+    let registry = NamespaceRegistry::from_file(&registry_path).unwrap();
+    // The best prefix is 'domains/logistics/' which selects 'long'
+    let ns = registry.namespace_for(&file_path).unwrap();
+    assert_eq!(ns, "long");
+}
+
+#[test]
+fn namespace_precedence_tie_break_alpha() {
+    let temp = tempdir().unwrap();
+    let base = temp.path();
+
+    let logistics_dir = base.join("domains/logistics");
+    fs::create_dir_all(&logistics_dir).unwrap();
+    let file_path = logistics_dir.join("warehouse.sea");
+    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
+
+    let registry_path = base.join(".sea-registry.toml");
+    fs::write(
+        &registry_path,
+        r#"
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "logistics"
+patterns = ["domains/*/warehouse.sea"]
+
+[[namespaces]]
+namespace = "finance"
+patterns = ["domains/*/warehouse.sea"]
+"#,
+    )
+    .unwrap();
+
+    let registry = NamespaceRegistry::from_file(&registry_path).unwrap();
+    // Two identical prefix lengths and patterns; alphabetical tie-breaker selects 'finance'
+    let ns = registry.namespace_for(&file_path).unwrap();
+    assert_eq!(ns, "finance");
+}
+
+#[test]
+fn registry_detects_conflict() {
+    let temp = tempdir().unwrap();
+    let base = temp.path();
+
+    let logistics_dir = base.join("domains/logistics");
+    fs::create_dir_all(&logistics_dir).unwrap();
+    let file_path = logistics_dir.join("warehouse.sea");
+    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
+
+    let registry_path = base.join(".sea-registry.toml");
+    fs::write(
+        &registry_path,
+        r#"
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "finance"
+patterns = ["domains/**/*.sea"]
+
+[[namespaces]]
+namespace = "logistics"
+patterns = ["domains/logistics/**/*.sea"]
+"#,
+    )
+    .unwrap();
+
+    let registry = NamespaceRegistry::from_file(&registry_path).unwrap();
+    let files = registry.resolve_files().unwrap();
+    // With longest literal prefix precedence, the logistics pattern should win
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].namespace, "logistics");
+}
+
+#[test]
+fn discover_finds_parent_registry() {
+    let temp = tempdir().unwrap();
+    let base = temp.path();
+
+    let subdir = base.join("a/b/c");
+    fs::create_dir_all(&subdir).unwrap();
+
+    let registry_path = base.join(".sea-registry.toml");
+    fs::write(
+        &registry_path,
+        r#"
+version = 1
+default_namespace = "default"
+
+[[namespaces]]
+namespace = "logistics"
+patterns = ["a/b/c/**/*.sea"]
+"#,
+    )
+    .unwrap();
+
+    let file_path = subdir.join("file.sea");
+    fs::write(&file_path, "Entity \"X\"").unwrap();
+
+    let reg = NamespaceRegistry::discover(&file_path).unwrap();
+    assert!(reg.is_some());
+    let reg = reg.unwrap();
+    let ns = reg.namespace_for(&file_path).unwrap();
+    assert_eq!(ns, "logistics");
+}

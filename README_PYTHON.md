@@ -2,8 +2,6 @@
 
 Python bindings for the Semantic Enterprise Architecture (SEA) Domain Specific Language.
 
-> **🎉 November 2025 Update**: Updated with latest API changes - namespace now returns `str` (not `Optional[str]`), new constructor patterns, multiline string support, and 342 tests passing!
-
 ## Installation
 
 ```bash
@@ -183,16 +181,27 @@ flow = Flow.new(
 - `export_calm()`: Export graph to CALM JSON format
 - `Graph.import_calm(json_str)`: Import graph from CALM JSON
 
-### Key API Changes (November 2025)
 
-**Breaking Changes:**
+### NamespaceRegistry (Workspace)
+
+```python
+import sea_dsl
+
+reg = sea_dsl.NamespaceRegistry.from_file('./.sea-registry.toml')
+files = reg.resolve_files()
+for binding in files:
+    print(binding.path, '=>', binding.namespace)
+
+ns = reg.namespace_for('/path/to/file.sea')
+print('Namespace:', ns)
+```
 
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit
 - `Resource.new(name, unit)` now routes through `new_with_namespace(..., "default")` so `namespace()` never returns `None` even when a namespace is not supplied
 - Flow constructor takes `ConceptId` values (not references) - must clone before passing
 
-**New Features:**
+
 
 - Multiline string support in parser: `Entity """Multi-line\nName"""`
 - ValidationError helpers: `undefined_entity()`, `unit_mismatch()`, etc.
@@ -222,4 +231,4 @@ pytest tests/
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0

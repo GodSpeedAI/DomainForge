@@ -80,6 +80,13 @@ cargo test --package sea-core
 # Check pkg/ directory for sea_core_bg.wasm
 ```
 
+### 🗂️ Workspace Registry (.sea-registry.toml)
+
+SEA provides a workspace-level registry file `.sea-registry.toml` to map files to logical namespaces via glob patterns. The `sea validate` CLI discovers the nearest registry when invoked from a file and expands directories by resolving files according to the registry rules.
+
+See `docs/reference/sea-registry.md` and `schemas/sea-registry.schema.json` for examples and schema validation.
+
+
 ### 💡 Your First Model (5 Minutes)
 
 Let's model a simple manufacturing process:

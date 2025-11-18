@@ -27,6 +27,8 @@ struct CompiledRule {
     namespace: String,
     matcher: GlobSet,
     patterns: Vec<String>,
+    // Length of literal prefix of the pattern before any wildcard or special glob char
+    literal_prefix_len: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -184,10 +186,35 @@ impl NamespaceRegistry {
                     source,
                 })?;
 
+            // compute the longest literal prefix across patterns for this namespace rule
+            let mut literal_prefix_len = 0usize;
+            for p in &ns.patterns {
+                let mut len = 0usize;
+                for ch in p.chars() {
+                    // stop at glob meta characters
+                    if ch == '*'
+                        || ch == '?'
+                        || ch == '['
+                        || ch == '{'
+                        || ch == ']'
+                        || ch == '}'
+                        || ch == '('
+                        || ch == ')'
+                    {
+                        break;
+                    }
+                    len += ch.len_utf8();
+                }
+                if len > literal_prefix_len {
+                    literal_prefix_len = len;
+                }
+            }
+
             entries.push(CompiledRule {
                 namespace: ns.namespace,
                 matcher,
                 patterns: ns.patterns,
+                literal_prefix_len,
             });
         }
 
@@ -244,17 +271,36 @@ impl NamespaceRegistry {
         };
         let normalized = normalize_path(relative);
 
+        // Choose the best matching entry using longest literal prefix precedence
+        let mut best: Option<(&CompiledRule, usize)> = None;
         for entry in &self.entries {
             if entry.matcher.is_match(normalized.as_str()) {
-                return Some(entry.namespace.as_str());
+                let len = entry.literal_prefix_len;
+                match best {
+                    None => best = Some((entry, len)),
+                    Some((best_entry, best_len)) => {
+                        if len > best_len {
+                            best = Some((entry, len));
+                        } else if len == best_len {
+                            // tie-breaker: deterministic alphabetical namespace
+                            if entry.namespace < best_entry.namespace {
+                                best = Some((entry, len));
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        Some(self.default_namespace.as_str())
+        best.map(|(entry, _)| entry.namespace.as_str())
+              .or(Some(self.default_namespace.as_str()))
+           // The above line has been modified to replace or_else with or
+           // to satisfy clippy warnings.
     }
 
     pub fn resolve_files(&self) -> Result<Vec<NamespaceBinding>, RegistryError> {
-        let mut matches: HashMap<PathBuf, String> = HashMap::new();
+        // Map a file to (namespace, literal_prefix_len) and pick the best namespace for a file
+        let mut matches: HashMap<PathBuf, (String, usize)> = HashMap::new();
 
         for entry in &self.entries {
             for pattern in &entry.patterns {
@@ -270,18 +316,26 @@ impl NamespaceRegistry {
                 for dir_entry in walker.into_iter() {
                     let dir_entry = dir_entry?;
                     let path = dir_entry.into_path();
+                    let current_len = entry.literal_prefix_len;
                     match matches.entry(path.clone()) {
                         Entry::Vacant(v) => {
-                            v.insert(entry.namespace.clone());
+                            v.insert((entry.namespace.clone(), current_len));
                         }
-                        Entry::Occupied(occupied) => {
-                            if occupied.get() != &entry.namespace {
-                                return Err(RegistryError::Conflict {
-                                    path,
-                                    existing: occupied.get().clone(),
-                                    requested: entry.namespace.clone(),
-                                });
+                        Entry::Occupied(mut occupied) => {
+                            let (ref existing_ns, existing_len) = occupied.get().clone();
+                            if existing_ns == &entry.namespace {
+                                // same namespace - nothing to do
+                                continue;
                             }
+                            if current_len > existing_len {
+                                occupied.insert((entry.namespace.clone(), current_len));
+                            } else if current_len == existing_len {
+                                // deterministic tie-breaker: choose alphabetically smallest namespace
+                                if entry.namespace < *existing_ns {
+                                    occupied.insert((entry.namespace.clone(), current_len));
+                                }
+                            }
+                            // if current_len < existing_len -> keep existing namespace
                         }
                     }
                 }
@@ -290,7 +344,7 @@ impl NamespaceRegistry {
 
         let mut bindings: Vec<NamespaceBinding> = matches
             .into_iter()
-            .map(|(path, namespace)| NamespaceBinding { path, namespace })
+            .map(|(path, (namespace, _len))| NamespaceBinding { path, namespace })
             .collect();
         bindings.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(bindings)

@@ -2,8 +2,6 @@
 
 This document describes the WebAssembly (WASM) bindings for the SEA Core library, enabling browser and edge runtime usage.
 
-> **🎉 November 2025 Update**: Updated with latest API changes - namespace now returns `string` (not nullable), new constructor patterns, multiline string support, and 342 tests passing!
-
 ## Overview
 
 Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (<500KB gzipped) module for browser and Node.js environments.
@@ -120,14 +118,6 @@ const flow = Flow.new(
 );
 ```
 
-### Key API Changes (November 2025)
-
-- `namespace()` now returns `string` (not nullable) - always returns "default" if unspecified
-- Constructors: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
-- Resource constructors now delegate to `Resource.newWithNamespace(..., "default")`, so `namespace()` is always `"default"` when you omit the namespace
-- Flow constructor takes `ConceptId` values (not references) - clone before passing
-
-See `pkg/README.md` for complete API documentation.
 
 ## Usage Examples
 
@@ -293,4 +283,4 @@ const importedGraph = await Graph.importCalm(calmJson);
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0
