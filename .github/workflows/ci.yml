@@ -213,7 +213,7 @@ jobs:
           EOF
           mkdir -p "$tmpdir/domains/logistics"
           echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
-          ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" || true
+          ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea"
 
   test-wasm:
     name: Test WASM

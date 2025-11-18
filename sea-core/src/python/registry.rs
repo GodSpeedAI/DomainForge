@@ -72,13 +72,7 @@ impl NamespaceRegistry {
             .inner
             .namespace_for_with_options(std::path::Path::new(&path), fail_on_ambiguity)
             .map(|s| s.to_string())
-            .or_else(|err| match err {
-                // Return an error to Python if ambiguous and caller requested it
-                _ => Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
-                    "{}",
-                    err
-                ))),
-            })?;
+            .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(format!("{}", err)))?;
         Ok(res)
     }
 

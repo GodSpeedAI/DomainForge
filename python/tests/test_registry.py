@@ -1,3 +1,4 @@
+import pytest
 import textwrap
 
 import sea_dsl
@@ -15,10 +16,10 @@ def test_registry_discover_and_resolve(tmp_path):
 
     registry_path = base / ".sea-registry.toml"
     registry_content = textwrap.dedent("""\
-        version = 1\n
-        [[namespaces]]\n
-        namespace = "logistics"\n
-        patterns = ["domains/logistics/**/*.sea"]\n
+        version = 1
+        [[namespaces]]
+        namespace = "logistics"
+        patterns = ["domains/logistics/**/*.sea"]
     """)
     registry_path.write_text(registry_content)
 
@@ -35,7 +36,7 @@ def test_registry_discover_and_resolve(tmp_path):
 
 def test_registry_precedence_long_and_tie(tmp_path):
     # Skip if not installed with FFI bindings
-    if not hasattr(__import__("sea_dsl"), "NamespaceRegistry"):
+    if not hasattr(sea_dsl, "NamespaceRegistry"):
         return
     base = tmp_path
     domains = base / "domains" / "logistics"
@@ -67,14 +68,8 @@ def test_registry_precedence_long_and_tie(tmp_path):
     assert reg.namespace_for(str(file_path)) == "finance"
 
     # When asking to fail on ambiguity, an exception should be raised
-    try:
+    with pytest.raises(Exception):
         reg.namespace_for(str(file_path), True)
-        assert False, "Expected namespace_for to raise on ambiguity"
-    except Exception:
-        pass
     # resolve_files should raise when fail_on_ambiguity True
-    try:
+    with pytest.raises(Exception):
         reg.resolve_files(True)
-        assert False, "Expected resolve_files to raise on ambiguity"
-    except Exception:
-        pass

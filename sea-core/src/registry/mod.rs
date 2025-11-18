@@ -208,8 +208,7 @@ impl NamespaceRegistry {
                         || ch == '{'
                         || ch == ']'
                         || ch == '}'
-                        || ch == '('
-                        || ch == ')'
+                        || ch == '\\'
                     {
                         break;
                     }

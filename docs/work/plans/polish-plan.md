@@ -72,6 +72,13 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
     - Override via `sea:priority` extension attribute
   - Defer synonyms, definitions, structured glossaries to Phase 19+
 
+**Security Considerations**:
+
+- Introduce a `--max-file-size` flag (default `100MB`) on CLI entry points that consume RDF/XML or SBVR sources so the parser rejects or stream-limits inputs above the threshold before parsing; document where this limit is enforced (e.g., the CLI validator and any import paths) and how large files are rejected or streamed in a controlled fashion.
+- Load SHACL shapes only from the embedded `schemas/sea-shapes.ttl` resource and ensure validation ignores any `sh:shapesGraph` entries from untrusted RDF; the plan should call out this explicit trust boundary and the guarantee that only the included shapes drive validation.
+- Configure all XML parsers (RDF/XML, SBVR, CALM, etc.) to disable entity expansion and external entity resolution so billion-laughs and XXE attacks are mitigated; describe the parser configuration knobs used (e.g., `quick_xml::Reader::expand_empty_elements(false)` plus disabling DTD resolution).
+- Add property-based fuzzing hooks that target the Pest DSL parser and the RDF Turtle/XML loaders inside `tests/cli_tests.rs`, run them with resource limits (timeouts, input size caps via the `--max-file-size` flag, etc.), and mention that these fuzz runs will be part of CI so parser robustness is continuously validated.
+
 **Implementation**:
 
 - **File**: `calm/sbvr_import.rs`
@@ -1402,4 +1409,3 @@ For each Rust feature, verify equivalence in:
 **END OF PLAN**
 
 This plan is ready for implementation. All architectural decisions finalized, dependencies clarified, and success criteria defined. Follow TDD RED-GREEN-REFACTOR workflow, maintain cross-language parity, and document thoroughly.
-

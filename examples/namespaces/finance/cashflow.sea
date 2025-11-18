@@ -1,4 +1,5 @@
 Entity "Accounts Payable" in finance
 Entity "Accounts Receivable" in finance
+Entity "Customer" in finance
 Resource "Invoice" units in finance
-Flow "Invoice" from "Accounts Receivable" to "Accounts Payable" quantity 5
+Flow "Invoice" from "Customer" to "Accounts Receivable" quantity 5

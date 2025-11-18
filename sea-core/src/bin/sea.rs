@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
+    if args.len() < 2 {
         print_usage();
         std::process::exit(2);
     }
@@ -14,7 +14,13 @@ fn main() {
     let command = &args[1];
     match command.as_str() {
         "validate" => {
-            let target = PathBuf::from(&args[2]);
+            let target = match args.get(2) {
+                Some(value) => PathBuf::from(value),
+                None => {
+                    print_usage();
+                    std::process::exit(2);
+                }
+            };
             if let Err(err) = run_validate(&target) {
                 eprintln!("{}", err);
                 std::process::exit(1);
@@ -22,29 +28,16 @@ fn main() {
         }
         "registry" => {
             // subcommands: list, resolve
-            if args.len() < 3 {
-                print_registry_usage();
-                std::process::exit(2);
-            }
-            let sub = &args[2];
-            match sub.as_str() {
+            let sub = match args.get(2).map(String::as_str) {
+                Some(value) => value,
+                None => {
+                    print_registry_usage();
+                    std::process::exit(2);
+                }
+            };
+            match sub {
                 "list" => {
-                    // accept an optional flag: --fail-on-ambiguity
-                    let mut fail_on_ambiguity = false;
-                    let path: Option<PathBuf> = if args.len() > 3 {
-                        if args[3] == "--fail-on-ambiguity" {
-                            fail_on_ambiguity = true;
-                            if args.len() > 4 {
-                                Some(PathBuf::from(&args[4]))
-                            } else {
-                                None
-                            }
-                        } else {
-                            Some(PathBuf::from(&args[3]))
-                        }
-                    } else {
-                        None
-                    };
+                    let (fail_on_ambiguity, path) = parse_registry_list_args(&args);
                     let path_ref = path.as_deref().unwrap_or_else(|| Path::new("."));
                     if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
                         eprintln!("{}", err);
@@ -52,29 +45,10 @@ fn main() {
                     }
                 }
                 "resolve" => {
-                    if args.len() < 4 {
-                        eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
-                        std::process::exit(2);
-                    }
-                    let mut fail_on_ambiguity = false;
-                    let file: Option<PathBuf> = if args[3] == "--fail-on-ambiguity" {
-                        fail_on_ambiguity = true;
-                        if args.len() < 5 {
-                            eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
-                            std::process::exit(2);
-                        }
-                        Some(PathBuf::from(&args[4]))
-                    } else {
-                        Some(PathBuf::from(&args[3]))
-                    };
-                    if let Some(fpath) = file {
-                        if let Err(err) = registry_resolve(&fpath, fail_on_ambiguity) {
-                            eprintln!("{}", err);
-                            std::process::exit(1);
-                        }
-                    } else {
-                        eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
-                        std::process::exit(2);
+                    let (fail_on_ambiguity, file) = parse_registry_resolve_args(&args);
+                    if let Err(err) = registry_resolve(&file, fail_on_ambiguity) {
+                        eprintln!("{}", err);
+                        std::process::exit(1);
                     }
                 }
                 _ => {
@@ -93,6 +67,7 @@ fn main() {
 fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  sea validate <file-or-directory>");
+    eprintln!("  sea registry <subcommand> [args]");
 }
 
 fn run_validate(target: &Path) -> Result<(), String> {
@@ -184,6 +159,69 @@ fn print_registry_usage() {
     eprintln!("Usage:");
     eprintln!("  sea registry list [--fail-on-ambiguity] [<path>]");
     eprintln!("  sea registry resolve [--fail-on-ambiguity] <file>");
+}
+
+fn parse_registry_list_args(args: &[String]) -> (bool, Option<PathBuf>) {
+    let mut fail_on_ambiguity = false;
+    let mut path: Option<PathBuf> = None;
+
+    for arg in args.iter().skip(3) {
+        if arg == "--fail-on-ambiguity" {
+            fail_on_ambiguity = true;
+            continue;
+        }
+
+        if arg.starts_with("--") {
+            eprintln!("Unknown registry flag: {}", arg);
+            print_registry_usage();
+            std::process::exit(2);
+        }
+
+        if path.is_some() {
+            eprintln!("Unexpected positional argument: {}", arg);
+            print_registry_usage();
+            std::process::exit(2);
+        }
+
+        path = Some(PathBuf::from(arg));
+    }
+
+    (fail_on_ambiguity, path)
+}
+
+fn parse_registry_resolve_args(args: &[String]) -> (bool, PathBuf) {
+    let mut fail_on_ambiguity = false;
+    let mut file: Option<PathBuf> = None;
+
+    for arg in args.iter().skip(3) {
+        if arg == "--fail-on-ambiguity" {
+            fail_on_ambiguity = true;
+            continue;
+        }
+
+        if arg.starts_with("--") {
+            eprintln!("Unknown registry flag: {}", arg);
+            print_registry_usage();
+            std::process::exit(2);
+        }
+
+        if file.is_some() {
+            eprintln!("Unexpected positional argument: {}", arg);
+            print_registry_usage();
+            std::process::exit(2);
+        }
+
+        file = Some(PathBuf::from(arg));
+    }
+
+    match file {
+        Some(path) => (fail_on_ambiguity, path),
+        None => {
+            eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
+            print_registry_usage();
+            std::process::exit(2);
+        }
+    }
 }
 
 fn registry_list(path: &Path, fail_on_ambiguity: bool) -> Result<(), String> {

@@ -300,9 +300,16 @@ impl Graph {
     }
 
     /// Extend this graph with all nodes and policies from another graph.
-    /// Duplicate identifiers result in an error so that callers can surface
-    /// clear diagnostics when two files describe the same concept.
+    /// The operation is atomic: the existing graph is only modified if the entire
+    /// merge succeeds, which prevents partial state when errors occur.
     pub fn extend(&mut self, other: Graph) -> Result<(), String> {
+        let mut merged = self.clone();
+        merged.extend_from_graph(other)?;
+        *self = merged;
+        Ok(())
+    }
+
+    fn extend_from_graph(&mut self, other: Graph) -> Result<(), String> {
         let Graph {
             entities,
             resources,

@@ -382,6 +382,23 @@ fn test_parse_to_graph_with_options_overrides_namespace() {
 }
 
 #[test]
+fn test_parse_to_graph_with_options_preserves_explicit_namespace() {
+    let source = r#"
+        Entity "Warehouse" in production
+        Resource "Camera" units
+    "#;
+
+    let options = ParseOptions {
+        default_namespace: Some("logistics".to_string()),
+    };
+
+    let graph = parse_to_graph_with_options(source, &options).unwrap();
+    let entity = graph.all_entities().into_iter().next().expect("entity");
+
+    assert_eq!(entity.namespace(), "production");
+}
+
+#[test]
 fn test_parse_case_insensitive_keywords() {
     let sources = vec![
         r#"ENTITY "Test""#,
