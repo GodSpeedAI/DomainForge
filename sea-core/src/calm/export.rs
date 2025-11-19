@@ -1,7 +1,9 @@
-use super::models::{CalmModel, CalmNode, CalmRelationship, FlowDetails, NodeType, Parties, RelationshipType};
-use crate::primitives::{Entity, Flow, Instance, Resource};
+use super::models::{
+    CalmModel, CalmNode, CalmRelationship, FlowDetails, NodeType, Parties, RelationshipType,
+};
 use crate::policy::Policy;
-use crate::policy::{Expression, BinaryOp, UnaryOp, Quantifier, AggregateFunction};
+use crate::policy::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
+use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::Graph;
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -143,7 +145,10 @@ fn export_policy(policy: &Policy) -> CalmNode {
     );
     metadata.insert("sea:expression_type".to_string(), json!("SEA"));
     metadata.insert("sea:priority".to_string(), json!(policy.priority));
-    metadata.insert("sea:modality".to_string(), json!(format!("{:?}", policy.modality)));
+    metadata.insert(
+        "sea:modality".to_string(),
+        json!(format!("{:?}", policy.modality)),
+    );
     metadata.insert("sea:kind".to_string(), json!(format!("{:?}", policy.kind)));
 
     CalmNode {
@@ -154,7 +159,6 @@ fn export_policy(policy: &Policy) -> CalmNode {
         metadata,
     }
 }
-
 
 fn serialize_expression_for_export(expr: &Expression) -> String {
     match expr {
@@ -179,7 +183,12 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 BinaryOp::StartsWith => "startswith",
                 BinaryOp::EndsWith => "endswith",
             };
-            format!("({} {} {})", serialize_expression_for_export(left), op_str, serialize_expression_for_export(right))
+            format!(
+                "({} {} {})",
+                serialize_expression_for_export(left),
+                op_str,
+                serialize_expression_for_export(right)
+            )
         }
         Expression::Unary { op, operand } => {
             let op_str = match op {
@@ -188,16 +197,32 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
             };
             format!("{} {}", op_str, serialize_expression_for_export(operand))
         }
-        Expression::Quantifier { quantifier, variable, collection, condition } => {
+        Expression::Quantifier {
+            quantifier,
+            variable,
+            collection,
+            condition,
+        } => {
             let q_str = match quantifier {
                 Quantifier::ForAll => "forall",
                 Quantifier::Exists => "exists",
                 Quantifier::ExistsUnique => "exists_unique",
             };
-            format!("{} {} in {}: ({})", q_str, variable, serialize_expression_for_export(collection), serialize_expression_for_export(condition))
+            format!(
+                "{} {} in {}: ({})",
+                q_str,
+                variable,
+                serialize_expression_for_export(collection),
+                serialize_expression_for_export(condition)
+            )
         }
         Expression::MemberAccess { object, member } => format!("{}.{}", object, member),
-        Expression::Aggregation { function, collection, field, filter } => {
+        Expression::Aggregation {
+            function,
+            collection,
+            field,
+            filter,
+        } => {
             let fn_str = match function {
                 AggregateFunction::Count => "count",
                 AggregateFunction::Sum => "sum",
@@ -207,19 +232,46 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
             };
             if let Some(fld) = field {
                 if let Some(flt) = filter {
-                    format!("{}({}.{} where {})", fn_str, serialize_expression_for_export(collection), fld, serialize_expression_for_export(flt))
+                    format!(
+                        "{}({}.{} where {})",
+                        fn_str,
+                        serialize_expression_for_export(collection),
+                        fld,
+                        serialize_expression_for_export(flt)
+                    )
                 } else {
-                    format!("{}({}.{} )", fn_str, serialize_expression_for_export(collection), fld)
+                    format!(
+                        "{}({}.{} )",
+                        fn_str,
+                        serialize_expression_for_export(collection),
+                        fld
+                    )
                 }
             } else {
                 if let Some(flt) = filter {
-                    format!("{}({} where {})", fn_str, serialize_expression_for_export(collection), serialize_expression_for_export(flt))
+                    format!(
+                        "{}({} where {})",
+                        fn_str,
+                        serialize_expression_for_export(collection),
+                        serialize_expression_for_export(flt)
+                    )
                 } else {
-                    format!("{}({})", fn_str, serialize_expression_for_export(collection))
+                    format!(
+                        "{}({})",
+                        fn_str,
+                        serialize_expression_for_export(collection)
+                    )
                 }
             }
         }
-        Expression::AggregationComprehension { function, variable, collection, predicate, projection, target_unit } => {
+        Expression::AggregationComprehension {
+            function,
+            variable,
+            collection,
+            predicate,
+            projection,
+            target_unit,
+        } => {
             let fn_str = match function {
                 AggregateFunction::Count => "count",
                 AggregateFunction::Sum => "sum",
@@ -228,9 +280,24 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 AggregateFunction::Avg => "avg",
             };
             if let Some(unit) = target_unit {
-                format!("{}({} in {} WHERE {}: {} as \"{}\")", fn_str, variable, serialize_expression_for_export(collection), serialize_expression_for_export(predicate), serialize_expression_for_export(projection), unit)
+                format!(
+                    "{}({} in {} WHERE {}: {} as \"{}\")",
+                    fn_str,
+                    variable,
+                    serialize_expression_for_export(collection),
+                    serialize_expression_for_export(predicate),
+                    serialize_expression_for_export(projection),
+                    unit
+                )
             } else {
-                format!("{}({} in {} WHERE {}: {})", fn_str, variable, serialize_expression_for_export(collection), serialize_expression_for_export(predicate), serialize_expression_for_export(projection))
+                format!(
+                    "{}({} in {} WHERE {}: {})",
+                    fn_str,
+                    variable,
+                    serialize_expression_for_export(collection),
+                    serialize_expression_for_export(predicate),
+                    serialize_expression_for_export(projection)
+                )
             }
         }
     }

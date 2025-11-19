@@ -227,10 +227,17 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = addAssociation)]
-    pub fn add_association(&mut self, owner: String, owned: String, rel_type: String) -> Result<(), JsValue> {
-        let owner_uuid = Uuid::from_str(&owner).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+    pub fn add_association(
+        &mut self,
+        owner: String,
+        owned: String,
+        rel_type: String,
+    ) -> Result<(), JsValue> {
+        let owner_uuid = Uuid::from_str(&owner)
+            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
         let owner_cid = crate::ConceptId::from(owner_uuid);
-        let owned_uuid = Uuid::from_str(&owned).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
+        let owned_uuid = Uuid::from_str(&owned)
+            .map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
         let owned_cid = crate::ConceptId::from(owned_uuid);
         self.inner
             .add_association(&owner_cid, &owned_cid, &rel_type)

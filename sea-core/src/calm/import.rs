@@ -83,7 +83,10 @@ fn import_constraint_node(
         let expr = crate::parser::parse_expression_from_str(expr_str)
             .map_err(|e| format!("Failed to parse policy expression: {}", e))?;
 
-        let ns = node.namespace.clone().unwrap_or_else(|| "default".to_string());
+        let ns = node
+            .namespace
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
         let mut policy = Policy::new_with_namespace(node.name.clone(), ns.clone(), expr);
 
         // Optional metadata mapping
@@ -96,9 +99,15 @@ fn import_constraint_node(
         // Modality and kind mapping if present
         if let Some(modality) = node.metadata.get("sea:modality").and_then(|v| v.as_str()) {
             match modality {
-                "Obligation" => policy = policy.with_modality(crate::policy::PolicyModality::Obligation),
-                "Prohibition" => policy = policy.with_modality(crate::policy::PolicyModality::Prohibition),
-                "Permission" => policy = policy.with_modality(crate::policy::PolicyModality::Permission),
+                "Obligation" => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Obligation)
+                }
+                "Prohibition" => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Prohibition)
+                }
+                "Permission" => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Permission)
+                }
                 _ => {}
             }
         }
@@ -257,9 +266,15 @@ fn import_relationship(
                 // Graph::add_association helper which stores associations as an attribute
                 // on the source entity for simplicity.
                 let (source_id, dest_id) = match &relationship.parties {
-                    Parties::SourceDestination { source, destination } => (source, destination),
+                    Parties::SourceDestination {
+                        source,
+                        destination,
+                    } => (source, destination),
                     _ => {
-                        return Err("Association relationship must have source/destination parties".to_string())
+                        return Err(
+                            "Association relationship must have source/destination parties"
+                                .to_string(),
+                        )
                     }
                 };
                 let source_uuid = id_map
@@ -1151,6 +1166,9 @@ mod tests {
         let associations = e1_ref.get_attribute("associations").unwrap();
         assert!(associations.is_array());
         let arr = associations.as_array().unwrap();
-        assert_eq!(arr[0]["target"], Value::String(graph.find_entity_by_name("B").unwrap().to_string()));
+        assert_eq!(
+            arr[0]["target"],
+            Value::String(graph.find_entity_by_name("B").unwrap().to_string())
+        );
     }
 }

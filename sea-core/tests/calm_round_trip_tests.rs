@@ -1,10 +1,10 @@
 use rust_decimal::Decimal;
 use sea_core::calm::{export, import};
+use sea_core::policy::Expression;
+use sea_core::policy::Policy;
 use sea_core::primitives::{Entity, Flow, Instance, Resource};
 use sea_core::units::unit_from_string;
 use sea_core::Graph;
-use sea_core::policy::Policy;
-use sea_core::policy::Expression;
 use serde_json::Value;
 
 #[test]
@@ -262,7 +262,9 @@ fn test_export_import_association_round_trip() {
     original_graph.add_entity(b).unwrap();
 
     // Create association by adding it via the Graph API
-    original_graph.add_association(&a_id, &b_id, "association").unwrap();
+    original_graph
+        .add_association(&a_id, &b_id, "association")
+        .unwrap();
 
     let calm_json = export(&original_graph).unwrap();
     let imported_graph = import(calm_json).unwrap();
