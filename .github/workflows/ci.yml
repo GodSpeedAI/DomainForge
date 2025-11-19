@@ -123,7 +123,7 @@ jobs:
       - name: Install dependencies
         run: |
           source .venv/bin/activate
-          pip install maturin pytest
+          pip install maturin==1.10.1 pytest==8.3.4
 
       - name: Build Python bindings
         run: |
