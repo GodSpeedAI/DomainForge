@@ -240,10 +240,10 @@ impl Graph {
     }
 
     #[napi]
-    pub fn add_policy(&mut self, policy: &crate::policy::Policy) -> Result<()> {
-        self.inner
-            .add_policy(policy.clone())
-            .map_err(Error::from_reason)
+    pub fn add_policy(&mut self, policy_json: String) -> Result<()> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| Error::from_reason(format!("Invalid Policy JSON: {}", e)))?;
+        self.inner.add_policy(policy).map_err(Error::from_reason)
     }
 
     #[napi]

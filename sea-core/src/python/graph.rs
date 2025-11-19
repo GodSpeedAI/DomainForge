@@ -216,9 +216,11 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
-    fn add_policy(&mut self, policy: &crate::policy::Policy) -> PyResult<()> {
+    fn add_policy(&mut self, policy_json: String) -> PyResult<()> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| PyValueError::new_err(format!("Invalid Policy JSON: {}", e)))?;
         self.inner
-            .add_policy(policy.clone())
+            .add_policy(policy)
             .map_err(|e| PyValueError::new_err(format!("Add policy error: {}", e)))
     }
 
