@@ -16,7 +16,7 @@ env:
   CARGO_INCREMENTAL: 0
   MATURIN_VERSION: 1.7.4
   PYTEST_VERSION: 7.4.2
-  CACHE_VERSION: v2  # Increment to bust all caches
+  CACHE_VERSION: v2 # Increment to bust all caches
 
 jobs:
   lint:
