@@ -13,7 +13,33 @@ This plan implements 7 priority enhancements plus polish items to strengthen Dom
 
 Step 1 is complete (SBVR/KG import implemented, validated, and merged). The RDF/Turtle and RDF/XML KG import paths now both work end-to-end; SBVR (XMI) import converts BusinessRule → Policy with modality and priority mapping; SHACL validation runs on KG imports and flags violations like sh:minExclusive (e.g., quantity > 0 checks). Automated tests for SBVR imports, KG imports (Turtle & RDF/XML), and SHACL validation were added and pass with the `shacl` feature enabled.
 
-Steps 2-7 remain pending (operator precedence & three-valued logic, ICU collation, logical namespace system, severity mapping, enhanced diagnostics, CLI polish, temporal policies), and are planned next in the order and schedules below.
+Step 2 is complete (operator precedence documented; three-valued NULL logic behind feature flag implemented and tested). Documentation for operator precedence and NULL semantics is in `docs/specs/semantics.md`. The three-valued logic implementation is gated behind the `three_valued_logic` feature flag, with comprehensive tests in `tests/null_handling_tests.rs` covering all operator combinations and aggregation behaviors.
+Step 2 is complete (operator precedence documented; three-valued NULL logic behind feature flag implemented and tested). Documentation for operator precedence and NULL semantics is in `docs/specs/semantics.md`. The three-valued logic implementation is gated behind the `three_valued_logic` feature flag, with comprehensive tests in `tests/null_handling_tests.rs` covering all operator combinations and aggregation behaviors.
+
+Step 3 is not yet started (ICU collation with locale bundle and runtime discovery).
+
+Step 4 is complete – Logical Namespace System with `.sea-registry.toml` and Glob Patterns
+
+**Goal:** Automatically map files to logical namespaces so parser defaults remain
+stable, even when files omit `in <namespace>` clauses.
+
+**Status:** ✅ Implemented
+
+### Deliverables
+
+- Workspace-level `.sea-registry.toml` that maps glob patterns to namespaces.
+- `NamespaceRegistry` loader in `sea_core` with glob validation, duplicate-match
+  detection, and helper APIs for both per-file lookups and registry expansion.
+  - Implemented longest-literal-prefix precedence when multiple patterns match a file. A deterministic alphabetical tie-breaker is used when literal prefixes have equal length.
+- CLI support for validating directories: the `sea` binary now discovers the
+  registry, expands all matching `.sea` files, applies the correct namespace
+  defaults, and merges the resulting graphs before running validation.
+  - The CLI adds `sea registry list [<path>]` and `sea registry resolve <file>` for exploration and automation.
+- Documentation under `docs/reference/sea-registry.md` detailing the registry
+  format and CLI workflow, plus sample `.sea` files in `examples/namespaces`.
+
+---
+>>>>>>> codex/review-and-merge-chore/fix-gaps-with-main:docs/work/plans/polish-plan.md
 
 ### Implementation Strategy
 
@@ -48,6 +74,15 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
     - Override via `sea:priority` extension attribute
   - Defer synonyms, definitions, structured glossaries to Phase 19+
 
+**Security Considerations**:
+**Security Considerations**:
+
+- Introduce a `--max-file-size` flag (default `100MB`) on CLI entry points that consume RDF/XML or SBVR sources so the parser rejects or stream-limits inputs above the threshold before parsing; document where this limit is enforced (e.g., the CLI validator and any import paths) and how large files are rejected or streamed in a controlled fashion.
+- Load SHACL shapes only from the embedded `schemas/sea-shapes.ttl` resource and ensure validation ignores any `sh:shapesGraph` entries from untrusted RDF; the plan should call out this explicit trust boundary and the guarantee that only the included shapes drive validation.
+- Configure all XML parsers (RDF/XML, SBVR, CALM, etc.) to disable entity expansion and external entity resolution so billion-laughs and XXE attacks are mitigated; describe the parser configuration knobs used (e.g., `quick_xml::Reader::expand_empty_elements(false)` plus disabling DTD resolution).
+- Add property-based fuzzing hooks that target the Pest DSL parser and the RDF Turtle/XML loaders inside `tests/cli_tests.rs`, run them with resource limits (timeouts, input size caps via the `--max-file-size` flag, etc.), and mention that these fuzz runs will be part of CI so parser robustness is continuously validated.
+
+ 
 **Implementation**:
 
 - **File**: `calm/sbvr_import.rs`

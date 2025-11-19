@@ -116,7 +116,7 @@ switch (platform) {
         nativeBinding = require('@domainforge/sea-darwin-universal')
       }
       break
-    } catch {}
+    } catch { }
     switch (arch) {
       case 'x64':
         localFileExisted = existsSync(join(__dirname, 'sea-core.darwin-x64.node'))
@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Graph, AggregateFunction, BinaryOp, Entity, Resource, Flow, Instance } = nativeBinding
+const { Graph, AggregateFunction, BinaryOp, Entity, Resource, Flow, Instance, NamespaceRegistry, NamespaceBinding } = nativeBinding
 
 module.exports.Graph = Graph
 module.exports.AggregateFunction = AggregateFunction
@@ -319,3 +319,5 @@ module.exports.Entity = Entity
 module.exports.Resource = Resource
 module.exports.Flow = Flow
 module.exports.Instance = Instance
+module.exports.NamespaceRegistry = NamespaceRegistry
+module.exports.NamespaceBinding = NamespaceBinding

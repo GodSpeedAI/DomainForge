@@ -160,6 +160,22 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 
 # After this, run the Debug Rust Test (auto) profile in VS Code
 ```
+=======
+### 🗂️ Workspace Registry (.sea-registry.toml)
+
+SEA provides a workspace-level registry file `.sea-registry.toml` to map files to logical namespaces via glob patterns. The `sea validate` CLI discovers the nearest registry when invoked from a file and expands directories by resolving files according to the registry rules.
+
+See `docs/reference/sea-registry.md` and `schemas/sea-registry.schema.json` for examples and schema validation.
+
+Tip: The CLI supports an optional `--fail-on-ambiguity` flag for `registry resolve` and `registry list` to make resolution fail when two matching namespace rules have an equal literal prefix length. By default, the resolver falls back to an alphabetical tie-breaker.
+
+### 🗂️ Workspace Registry (.sea-registry.toml)
+
+SEA provides a workspace-level registry file `.sea-registry.toml` to map files to logical namespaces via glob patterns. The `sea validate` CLI discovers the nearest registry when invoked from a file and expands directories by resolving files according to the registry rules.
+
+See `docs/reference/sea-registry.md` and `schemas/sea-registry.schema.json` for examples and schema validation.
+
+Tip: The CLI supports an optional `--fail-on-ambiguity` flag for `registry resolve` and `registry list` to make resolution fail when two matching namespace rules have an equal literal prefix length. By default, the resolver falls back to an alphabetical tie-breaker.
 
 ### 💡 Your First Model (5 Minutes)
 
@@ -591,6 +607,7 @@ imported_graph = Graph.import_calm(calm_data)
 | 📋 [**Implementation Plans**](docs/plans/) | Phase-by-phase TDD implementation guides |
 | 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md) | SEA ↔ CALM conversion specification |
 | 🎓 [**Examples**](examples/) | Browser demo and parser examples |
+| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md) | Configure `.sea-registry.toml` and workspace glob patterns |
 
 ### 🆕 Recent API Changes (November 2025)
 

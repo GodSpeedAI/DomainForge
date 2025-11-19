@@ -14,6 +14,17 @@ pub use ast::{parse_source, Ast, AstNode};
 pub use error::{ParseError, ParseResult};
 pub use string_utils::unescape_string;
 
+/// Controls how the SEA parser interprets declarations.
+///
+/// Currently only the `default_namespace` value influences whether entities/resources
+/// without an explicit namespace inherit a fallback namespace.
+#[derive(Debug, Clone, Default)]
+pub struct ParseOptions {
+    /// When `Some`, unqualified declarations receive this namespace.
+    /// When `None`, entities and resources must provide their own namespace.
+    pub default_namespace: Option<String>,
+}
+
 /// Parse SEA DSL source code into an AST
 pub fn parse(source: &str) -> ParseResult<Ast> {
     ast::parse_source(source)
@@ -22,7 +33,33 @@ pub fn parse(source: &str) -> ParseResult<Ast> {
 /// Parse SEA DSL source code directly into a Graph
 pub fn parse_to_graph(source: &str) -> ParseResult<Graph> {
     let ast = parse(source)?;
-    ast::ast_to_graph(ast)
+    ast::ast_to_graph_with_options(ast, &ParseOptions::default())
+}
+
+/// Parses SEA DSL `source` directly into a `Graph`, honoring the provided `options`.
+///
+/// # Parameters
+/// - `source`: DSL text that will be parsed into AST nodes.
+/// - `options`: Controls parser behavior (currently `default_namespace` for missing namespaces).
+///
+/// # Returns
+/// A `ParseResult` containing the constructed `Graph` or a `ParseError`.
+///
+/// # Errors
+/// Returns an error if parsing fails or AST validation (graph construction) rejects the input.
+///
+/// # Example
+/// ```
+/// use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
+///
+/// let options = ParseOptions {
+///     default_namespace: Some("logistics".to_string()),
+/// };
+/// let graph = parse_to_graph_with_options("Entity \"Warehouse\"", &options).unwrap();
+/// ```
+pub fn parse_to_graph_with_options(source: &str, options: &ParseOptions) -> ParseResult<Graph> {
+    let ast = parse(source)?;
+    ast::ast_to_graph_with_options(ast, options)
 }
 
 #[cfg(test)]

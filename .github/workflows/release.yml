@@ -188,17 +188,17 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install maturin
-        run: pip install maturin
+        run: pip install maturin==1.10.1
 
       - name: Build wheels
-        run: maturin build --release --features python --target ${{ matrix.target }}
+        run: maturin build --release --features python --target ${{ matrix.target }} --out dist
         working-directory: sea-core
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.target }}
-          path: sea-core/target/wheels/*.whl
+          path: sea-core/dist/*.whl
 
   build-wasm-release:
     name: Build WASM Release

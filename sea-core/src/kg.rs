@@ -50,7 +50,19 @@ pub struct KnowledgeGraph {
     pub shapes: Vec<ShaclShape>,
 }
 
-const URI_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b':').add(b'/').add(b'#');
+const URI_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b':')
+    .add(b'/')
+    .add(b'#')
+    .add(b'?')
+    .add(b'&')
+    .add(b'=')
+    .add(b'+')
+    .add(b'$')
+    .add(b',')
+    .add(b'@')
+    .add(b';');
 
 fn tokenize_triple_line(line: &str) -> Vec<String> {
     let mut tokens = Vec::new();

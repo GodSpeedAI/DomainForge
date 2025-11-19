@@ -299,6 +299,48 @@ impl Graph {
         self.policies.values().collect()
     }
 
+    /// Extend this graph with all nodes and policies from another graph.
+    /// The operation is atomic: the existing graph is only modified if the entire
+    /// merge succeeds, which prevents partial state when errors occur.
+    pub fn extend(&mut self, other: Graph) -> Result<(), String> {
+        let mut merged = self.clone();
+        merged.extend_from_graph(other)?;
+        *self = merged;
+        Ok(())
+    }
+
+    fn extend_from_graph(&mut self, other: Graph) -> Result<(), String> {
+        let Graph {
+            entities,
+            resources,
+            flows,
+            instances,
+            policies,
+        } = other;
+
+        for entity in entities.into_values() {
+            self.add_entity(entity)?;
+        }
+
+        for resource in resources.into_values() {
+            self.add_resource(resource)?;
+        }
+
+        for instance in instances.into_values() {
+            self.add_instance(instance)?;
+        }
+
+        for flow in flows.into_values() {
+            self.add_flow(flow)?;
+        }
+
+        for policy in policies.into_values() {
+            self.add_policy(policy)?;
+        }
+
+        Ok(())
+    }
+
     /// Validate the graph by evaluating all policies against it and
     /// collecting any violations produced. Returns a `ValidationResult`.
     pub fn validate(&self) -> ValidationResult {

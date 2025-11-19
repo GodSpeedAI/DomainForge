@@ -188,6 +188,9 @@ fn import_relationship(
         }
         RelationshipType::Simple(rel_type) => {
             let rel_type_text = rel_type.as_str();
+            if rel_type_text == "ownership" {
+                return Err("Ownership relationships should be modeled as Instances, not Simple relationships".to_string());
+            }
             log::warn!(
                 "Skipping unsupported Simple relationship '{}' in CALM import",
                 rel_type_text

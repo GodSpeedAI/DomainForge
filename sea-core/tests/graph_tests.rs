@@ -588,3 +588,39 @@ fn test_instance_iteration_order_deterministic() {
 
     assert_eq!(ids1, ids2);
 }
+
+#[test]
+fn test_extend_merges_graphs() {
+    let mut left = Graph::new();
+    let mut right = Graph::new();
+
+    let left_entity = Entity::new_with_namespace("Warehouse", "logistics");
+    let left_resource =
+        Resource::new_with_namespace("Camera", unit_from_string("units"), "logistics");
+    left.add_entity(left_entity).unwrap();
+    left.add_resource(left_resource).unwrap();
+
+    let right_source = Entity::new_with_namespace("Factory", "logistics");
+    let right_target = Entity::new_with_namespace("Customer", "logistics");
+    let right_resource = Resource::new_with_namespace("Cash", unit_from_string("units"), "finance");
+    let right_source_id = right_source.id().clone();
+    let right_target_id = right_target.id().clone();
+    let right_resource_id = right_resource.id().clone();
+    right.add_entity(right_source).unwrap();
+    right.add_entity(right_target).unwrap();
+    right.add_resource(right_resource).unwrap();
+
+    let flow = Flow::new(
+        right_resource_id,
+        right_source_id,
+        right_target_id,
+        Decimal::from(10),
+    );
+    right.add_flow(flow).unwrap();
+
+    left.extend(right).unwrap();
+
+    assert_eq!(left.entity_count(), 3);
+    assert_eq!(left.resource_count(), 2);
+    assert_eq!(left.flow_count(), 1);
+}

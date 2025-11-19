@@ -32,6 +32,7 @@ pub mod kg_import;
 pub mod parser;
 pub mod policy;
 pub mod primitives;
+pub mod registry;
 pub mod sbvr;
 pub mod semantic_version;
 pub mod units;
@@ -52,6 +53,10 @@ pub use typescript::primitives::{
 
 #[cfg(feature = "typescript")]
 pub use typescript::graph::Graph as TsGraph;
+#[cfg(feature = "typescript")]
+pub use typescript::registry::{
+    NamespaceBinding as TsNamespaceBinding, NamespaceRegistry as TsNamespaceRegistry,
+};
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
@@ -60,7 +65,8 @@ pub use concept_id::ConceptId;
 pub use graph::Graph;
 pub use kg::{KgError, KnowledgeGraph};
 pub use kg_import::{import_kg_rdfxml, import_kg_turtle, ImportError};
-pub use parser::{parse, parse_to_graph};
+pub use parser::{parse, parse_to_graph, parse_to_graph_with_options, ParseOptions};
+pub use registry::{NamespaceBinding, NamespaceRegistry, RegistryError};
 pub use sbvr::{SbvrError, SbvrModel};
 pub use semantic_version::SemanticVersion;
 pub use units::{unit_from_string, Dimension, Unit, UnitError, UnitRegistry};
@@ -94,6 +100,8 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::primitives::Flow>()?;
     m.add_class::<python::primitives::Instance>()?;
     m.add_class::<python::graph::Graph>()?;
+    m.add_class::<python::registry::NamespaceRegistry>()?;
+    m.add_class::<python::registry::NamespaceBinding>()?;
 
     Ok(())
 }

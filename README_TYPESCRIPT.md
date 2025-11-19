@@ -2,8 +2,6 @@
 
 TypeScript/Node.js bindings for the SEA (Semantic Enterprise Architecture) DSL.
 
-> **🎉 November 2025 Update**: Updated with latest API changes - namespace now returns `string` (not `string | undefined`), new constructor patterns, multiline string support, and 342 tests passing!
-
 ## Installation
 
 ```bash
@@ -188,6 +186,26 @@ class Graph {
 }
 ```
 
+### NamespaceRegistry (Workspace)
+
+```typescript
+import { NamespaceRegistry } from '@domainforge/sea';
+
+// Load a registry by path to the file
+const reg = NamespaceRegistry.from_file('./.sea-registry.toml');
+
+// Expand files and get bindings
+const files = reg.resolve_files(); // or reg.resolve_files(true) to fail on ambiguity via the failOnAmbiguity flag
+for (const f of files) {
+  console.log(f.path, '=>', f.namespace);
+}
+
+// Query namespace for a single file
+const ns = reg.namespace_for('/path/to/file.sea'); // or pass true as the failOnAmbiguity flag to error on ambiguous matches
+console.log('Namespace:', ns);
+```
+
+
 ## Advanced Usage
 
 ### Working with Attributes
@@ -238,20 +256,6 @@ npm run build
 npm test
 ```
 
-## Key API Changes (November 2025)
-
-**Breaking Changes:**
-- `namespace()` now returns `string` instead of `string | undefined` (always returns "default" if unspecified)
-- Constructors changed: Use `Entity.new(name)` for default namespace, `Entity.newWithNamespace(name, ns)` for explicit
-- `Resource.new(name, unit)` now delegates to `Resource.newWithNamespace(..., "default")`, so `namespace()` is always defined even when you omit the namespace
-- Flow constructor takes `ConceptId` values (not references) - clone before passing
-- Methods now return `ConceptId` type instead of raw strings for IDs
-
-**New Features:**
-- **Multiline string support**: Parser accepts `"""..."""` syntax for entity/resource names
-- **CALM integration**: `exportCalm()` and `importCalm()` for architecture-as-code
-- **Deterministic iteration**: Graph uses IndexMap for reproducible results
-- **342 tests passing**: Comprehensive test coverage with zero failures
 
 ## Platform Support
 
@@ -264,4 +268,4 @@ Build from source for other platforms using `npm run build`.
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0

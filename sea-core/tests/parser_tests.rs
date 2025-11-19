@@ -1,4 +1,4 @@
-use sea_core::parser::{parse, parse_to_graph, AstNode};
+use sea_core::parser::{parse, parse_to_graph, parse_to_graph_with_options, AstNode, ParseOptions};
 
 #[test]
 fn test_parse_entity_basic() {
@@ -362,6 +362,40 @@ fn test_ast_to_graph_duplicate_resource_error() {
 
     let result = parse_to_graph(source);
     assert!(result.is_err());
+}
+
+#[test]
+fn test_parse_to_graph_with_options_overrides_namespace() {
+    let source = r#"
+        Entity "Warehouse"
+        Resource "Camera" units
+    "#;
+
+    let options = ParseOptions {
+        default_namespace: Some("logistics".to_string()),
+    };
+
+    let graph = parse_to_graph_with_options(source, &options).unwrap();
+    let entity = graph.all_entities().into_iter().next().expect("entity");
+
+    assert_eq!(entity.namespace(), "logistics");
+}
+
+#[test]
+fn test_parse_to_graph_with_options_preserves_explicit_namespace() {
+    let source = r#"
+        Entity "Warehouse" in production
+        Resource "Camera" units
+    "#;
+
+    let options = ParseOptions {
+        default_namespace: Some("logistics".to_string()),
+    };
+
+    let graph = parse_to_graph_with_options(source, &options).unwrap();
+    let entity = graph.all_entities().into_iter().next().expect("entity");
+
+    assert_eq!(entity.namespace(), "production");
 }
 
 #[test]
