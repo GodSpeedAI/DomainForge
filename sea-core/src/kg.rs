@@ -49,7 +49,19 @@ pub struct KnowledgeGraph {
     pub shapes: Vec<ShaclShape>,
 }
 
-const URI_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b':').add(b'/').add(b'#');
+const URI_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b':')
+    .add(b'/')
+    .add(b'#')
+    .add(b'?')
+    .add(b'&')
+    .add(b'=')
+    .add(b'+')
+    .add(b'$')
+    .add(b',')
+    .add(b'@')
+    .add(b';');
 
 impl KnowledgeGraph {
     pub fn new() -> Self {
