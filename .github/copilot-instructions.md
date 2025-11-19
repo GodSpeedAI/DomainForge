@@ -250,7 +250,7 @@ pub struct Entity {
 impl Entity {
     #[new]
     pub fn new(name: String) -> Self {
-        Self { inner: sea_core::primitives::Entity::new(name) }
+        Self { inner: sea_core::primitives::Entity::new_with_namespace(name, "default") }
     }
 }
 ```
@@ -267,7 +267,7 @@ pub struct Entity {
 impl Entity {
     #[napi(constructor)]
     pub fn new(name: String) -> Self {
-        Self { inner: sea_core::primitives::Entity::new(name) }
+        Self { inner: sea_core::primitives::Entity::new_with_namespace(name, "default") }
     }
 }
 ```
@@ -316,9 +316,11 @@ Models follow three-layer separation:
    - ⚠️ **Known Issue**: `uuid` crate in Cargo.toml incorrectly includes non-existent "wasm-bindgen" feature. Use only `["v4", "v5", "v7", "serde"]`.
 4. **Namespace API**: `namespace()` returns `&str`, not `Option<&str>`. Check for empty string, not None. Default is `"default"`.
 5. **Constructor Patterns**:
-   - `Entity::new(name)` → default namespace
-   - `Entity::new_with_namespace(name, ns)` → explicit namespace
-   - `Flow::new(resource_id, from_id, to_id, quantity)` → takes ConceptId values (clone IDs before passing)
+
+- `Entity::new_with_namespace(name, ns)` → explicit namespace (use `"default"` when migrating)
+- `Entity::new_with_namespace(name, ns)` → explicit namespace
+- `Flow::new(resource_id, from_id, to_id, quantity)` → takes ConceptId values (clone IDs before passing)
+
 6. **Referential Integrity**: Graph validates all UUIDs. Add primitives in order: Entity/Resource → Flow/Instance → Policy.
 7. **IndexMap for Determinism**: Graph uses `IndexMap` (not `HashMap`) to ensure stable iteration order for policies.
 8. **Unit Handling**:

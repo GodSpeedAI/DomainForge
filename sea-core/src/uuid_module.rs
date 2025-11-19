@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 /// Generate a new UUID v7
 pub fn generate_uuid_v7() -> Uuid {
-    uuid::Uuid::now_v7()
+    Uuid::now_v7()
 }
 
 /// Parse a UUID from string

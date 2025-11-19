@@ -1,9 +1,15 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Expression {
     Literal(serde_json::Value),
+
+    QuantityLiteral {
+        value: Decimal,
+        unit: String,
+    },
 
     Variable(String),
 
@@ -35,6 +41,15 @@ pub enum Expression {
         collection: Box<Expression>,
         field: Option<String>,
         filter: Option<Box<Expression>>,
+    },
+
+    AggregationComprehension {
+        function: AggregateFunction,
+        variable: String,
+        collection: Box<Expression>,
+        predicate: Box<Expression>,
+        projection: Box<Expression>,
+        target_unit: Option<String>,
     },
 }
 
@@ -168,6 +183,9 @@ impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Expression::Literal(v) => write!(f, "{}", v),
+            Expression::QuantityLiteral { value, unit } => {
+                write!(f, "{} {}", value, unit)
+            }
             Expression::Variable(n) => write!(f, "{}", n),
             Expression::Binary { op, left, right } => {
                 write!(f, "({} {} {})", left, op, right)
@@ -202,6 +220,24 @@ impl fmt::Display for Expression {
                 }
                 if let Some(flt) = filter {
                     write!(f, " WHERE {}", flt)?;
+                }
+                write!(f, ")")
+            }
+            Expression::AggregationComprehension {
+                function,
+                variable,
+                collection,
+                predicate,
+                projection,
+                target_unit,
+            } => {
+                write!(
+                    f,
+                    "{}({} in {} WHERE {}: {}",
+                    function, variable, collection, predicate, projection
+                )?;
+                if let Some(unit) = target_unit {
+                    write!(f, " AS \"{}\"", unit)?;
                 }
                 write!(f, ")")
             }

@@ -295,9 +295,9 @@ fn test_forall_quantifier() {
     let mut graph = Graph::new();
 
     // Add entities and flows
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
-    let cameras = Resource::new("Cameras", "units");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
+    let cameras = Resource::new_with_namespace("Cameras", "units", "default");
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -597,9 +597,9 @@ fn test_policy_with_violation() {
     let mut graph = Graph::new();
 
     // Create scenario with violation
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
-    let cameras = Resource::new("Cameras", "units");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
+    let cameras = Resource::new_with_namespace("Cameras", "units", "default");
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();

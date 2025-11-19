@@ -334,10 +334,10 @@ fn test_count_flows() {
     let mut graph = Graph::new();
 
     // Create 3 flows
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default");
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -425,12 +425,12 @@ fn test_aggregation_with_filter() {
     let mut graph = Graph::new();
 
     // Create flows for different resources
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
 
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let camera = Resource::new("Camera", Unit::new("units", "units", Dimension::Count, Decimal::from(1)));
-    let gold = Resource::new("Gold", kg);
+    let camera = Resource::new_with_namespace("Camera", Unit::new("units", "units", Dimension::Count, Decimal::from(1)), "default");
+    let gold = Resource::new_with_namespace("Gold", kg, "default");
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();
@@ -670,7 +670,7 @@ fn test_sum_preserves_units() {
 
     // Create flows in kg
     let kg = Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1));
-    let gold = Resource::new("Gold", kg.clone());
+    let gold = Resource::new_with_namespace("Gold", kg.clone(), "default");
 
     // ... add flows
 

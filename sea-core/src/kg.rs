@@ -632,9 +632,10 @@ mod tests {
         graph.add_entity(entity_slash.clone()).unwrap();
         graph.add_entity(entity_hash.clone()).unwrap();
 
-        let resource = Resource::new(
+        let resource = Resource::new_with_namespace(
             "Resource:Name/Hash",
             crate::units::unit_from_string("units"),
+            "default".to_string(),
         );
         let resource_id = resource.id().clone();
         graph.add_resource(resource).unwrap();

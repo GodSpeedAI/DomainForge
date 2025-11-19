@@ -106,7 +106,7 @@ fn test_graph_creation() {
 #[test]
 fn test_add_entity_to_graph() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Warehouse A");
+    let entity = Entity::new_with_namespace("Warehouse A", "default");
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity);
@@ -117,7 +117,7 @@ fn test_add_entity_to_graph() {
 #[test]
 fn test_add_duplicate_entity() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Factory");
+    let entity = Entity::new_with_namespace("Factory", "default");
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity.clone());
@@ -207,7 +207,7 @@ cargo clippy -- -D warnings
 #[test]
 fn test_add_resource() {
     let mut graph = Graph::new();
-    let resource = Resource::new("Camera Units", "units");
+    let resource = Resource::new_with_namespace("Camera Units", "units", "default");
     let resource_id = resource.id().clone();
 
     graph.add_resource(resource).unwrap();
@@ -218,7 +218,7 @@ fn test_add_resource() {
 #[test]
 fn test_get_entity_by_id() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Warehouse");
+    let entity = Entity::new_with_namespace("Warehouse", "default");
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity).unwrap();
@@ -231,7 +231,7 @@ fn test_get_entity_by_id() {
 #[test]
 fn test_remove_entity() {
     let mut graph = Graph::new();
-    let entity = Entity::new("Factory");
+    let entity = Entity::new_with_namespace("Factory", "default");
     let entity_id = entity.id().clone();
 
     graph.add_entity(entity).unwrap();
@@ -321,9 +321,9 @@ impl Graph {
 fn test_flows_from_entity() {
     let mut graph = Graph::new();
 
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
-    let cameras = Resource::new("Cameras", "units");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
+    let cameras = Resource::new_with_namespace("Cameras", "units", "default");
 
     let warehouse_id = warehouse.id().clone();
     let factory_id = factory.id().clone();
@@ -343,10 +343,9 @@ fn test_flows_from_entity() {
 #[test]
 fn test_flows_to_entity() {
     let mut graph = Graph::new();
-
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
-    let cameras = Resource::new("Cameras", "units");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
+    let cameras = Resource::new_with_namespace("Cameras", "units", "default");
 
     let warehouse_id = warehouse.id().clone();
     let factory_id = factory.id().clone();

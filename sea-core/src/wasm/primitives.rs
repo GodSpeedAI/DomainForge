@@ -177,6 +177,7 @@ impl Flow {
         from_id: String,
         to_id: String,
         quantity: String,
+        namespace: Option<String>,
     ) -> Result<Flow, JsValue> {
         let resource_uuid = Uuid::from_str(&resource_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid resource_id UUID: {}", e)))?;
@@ -187,11 +188,17 @@ impl Flow {
         let quantity_decimal = Decimal::from_str(&quantity)
             .map_err(|e| JsValue::from_str(&format!("Invalid quantity: {}", e)))?;
 
-        let flow = RustFlow::new(
+        let ns = match namespace {
+            Some(n) => n,
+            None => "default".to_string(),
+        };
+
+        let flow = RustFlow::new_with_namespace(
             crate::ConceptId::from(resource_uuid),
             crate::ConceptId::from(from_uuid),
             crate::ConceptId::from(to_uuid),
             quantity_decimal,
+            ns,
         );
 
         Ok(Self { inner: flow })
@@ -288,17 +295,16 @@ impl Instance {
         let entity_uuid = Uuid::from_str(&entity_id)
             .map_err(|e| JsValue::from_str(&format!("Invalid entity_id UUID: {}", e)))?;
 
-        let instance = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(
-                crate::ConceptId::from(resource_uuid),
-                crate::ConceptId::from(entity_uuid),
-                ns,
-            ),
-            None => RustInstance::new(
-                crate::ConceptId::from(resource_uuid),
-                crate::ConceptId::from(entity_uuid),
-            ),
+        let ns = match namespace {
+            Some(n) => n,
+            None => "default".to_string(),
         };
+
+        let instance = RustInstance::new_with_namespace(
+            crate::ConceptId::from(resource_uuid),
+            crate::ConceptId::from(entity_uuid),
+            ns,
+        );
 
         Ok(Self { inner: instance })
     }

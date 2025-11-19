@@ -197,7 +197,7 @@ use sea_core::{Graph, Entity, calm};
 #[test]
 fn test_export_simple_graph_to_calm() {
     let mut graph = Graph::new();
-    graph.add_entity(Entity::new("Warehouse"));
+    graph.add_entity(Entity::new_with_namespace("Warehouse", "default"));
 
     let calm_json = calm::export(&graph).unwrap();
 
@@ -213,7 +213,7 @@ fn test_export_simple_graph_to_calm() {
 #[test]
 fn test_export_preserves_attributes() {
     let mut graph = Graph::new();
-    let mut entity = Entity::new("Factory");
+    let mut entity = Entity::new_with_namespace("Factory", "default");
     entity.set_attribute("capacity", 5000);
     graph.add_entity(entity);
 
@@ -425,7 +425,7 @@ fn import_entity(node: &Value) -> Result<Entity, String> {
     let name = node["name"].as_str()
         .ok_or("Missing name")?.to_string();
 
-    let mut entity = Entity::new(name);
+    let mut entity = Entity::new_with_namespace(name, "default");
 
     if let Some(namespace) = node["namespace"].as_str() {
         entity.set_namespace(namespace);
@@ -446,7 +446,7 @@ fn import_resource(node: &Value) -> Result<Resource, String> {
     let unit = node["metadata"]["unit"].as_str()
         .unwrap_or("units").to_string();
 
-    let mut resource = Resource::new(name, unit);
+    let mut resource = Resource::new_with_namespace(name, unit, "default");
 
     if let Some(attrs) = node["metadata"]["sea:attributes"].as_object() {
         for (key, value) in attrs {
@@ -461,7 +461,7 @@ fn import_instance(node: &Value, graph: &mut Graph, id_map: &mut HashMap<String,
     // Import Instance as composite entity + ownership relationship
     let name = node["name"].as_str()
         .ok_or("Missing name")?.to_string();
-    let mut instance_entity = Entity::new(name);
+    let mut instance_entity = Entity::new_with_namespace(name, "default");
     instance_entity.set_attribute("instance_type".to_string(), serde_json::json!("instance"));
 
     let instance_id = instance_entity.id().clone();

@@ -5,10 +5,21 @@ WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
 
 // Program is the top-level entry point
-program = { SOI ~ declaration* ~ EOI }
+program = { SOI ~ file_header? ~ declaration* ~ EOI }
+
+// File-level metadata annotations
+file_header = { annotation+ }
+
+annotation = {
+    "@" ~ annotation_name ~ string_literal
+}
+
+annotation_name = {
+    ^"namespace" | ^"version" | ^"owner"
+}
 
 // Declarations
-declaration = { entity_decl | resource_decl | flow_decl | policy_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | policy_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -39,12 +50,39 @@ flow_decl = {
     ^"flow" ~ string_literal ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number)?
 }
 
+// Dimension Declaration
+// Syntax: Dimension "Currency"
+dimension_decl = {
+    ^"dimension" ~ string_literal
+}
+
+// Unit Declaration
+// Syntax: Unit "USD" of "Currency" factor 1 base "USD"
+unit_decl = {
+    ^"unit" ~ string_literal ~ ^"of" ~ string_literal ~ ^"factor" ~ number ~ ^"base" ~ string_literal
+}
+
 // Policy Declaration
 // Syntax: Policy name as: expression
 // Syntax: Policy name v1.0.0 as: expression
+// Syntax: Policy name per Constraint Obligation priority 5 as: expression
 policy_decl = {
-    ^"policy" ~ identifier ~ (^"v" ~ version)? ~ ^"as" ~ ":" ~ expression
+    ^"policy" ~ identifier ~ (^"per" ~ policy_kind ~ policy_modality ~ ^"priority" ~ number)? ~ policy_annotation* ~ (^"v" ~ version)? ~ ^"as" ~ ":" ~ expression
 }
+
+policy_kind = { ^"Constraint" | ^"Derivation" | ^"Obligation" }
+
+policy_modality = { ^"Obligation" | ^"Prohibition" | ^"Permission" }
+
+policy_annotation = {
+    "@" ~ policy_annotation_name ~ (string_literal | string_array)
+}
+
+policy_annotation_name = {
+    ^"rationale" | ^"tags"
+}
+
+string_array = { "[" ~ string_literal ~ ("," ~ string_literal)* ~ "]" }
 
 // Semantic Version
 version = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
@@ -88,12 +126,17 @@ primary_expr = {
 // Syntax: count(flows)
 // Syntax: sum(flows.quantity)
 // Syntax: count(flows where resource = "Camera")
+// Syntax: sum(f in flows where f.resource = "Money": f.quantity as "USD")
 aggregation_expr = {
-    aggregate_fn ~ "(" ~
-        collection ~
-        ("." ~ identifier)? ~
-        (^"where" ~ expression)? ~
-    ")"
+    aggregate_fn ~ "(" ~ (aggregation_comprehension | aggregation_simple) ~ ")"
+}
+
+aggregation_comprehension = {
+    identifier ~ ^"in" ~ collection ~ ^"where" ~ expression ~ ":" ~ expression ~ (^"as" ~ string_literal)?
+}
+
+aggregation_simple = {
+    collection ~ ("." ~ identifier)? ~ (^"where" ~ expression)?
 }
 
 aggregate_fn = {
@@ -117,7 +160,12 @@ collection = {
 member_access = { identifier ~ "." ~ identifier }
 
 // Literals
-literal = { multiline_string | string_literal | number | boolean }
+literal = { multiline_string | string_literal | quantity_literal | number | boolean }
+
+// Quantity literal with unit suffix
+// Syntax: 1_500 "USD"
+// Syntax: 100.5 "kg"
+quantity_literal = { number ~ string_literal }
 
 // Name can be either a multiline string or regular string literal
 name = { multiline_string | string_literal }

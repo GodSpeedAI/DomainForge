@@ -17,8 +17,8 @@ const DEFAULT_NAMESPACE: &str = "default";
 /// use sea_core::primitives::{Entity, Resource, Instance};
 /// use sea_core::units::unit_from_string;
 ///
-/// let warehouse = Entity::new("Warehouse A");
-/// let product = Resource::new("Camera", unit_from_string("units"));
+/// let warehouse = Entity::new_with_namespace("Warehouse A".to_string(), "default".to_string());
+/// let product = Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
 ///
 /// let camera_123 = Instance::new(
 ///     product.id().clone(),

@@ -103,7 +103,7 @@ fn import_resource(node: &super::models::CalmNode) -> Result<Resource, String> {
     let resource = if let Some(ns) = &node.namespace {
         Resource::new_with_namespace(node.name.clone(), unit_obj, ns.clone())
     } else {
-        Resource::new(node.name.clone(), unit_obj)
+        Resource::new_with_namespace(node.name.clone(), unit_obj, "default".to_string())
     };
 
     Ok(resource)
@@ -136,7 +136,7 @@ fn import_instance(
     let instance = if let Some(ns) = &node.namespace {
         Instance::new_with_namespace(resource_id.clone(), entity_id.clone(), ns.clone())
     } else {
-        Instance::new(resource_id.clone(), entity_id.clone())
+        Instance::new_with_namespace(resource_id.clone(), entity_id.clone(), "default".to_string())
     };
 
     Ok(instance)

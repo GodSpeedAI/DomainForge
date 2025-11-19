@@ -155,7 +155,7 @@ pub struct Entity {
 impl Entity {
     #[napi(constructor)]
     pub fn new(name: String, namespace: Option<String>) -> Self {
-        let mut entity = RustEntity::new(name);
+        let mut entity = RustEntity::new_with_namespace(name, "default");
         if let Some(ns) = namespace {
             entity.set_namespace(ns);
         }

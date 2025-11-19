@@ -104,9 +104,9 @@ use rust_decimal::Decimal;
 
 #[test]
 fn test_flow_new_stores_references() {
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
-    let product = Resource::new("Widget", "units");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
+    let product = Resource::new_with_namespace("Widget", "units", "default");
 
     let flow = Flow::new(
         product.id().clone(),
@@ -153,9 +153,9 @@ use serde_json::Value;
 /// use sea_core::primitives::{Entity, Resource, Flow};
 /// use rust_decimal::Decimal;
 ///
-/// let warehouse = Entity::new("Warehouse");
-/// let factory = Entity::new("Factory");
-/// let steel = Resource::new("Steel", "kg");
+/// let warehouse = Entity::new_with_namespace("Warehouse", "default");
+/// let factory = Entity::new_with_namespace("Factory", "default");
+/// let steel = Resource::new_with_namespace("Steel", "kg", "default");
 ///
 /// let shipment = Flow::new(
 ///     steel.id().clone(),
@@ -236,8 +236,8 @@ use sea_core::primitives::{Entity, Resource, Instance};
 
 #[test]
 fn test_instance_new_stores_references() {
-    let warehouse = Entity::new("Warehouse");
-    let camera = Resource::new("Camera", "units");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let camera = Resource::new_with_namespace("Camera", "units", "default");
 
     let instance = Instance::new(
         camera.id().clone(),
@@ -266,8 +266,8 @@ use serde_json::Value;
 /// ```
 /// use sea_core::primitives::{Entity, Resource, Instance};
 ///
-/// let warehouse = Entity::new("Warehouse A");
-/// let product = Resource::new("Camera", "units");
+/// let warehouse = Entity::new_with_namespace("Warehouse A", "default");
+/// let product = Resource::new_with_namespace("Camera", "units", "default");
 ///
 /// let camera_123 = Instance::new(
 ///     product.id().clone(),
@@ -344,13 +344,13 @@ use rust_decimal::Decimal;
 #[test]
 fn test_complete_supply_chain_model() {
     // Entities
-    let supplier = Entity::new("Supplier");
-    let warehouse = Entity::new("Warehouse");
-    let factory = Entity::new("Factory");
+    let supplier = Entity::new_with_namespace("Supplier", "default");
+    let warehouse = Entity::new_with_namespace("Warehouse", "default");
+    let factory = Entity::new_with_namespace("Factory", "default");
 
     // Resources
-    let steel = Resource::new("Steel", "kg");
-    let camera = Resource::new("Camera", "units");
+    let steel = Resource::new_with_namespace("Steel", "kg", "default");
+    let camera = Resource::new_with_namespace("Camera", "units", "default");
 
     // Flows
     let steel_shipment = Flow::new(

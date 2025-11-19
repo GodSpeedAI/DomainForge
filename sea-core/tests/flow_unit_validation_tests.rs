@@ -12,7 +12,7 @@ fn test_flow_creation_with_resource_unit() {
     let warehouse = Entity::new_with_namespace("Warehouse", "default".to_string());
     let factory = Entity::new_with_namespace("Factory", "default".to_string());
     let kg = unit_from_string("kg");
-    let gold = Resource::new("Gold", kg);
+    let gold = Resource::new_with_namespace("Gold", kg, "default".to_string());
 
     graph.add_entity(warehouse.clone()).unwrap();
     graph.add_entity(factory.clone()).unwrap();

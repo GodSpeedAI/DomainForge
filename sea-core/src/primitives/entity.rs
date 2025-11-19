@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// ```
 /// use sea_core::primitives::Entity;
 ///
-/// let warehouse = Entity::new("Main Warehouse");
+/// let warehouse = Entity::new_with_namespace("Main Warehouse", "default");
 /// assert_eq!(warehouse.name(), "Main Warehouse");
 /// assert_eq!(warehouse.namespace(), "default");
 /// ```
@@ -36,7 +36,7 @@ use uuid::Uuid;
 /// use sea_core::primitives::Entity;
 /// use serde_json::json;
 ///
-/// let mut factory = Entity::new("Factory");
+/// let mut factory = Entity::new_with_namespace("Factory", "default");
 /// factory.set_attribute("capacity", json!(5000));
 /// factory.set_attribute("location", json!("Building 3"));
 ///
@@ -48,7 +48,7 @@ use uuid::Uuid;
 /// ```
 /// use sea_core::primitives::Entity;
 ///
-/// let entity = Entity::new("Test Entity");
+/// let entity = Entity::new_with_namespace("Test Entity", "default");
 /// let json = serde_json::to_string(&entity).unwrap();
 /// let deserialized: Entity = serde_json::from_str(&json).unwrap();
 /// assert_eq!(entity.name(), deserialized.name());
@@ -69,9 +69,10 @@ impl Entity {
     /// ```
     /// use sea_core::primitives::Entity;
     ///
-    /// let entity = Entity::new("Warehouse");
+    /// let entity = Entity::new_with_namespace("Warehouse", "default");
     /// assert_eq!(entity.name(), "Warehouse");
     /// ```
+    #[deprecated(note = "use new_with_namespace instead")]
     pub fn new(name: impl Into<String>) -> Self {
         let name = name.into();
         let namespace = "default".to_string();
@@ -143,7 +144,7 @@ impl Entity {
     /// use sea_core::primitives::Entity;
     /// use serde_json::json;
     ///
-    /// let mut entity = Entity::new("Factory");
+    /// let mut entity = Entity::new_with_namespace("Factory", "default");
     /// entity.set_attribute("capacity", json!(5000));
     /// assert_eq!(entity.get_attribute("capacity"), Some(&json!(5000)));
     /// ```

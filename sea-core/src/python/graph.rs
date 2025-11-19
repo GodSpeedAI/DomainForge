@@ -35,25 +35,25 @@ impl Graph {
     fn add_entity(&mut self, entity: &Entity) -> PyResult<()> {
         self.inner
             .add_entity(entity.clone().into_inner())
-            .map_err(PyValueError::new_err)
+            .map_err(|e| PyValueError::new_err(format!("Add entity error: {}", e)))
     }
 
     fn add_resource(&mut self, resource: &Resource) -> PyResult<()> {
         self.inner
             .add_resource(resource.clone().into_inner())
-            .map_err(PyValueError::new_err)
+            .map_err(|e| PyValueError::new_err(format!("Add resource error: {}", e)))
     }
 
     fn add_flow(&mut self, flow: &Flow) -> PyResult<()> {
         self.inner
             .add_flow(flow.clone().into_inner())
-            .map_err(PyValueError::new_err)
+            .map_err(|e| PyValueError::new_err(format!("Add flow error: {}", e)))
     }
 
     fn add_instance(&mut self, instance: &Instance) -> PyResult<()> {
         self.inner
             .add_instance(instance.clone().into_inner())
-            .map_err(PyValueError::new_err)
+            .map_err(|e| PyValueError::new_err(format!("Add instance error: {}", e)))
     }
 
     fn entity_count(&self) -> usize {

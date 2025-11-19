@@ -19,9 +19,9 @@ const DEFAULT_NAMESPACE: &str = "default";
 /// use sea_core::units::unit_from_string;
 /// use rust_decimal::Decimal;
 ///
-/// let warehouse = Entity::new("Warehouse");
-/// let factory = Entity::new("Factory");
-/// let product = Resource::new("Widget", unit_from_string("units"));
+/// let warehouse = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
+/// let factory = Entity::new_with_namespace("Factory".to_string(), "default".to_string());
+/// let product = Resource::new_with_namespace("Widget", unit_from_string("units"), "default".to_string());
 ///
 /// let flow = Flow::new(
 ///     product.id().clone(),

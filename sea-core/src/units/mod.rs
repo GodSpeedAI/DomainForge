@@ -1,4 +1,5 @@
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -36,17 +37,30 @@ impl Unit {
         name: impl Into<String>,
         dimension: Dimension,
         base_factor: Decimal,
-    ) -> Result<Self, UnitError> {
-        if base_factor.is_zero() {
-            return Err(UnitError::ZeroBaseFactor);
+        base_unit: impl Into<String>,
+    ) -> Self {
+        let symbol = symbol.into();
+        Self {
+            symbol,
+            name: name.into(),
+            dimension,
+            base_factor,
+            base_unit: base_unit.into(),
         }
+    }
+
+    pub fn new_base(
+        symbol: impl Into<String>,
+        name: impl Into<String>,
+        dimension: Dimension,
+    ) -> Result<Self, UnitError> {
         let symbol = symbol.into();
         let base_unit = symbol.clone();
         Ok(Self {
             symbol,
             name: name.into(),
             dimension,
-            base_factor,
+            base_factor: Decimal::ONE,
             base_unit,
         })
     }
@@ -94,6 +108,7 @@ pub enum UnitError {
     IncompatibleDimensions { from: Dimension, to: Dimension },
     ConversionNotDefined { from: String, to: String },
     ZeroBaseFactor,
+    DuplicateUnit(String),
 }
 
 impl std::fmt::Display for UnitError {
@@ -108,6 +123,9 @@ impl std::fmt::Display for UnitError {
             }
             UnitError::ZeroBaseFactor => {
                 write!(f, "Unit base_factor cannot be zero")
+            }
+            UnitError::DuplicateUnit(symbol) => {
+                write!(f, "Unit already registered: {}", symbol)
             }
         }
     }
@@ -130,90 +148,133 @@ impl Default for UnitRegistry {
 
         // Mass units
         registry.register_base(Dimension::Mass, "kg");
-        registry.register(
-            Unit::new("kg", "kilogram", Dimension::Mass, Decimal::from(1)).expect("valid unit"),
-        );
-        registry.register(
-            Unit::new("g", "gram", Dimension::Mass, Decimal::new(1, 3))
-                .expect("valid unit")
-                .with_base("kg"),
-        );
-        registry.register(
-            Unit::new("lb", "pound", Dimension::Mass, Decimal::new(45359237, 8))
-                .expect("valid unit")
-                .with_base("kg"),
-        );
+        registry.register_builtin(Unit::new(
+            "kg",
+            "kilogram",
+            Dimension::Mass,
+            Decimal::from(1),
+            "kg",
+        ));
+        registry.register_builtin(Unit::new(
+            "g",
+            "gram",
+            Dimension::Mass,
+            Decimal::new(1, 3),
+            "kg",
+        ));
+        registry.register_builtin(Unit::new(
+            "lb",
+            "pound",
+            Dimension::Mass,
+            Decimal::new(45359237, 8),
+            "kg",
+        ));
 
         // Length units
         registry.register_base(Dimension::Length, "m");
-        registry.register(
-            Unit::new("m", "meter", Dimension::Length, Decimal::from(1)).expect("valid unit"),
-        );
-        registry.register(
-            Unit::new("cm", "centimeter", Dimension::Length, Decimal::new(1, 2))
-                .expect("valid unit")
-                .with_base("m"),
-        );
-        registry.register(
-            Unit::new("in", "inch", Dimension::Length, Decimal::new(254, 4))
-                .expect("valid unit")
-                .with_base("m"),
-        );
+        registry.register_builtin(Unit::new(
+            "m",
+            "meter",
+            Dimension::Length,
+            Decimal::from(1),
+            "m",
+        ));
+        registry.register_builtin(Unit::new(
+            "cm",
+            "centimeter",
+            Dimension::Length,
+            Decimal::new(1, 2),
+            "m",
+        ));
+        registry.register_builtin(Unit::new(
+            "in",
+            "inch",
+            Dimension::Length,
+            Decimal::new(254, 4),
+            "m",
+        ));
 
         // Volume units
         registry.register_base(Dimension::Volume, "L");
-        registry.register(
-            Unit::new("L", "liter", Dimension::Volume, Decimal::from(1)).expect("valid unit"),
-        );
-        registry.register(
-            Unit::new("mL", "milliliter", Dimension::Volume, Decimal::new(1, 3))
-                .expect("valid unit")
-                .with_base("L"),
-        );
+        registry.register_builtin(Unit::new(
+            "L",
+            "liter",
+            Dimension::Volume,
+            Decimal::from(1),
+            "L",
+        ));
+        registry.register_builtin(Unit::new(
+            "mL",
+            "milliliter",
+            Dimension::Volume,
+            Decimal::new(1, 3),
+            "L",
+        ));
 
         // Currency units (no conversion without exchange rates)
         registry.register_base(Dimension::Currency, "USD");
-        registry.register(
-            Unit::new("USD", "US Dollar", Dimension::Currency, Decimal::from(1))
-                .expect("valid unit"),
-        );
-        registry.register(
-            Unit::new("EUR", "Euro", Dimension::Currency, Decimal::from(1)).expect("valid unit"),
-        );
-        registry.register(
-            Unit::new(
-                "GBP",
-                "British Pound",
-                Dimension::Currency,
-                Decimal::from(1),
-            )
-            .expect("valid unit"),
-        );
+        registry.register_builtin(Unit::new(
+            "USD",
+            "US Dollar",
+            Dimension::Currency,
+            Decimal::from(1),
+            "USD",
+        ));
+        registry.register_builtin(Unit::new(
+            "EUR",
+            "Euro",
+            Dimension::Currency,
+            Decimal::from(1),
+            "EUR",
+        ));
+        registry.register_builtin(Unit::new(
+            "GBP",
+            "British Pound",
+            Dimension::Currency,
+            Decimal::from(1),
+            "GBP",
+        ));
 
         // Time units
         registry.register_base(Dimension::Time, "s");
-        registry.register(
-            Unit::new("s", "second", Dimension::Time, Decimal::from(1)).expect("valid unit"),
-        );
-        registry.register(
-            Unit::new("min", "minute", Dimension::Time, Decimal::from(60))
-                .expect("valid unit")
-                .with_base("s"),
-        );
-        registry.register(
-            Unit::new("h", "hour", Dimension::Time, Decimal::from(3600))
-                .expect("valid unit")
-                .with_base("s"),
-        );
+        registry.register_builtin(Unit::new(
+            "s",
+            "second",
+            Dimension::Time,
+            Decimal::from(1),
+            "s",
+        ));
+        registry.register_builtin(Unit::new(
+            "min",
+            "minute",
+            Dimension::Time,
+            Decimal::from(60),
+            "s",
+        ));
+        registry.register_builtin(Unit::new(
+            "h",
+            "hour",
+            Dimension::Time,
+            Decimal::from(3600),
+            "s",
+        ));
 
         // Count (dimensionless)
         registry.register_base(Dimension::Count, "units");
-        registry.register(
-            Unit::new("units", "units", Dimension::Count, Decimal::from(1)).expect("valid unit"),
-        );
-        registry.register(
-            Unit::new("items", "items", Dimension::Count, Decimal::from(1)).expect("valid unit"),
-        );
+        registry.register_builtin(Unit::new(
+            "units",
+            "units",
+            Dimension::Count,
+            Decimal::from(1),
+            "units",
+        ));
+        registry.register_builtin(Unit::new(
+            "items",
+            "items",
+            Dimension::Count,
+            Decimal::from(1),
+            "items",
+        ));
 
         registry
     }
@@ -227,8 +288,20 @@ impl UnitRegistry {
         }
     }
 
-    pub fn register(&mut self, unit: Unit) {
+    pub fn register(&mut self, unit: Unit) -> Result<(), UnitError> {
+        if self.units.contains_key(&unit.symbol) {
+            return Err(UnitError::DuplicateUnit(unit.symbol.clone()));
+        }
         self.units.insert(unit.symbol.clone(), unit);
+        Ok(())
+    }
+
+    fn register_builtin(&mut self, unit: Unit) {
+        let _ = self.register(unit);
+    }
+
+    pub fn register_dimension(&mut self, dimension: Dimension) {
+        self.base_units.entry(dimension).or_default();
     }
 
     pub fn register_base(&mut self, dimension: Dimension, base_unit: impl Into<String>) {
@@ -250,7 +323,6 @@ impl UnitRegistry {
     }
 
     pub fn convert(&self, value: Decimal, from: &Unit, to: &Unit) -> Result<Decimal, UnitError> {
-        // Check dimension compatibility
         if from.dimension != to.dimension {
             return Err(UnitError::IncompatibleDimensions {
                 from: from.dimension.clone(),
@@ -258,7 +330,6 @@ impl UnitRegistry {
             });
         }
 
-        // Special case: Currency requires exchange rates
         if matches!(from.dimension, Dimension::Currency) && from.symbol != to.symbol {
             return Err(UnitError::ConversionNotDefined {
                 from: from.symbol.clone(),
@@ -266,11 +337,55 @@ impl UnitRegistry {
             });
         }
 
-        // Convert to base unit, then to target using trait
         let in_base = from.convert_to_base(value);
         let in_target = to.convert_from_base(in_base);
 
         Ok(in_target)
+    }
+
+    pub fn global() -> &'static mut UnitRegistry {
+        use std::sync::Mutex;
+        static GLOBAL_REGISTRY: OnceLock<Mutex<UnitRegistry>> = OnceLock::new();
+
+        let mutex = GLOBAL_REGISTRY.get_or_init(|| Mutex::new(UnitRegistry::default()));
+        unsafe {
+            let ptr = mutex as *const Mutex<UnitRegistry> as *mut Mutex<UnitRegistry>;
+            (*ptr).get_mut().unwrap()
+        }
+    }
+
+    /// Register units defined in a JSON string of the form:
+    /// [{ "symbol": "X", "name": "Name", "dimension": "Currency", "base_factor": 1.0, "base_unit": "USD" }]
+    pub fn register_from_json(&mut self, json: &str) -> Result<(), UnitError> {
+        #[derive(Deserialize)]
+        struct UnitConfig {
+            symbol: String,
+            name: String,
+            dimension: String,
+            base_factor: f64,
+            base_unit: String,
+        }
+
+        let parsed: Vec<UnitConfig> = serde_json::from_str(json).map_err(|e| UnitError::ConversionNotDefined { from: "json".to_string(), to: e.to_string() })?;
+        for cfg in parsed {
+            let dim = match cfg.dimension.as_str() {
+                "Mass" => Dimension::Mass,
+                "Length" => Dimension::Length,
+                "Volume" => Dimension::Volume,
+                "Currency" => Dimension::Currency,
+                "Time" => Dimension::Time,
+                "Temperature" => Dimension::Temperature,
+                "Count" => Dimension::Count,
+                other => Dimension::Custom(other.to_string()),
+            };
+            let factor = Decimal::from_f64(cfg.base_factor).ok_or(UnitError::ZeroBaseFactor)?;
+            if factor == Decimal::ZERO {
+                return Err(UnitError::ZeroBaseFactor);
+            }
+            let unit = Unit::new(cfg.symbol, cfg.name, dim, factor, cfg.base_unit);
+            self.register(unit)?;
+        }
+        Ok(())
     }
 }
 
@@ -289,7 +404,7 @@ pub fn unit_from_string(symbol: impl Into<String>) -> Unit {
             symbol.clone(),
             Dimension::Count,
             Decimal::from(1),
+            symbol.clone(),
         )
-        .expect("default unit should have non-zero base_factor")
     })
 }

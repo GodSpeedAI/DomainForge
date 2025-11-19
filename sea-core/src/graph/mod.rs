@@ -1,3 +1,4 @@
+use crate::policy::Policy;
 use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -9,6 +10,7 @@ pub struct Graph {
     resources: IndexMap<ConceptId, Resource>,
     flows: IndexMap<ConceptId, Flow>,
     instances: IndexMap<ConceptId, Instance>,
+    policies: IndexMap<ConceptId, Policy>,
 }
 
 impl Graph {
@@ -21,6 +23,7 @@ impl Graph {
             && self.resources.is_empty()
             && self.flows.is_empty()
             && self.instances.is_empty()
+            && self.policies.is_empty()
     }
 
     pub fn entity_count(&self) -> usize {
@@ -262,5 +265,36 @@ impl Graph {
 
     pub fn all_instances(&self) -> Vec<&Instance> {
         self.instances.values().collect()
+    }
+
+    pub fn policy_count(&self) -> usize {
+        self.policies.len()
+    }
+
+    pub fn add_policy(&mut self, policy: Policy) -> Result<(), String> {
+        let id = policy.id.clone();
+        if self.policies.contains_key(&id) {
+            return Err(format!("Policy with ID {} already exists", id));
+        }
+        self.policies.insert(id, policy);
+        Ok(())
+    }
+
+    pub fn has_policy(&self, id: &ConceptId) -> bool {
+        self.policies.contains_key(id)
+    }
+
+    pub fn get_policy(&self, id: &ConceptId) -> Option<&Policy> {
+        self.policies.get(id)
+    }
+
+    pub fn remove_policy(&mut self, id: &ConceptId) -> Result<Policy, String> {
+        self.policies
+            .shift_remove(id)
+            .ok_or_else(|| format!("Policy with ID {} not found", id))
+    }
+
+    pub fn all_policies(&self) -> Vec<&Policy> {
+        self.policies.values().collect()
     }
 }

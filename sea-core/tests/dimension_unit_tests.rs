@@ -1,0 +1,54 @@
+//! Tests for parsing dimension and unit declarations.
+use rust_decimal_macros::dec;
+use sea_core::parser::ast::AstNode;
+use sea_core::parser::parse_source;
+#[test]
+fn test_parse_dimension() {
+    let source = r#"
+        Dimension "Currency"
+    "#;
+    let ast = parse_source(source).unwrap();
+    assert_eq!(ast.declarations.len(), 1);
+    match &ast.declarations[0] {
+        AstNode::Dimension { name } => {
+            assert_eq!(name, "Currency");
+        }
+        _ => panic!("Expected Dimension declaration"),
+    }
+}
+#[test]
+fn test_parse_unit() {
+    let source = r#"
+        Unit "USD" of "Currency" factor 1 base "USD"
+    "#;
+    let ast = parse_source(source).unwrap();
+    assert_eq!(ast.declarations.len(), 1);
+    match &ast.declarations[0] {
+        AstNode::UnitDeclaration {
+            symbol,
+            dimension,
+            ref factor,
+            base_unit,
+        } => {
+            assert_eq!(symbol, "USD");
+            assert_eq!(dimension, "Currency");
+            assert_eq!(*factor, dec!(1));
+            assert_eq!(base_unit, "USD");
+        }
+        _ => panic!("Expected UnitDeclaration"),
+    }
+}
+#[test]
+fn test_parse_unit_with_decimal_factor() {
+    let source = r#"
+        Unit "EUR" of "Currency" factor 1.07 base "USD"
+    "#;
+    let ast = parse_source(source).unwrap();
+    assert_eq!(ast.declarations.len(), 1);
+    match &ast.declarations[0] {
+        AstNode::UnitDeclaration { ref factor, .. } => {
+            assert_eq!(*factor, dec!(1.07));
+        }
+        _ => panic!("Expected UnitDeclaration"),
+    }
+}

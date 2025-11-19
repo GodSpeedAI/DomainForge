@@ -84,7 +84,7 @@ if entity.namespace() == "default" { ... }
 ### Constructor Patterns
 ```rust
 // Default namespace
-let entity = Entity::new("Warehouse");
+let entity = Entity::new_with_namespace("Warehouse", "default");
 
 // Explicit namespace
 let entity = Entity::new_with_namespace("Warehouse", "logistics");
