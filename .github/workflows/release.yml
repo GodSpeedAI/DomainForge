@@ -157,7 +157,7 @@ jobs:
           fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sea-core-${{ matrix.target }}
           path: sea-core-${{ matrix.target }}.*
@@ -195,7 +195,7 @@ jobs:
         working-directory: sea-core
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-${{ matrix.target }}
           path: sea-core/dist/*.whl
@@ -251,7 +251,7 @@ jobs:
           tar czf ../../sea-core-wasm.tar.gz * || true
 
       - name: Upload WASM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sea-core-wasm
           path: sea-core-wasm.tar.gz
