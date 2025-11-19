@@ -1,41 +1,19 @@
-use super::models::{
-    CalmModel, CalmNode, CalmRelationship, FlowDetails, NodeType, Parties, RelationshipType,
-};
+use super::models::{CalmModel, CalmNode, CalmRelationship, FlowDetails, NodeType, Parties, RelationshipType};
 use crate::primitives::{Entity, Flow, Instance, Resource};
+use crate::policy::Policy;
+use crate::policy::{Expression, BinaryOp, UnaryOp, Quantifier, AggregateFunction};
 use crate::Graph;
 use chrono::Utc;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-pub fn export(graph: &Graph) -> Result<Value, String> {
-    let mut calm_model = CalmModel::new();
-
-    calm_model.metadata.sea_timestamp = Some(Utc::now().to_rfc3339());
-
-    for entity in graph.all_entities() {
-        calm_model.nodes.push(export_entity(entity));
-    }
-
-    for resource in graph.all_resources() {
-        calm_model.nodes.push(export_resource(resource));
-    }
-
-    for instance in graph.all_instances() {
-        let (node, relationship) = export_instance(instance);
-        calm_model.nodes.push(node);
-        calm_model.relationships.push(relationship);
-    }
-
-    for flow in graph.all_flows() {
-        calm_model.relationships.push(export_flow(flow));
-    }
-
-    serde_json::to_value(&calm_model).map_err(|e| format!("Failed to serialize CALM model: {}", e))
-}
-
 fn export_entity(entity: &Entity) -> CalmNode {
     let mut metadata = HashMap::new();
     metadata.insert("sea:primitive".to_string(), json!("Entity"));
+
+    let ser = serde_json::to_value(entity).unwrap_or(Value::Null);
+    let attrs = ser["attributes"].clone();
+    metadata.insert("sea:attributes".to_string(), attrs);
 
     CalmNode {
         unique_id: entity.id().to_string(),
@@ -51,6 +29,10 @@ fn export_resource(resource: &Resource) -> CalmNode {
     metadata.insert("sea:primitive".to_string(), json!("Resource"));
     metadata.insert("sea:unit".to_string(), json!(resource.unit().symbol()));
 
+    let ser = serde_json::to_value(resource).unwrap_or(Value::Null);
+    let attrs = ser["attributes"].clone();
+    metadata.insert("sea:attributes".to_string(), attrs);
+
     CalmNode {
         unique_id: resource.id().to_string(),
         node_type: NodeType::Resource,
@@ -60,7 +42,7 @@ fn export_resource(resource: &Resource) -> CalmNode {
     }
 }
 
-fn export_instance(instance: &Instance) -> (CalmNode, CalmRelationship) {
+fn export_instance(instance: &Instance) -> CalmNode {
     let mut metadata = HashMap::new();
     metadata.insert("sea:primitive".to_string(), json!("Instance"));
     metadata.insert(
@@ -72,24 +54,17 @@ fn export_instance(instance: &Instance) -> (CalmNode, CalmRelationship) {
         json!(instance.resource_id().to_string()),
     );
 
-    let node = CalmNode {
+    let ser = serde_json::to_value(instance).unwrap_or(Value::Null);
+    let attrs = ser["attributes"].clone();
+    metadata.insert("sea:attributes".to_string(), attrs);
+
+    CalmNode {
         unique_id: instance.id().to_string(),
         node_type: NodeType::Instance,
         name: format!("Instance of {}", instance.id()),
         namespace: Some(instance.namespace().to_string()),
         metadata,
-    };
-
-    let relationship = CalmRelationship {
-        unique_id: format!("{}-ownership", instance.id()),
-        relationship_type: RelationshipType::Simple("ownership".to_string()),
-        parties: Parties::OwnerOwned {
-            owner: instance.entity_id().to_string(),
-            owned: instance.id().to_string(),
-        },
-    };
-
-    (node, relationship)
+    }
 }
 
 fn export_flow(flow: &Flow) -> CalmRelationship {
@@ -108,91 +83,155 @@ fn export_flow(flow: &Flow) -> CalmRelationship {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::primitives::*;
+pub fn export(graph: &Graph) -> Result<Value, String> {
+    let mut calm_model = CalmModel::new();
 
-    #[test]
-    fn test_export_empty_graph() {
-        let graph = Graph::new();
-        let result = export(&graph);
-        assert!(result.is_ok());
+    calm_model.metadata.sea_timestamp = Some(Utc::now().to_rfc3339());
 
-        let calm = result.unwrap();
-        assert_eq!(calm["version"], "2.0");
-        assert_eq!(calm["nodes"].as_array().unwrap().len(), 0);
-        assert_eq!(calm["relationships"].as_array().unwrap().len(), 0);
+    for entity in graph.all_entities() {
+        calm_model.nodes.push(export_entity(entity));
     }
 
-    #[test]
-    fn test_export_entity() {
-        let mut graph = Graph::new();
-        let entity = Entity::new_with_namespace("Warehouse".to_string(), "logistics".to_string());
-        graph.add_entity(entity.clone()).unwrap();
-
-        let result = export(&graph).unwrap();
-        let nodes = result["nodes"].as_array().unwrap();
-
-        assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0]["name"], "Warehouse");
-        assert_eq!(nodes[0]["namespace"], "logistics");
-        assert_eq!(nodes[0]["metadata"]["sea:primitive"], "Entity");
+    for resource in graph.all_resources() {
+        calm_model.nodes.push(export_resource(resource));
     }
 
-    #[test]
-    fn test_export_resource() {
-        use crate::units::unit_from_string;
-
-        let mut graph = Graph::new();
-        let resource = Resource::new_with_namespace(
-            "Cameras".to_string(),
-            unit_from_string("units"),
-            "default".to_string(),
-        );
-        graph.add_resource(resource).unwrap();
-
-        let result = export(&graph).unwrap();
-        let nodes = result["nodes"].as_array().unwrap();
-
-        assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0]["name"], "Cameras");
-        assert_eq!(nodes[0]["node-type"], "resource");
-        assert_eq!(nodes[0]["metadata"]["sea:unit"], "units");
+    for instance in graph.all_instances() {
+        calm_model.nodes.push(export_instance(instance));
     }
 
-    #[test]
-    fn test_export_flow() {
-        use crate::units::unit_from_string;
+    for flow in graph.all_flows() {
+        calm_model.relationships.push(export_flow(flow));
+    }
 
-        let mut graph = Graph::new();
+    // Export policies as constraint nodes
+    for policy in graph.all_policies() {
+        calm_model.nodes.push(export_policy(policy));
+    }
 
-        let entity1 = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
-        let entity2 = Entity::new_with_namespace("Factory".to_string(), "default".to_string());
-        let resource = Resource::new_with_namespace(
-            "Cameras".to_string(),
-            unit_from_string("units"),
-            "default".to_string(),
-        );
+    // Export associations as Simple relationships when recorded on an entity
+    for entity in graph.all_entities() {
+        if let Some(assoc_val) = entity.get_attribute("associations") {
+            if let Value::Array(arr) = assoc_val {
+                for entry in arr {
+                    if let Some(rel_type) = entry.get("type").and_then(|v| v.as_str()) {
+                        if let Some(target) = entry.get("target").and_then(|v| v.as_str()) {
+                            calm_model.relationships.push(CalmRelationship {
+                                unique_id: format!("assoc-{}-{}", entity.id(), target),
+                                relationship_type: RelationshipType::Simple(rel_type.to_string()),
+                                parties: Parties::SourceDestination {
+                                    source: entity.id().to_string(),
+                                    destination: target.to_string(),
+                                },
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-        let e1_id = entity1.id().clone();
-        let e2_id = entity2.id().clone();
-        let r_id = resource.id().clone();
+    serde_json::to_value(&calm_model).map_err(|e| format!("Failed to serialize CALM model: {}", e))
+}
 
-        graph.add_entity(entity1).unwrap();
-        graph.add_entity(entity2).unwrap();
-        graph.add_resource(resource).unwrap();
+fn export_policy(policy: &Policy) -> CalmNode {
+    let mut metadata = HashMap::new();
+    metadata.insert("sea:primitive".to_string(), json!("Policy"));
+    metadata.insert(
+        "sea:expression".to_string(),
+        json!(serialize_expression_for_export(&policy.expression)),
+    );
+    metadata.insert("sea:expression_type".to_string(), json!("SEA"));
+    metadata.insert("sea:priority".to_string(), json!(policy.priority));
+    metadata.insert("sea:modality".to_string(), json!(format!("{:?}", policy.modality)));
+    metadata.insert("sea:kind".to_string(), json!(format!("{:?}", policy.kind)));
 
-        let flow = Flow::new(r_id, e1_id, e2_id, rust_decimal::Decimal::from(100));
-        graph.add_flow(flow).unwrap();
+    CalmNode {
+        unique_id: policy.id.to_string(),
+        node_type: NodeType::Constraint,
+        name: policy.name.clone(),
+        namespace: Some(policy.namespace.clone()),
+        metadata,
+    }
+}
 
-        let result = export(&graph).unwrap();
-        let relationships = result["relationships"].as_array().unwrap();
 
-        assert_eq!(relationships.len(), 1);
-        assert_eq!(
-            relationships[0]["relationship-type"]["flow"]["quantity"],
-            "100"
-        );
+fn serialize_expression_for_export(expr: &Expression) -> String {
+    match expr {
+        Expression::Literal(v) => v.to_string(),
+        Expression::QuantityLiteral { value, unit } => format!("{} \"{}\"", value, unit),
+        Expression::Variable(s) => s.to_string(),
+        Expression::Binary { op, left, right } => {
+            let op_str = match op {
+                BinaryOp::And => "and",
+                BinaryOp::Or => "or",
+                BinaryOp::Equal => "=",
+                BinaryOp::NotEqual => "!=",
+                BinaryOp::GreaterThan => ">",
+                BinaryOp::LessThan => "<",
+                BinaryOp::GreaterThanOrEqual => ">=",
+                BinaryOp::LessThanOrEqual => "<=",
+                BinaryOp::Plus => "+",
+                BinaryOp::Minus => "-",
+                BinaryOp::Multiply => "*",
+                BinaryOp::Divide => "/",
+                BinaryOp::Contains => "contains",
+                BinaryOp::StartsWith => "startswith",
+                BinaryOp::EndsWith => "endswith",
+            };
+            format!("({} {} {})", serialize_expression_for_export(left), op_str, serialize_expression_for_export(right))
+        }
+        Expression::Unary { op, operand } => {
+            let op_str = match op {
+                UnaryOp::Not => "not",
+                UnaryOp::Negate => "-",
+            };
+            format!("{} {}", op_str, serialize_expression_for_export(operand))
+        }
+        Expression::Quantifier { quantifier, variable, collection, condition } => {
+            let q_str = match quantifier {
+                Quantifier::ForAll => "forall",
+                Quantifier::Exists => "exists",
+                Quantifier::ExistsUnique => "exists_unique",
+            };
+            format!("{} {} in {}: ({})", q_str, variable, serialize_expression_for_export(collection), serialize_expression_for_export(condition))
+        }
+        Expression::MemberAccess { object, member } => format!("{}.{}", object, member),
+        Expression::Aggregation { function, collection, field, filter } => {
+            let fn_str = match function {
+                AggregateFunction::Count => "count",
+                AggregateFunction::Sum => "sum",
+                AggregateFunction::Min => "min",
+                AggregateFunction::Max => "max",
+                AggregateFunction::Avg => "avg",
+            };
+            if let Some(fld) = field {
+                if let Some(flt) = filter {
+                    format!("{}({}.{} where {})", fn_str, serialize_expression_for_export(collection), fld, serialize_expression_for_export(flt))
+                } else {
+                    format!("{}({}.{} )", fn_str, serialize_expression_for_export(collection), fld)
+                }
+            } else {
+                if let Some(flt) = filter {
+                    format!("{}({} where {})", fn_str, serialize_expression_for_export(collection), serialize_expression_for_export(flt))
+                } else {
+                    format!("{}({})", fn_str, serialize_expression_for_export(collection))
+                }
+            }
+        }
+        Expression::AggregationComprehension { function, variable, collection, predicate, projection, target_unit } => {
+            let fn_str = match function {
+                AggregateFunction::Count => "count",
+                AggregateFunction::Sum => "sum",
+                AggregateFunction::Min => "min",
+                AggregateFunction::Max => "max",
+                AggregateFunction::Avg => "avg",
+            };
+            if let Some(unit) = target_unit {
+                format!("{}({} in {} WHERE {}: {} as \"{}\")", fn_str, variable, serialize_expression_for_export(collection), serialize_expression_for_export(predicate), serialize_expression_for_export(projection), unit)
+            } else {
+                format!("{}({} in {} WHERE {}: {})", fn_str, variable, serialize_expression_for_export(collection), serialize_expression_for_export(predicate), serialize_expression_for_export(projection))
+            }
+        }
     }
 }

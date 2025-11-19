@@ -240,6 +240,20 @@ impl Graph {
     }
 
     #[napi]
+    pub fn add_policy(&mut self, policy: &crate::policy::Policy) -> Result<()> {
+        self.inner.add_policy(policy.clone()).map_err(Error::from_reason)
+    }
+
+    #[napi]
+    pub fn add_association(&mut self, owner: String, owned: String, rel_type: String) -> Result<()> {
+        let owner_cid = parse_concept_id(&owner)?;
+        let owned_cid = parse_concept_id(&owned)?;
+        self.inner
+            .add_association(&owner_cid, &owned_cid, &rel_type)
+            .map_err(Error::from_reason)
+    }
+
+    #[napi]
     pub fn to_string(&self) -> String {
         format!(
             "Graph(entities={}, resources={}, flows={}, instances={})",

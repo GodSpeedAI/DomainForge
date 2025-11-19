@@ -46,7 +46,7 @@ fn main() {
                     if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
                         eprintln!("{}", err);
                         std::process::exit(1);
- 
+
                     }
                 }
                 "resolve" => {

@@ -180,6 +180,8 @@ flow = Flow.new(
 - `Graph.parse(source)`: Parse DSL source into a graph
 - `export_calm()`: Export graph to CALM JSON format
 - `Graph.import_calm(json_str)`: Import graph from CALM JSON
+ - `add_policy(policy)`: Add a policy to the graph
+ - `add_association(owner_id, owned_id, rel_type)`: Add ownership/association relation between two entities (owner/owned)
 
 
 **Breaking Changes:**
@@ -208,7 +210,7 @@ except Exception as e:
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit
 - `Resource.new(name, unit)` now routes through `new_with_namespace(..., "default")` so `namespace()` never returns `None` even when a namespace is not supplied
 - Flow constructor takes `ConceptId` values (not references) - must clone before passing
- 
+
 
 
 - Multiline string support in parser: `Entity """Multi-line\nName"""`

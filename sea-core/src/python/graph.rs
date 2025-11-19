@@ -216,6 +216,20 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
+    fn add_policy(&mut self, policy: &crate::policy::Policy) -> PyResult<()> {
+        self.inner
+            .add_policy(policy.clone())
+            .map_err(|e| PyValueError::new_err(format!("Add policy error: {}", e)))
+    }
+
+    fn add_association(&mut self, owner: String, owned: String, rel_type: String) -> PyResult<()> {
+        let owner_id = parse_concept_id(&owner)?;
+        let owned_id = parse_concept_id(&owned)?;
+        self.inner
+            .add_association(&owner_id, &owned_id, &rel_type)
+            .map_err(|e| PyValueError::new_err(format!("Add association error: {}", e)))
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "Graph(entities={}, resources={}, flows={}, instances={})",

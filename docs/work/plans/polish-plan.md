@@ -82,7 +82,7 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
 - Configure all XML parsers (RDF/XML, SBVR, CALM, etc.) to disable entity expansion and external entity resolution so billion-laughs and XXE attacks are mitigated; describe the parser configuration knobs used (e.g., `quick_xml::Reader::expand_empty_elements(false)` plus disabling DTD resolution).
 - Add property-based fuzzing hooks that target the Pest DSL parser and the RDF Turtle/XML loaders inside `tests/cli_tests.rs`, run them with resource limits (timeouts, input size caps via the `--max-file-size` flag, etc.), and mention that these fuzz runs will be part of CI so parser robustness is continuously validated.
 
- 
+
 **Implementation**:
 
 - **File**: `calm/sbvr_import.rs`
