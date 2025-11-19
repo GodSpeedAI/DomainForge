@@ -220,9 +220,13 @@ impl Graph {
     }
 
     #[wasm_bindgen(js_name = addPolicy)]
-    pub fn add_policy(&mut self, policy: &crate::policy::Policy) -> Result<(), JsValue> {
+    pub fn add_policy(&mut self, policy: &JsValue) -> Result<(), JsValue> {
+        // Deserialize policy from JsValue using serde_wasm_bindgen. Policy derives
+        // Serialize/Deserialize so this will convert from the JS representation.
+        let policy: crate::policy::Policy = serde_wasm_bindgen::from_value(policy.clone())
+            .map_err(|e| JsValue::from_str(&format!("Invalid Policy: {}", e)))?;
         self.inner
-            .add_policy(policy.clone())
+            .add_policy(policy)
             .map_err(|e| JsValue::from_str(&e))
     }
 
