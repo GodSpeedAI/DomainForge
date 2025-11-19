@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetpack-io/devbox/main/.schema/devbox.schema.json",
+  "packages": [
+    "supabase-cli"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo 'Devbox environment ready with Supabase CLI'"
+    ]
+  }
+}

@@ -1,8 +1,40 @@
 default := "ai-validate"
 
+set shell := ["/bin/bash", "-cu"]
+
+# Environment variables used by Supabase tasks
+SUPABASE_PROJECT_REF := env_var("SUPABASE_PROJECT_REF", "")
+SUPABASE_DB_URL := env_var("SUPABASE_DB_URL", "")
+
 # Run all validation checks required for CI and AI agents
-ai-validate:
+ai-validate: validate-types
     cargo test -p sea-core --features cli
+
+gen-types-ts:
+    @echo "Generating Supabase TypeScript types..."
+    if [ -z "{{SUPABASE_PROJECT_REF}}" ]; then \
+        echo "Set SUPABASE_PROJECT_REF to your Supabase project ref before running this recipe."; \
+        exit 1; \
+    fi
+    mkdir -p libs/shared/types/src
+    supabase gen types typescript --project-ref "{{SUPABASE_PROJECT_REF}}" --schema public \
+        > libs/shared/types/src/database-types.ts
+    echo "TypeScript types written to libs/shared/types/src/database-types.ts"
+
+gen-types-py:
+    @echo "Generating Supabase Pydantic models..."
+    ./scripts/gen_types_py.sh
+
+validate-types: gen-types-ts gen-types-py
+    ./scripts/validate_types.sh
+
+db-migrate:
+    @echo "Running Supabase migrations..."
+    if [ -z "{{SUPABASE_DB_URL}}" ]; then \
+        echo "Set SUPABASE_DB_URL to the Postgres connection string for your Supabase instance."; \
+        exit 1; \
+    fi
+    supabase migration up --db-url "{{SUPABASE_DB_URL}}"
 
 # Test tasks - run per-language test suites
 rust-test:

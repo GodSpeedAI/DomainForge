@@ -29,6 +29,7 @@ classifiers = [
 dev = [
     "pytest>=7.4",
     "mypy>=1.0",
+    "datamodel-code-generator>=0.25",
 ]
 
 [tool.maturin]
