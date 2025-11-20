@@ -248,21 +248,19 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                     )
                 }
             } else if let Some(flt) = filter {
-                    format!(
-                        "{}({} where {})",
-                        fn_str,
-                        serialize_expression_for_export(collection),
-                        serialize_expression_for_export(flt)
-                    )
-                } else {
-                    format!(
-                        "{}({})",
-                        fn_str,
-                        serialize_expression_for_export(collection)
-                    )
-                }
+                format!(
+                    "{}({} where {})",
+                    fn_str,
+                    serialize_expression_for_export(collection),
+                    serialize_expression_for_export(flt)
+                )
+            } else {
+                format!(
+                    "{}({})",
+                    fn_str,
+                    serialize_expression_for_export(collection)
+                )
             }
-        }
         Expression::AggregationComprehension {
             function,
             variable,
