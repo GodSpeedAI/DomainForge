@@ -27,7 +27,8 @@ jobs:
         working-directory: sea-core
 
       - name: Publish to PyPI
-        if: secrets.PYPI_API_TOKEN != ''
+        # Only publish if PYPI_API_TOKEN secret is configured and this is a release event
+        if: secrets.PYPI_API_TOKEN != '' && github.event_name == 'release'
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: maturin upload --skip-existing sea-core/target/wheels/*.whl
