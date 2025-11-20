@@ -3,6 +3,8 @@ use super::violation::{Severity, Violation};
 use crate::graph::Graph;
 use crate::{ConceptId, SemanticVersion};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "three_valued_logic")]
+use crate::policy::ThreeValuedBool;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PolicyModality {
@@ -147,7 +149,29 @@ impl Policy {
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
         let expanded = self.expression.expand(graph)?;
 
-        let is_satisfied = self.evaluate_expression(&expanded, graph)?;
+        // Evaluate expression. If three_valued_logic is enabled the
+        // evaluator may return a ThreeValuedBool; we convert to a strict
+        // bool here by treating Null as an error unless callers opt-in.
+        let is_satisfied = {
+            #[cfg(feature = "three_valued_logic")]
+            {
+                match self.evaluate_expression_three_valued(&expanded, graph)? {
+                    ThreeValuedBool::True => true,
+                    ThreeValuedBool::False => false,
+                    ThreeValuedBool::Null => {
+                        return Err(format!(
+                            "Policy '{}' evaluated to NULL (unknown). Enable three_valued_logic and handle unknowns explicitly.",
+                            self.name
+                        ));
+                    }
+                }
+            }
+
+            #[cfg(not(feature = "three_valued_logic"))]
+            {
+                self.evaluate_expression(&expanded, graph)?
+            }
+        };
 
         let violations = if !is_satisfied {
             vec![Violation::new(
@@ -238,6 +262,99 @@ impl Policy {
             Expression::QuantityLiteral { .. } => {
                 Err("Cannot evaluate quantity literal in boolean context".to_string())
             }
+        }
+    }
+
+    #[cfg(feature = "three_valued_logic")]
+    fn evaluate_expression_three_valued(
+        &self,
+        expr: &Expression,
+        graph: &Graph,
+    ) -> Result<ThreeValuedBool, String> {
+        use ThreeValuedBool as T;
+
+        match expr {
+            Expression::Literal(v) => Ok(T::from_option_bool(v.as_bool())),
+            Expression::Variable(name) => Err(format!("Cannot evaluate unexpanded variable: {}", name)),
+            Expression::Binary { op, left, right } => match op {
+                BinaryOp::And | BinaryOp::Or => {
+                    let l = self.evaluate_expression_three_valued(left, graph)?;
+                    let r = self.evaluate_expression_three_valued(right, graph)?;
+                    Ok(match op {
+                        BinaryOp::And => l.and(r),
+                        BinaryOp::Or => l.or(r),
+                        _ => unreachable!(),
+                    })
+                }
+                BinaryOp::Equal | BinaryOp::NotEqual => {
+                    // Comparisons that rely on missing literals should yield Null
+                    let left_val = self.get_literal_value(left);
+                    let right_val = self.get_literal_value(right);
+
+                    match (left_val, right_val) {
+                        (Ok(lv), Ok(rv)) => {
+                            let eq = match op {
+                                BinaryOp::Equal => lv == rv,
+                                BinaryOp::NotEqual => lv != rv,
+                                _ => unreachable!(),
+                            };
+                            Ok(T::from_option_bool(Some(eq)))
+                        }
+                        _ => Ok(T::Null),
+                    }
+                }
+                BinaryOp::GreaterThan
+                | BinaryOp::LessThan
+                | BinaryOp::GreaterThanOrEqual
+                | BinaryOp::LessThanOrEqual => {
+                    let left_n = self.get_numeric_value(left);
+                    let right_n = self.get_numeric_value(right);
+                    match (left_n, right_n) {
+                        (Ok(l), Ok(r)) => {
+                            let res = match op {
+                                BinaryOp::GreaterThan => l > r,
+                                BinaryOp::LessThan => l < r,
+                                BinaryOp::GreaterThanOrEqual => l >= r,
+                                BinaryOp::LessThanOrEqual => l <= r,
+                                _ => unreachable!(),
+                            };
+                            Ok(T::from_option_bool(Some(res)))
+                        }
+                        _ => Ok(T::Null),
+                    }
+                }
+                BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Multiply | BinaryOp::Divide => {
+                    Err("Arithmetic operations not supported in boolean context".to_string())
+                }
+                BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => {
+                    let left_s = self.get_string_value(left);
+                    let right_s = self.get_string_value(right);
+                    match (left_s, right_s) {
+                        (Ok(l), Ok(r)) => {
+                            let ok = match op {
+                                BinaryOp::Contains => l.contains(&r),
+                                BinaryOp::StartsWith => l.starts_with(&r),
+                                BinaryOp::EndsWith => l.ends_with(&r),
+                                _ => unreachable!(),
+                            };
+                            Ok(T::from_option_bool(Some(ok)))
+                        }
+                        _ => Ok(T::Null),
+                    }
+                }
+            },
+            Expression::Unary { op, operand } => {
+                let v = self.evaluate_expression_three_valued(operand, graph)?;
+                Ok(match op {
+                    UnaryOp::Not => v.not(),
+                    UnaryOp::Negate => return Err("Negate operator not supported in boolean context".to_string()),
+                })
+            }
+            Expression::Quantifier { .. }
+            | Expression::MemberAccess { .. }
+            | Expression::Aggregation { .. }
+            | Expression::AggregationComprehension { .. }
+            | Expression::QuantityLiteral { .. } => Ok(T::Null),
         }
     }
 

@@ -11,19 +11,20 @@ This plan implements 7 priority enhancements plus polish items to strengthen Dom
 
 ### Current Status
 
-Step 1 is complete (SBVR/KG import implemented, validated, and merged). The RDF/Turtle and RDF/XML KG import paths now both work end-to-end; SBVR (XMI) import converts BusinessRule → Policy with modality and priority mapping; SHACL validation runs on KG imports and flags violations like sh:minExclusive (e.g., quantity > 0 checks). Automated tests for SBVR imports, KG imports (Turtle & RDF/XML), and SHACL validation were added and pass with the `shacl` feature enabled.
+The plan is partially implemented, with several high-impact steps complete:
 
-Step 2 is complete (operator precedence documented; three-valued NULL logic behind feature flag implemented and tested). Documentation for operator precedence and NULL semantics is in `docs/specs/semantics.md`. The three-valued logic implementation is gated behind the `three_valued_logic` feature flag, with comprehensive tests in `tests/null_handling_tests.rs` covering all operator combinations and aggregation behaviors.
-Step 2 is complete (operator precedence documented; three-valued NULL logic behind feature flag implemented and tested). Documentation for operator precedence and NULL semantics is in `docs/specs/semantics.md`. The three-valued logic implementation is gated behind the `three_valued_logic` feature flag, with comprehensive tests in `tests/null_handling_tests.rs` covering all operator combinations and aggregation behaviors.
+- Step 1 (SBVR/CALM/KG import + SHACL) ✅
+- Step 4 (Logical Namespace Registry + CLI) ✅
+- Step 5 (Violation severity mapping) ✅
 
-Step 3 is not yet started (ICU collation with locale bundle and runtime discovery).
+Partially implemented items (needs further work):
 
-Step 4 is complete – Logical Namespace System with `.sea-registry.toml` and Glob Patterns
-
-**Goal:** Automatically map files to logical namespaces so parser defaults remain
-stable, even when files omit `in <namespace>` clauses.
-
-**Status:** ✅ Implemented
+- Step 2: operator precedence ✔, full three-valued logic with a gated compile-time feature ✅
+- Step 6: ValidationError & suggestions exist ✔, fuzzy Levenshtein and JSON/LSP formatters partial/absent ❌
+- Step 7: CLI: validate/import/registry ✔, project, format, test subcommands missing ❌
+- Step 9: quantity parsing/type inference ✔, formatters/linter/AST schema missing ❌
+- Step 10: CI guardrails in place (tests & security) ✔, semver enforcement & JSON output partial ❌
+- Step 8 (Temporal storage/temporal policies) is not implemented ❌
 
 ### Deliverables
 
@@ -53,7 +54,7 @@ stable, even when files omit `in <namespace>` clauses.
 
 ### Steps
 
-#### 1. Normative Projection Specifications with Bidirectional SBVR/KG Import
+#### [x] 1. Normative Projection Specifications with Bidirectional SBVR/KG Import
 
 **Duration**: 2 weeks | **Priority**: P0 | **Complexity**: High
 
@@ -111,7 +112,7 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
 
 ---
 
-#### 2. Operator Precedence Documentation and Three-Valued NULL Logic
+#### [ ] 2. Operator Precedence Documentation and Three-Valued NULL Logic
 
 **Duration**: 1.5 weeks | **Priority**: P0 | **Complexity**: Medium
 
@@ -174,7 +175,7 @@ Document operator precedence and implement three-valued logic behind compile-tim
 
 ---
 
-#### 3. ICU Collation with Locale Bundle and Runtime Discovery
+#### [ ] 3. ICU Collation with Locale Bundle and Runtime Discovery
 
 **Duration**: 1.5 weeks | **Priority**: P1 | **Complexity**: Medium
 
@@ -265,7 +266,7 @@ Implement full ICU collation support with minimal locale bundle and flexible dat
 
 ---
 
-#### 4. Logical Namespace System with `.sea-registry.toml` and Glob Patterns
+#### [x] 4. Logical Namespace System with `.sea-registry.toml` and Glob Patterns
 
 **Duration**: 2 weeks | **Priority**: P0 | **Complexity**: High
 
@@ -390,7 +391,7 @@ path = "./vendor/acme/*/"
 
 ---
 
-#### 5. Violation Severity Mapping with Deterministic Rules
+#### [x] 5. Violation Severity Mapping with Deterministic Rules
 
 **Duration**: 1 week | **Priority**: P0 | **Complexity**: Low
 
@@ -477,7 +478,7 @@ pub fn compute_severity(policy: &Policy) -> Severity {
 
 ---
 
-#### 6. Enhanced Diagnostics with Fuzzy Matching and Formatters
+#### [ ] 6. Enhanced Diagnostics with Fuzzy Matching and Formatters
 
 **Duration**: 1.5 weeks | **Priority**: P1 | **Complexity**: Medium
 
@@ -606,7 +607,7 @@ Enhance error diagnostics with "did you mean?" suggestions and structured output
 
 ---
 
-#### 7. CLI Commands for Projection/Import/Validation/Testing
+#### [ ] 7. CLI Commands for Projection/Import/Validation/Testing
 
 **Duration**: 1.5 weeks | **Priority**: P0 | **Complexity**: Medium
 
@@ -746,7 +747,7 @@ enum Commands {
 
 ---
 
-#### 8. Temporal Policies with Redb and Background Index Migration
+#### [ ] 8. Temporal Policies with Redb and Background Index Migration
 
 **Duration**: 2 weeks | **Priority**: P2 | **Complexity**: High
 
@@ -934,7 +935,7 @@ mod tests {
 
 ---
 
-#### 9. Quantity Rendering, Type Inference, Lint, and AST Export
+#### [ ] 9. Quantity Rendering, Type Inference, Lint, and AST Export
 
 **Duration**: 1 week | **Priority**: P1 | **Complexity**: Low
 
@@ -1104,7 +1105,7 @@ impl PrettyPrinter {
 
 ---
 
-#### 10. CI/CD Guardrails with Semver Enforcement and Security Scanning
+#### [ ] 10. CI/CD Guardrails with Semver Enforcement and Security Scanning
 
 **Duration**: 1.5 weeks | **Priority**: P0 | **Complexity**: Medium
 
@@ -1349,7 +1350,7 @@ For each Rust feature, verify equivalence in:
 
 ### Success Criteria
 
-**Phase 18 Complete When**:
+**Phase  Complete When**:
 
 1. ✅ All 10 steps implemented with passing tests
 2. ✅ Documentation complete (specs + guides + API docs)

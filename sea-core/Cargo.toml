@@ -61,6 +61,7 @@ typescript = ["napi", "napi-derive"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 shacl = ["oxigraph"]
 cli = []
+three_valued_logic = []
 
 ## NOTE: Profiles are managed at the workspace root (Cargo.toml). Please
 ## update the workspace-level profiles in /Cargo.toml rather than in
