@@ -227,7 +227,7 @@ impl Graph {
             use serde_json::{json, Value};
             let mut associations: Value = entity
                 .get_attribute("associations")
-                .map(|v| v.clone())
+.cloned()
                 .unwrap_or_else(|| json!([]));
 
             if let Value::Array(arr) = &mut associations {
