@@ -113,25 +113,25 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
 
     // Export associations as Simple relationships when recorded on an entity
     for entity in graph.all_entities() {
-        if let Some(assoc_val) = entity.get_attribute("associations") {
-            if let Value::Array(arr) = assoc_val {
-                for entry in arr {
-                    if let Some(rel_type) = entry.get("type").and_then(|v| v.as_str()) {
-                        if let Some(target) = entry.get("target").and_then(|v| v.as_str()) {
-                            calm_model.relationships.push(CalmRelationship {
-                                unique_id: format!("assoc-{}-{}", entity.id(), target),
-                                relationship_type: RelationshipType::Simple(rel_type.to_string()),
-                                parties: Parties::SourceDestination {
-                                    source: entity.id().to_string(),
-                                    destination: target.to_string(),
-                                },
-                            });
-                        }
-                    }
+        if let Some(Value::Array(arr)) = entity.get_attribute("associations") {
+            for entry in arr {
+                if let (Some(rel_type), Some(target)) = (
+                    entry.get("type").and_then(|v| v.as_str()),
+                    entry.get("target").and_then(|v| v.as_str()),
+                ) {
+                    calm_model.relationships.push(CalmRelationship {
+                        unique_id: format!("assoc-{}-{}", entity.id(), target),
+                        relationship_type: RelationshipType::Simple(rel_type.to_string()),
+                        parties: Parties::SourceDestination {
+                            source: entity.id().to_string(),
+                            destination: target.to_string(),
+                        },
+                    });
                 }
             }
         }
     }
+
 
     serde_json::to_value(&calm_model).map_err(|e| format!("Failed to serialize CALM model: {}", e))
 }
@@ -247,21 +247,19 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                         fld
                     )
                 }
+            } else if let Some(flt) = filter {
+                format!(
+                    "{}({} where {})",
+                    fn_str,
+                    serialize_expression_for_export(collection),
+                    serialize_expression_for_export(flt)
+                )
             } else {
-                if let Some(flt) = filter {
-                    format!(
-                        "{}({} where {})",
-                        fn_str,
-                        serialize_expression_for_export(collection),
-                        serialize_expression_for_export(flt)
-                    )
-                } else {
-                    format!(
-                        "{}({})",
-                        fn_str,
-                        serialize_expression_for_export(collection)
-                    )
-                }
+                format!(
+                    "{}({})",
+                    fn_str,
+                    serialize_expression_for_export(collection)
+                )
             }
         }
         Expression::AggregationComprehension {
