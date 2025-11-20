@@ -113,11 +113,9 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
 
     // Export associations as Simple relationships when recorded on an entity
     for entity in graph.all_entities() {
-        if let Some(assoc_val) = entity.get_attribute("associations") {
-            if let Value::Array(arr) = assoc_val {
+        if let Some(Value::Array(arr)) = entity.get_attribute("associations") {
                 for entry in arr {
-                    if let Some(rel_type) = entry.get("type").and_then(|v| v.as_str()) {
-                        if let Some(target) = entry.get("target").and_then(|v| v.as_str()) {
+                    if let (Some(rel_type), Some(target)) = (entry.get("type").and_then(|v| v.as_str()), entry.get("target").and_then(|v| v.as_str())) {
                             calm_model.relationships.push(CalmRelationship {
                                 unique_id: format!("assoc-{}-{}", entity.id(), target),
                                 relationship_type: RelationshipType::Simple(rel_type.to_string()),
@@ -247,8 +245,7 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                         fld
                     )
                 }
-            } else {
-                if let Some(flt) = filter {
+            } else if let Some(flt) = filter {
                     format!(
                         "{}({} where {})",
                         fn_str,
