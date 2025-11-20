@@ -261,6 +261,7 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                     serialize_expression_for_export(collection)
                 )
             }
+        }
         Expression::AggregationComprehension {
             function,
             variable,
