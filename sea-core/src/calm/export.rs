@@ -132,7 +132,6 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
         }
     }
 
-
     serde_json::to_value(&calm_model).map_err(|e| format!("Failed to serialize CALM model: {}", e))
 }
 

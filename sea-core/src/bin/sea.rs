@@ -1,6 +1,6 @@
+use sea_core::kg_import::ImportError;
 use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
 use sea_core::{import_kg_turtle, Graph, NamespaceRegistry};
-use sea_core::kg_import::ImportError;
 use std::env;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
