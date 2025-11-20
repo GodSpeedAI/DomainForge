@@ -66,11 +66,11 @@ impl NamespaceRegistry {
             .collect())
     }
 
-    #[args(fail_on_ambiguity = "false")]
-    pub fn namespace_for(&self, path: String, fail_on_ambiguity: bool) -> PyResult<String> {
+    pub fn namespace_for(&self, path: String, fail_on_ambiguity: Option<bool>) -> PyResult<String> {
+        let fail = fail_on_ambiguity.unwrap_or(false);
         let res = self
             .inner
-            .namespace_for_with_options(std::path::Path::new(&path), fail_on_ambiguity)
+            .namespace_for_with_options(std::path::Path::new(&path), fail)
             .map(|s| s.to_string())
             .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(format!("{}", err)))?;
         Ok(res)
