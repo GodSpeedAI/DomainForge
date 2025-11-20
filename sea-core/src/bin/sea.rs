@@ -1,5 +1,5 @@
-use sea_core::{Graph, NamespaceRegistry, import_kg_turtle};
 use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
+use sea_core::{import_kg_turtle, Graph, NamespaceRegistry};
 use std::env;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
@@ -46,7 +46,6 @@ fn main() {
                     if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
                         eprintln!("{}", err);
                         std::process::exit(1);
- 
                     }
                 }
                 "resolve" => {

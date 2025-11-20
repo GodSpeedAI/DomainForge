@@ -48,6 +48,13 @@ impl Graph {
         self.entities.get(id)
     }
 
+    /// Returns a mutable reference to an Entity identified by `id`.
+    /// This method is necessary for operations that need to update attributes
+    /// on existing entities (such as association relationships).
+    pub fn get_entity_mut(&mut self, id: &ConceptId) -> Option<&mut Entity> {
+        self.entities.get_mut(id)
+    }
+
     pub fn remove_entity(&mut self, id: &ConceptId) -> Result<Entity, String> {
         // Check for references in flows
         let referencing_flows: Vec<String> = self
@@ -194,6 +201,47 @@ impl Graph {
         }
         self.instances.insert(id, instance);
         Ok(())
+    }
+
+    /// Adds an association relationship from `owner` -> `owned` using a named `rel_type`.
+    /// Associations are represented as a JSON attribute `associations` on the source entity to
+    /// maintain a simple, serializable representation without introducing a new primitive.
+    pub fn add_association(
+        &mut self,
+        owner: &ConceptId,
+        owned: &ConceptId,
+        rel_type: &str,
+    ) -> Result<(), String> {
+        if !self.entities.contains_key(owner) {
+            return Err("Source entity not found".to_string());
+        }
+        if !self.entities.contains_key(owned) {
+            return Err("Destination entity not found".to_string());
+        }
+
+        let owned_str = owned.to_string();
+        let rel_type_str = rel_type.to_string();
+
+        // Mutably borrow the entity and insert/update the `associations` attribute.
+        if let Some(entity) = self.entities.get_mut(owner) {
+            use serde_json::{json, Value};
+            let mut associations: Value = entity
+                .get_attribute("associations")
+                .map(|v| v.clone())
+                .unwrap_or_else(|| json!([]));
+
+            if let Value::Array(arr) = &mut associations {
+                arr.push(json!({"type": rel_type_str, "target": owned_str}));
+            } else {
+                // Replace non-array associations with an array structure.
+                associations = json!([ {"type": rel_type_str, "target": owned_str} ]);
+            }
+
+            entity.set_attribute("associations", associations);
+            Ok(())
+        } else {
+            Err("Failed to retrieve entity for association".to_string())
+        }
     }
 
     pub fn has_instance(&self, id: &ConceptId) -> bool {

@@ -13,3 +13,9 @@
     - Added optional `--fail-on-ambiguity` CLI flag (default behavior remains alphabetical tie-breaker).
     - Added `namespace_for_with_options` and `resolve_files_with_options` to allow programmatic control of ambiguity behavior.
     - Added unit tests to verify ambiguous-match error handling when `fail_on_ambiguity` is enabled.
+     - Added FINOS CALM import/export support to `sea-core`, including:
+       - SEA → CALM `export_calm()` and CALM → SEA `import_calm()` conversions
+       - Policy (Constraint) export/import serialized as `metadata.sea:expression` (SEA or SBVR formats supported)
+       - Association mapping exported as `relationship-type: "association"` and imported into `sea:associations` metadata on source entity
+       - Python/TypeScript/WASM bindings: `export_calm`, `import_calm`, `add_policy`, and `add_association` methods
+       - Comprehensive unit & integration tests for CALM round-trip & schema validation

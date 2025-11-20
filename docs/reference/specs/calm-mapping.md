@@ -196,6 +196,25 @@ Instance {
 - `Instance.attributes` → `metadata.sea:attributes`
 - Generate ownership relationship linking instance to parent entity
 
+### Entity Relationships - Association → CALM Relationship
+
+**CALM Relationship Structure (Association):**
+```json
+{
+  "unique-id": "assoc-1",
+  "relationship-type": "association",
+  "parties": {
+    "source": "entity-1",
+    "destination": "entity-2"
+  }
+}
+```
+
+**Mapping Rules:**
+- Associations are exported as `relationship-type: "association"` with `source` and `destination` set to the `unique-id` of the participating nodes.
+- During import, associations are stored on the source entity as a metadata attribute `sea:associations` which contains an array of objects `{ "type": "association", "target": "<unique-id>" }` to preserve a lightweight representation that avoids adding extra primitives.
+
+
 ### 5. Policy → CALM Node
 
 **SEA Policy Structure:**
@@ -226,6 +245,10 @@ Policy {
 - `Policy.name` → `name`
 - `Policy.expression` → `metadata.sea:expression` (serialized as string)
 - `node-type` = `"constraint"`
+ - `Policy.modality` → `metadata.sea:modality` (e.g., `Obligation`, `Prohibition`, `Permission`)
+ - `Policy.kind` → `metadata.sea:kind` (e.g., `Constraint`, `Derivation`, `Obligation`)
+ - `Policy.priority` → `metadata.sea:priority`
+ - `metadata.sea:expression_type` → `"SBVR"` or `"SEA"` - indicates whether expression uses SBVR or SEA DSL format
 
 ### PolicyExpression Serialization
 

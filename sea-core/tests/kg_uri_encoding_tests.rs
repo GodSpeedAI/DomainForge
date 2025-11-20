@@ -34,12 +34,20 @@ fn test_kg_uri_encoding_rfc3986() {
         // We check if the output contains the encoded version
         // If it contains the unencoded version (e.g. sea:EntityQuestion?), it might be invalid Turtle
         if !turtle.contains(&expected) {
-            println!("WARNING: '{}' was not encoded as '{}'. Output: {}", char, encoded, turtle);
+            println!(
+                "WARNING: '{}' was not encoded as '{}'. Output: {}",
+                char, encoded, turtle
+            );
             // For now, we might assert failure if we want to enforce it,
             // or we can just log it if we are exploring.
             // But the task is "Add tests", implying we want to verify behavior.
             // I'll assert it.
-            assert!(turtle.contains(&expected), "Failed to encode '{}' to '{}'", char, encoded);
+            assert!(
+                turtle.contains(&expected),
+                "Failed to encode '{}' to '{}'",
+                char,
+                encoded
+            );
         }
     }
 }

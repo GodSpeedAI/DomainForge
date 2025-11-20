@@ -1,8 +1,11 @@
 use rust_decimal::Decimal;
 use sea_core::calm::{export, import};
+use sea_core::policy::Expression;
+use sea_core::policy::Policy;
 use sea_core::primitives::{Entity, Flow, Instance, Resource};
 use sea_core::units::unit_from_string;
 use sea_core::Graph;
+use serde_json::Value;
 
 #[test]
 fn test_round_trip_simple_graph() {
@@ -217,4 +220,61 @@ fn test_semantic_equivalence_after_round_trip() {
     );
 
     assert_eq!(original_graph.flow_count(), imported_graph.flow_count());
+}
+
+#[test]
+fn test_export_import_policy_round_trip() {
+    let mut original_graph = Graph::new();
+
+    let entity = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
+    original_graph.add_entity(entity).unwrap();
+
+    let expr = Expression::quantifier(
+        sea_core::policy::Quantifier::ForAll,
+        "f",
+        Expression::variable("flows"),
+        Expression::binary(
+            sea_core::policy::BinaryOp::GreaterThan,
+            Expression::member_access("f", "quantity"),
+            Expression::literal(0),
+        ),
+    );
+
+    let policy = Policy::new_with_namespace("MustHavePositiveQuantity", "default", expr);
+    original_graph.add_policy(policy).unwrap();
+
+    let calm_json = export(&original_graph).unwrap();
+    let imported_graph = import(calm_json).unwrap();
+
+    assert_eq!(original_graph.policy_count(), imported_graph.policy_count());
+}
+
+#[test]
+fn test_export_import_association_round_trip() {
+    let mut original_graph = Graph::new();
+    let a = Entity::new_with_namespace("A".to_string(), "default".to_string());
+    let b = Entity::new_with_namespace("B".to_string(), "default".to_string());
+
+    let a_id = a.id().clone();
+    let b_id = b.id().clone();
+
+    original_graph.add_entity(a).unwrap();
+    original_graph.add_entity(b).unwrap();
+
+    // Create association by adding it via the Graph API
+    original_graph
+        .add_association(&a_id, &b_id, "association")
+        .unwrap();
+
+    let calm_json = export(&original_graph).unwrap();
+    let imported_graph = import(calm_json).unwrap();
+
+    // Check the association was imported as an attribute on the source entity
+    let a_imported_id = imported_graph.find_entity_by_name("A").unwrap();
+    let a_entity = imported_graph.get_entity(&a_imported_id).unwrap();
+    let associations = a_entity.get_attribute("associations").unwrap();
+    assert!(associations.is_array());
+    let arr = associations.as_array().unwrap();
+    assert!(!arr.is_empty());
+    assert_eq!(arr[0]["type"], Value::String("association".to_string()));
 }

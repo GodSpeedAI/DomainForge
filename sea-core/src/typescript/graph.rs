@@ -240,6 +240,27 @@ impl Graph {
     }
 
     #[napi]
+    pub fn add_policy(&mut self, policy_json: String) -> Result<()> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| Error::from_reason(format!("Invalid Policy JSON: {}", e)))?;
+        self.inner.add_policy(policy).map_err(Error::from_reason)
+    }
+
+    #[napi]
+    pub fn add_association(
+        &mut self,
+        owner: String,
+        owned: String,
+        rel_type: String,
+    ) -> Result<()> {
+        let owner_cid = parse_concept_id(&owner)?;
+        let owned_cid = parse_concept_id(&owned)?;
+        self.inner
+            .add_association(&owner_cid, &owned_cid, &rel_type)
+            .map_err(Error::from_reason)
+    }
+
+    #[napi]
     pub fn to_string(&self) -> String {
         format!(
             "Graph(entities={}, resources={}, flows={}, instances={})",

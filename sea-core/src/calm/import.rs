@@ -1,4 +1,5 @@
 use super::models::{CalmModel, NodeType, Parties, RelationshipType};
+use crate::policy::Policy;
 use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::units::unit_from_string;
 use crate::ConceptId;
@@ -18,6 +19,9 @@ pub fn import(calm_json: Value) -> Result<Graph, String> {
     // First pass: import entities and resources to populate id_map
     for node in &calm_model.nodes {
         import_entity_or_resource_node(node, &mut graph, &mut id_map)?;
+        // Import policies (constraints) as part of the first pass as they do not
+        // reference other nodes.
+        import_constraint_node(node, &mut graph, &mut id_map)?;
     }
 
     // Second pass: import instances now that referenced IDs are available
@@ -56,6 +60,72 @@ fn import_entity_or_resource_node(
     };
 
     id_map.insert(calm_id.clone(), sea_id);
+    Ok(())
+}
+
+fn import_constraint_node(
+    node: &super::models::CalmNode,
+    graph: &mut Graph,
+    id_map: &mut HashMap<String, ConceptId>,
+) -> Result<(), String> {
+    let calm_id = &node.unique_id;
+
+    if let NodeType::Constraint = node.node_type {
+        // Extract SBVR/SEA expression from metadata
+        let expr_str = node
+            .metadata
+            .get("sea:expression")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing sea:expression for constraint node")?;
+
+        // Parse the expression using the SEA parser; SBVR XMI exports expressions
+        // in a compatible textual form (forall/exist style) - use the same parser.
+        let expr = crate::parser::parse_expression_from_str(expr_str)
+            .map_err(|e| format!("Failed to parse policy expression: {}", e))?;
+
+        let ns = node
+            .namespace
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
+        let mut policy = Policy::new_with_namespace(node.name.clone(), ns.clone(), expr);
+
+        // Optional metadata mapping
+        if let Some(priority_val) = node.metadata.get("sea:priority") {
+            if let Some(priority) = priority_val.as_i64() {
+                policy = policy.with_priority(priority as i32);
+            }
+        }
+
+        // Modality and kind mapping if present
+        if let Some(modality) = node.metadata.get("sea:modality").and_then(|v| v.as_str()) {
+            match modality {
+                "Obligation" => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Obligation)
+                }
+                "Prohibition" => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Prohibition)
+                }
+                "Permission" => {
+                    policy = policy.with_modality(crate::policy::PolicyModality::Permission)
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(kind) = node.metadata.get("sea:kind").and_then(|v| v.as_str()) {
+            match kind {
+                "Constraint" => policy = policy.with_kind(crate::policy::PolicyKind::Constraint),
+                "Derivation" => policy = policy.with_kind(crate::policy::PolicyKind::Derivation),
+                "Obligation" => policy = policy.with_kind(crate::policy::PolicyKind::Obligation),
+                _ => {}
+            }
+        }
+
+        let policy_id = policy.id.clone();
+        graph.add_policy(policy)?;
+        id_map.insert(calm_id.clone(), policy_id);
+    }
+
     Ok(())
 }
 
@@ -190,6 +260,33 @@ fn import_relationship(
             let rel_type_text = rel_type.as_str();
             if rel_type_text == "ownership" {
                 return Err("Ownership relationships should be modeled as Instances, not Simple relationships".to_string());
+            }
+            if rel_type_text == "association" {
+                // Map association relationships into the Graph. We use the
+                // Graph::add_association helper which stores associations as an attribute
+                // on the source entity for simplicity.
+                let (source_id, dest_id) = match &relationship.parties {
+                    Parties::SourceDestination {
+                        source,
+                        destination,
+                    } => (source, destination),
+                    _ => {
+                        return Err(
+                            "Association relationship must have source/destination parties"
+                                .to_string(),
+                        )
+                    }
+                };
+                let source_uuid = id_map
+                    .get(source_id)
+                    .ok_or_else(|| format!("Unknown source ID: {}", source_id))?;
+
+                let dest_uuid = id_map
+                    .get(dest_id)
+                    .ok_or_else(|| format!("Unknown destination ID: {}", dest_id))?;
+
+                graph.add_association(source_uuid, dest_uuid, "association")?;
+                return Ok(());
             }
             log::warn!(
                 "Skipping unsupported Simple relationship '{}' in CALM import",
@@ -991,5 +1088,87 @@ mod tests {
         assert!(result
             .unwrap_err()
             .contains("Flow relationship must have source/destination parties"));
+    }
+
+    #[test]
+    fn test_import_policy_node() {
+        let calm_json = json!({
+            "version": "2.0",
+            "metadata": {"sea:exported": true, "sea:version": "0.0.1"},
+            "nodes": [
+                {
+                    "unique-id": "entity-1",
+                    "node-type": "actor",
+                    "name": "Warehouse",
+                    "metadata": {"sea:primitive": "Entity"}
+                },
+                {
+                    "unique-id": "policy-1",
+                    "node-type": "constraint",
+                    "name": "MustHavePositiveQuantity",
+                    "metadata": {
+                        "sea:primitive": "Policy",
+                        "sea:expression": "forall f in flows: (f.quantity > 0)",
+                        "sea:expression_type": "SEA"
+                    }
+                }
+            ],
+            "relationships": []
+        });
+
+        let result = import(calm_json);
+        assert!(result.is_ok());
+        let graph = result.unwrap();
+        assert_eq!(graph.policy_count(), 1);
+        let policy = graph.all_policies()[0];
+        assert_eq!(policy.name, "MustHavePositiveQuantity");
+    }
+
+    #[test]
+    fn test_import_association_relationship() {
+        let calm_json = json!({
+            "version": "2.0",
+            "metadata": {"sea:exported": true, "sea:version": "0.0.1"},
+            "nodes": [
+                {
+                    "unique-id": "entity-1",
+                    "node-type": "actor",
+                    "name": "A",
+                    "metadata": {"sea:primitive": "Entity"}
+                },
+                {
+                    "unique-id": "entity-2",
+                    "node-type": "actor",
+                    "name": "B",
+                    "metadata": {"sea:primitive": "Entity"}
+                }
+            ],
+            "relationships": [
+                {
+                    "unique-id": "assoc-1",
+                    "relationship-type": "association",
+                    "parties": {
+                        "source": "entity-1",
+                        "destination": "entity-2"
+                    }
+                }
+            ]
+        });
+
+        let result = import(calm_json);
+        assert!(result.is_ok());
+        let graph = result.unwrap();
+        assert_eq!(graph.entity_count(), 2);
+        let _entities = graph.all_entities();
+        // Get the first entity and check associations attribute
+        let e1 = graph.find_entity_by_name("A").unwrap();
+        let e1_ref = graph.get_entity(&e1).unwrap();
+        let associations = e1_ref.get_attribute("associations").unwrap();
+        assert!(associations.is_array());
+        let arr = associations.as_array().unwrap();
+        assert_eq!(
+            arr[0]["target"],
+            Value::String(graph.find_entity_by_name("B").unwrap().to_string())
+        );
     }
 }
