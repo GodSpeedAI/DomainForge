@@ -57,7 +57,10 @@ fn test_forall_with_nulls_results_in_unknown() {
     assert_eq!(result.is_satisfied_tristate, None);
     // Violations should indicate Unknown with severity derived from modality
     assert_eq!(result.violations.len(), 1);
-    assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Error);
+    assert_eq!(
+        result.violations[0].severity,
+        sea_core::policy::Severity::Error
+    );
 }
 
 #[test]
@@ -144,5 +147,8 @@ fn test_nested_null_propagation_and_forall_unknown() {
         !result.violations.is_empty(),
         "Expected at least one violation when evaluation is NULL"
     );
-    assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Error);
+    assert_eq!(
+        result.violations[0].severity,
+        sea_core::policy::Severity::Error
+    );
 }
