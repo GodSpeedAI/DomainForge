@@ -11,15 +11,15 @@ mod tests {
         let _lit_null = Expression::Literal(serde_json::Value::Null);
         let _lit_num = Expression::Literal(serde_json::json!(42));
         match _lit_true {
-            Expression::Literal(_) => {}
+            Expression::Literal(_) => {},
             _ => panic!("expected literal"),
         }
         match _lit_num {
-            Expression::Literal(_) => {}
+            Expression::Literal(_) => {},
             _ => panic!("expected literal"),
         }
         match _lit_null {
-            Expression::Literal(_) => {}
+            Expression::Literal(_) => {},
             _ => panic!("expected literal"),
         }
     }
