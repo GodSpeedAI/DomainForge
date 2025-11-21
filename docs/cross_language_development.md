@@ -100,8 +100,8 @@ When switching from Python to TypeScript development (or vice versa):
 1. **Clean all build artifacts:**
 
    ```bash
+   # Workspace layout uses a single target/ directory at the repo root
    cargo clean
-   rm -rf target sea-core/target
    ```
 
 2. **Build for the target language:**

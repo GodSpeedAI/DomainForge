@@ -80,6 +80,17 @@ export declare class Graph {
   addPolicy(policyJson: string): void
   addAssociation(owner: string, owned: string, relType: string): void
   evaluatePolicy(policyJson: string): EvaluationResult
+  /**
+   * Set the evaluation mode for policy evaluation.
+   * When `useThreeValuedLogic` is true, policies will use three-valued logic (true, false, null).
+   * When false, policies will use strict boolean logic (true, false).
+   */
+  setEvaluationMode(useThreeValuedLogic: boolean): void
+  /**
+   * Get the current evaluation mode.
+   * Returns true if three-valued logic is enabled, false otherwise.
+   */
+  useThreeValuedLogic(): boolean
   toString(): string
 }
 export declare class Entity {

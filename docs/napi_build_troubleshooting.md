@@ -40,7 +40,7 @@ The Node.js native module (`.node` file) was built with the `python` feature ena
 3. **Copy the artifact to the Node.js module location:**
 
    ```bash
-   cp ../target/debug/libsea_core.so ../sea-core.linux-x64-gnu.node
+   cp target/debug/libsea_core.so ../sea-core.linux-x64-gnu.node
    ```
 
 4. **Verify the build is clean:**

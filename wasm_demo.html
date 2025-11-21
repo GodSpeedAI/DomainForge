@@ -195,7 +195,7 @@
 
           let output = `${testName}\n${'='.repeat(50)}\n\n`;
           output += `isSatisfied: ${result.isSatisfied}\n`;
-          output += `isSatisfiedTristate: ${result.isSatisfiedTristate === undefined ? 'undefined (NULL)' : result.isSatisfied Tristate}\n`;
+        output += `isSatisfiedTristate: ${result.isSatisfiedTristate === undefined ? 'undefined (NULL)' : result.isSatisfiedTristate}\n`;
           output += `\nViolations (${result.violations.length}):\n`;
 
           if (result.violations.length === 0) {

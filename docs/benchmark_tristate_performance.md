@@ -42,7 +42,7 @@ The tri-state (nullable) logic implementation shows **minimal overhead** compare
 ### Sum Non-Null (Ignoring Nulls)
 
 - **sum_nonnull_10pct_null_1k**: `7.33 µs` (7.19 - 7.50 µs)
-  - **Overhead: ~11%** slower than strict baseline
+  - **~11% faster than strict baseline**
   - Similar to nullable but doesn't track null flag
   - Filters and sums only non-null values
 
@@ -93,7 +93,7 @@ The tri-state (nullable) logic implementation shows **minimal overhead** compare
 1. **Deploy with confidence**: The overhead is minimal and acceptable
 2. **Monitor in production**: Track actual null ratios in real workloads
 3. **Consider optimizations** only if profiling shows this as a bottleneck
-4. **Document the tradeoff**: Users get SQL-like null semantics with <10% overhead
+4. **Document the tradeoff**: Users get SQL-like null semantics with ≈10% overhead (worst-case ~10.4%)
 
 ## Raw Benchmark Output
 

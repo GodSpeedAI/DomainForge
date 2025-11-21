@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use sea_core::policy::Expression;
-    use rust_decimal::Decimal;
 
     #[test]
     fn smoke_truth_table_examples() {
@@ -20,6 +19,7 @@ mod tests {
     #[test]
     fn aggregator_nulls() {
         use sea_core::policy::three_valued_aggregators as aggregators;
+        use rust_decimal::Decimal;
 
         let vals: Vec<Option<Decimal>> = vec![Some(Decimal::new(1, 0)), None, Some(Decimal::new(3, 0))];
         assert_eq!(aggregators::sum_nullable(&vals), None);

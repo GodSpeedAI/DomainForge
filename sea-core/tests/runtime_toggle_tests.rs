@@ -1,5 +1,5 @@
 use sea_core::graph::Graph;
-use sea_core::policy::{Expression, Policy, BinaryOp};
+use sea_core::policy::{Expression, Policy};
 use sea_core::primitives::Entity;
 
 #[test]

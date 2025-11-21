@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 use sea_core::{
-    policy::{BinaryOp, Expression, Policy, Quantifier, UnaryOp},
+    policy::{BinaryOp, Expression, Policy, Quantifier},
     primitives::{Entity, Flow, Resource},
     units::unit_from_string,
     Graph,
@@ -23,9 +23,9 @@ fn build_graph_with_optional_flow_attribute() -> Graph {
     graph.add_resource(product).unwrap();
 
     // Flow with missing optional attribute "tag"
-        let mut flow1 = Flow::new(product_id.clone(), warehouse_id.clone(), factory_id.clone(), Decimal::from_str("100").unwrap());
-        // Explicitly set tag to Null so substitution finds the field and the evaluator treats it as NULL
-        flow1.set_attribute("tag", serde_json::Value::Null);
+    let mut flow1 = Flow::new(product_id.clone(), warehouse_id.clone(), factory_id.clone(), Decimal::from_str("100").unwrap());
+    // Explicitly set tag to Null so substitution finds the field and the evaluator treats it as NULL
+    flow1.set_attribute("tag", serde_json::Value::Null);
     graph.add_flow(flow1).unwrap();
 
     // Flow with tag present
@@ -80,7 +80,7 @@ fn test_exists_with_true_and_null_returns_true() {
 }
 
 #[test]
-fn test_exists_unique_with_true_and_null_returns_unknown() {
+fn test_exists_unique_with_duplicate_true_returns_false() {
     let graph = build_graph_with_optional_flow_attribute();
 
     // Add a third flow which has tag "X" to create duplicate true
@@ -116,12 +116,8 @@ fn test_nested_null_propagation_and_forall_unknown() {
     // yields Null for tag==X and True for quantity -> overall Null per AND when no False.
     // The graph contains one flow with tag Null and one with tag "X" and quantity >0 so ForAll yields False.
     // For this test, we modify both flows to have tag Null to force Unknown.
-    let flow_id1 = graph.all_flows()[0].id().clone();
     let flow_id2 = graph.all_flows()[1].id().clone();
     // Update attributes by finding flows via graph.get_flow
-    if let Some(mut f1) = graph.get_flow(&flow_id1).cloned() {
-        // Already has tag Null from helper
-    }
     if let Some(mut f2) = graph.get_flow(&flow_id2).cloned() {
         f2.set_attribute("tag", serde_json::Value::Null);
         // replace flow in graph

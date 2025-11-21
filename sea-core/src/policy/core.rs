@@ -3,6 +3,7 @@ use super::violation::{Severity, Violation};
 use crate::graph::Graph;
 use crate::{ConceptId, SemanticVersion};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "three_valued_logic")]
 use crate::policy::ThreeValuedBool;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -150,18 +151,25 @@ impl Policy {
     }
 
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
-        // Evaluate expression. If three_valued_logic is enabled at runtime, the
+        let expanded = self.expression.expand(graph)?;
+
+        // Evaluate expression. If three_valued_logic is enabled the
         // evaluator may return a ThreeValuedBool; we compute the tri-state
         // result and derive a backward-compatible boolean (false when Null).
-        let is_satisfied_tristate: Option<bool> = if graph.config.use_three_valued_logic {
-            match self.evaluate_expression_three_valued(&self.expression, graph)? {
-                ThreeValuedBool::True => Some(true),
-                ThreeValuedBool::False => Some(false),
-                ThreeValuedBool::Null => None,
+        let is_satisfied_tristate: Option<bool> = {
+            #[cfg(feature = "three_valued_logic")]
+            {
+                match self.evaluate_expression_three_valued(&expanded, graph)? {
+                    ThreeValuedBool::True => Some(true),
+                    ThreeValuedBool::False => Some(false),
+                    ThreeValuedBool::Null => None,
+                }
             }
-        } else {
-            let expanded = self.expression.expand(graph)?;
-            Some(self.evaluate_expression(&expanded, graph)?)
+
+            #[cfg(not(feature = "three_valued_logic"))]
+            {
+                Some(self.evaluate_expression(&expanded, graph)?)
+            }
         };
 
         let is_satisfied = is_satisfied_tristate.unwrap_or(false);
@@ -190,6 +198,7 @@ impl Policy {
         })
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn evaluate_expression(&self, expr: &Expression, graph: &Graph) -> Result<bool, String> {
         match expr {
             Expression::Literal(v) => v
@@ -266,6 +275,7 @@ impl Policy {
         }
     }
 
+    #[cfg(feature = "three_valued_logic")]
     fn evaluate_expression_three_valued(
         &self,
         expr: &Expression,
@@ -362,7 +372,7 @@ impl Policy {
             Expression::Unary { op, operand } => {
                 let v = self.evaluate_expression_three_valued(operand, graph)?;
                 Ok(match op {
-                    UnaryOp::Not => !v,
+                    UnaryOp::Not => v.not(),
                     UnaryOp::Negate => return Err("Negate operator not supported in boolean context".to_string()),
                 })
             }
@@ -411,7 +421,9 @@ impl Policy {
                 Ok(T::from_option_bool(value.as_bool()))
             }
             Expression::Aggregation { function, collection, field, filter } => {
-                // Evaluate aggregation and map the result to Null or a boolean
+                // Aggregations in boolean contexts follow non-zero truthiness:
+                // Null -> Null, numeric -> non-zero is true and zero is false. Prefer explicit
+                // comparisons like COUNT(items) > 0 for clearer intent.
                 let v = Expression::evaluate_aggregation(function, collection, field, filter, graph)?;
                 // If this yields numeric, non-zero is true, zero is false; if Null then Null.
                 if v.is_null() {
@@ -432,11 +444,12 @@ impl Policy {
         }
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn compare_values<F>(
         &self,
         left: &Expression,
         right: &Expression,
-        _: &Graph,
+        _graph: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
@@ -447,11 +460,12 @@ impl Policy {
         Ok(op(&left_val, &right_val))
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn compare_numeric<F>(
         &self,
         left: &Expression,
         right: &Expression,
-        _: &Graph,
+        _graph: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
@@ -462,11 +476,12 @@ impl Policy {
         Ok(op(left_val, right_val))
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn compare_strings<F>(
         &self,
         left: &Expression,
         right: &Expression,
-        _: &Graph,
+        _graph: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
@@ -477,6 +492,7 @@ impl Policy {
         Ok(op(&left_val, &right_val))
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn get_literal_value(&self, expr: &Expression) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),
@@ -484,6 +500,7 @@ impl Policy {
         }
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn get_numeric_value(&self, expr: &Expression) -> Result<f64, String> {
         match expr {
             Expression::Literal(v) => v
@@ -494,6 +511,7 @@ impl Policy {
         }
     }
 
+    #[cfg(not(feature = "three_valued_logic"))]
     fn get_string_value(&self, expr: &Expression) -> Result<String, String> {
         match expr {
             Expression::Literal(v) => v
@@ -504,6 +522,7 @@ impl Policy {
         }
     }
 
+    #[cfg(feature = "three_valued_logic")]
     fn get_runtime_value(&self, expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),

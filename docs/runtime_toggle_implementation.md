@@ -93,27 +93,6 @@ graph.set_evaluation_mode(false);
 let is_tristate = graph.use_three_valued_logic();
 ```
 
-### Python (Planned)
-
-```python
-from sea_dsl import Graph
-
-graph = Graph()
-graph.set_evaluation_mode(True)  # Enable three-valued logic
-graph.set_evaluation_mode(False) # Disable three-valued logic
-is_tristate = graph.use_three_valued_logic()
-```
-
-### TypeScript (Planned)
-
-```typescript
-import { Graph } from "@domainforge/sea";
-
-const graph = new Graph();
-graph.setEvaluationMode(true); // Enable three-valued logic
-graph.setEvaluationMode(false); // Disable three-valued logic
-const isTristate = graph.useThreeValuedLogic();
-```
 
 ## Behavior Differences
 
@@ -153,9 +132,7 @@ All tests pass successfully:
 
 ## Next Steps
 
-~~To expose this functionality in Python and TypeScript bindings:~~
-
-✅ **COMPLETED**: All bindings have been implemented and tested.
+✅ **COMPLETED**: Python and TypeScript bindings implemented and tested.
 
 ### Python Bindings ✅
 

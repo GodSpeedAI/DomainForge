@@ -86,7 +86,7 @@ impl From<crate::policy::Severity> for Severity {
 
 /// A policy violation
 #[pyclass]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Violation {
     #[pyo3(get)]
     pub name: String,
@@ -118,7 +118,7 @@ impl From<crate::policy::Violation> for Violation {
 
 /// Result of evaluating a policy against a graph
 #[pyclass]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EvaluationResult {
     /// Backwards compatible boolean: false if evaluation is unknown (NULL)
     #[pyo3(get)]

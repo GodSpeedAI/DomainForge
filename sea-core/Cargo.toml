@@ -45,7 +45,7 @@ rust_decimal_macros = "1.33"
 tempfile = "3.12"
 assert_cmd = "2.0"
 predicates = "3"
-criterion = { version = "0.4", optional = false }
+criterion = { version = "0.4" }
 
 [build-dependencies]
 napi-build = "2.1"
@@ -61,7 +61,7 @@ python = ["pyo3", "pythonize"]
 typescript = ["napi", "napi-derive"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 shacl = ["oxigraph"]
-cli = []
+cli = ["three_valued_logic"]
 three_valued_logic = []
 
 ## NOTE: Profiles are managed at the workspace root (Cargo.toml). Please
@@ -73,10 +73,6 @@ three_valued_logic = []
 name = "sea"
 path = "src/bin/sea.rs"
 required-features = ["cli"]
-
-[[bench]]
-name = "null_overhead"
-harness = false
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

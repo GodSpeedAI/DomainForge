@@ -19,6 +19,15 @@ mod microbench {
             .map(|i| Decimal::new(i as i64, 0))
             .collect();
 
+        let baseline_warmup_iters = (ITERATIONS / 10).max(1);
+        for _ in 0..baseline_warmup_iters {
+            let mut total = Decimal::ZERO;
+            for item in &data_strict {
+                total += *item;
+            }
+            std::hint::black_box(total);
+        }
+
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             let mut total = Decimal::ZERO;
@@ -40,6 +49,10 @@ mod microbench {
             })
             .collect();
 
+        for _ in 0..100usize {
+            std::hint::black_box(sum_nullable(&data_nullable));
+        }
+
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             let result = sum_nullable(&data_nullable);
@@ -48,10 +61,13 @@ mod microbench {
         let nullable_duration = start.elapsed();
 
         // Calculate overhead
-        let overhead_pct = ((nullable_duration.as_nanos() as f64
-            / baseline_duration.as_nanos() as f64)
-            - 1.0)
-            * 100.0;
+        let baseline_nanos = baseline_duration.as_nanos();
+        let nullable_nanos = nullable_duration.as_nanos();
+        let overhead_pct = if baseline_nanos == 0 {
+            0.0
+        } else {
+            ((nullable_nanos as f64 / baseline_nanos as f64) - 1.0) * 100.0
+        };
 
         println!("\n=== Micro-Benchmark Results ===");
         println!("Iterations: {}", ITERATIONS);

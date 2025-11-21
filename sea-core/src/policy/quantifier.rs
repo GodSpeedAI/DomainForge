@@ -225,6 +225,12 @@ impl Expression {
                                 map.insert("quantity".to_string(), serde_json::json!(quantity));
 
                                 for (k, v) in f.attributes().iter() {
+                                    if matches!(
+                                        k.as_str(),
+                                        "id" | "from_entity" | "to_entity" | "resource" | "quantity"
+                                    ) {
+                                        continue;
+                                    }
                                     map.insert(k.clone(), v.clone());
                                 }
                                 Ok(serde_json::Value::Object(map))
@@ -257,6 +263,9 @@ impl Expression {
                                 map.insert("namespace".to_string(), serde_json::json!(r.namespace()));
                                 map.insert("unit".to_string(), serde_json::json!(r.unit()));
                                 for (k, v) in r.attributes().iter() {
+                                    if matches!(k.as_str(), "id" | "name" | "namespace" | "unit") {
+                                        continue;
+                                    }
                                     map.insert(k.clone(), v.clone());
                                 }
                                 serde_json::Value::Object(map)
@@ -274,6 +283,9 @@ impl Expression {
                                 map.insert("entity".to_string(), serde_json::json!(i.entity_id().to_string()));
                                 map.insert("resource".to_string(), serde_json::json!(i.resource_id().to_string()));
                                 for (k, v) in i.attributes().iter() {
+                                    if matches!(k.as_str(), "id" | "entity" | "resource") {
+                                        continue;
+                                    }
                                     map.insert(k.clone(), v.clone());
                                 }
                                 serde_json::Value::Object(map)
@@ -595,6 +607,11 @@ impl Expression {
     ) -> Result<Expression, String> {
         match (&left, &right) {
             (Expression::Literal(left_value), Expression::Literal(right_value)) => {
+                // Preserve tri-state semantics: if either operand is NULL, yield NULL.
+                if left_value.is_null() || right_value.is_null() {
+                    return Ok(Expression::Literal(serde_json::Value::Null));
+                }
+
                 let reduced = match op {
                     BinaryOp::Equal => serde_json::json!(left_value == right_value),
                     BinaryOp::NotEqual => serde_json::json!(left_value != right_value),
