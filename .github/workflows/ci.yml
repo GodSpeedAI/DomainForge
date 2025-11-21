@@ -303,11 +303,20 @@ jobs:
           echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
           
           # Test that --fail-on-ambiguity properly detects ambiguous matches
-          if ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1 | grep -q "matched multiple namespaces"; then
+          # The command should fail and output an error message
+          set +e  # Temporarily disable exit on error
+          output=$(./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
+          exit_code=$?
+          set -e  # Re-enable exit on error
+          
+          if [ $exit_code -ne 0 ] && echo "$output" | grep -q "multiple namespaces"; then
             echo "✓ Ambiguity detection working correctly"
+            echo "Output: $output"
             exit 0
           else
-            echo "✗ Expected ambiguity error but got different result"
+            echo "✗ Expected ambiguity error but got:"
+            echo "Exit code: $exit_code"
+            echo "Output: $output"
             exit 1
           fi
 
