@@ -1,0 +1,83 @@
+name: Dependabot Auto Merge
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+  pull_request_review:
+    types:
+      - submitted
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependabot PRs
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Extract Dependabot metadata
+        id: dependabot
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Safety gate – block major updates
+        if: steps.dependabot.outputs.update-type == 'version-update:semver-major'
+        run: |
+          echo "Major update detected. Auto-merge disabled."
+          exit 0
+
+      - name: Safety gate – ensure all checks pass
+        id: check_status
+        run: |
+          conclusion=$(gh pr checks ${{ github.event.pull_request.number }} --json status --jq '.[] | select(.status=="completed") | .conclusion' | grep -v null)
+          if echo "$conclusion" | grep -q "failure"; then
+            echo "Some required checks failed."
+            exit 1
+          fi
+          echo "All required checks passed."
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve PR
+        run: gh pr review ${{ github.event.pull_request.number }} --approve --body "Auto-approved by workflow."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply auto-merge label (optional)
+        run: gh pr edit ${{ github.event.pull_request.number }} --add-label "automerge"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-merge security updates
+        if: steps.dependabot.outputs.update-type == 'security'
+        run: gh pr merge ${{ github.event.pull_request.number }} --merge --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-merge patch & minor updates
+        if: >
+          steps.dependabot.outputs.update-type == 'version-update:semver-patch' ||
+          steps.dependabot.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print merge decision
+        run: |
+          echo "Dependabot PR processed:"
+          echo " - Update type: ${{ steps.dependabot.outputs.update-type }}"
+          echo " - Auto-merge executed."

@@ -1,37 +1,68 @@
 version: 2
+
 updates:
+  # ---------------------------------------------------------
+  # Rust (Cargo)
+  # ---------------------------------------------------------
   - package-ecosystem: "cargo"
     directory: "/sea-core"
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "04:00"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "rust"
+      - "automerge"
+      - "safe-to-merge"
     commit-message:
-      prefix: "chore(deps):"
+      prefix: "chore(deps)"
+      include: "scope"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
+  # ---------------------------------------------------------
+  # JavaScript/TypeScript (npm)
+  # ---------------------------------------------------------
   - package-ecosystem: "npm"
     directory: "/sea-core"
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "04:00"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "typescript"
+      - "automerge"
+      - "safe-to-merge"
     commit-message:
-      prefix: "chore(deps):"
+      prefix: "chore(deps)"
+      include: "scope"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
+  # ---------------------------------------------------------
+  # GitHub Actions
+  # ---------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "04:00"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "ci"
+      - "automerge"
+      - "safe-to-merge"
     commit-message:
-      prefix: "chore(deps):"
+      prefix: "chore(deps)"
+      include: "scope"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
