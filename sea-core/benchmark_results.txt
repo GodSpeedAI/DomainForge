@@ -1,0 +1,51 @@
+   Compiling sea-core v0.0.1 (/home/sprime01/projects/domainforge/sea-core)
+    Finished `bench` profile [optimized] target(s) in 21.41s
+     Running benches/null_overhead.rs (/home/sprime01/projects/domainforge/target/release/deps/null_overhead-a3cacc905f36c3c3)
+Benchmarking sum_baseline/sum_strict_1k
+Benchmarking sum_baseline/sum_strict_1k: Warming up for 3.0000 s
+Benchmarking sum_baseline/sum_strict_1k: Collecting 100 samples in estimated 5.0007 s (566k iterations)
+Benchmarking sum_baseline/sum_strict_1k: Analyzing
+sum_baseline/sum_strict_1k
+                        time:   [7.9087 µs 8.2293 µs 8.6586 µs]
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+Benchmarking three_valued_sum/sum_nullable/0pct_null
+Benchmarking three_valued_sum/sum_nullable/0pct_null: Warming up for 3.0000 s
+Benchmarking three_valued_sum/sum_nullable/0pct_null: Collecting 100 samples in estimated 5.0218 s (601k iterations)
+Benchmarking three_valued_sum/sum_nullable/0pct_null: Analyzing
+three_valued_sum/sum_nullable/0pct_null
+                        time:   [8.5873 µs 9.0864 µs 9.6445 µs]
+Found 10 outliers among 100 measurements (10.00%)
+  3 (3.00%) high mild
+  7 (7.00%) high severe
+Benchmarking three_valued_sum/sum_nullable/10pct_null
+Benchmarking three_valued_sum/sum_nullable/10pct_null: Warming up for 3.0000 s
+Benchmarking three_valued_sum/sum_nullable/10pct_null: Collecting 100 samples in estimated 5.0037 s (651k iterations)
+Benchmarking three_valued_sum/sum_nullable/10pct_null: Analyzing
+three_valued_sum/sum_nullable/10pct_null
+                        time:   [7.4073 µs 7.6063 µs 7.8516 µs]
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+Benchmarking three_valued_sum/sum_nullable/50pct_null
+Benchmarking three_valued_sum/sum_nullable/50pct_null: Warming up for 3.0000 s
+Benchmarking three_valued_sum/sum_nullable/50pct_null: Collecting 100 samples in estimated 5.0119 s (1.2M iterations)
+Benchmarking three_valued_sum/sum_nullable/50pct_null: Analyzing
+three_valued_sum/sum_nullable/50pct_null
+                        time:   [3.9081 µs 4.0466 µs 4.2245 µs]
+Found 12 outliers among 100 measurements (12.00%)
+  4 (4.00%) high mild
+  8 (8.00%) high severe
+
+Benchmarking sum_nonnull/sum_nonnull_10pct_null_1k
+Benchmarking sum_nonnull/sum_nonnull_10pct_null_1k: Warming up for 3.0000 s
+Benchmarking sum_nonnull/sum_nonnull_10pct_null_1k: Collecting 100 samples in estimated 5.0033 s (641k iterations)
+Benchmarking sum_nonnull/sum_nonnull_10pct_null_1k: Analyzing
+sum_nonnull/sum_nonnull_10pct_null_1k
+                        time:   [7.1903 µs 7.3307 µs 7.5023 µs]
+Found 12 outliers among 100 measurements (12.00%)
+  6 (6.00%) high mild
+  6 (6.00%) high severe
+

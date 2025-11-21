@@ -74,5 +74,9 @@ name = "sea"
 path = "src/bin/sea.rs"
 required-features = ["cli"]
 
+[[bench]]
+name = "null_overhead"
+harness = false
+
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
