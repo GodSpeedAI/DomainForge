@@ -23,13 +23,23 @@ fn build_graph_with_optional_flow_attribute() -> Graph {
     graph.add_resource(product).unwrap();
 
     // Flow with missing optional attribute "tag"
-    let mut flow1 = Flow::new(product_id.clone(), warehouse_id.clone(), factory_id.clone(), Decimal::from_str("100").unwrap());
+    let mut flow1 = Flow::new(
+        product_id.clone(),
+        warehouse_id.clone(),
+        factory_id.clone(),
+        Decimal::from_str("100").unwrap(),
+    );
     // Explicitly set tag to Null so substitution finds the field and the evaluator treats it as NULL
     flow1.set_attribute("tag", serde_json::Value::Null);
     graph.add_flow(flow1).unwrap();
 
     // Flow with tag present
-    let mut flow2 = Flow::new(product_id.clone(), warehouse_id.clone(), factory_id.clone(), Decimal::from_str("200").unwrap());
+    let mut flow2 = Flow::new(
+        product_id.clone(),
+        warehouse_id.clone(),
+        factory_id.clone(),
+        Decimal::from_str("200").unwrap(),
+    );
     flow2.set_attribute("tag", serde_json::json!("X"));
     graph.add_flow(flow2).unwrap();
 

@@ -111,7 +111,11 @@ pub mod aggregators {
                 None => any_null = true,
             }
         }
-        if any_null { None } else { Some(total) }
+        if any_null {
+            None
+        } else {
+            Some(total)
+        }
     }
 
     /// Sum that ignores NULLs.

@@ -11,15 +11,15 @@ mod tests {
         let _lit_null = Expression::Literal(serde_json::Value::Null);
         let _lit_num = Expression::Literal(serde_json::json!(42));
         match _lit_true {
-            Expression::Literal(_) => {},
+            Expression::Literal(_) => {}
             _ => panic!("expected literal"),
         }
         match _lit_num {
-            Expression::Literal(_) => {},
+            Expression::Literal(_) => {}
             _ => panic!("expected literal"),
         }
         match _lit_null {
-            Expression::Literal(_) => {},
+            Expression::Literal(_) => {}
             _ => panic!("expected literal"),
         }
     }
@@ -27,10 +27,11 @@ mod tests {
     #[cfg(feature = "three_valued_logic")]
     #[test]
     fn aggregator_nulls() {
-        use sea_core::policy::three_valued::aggregators;
         use rust_decimal::Decimal;
+        use sea_core::policy::three_valued::aggregators;
 
-        let vals: Vec<Option<Decimal>> = vec![Some(Decimal::new(1, 0)), None, Some(Decimal::new(3, 0))];
+        let vals: Vec<Option<Decimal>> =
+            vec![Some(Decimal::new(1, 0)), None, Some(Decimal::new(3, 0))];
         assert_eq!(aggregators::sum_nullable(&vals), None);
         assert_eq!(aggregators::sum_nonnull(&vals), Decimal::new(4, 0));
         assert_eq!(aggregators::count_all(&vals), 3usize);

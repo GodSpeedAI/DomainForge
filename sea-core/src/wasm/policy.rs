@@ -48,12 +48,12 @@ pub struct EvaluationResult {
     /// Backward-compatible boolean result (false if evaluation is NULL)
     #[wasm_bindgen(readonly, js_name = isSatisfied)]
     pub is_satisfied: bool,
-    
+
     /// Three-valued result: true, false, or undefined (NULL)
     /// Note: In WASM, Option<bool> where None becomes undefined in JS
     #[wasm_bindgen(readonly, js_name = isSatisfiedTristate)]
     pub is_satisfied_tristate: Option<bool>,
-    
+
     /// List of violations
     #[wasm_bindgen(readonly)]
     pub violations: Vec<Violation>,

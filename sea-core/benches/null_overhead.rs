@@ -8,7 +8,13 @@ fn bench_sum_nullable(c: &mut Criterion) {
     let mut group = c.benchmark_group("three_valued_sum");
 
     let data_with_null: Vec<Option<Decimal>> = (0..1000)
-        .map(|i| if i % 10 == 0 { None } else { Some(Decimal::new(i, 0)) })
+        .map(|i| {
+            if i % 10 == 0 {
+                None
+            } else {
+                Some(Decimal::new(i, 0))
+            }
+        })
         .collect();
 
     group.bench_function("sum_nullable_1k", |b| {

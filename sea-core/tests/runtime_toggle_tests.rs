@@ -29,10 +29,7 @@ fn test_runtime_toggle_three_valued_logic() {
     assert_eq!(result_with_tristate.is_satisfied_tristate, None);
     assert_eq!(result_with_tristate.is_satisfied, false);
     assert_eq!(result_with_tristate.violations.len(), 1);
-    assert_eq!(
-    result_with_tristate.violations[0].severity,
-    Severity::Error
-);
+    assert_eq!(result_with_tristate.violations[0].severity, Severity::Error);
 
     // Test with three-valued logic disabled
     graph.set_evaluation_mode(false);
@@ -43,15 +40,15 @@ fn test_runtime_toggle_three_valued_logic() {
     assert_eq!(result_without_tristate.is_satisfied, false);
     assert_eq!(result_without_tristate.violations.len(), 1);
     assert_eq!(
-    result_without_tristate.violations[0].severity,
-    Severity::Error
-);
+        result_without_tristate.violations[0].severity,
+        Severity::Error
+    );
 }
 
 #[test]
 fn test_runtime_toggle_default_is_three_valued() {
     let graph = Graph::new();
-    
+
     // Default should be three-valued logic enabled
     assert_eq!(graph.use_three_valued_logic(), true);
 }
@@ -59,14 +56,14 @@ fn test_runtime_toggle_default_is_three_valued() {
 #[test]
 fn test_runtime_toggle_can_be_changed() {
     let mut graph = Graph::new();
-    
+
     // Start with default (three-valued enabled)
     assert_eq!(graph.use_three_valued_logic(), true);
-    
+
     // Disable three-valued logic
     graph.set_evaluation_mode(false);
     assert_eq!(graph.use_three_valued_logic(), false);
-    
+
     // Re-enable three-valued logic
     graph.set_evaluation_mode(true);
     assert_eq!(graph.use_three_valued_logic(), true);

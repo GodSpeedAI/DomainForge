@@ -1,7 +1,7 @@
 use super::expression::{BinaryOp, Expression, UnaryOp};
 use super::violation::{Severity, Violation};
-use crate::policy::ThreeValuedBool;
 use crate::graph::Graph;
+use crate::policy::ThreeValuedBool;
 use crate::{ConceptId, SemanticVersion};
 use serde::{Deserialize, Serialize};
 
@@ -200,7 +200,10 @@ impl Policy {
         })
     }
 
-    fn validate_aggregation_usage(expr: &Expression, in_boolean_context: bool) -> Result<(), String> {
+    fn validate_aggregation_usage(
+        expr: &Expression,
+        in_boolean_context: bool,
+    ) -> Result<(), String> {
         match expr {
             Expression::Aggregation { .. } | Expression::AggregationComprehension { .. } => {
                 if in_boolean_context {
@@ -219,7 +222,11 @@ impl Policy {
                 let child_boolean = matches!(op, UnaryOp::Not);
                 Self::validate_aggregation_usage(operand, child_boolean)
             }
-            Expression::Quantifier { collection, condition, .. } => {
+            Expression::Quantifier {
+                collection,
+                condition,
+                ..
+            } => {
                 Self::validate_aggregation_usage(collection, false)?;
                 Self::validate_aggregation_usage(condition, true)
             }
@@ -227,7 +234,11 @@ impl Policy {
         }
     }
 
-    fn evaluate_expression_boolean(&self, expr: &Expression, graph: &Graph) -> Result<bool, String> {
+    fn evaluate_expression_boolean(
+        &self,
+        expr: &Expression,
+        graph: &Graph,
+    ) -> Result<bool, String> {
         match expr {
             Expression::Literal(v) => v
                 .as_bool()
@@ -535,7 +546,11 @@ impl Policy {
             .ok_or_else(|| "Expected string value".to_string())
     }
 
-    fn get_runtime_value(&self, expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
+    fn get_runtime_value(
+        &self,
+        expr: &Expression,
+        graph: &Graph,
+    ) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),
             Expression::MemberAccess { object, member } => {
@@ -554,14 +569,16 @@ impl Policy {
                             if val.is_null() {
                                 log::debug!(
                                     "Entity '{}' member '{}' present but NULL; returning Null",
-                                    object, member
+                                    object,
+                                    member
                                 );
                             }
                             return Ok(val.clone());
                         }
                         log::debug!(
                             "Entity '{}' found but member '{}' missing; returning Null",
-                            object, member
+                            object,
+                            member
                         );
                         return Ok(serde_json::Value::Null);
                     } else {
@@ -573,7 +590,8 @@ impl Policy {
                 } else {
                     log::debug!(
                         "Entity '{}' not found while resolving member '{}'; continuing lookup",
-                        object, member
+                        object,
+                        member
                     );
                 }
 
@@ -590,14 +608,16 @@ impl Policy {
                             if val.is_null() {
                                 log::debug!(
                                     "Resource '{}' member '{}' present but NULL; returning Null",
-                                    object, member
+                                    object,
+                                    member
                                 );
                             }
                             return Ok(val.clone());
                         }
                         log::debug!(
                             "Resource '{}' found but member '{}' missing; returning Null",
-                            object, member
+                            object,
+                            member
                         );
                         return Ok(serde_json::Value::Null);
                     } else {
@@ -609,27 +629,55 @@ impl Policy {
                 } else {
                     log::debug!(
                         "Resource '{}' not found while resolving member '{}'; returning Null",
-                        object, member
+                        object,
+                        member
                     );
                 }
 
                 // Not found: return Null to indicate unknown member
                 log::debug!(
                     "Member access '{}.{}' did not resolve to entity or resource; returning Null",
-                    object, member
+                    object,
+                    member
                 );
                 Ok(serde_json::Value::Null)
             }
-            Expression::Aggregation { function, collection, field, filter } => {
-                let v = Expression::evaluate_aggregation(function, collection, field, filter, graph)?;
+            Expression::Aggregation {
+                function,
+                collection,
+                field,
+                filter,
+            } => {
+                let v =
+                    Expression::evaluate_aggregation(function, collection, field, filter, graph)?;
                 Ok(v)
             }
-            Expression::AggregationComprehension { function, variable, collection, predicate, projection, target_unit } => {
-                let v = Expression::evaluate_aggregation_comprehension(function, variable, collection, predicate, projection, target_unit.as_deref(), graph)?;
+            Expression::AggregationComprehension {
+                function,
+                variable,
+                collection,
+                predicate,
+                projection,
+                target_unit,
+            } => {
+                let v = Expression::evaluate_aggregation_comprehension(
+                    function,
+                    variable,
+                    collection,
+                    predicate,
+                    projection,
+                    target_unit.as_deref(),
+                    graph,
+                )?;
                 Ok(v)
             }
-            Expression::QuantityLiteral { value, unit } => Ok(serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit})),
-            _ => Err("Expected a runtime-resolvable expression (literal, member access, or aggregation)".to_string()),
+            Expression::QuantityLiteral { value, unit } => Ok(
+                serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit}),
+            ),
+            _ => Err(
+                "Expected a runtime-resolvable expression (literal, member access, or aggregation)"
+                    .to_string(),
+            ),
         }
     }
 }

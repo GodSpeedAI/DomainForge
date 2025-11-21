@@ -1,7 +1,7 @@
+use super::three_valued::aggregators::sum_nullable;
 /// Simple micro-benchmark using std::time::Instant
 /// Run with: cargo test --release -- --nocapture --ignored bench_microbench
 use rust_decimal::Decimal;
-use super::three_valued::aggregators::sum_nullable;
 
 #[cfg(test)]
 mod microbench {
@@ -16,9 +16,7 @@ mod microbench {
         const WARMUP_ITERS: usize = 100;
 
         // Baseline: strict sum with manual loop (more comparable to nullable version)
-        let data_strict: Vec<Decimal> = (0..DATA_SIZE)
-            .map(|i| Decimal::new(i as i64, 0))
-            .collect();
+        let data_strict: Vec<Decimal> = (0..DATA_SIZE).map(|i| Decimal::new(i as i64, 0)).collect();
 
         let expected_strict_sum: Decimal = data_strict.iter().copied().sum();
 

@@ -452,10 +452,7 @@ fn test_violation_severity_obligation() {
         .with_modality(DeonticModality::Obligation);
 
     let result = policy.evaluate(&Graph::new()).unwrap();
-    assert_eq!(
-    result.violations[0].severity,
-    Severity::Error
-);
+    assert_eq!(result.violations[0].severity, Severity::Error);
 }
 
 #[test]
@@ -464,10 +461,7 @@ fn test_violation_severity_prohibition() {
         .with_modality(DeonticModality::Prohibition);
 
     let result = policy.evaluate(&Graph::new()).unwrap();
-    assert_eq!(
-    result.violations[0].severity,
-    Severity::Error
-);
+    assert_eq!(result.violations[0].severity, Severity::Error);
 }
 
 #[test]
@@ -476,10 +470,7 @@ fn test_violation_severity_permission() {
         .with_modality(DeonticModality::Permission);
 
     let result = policy.evaluate(&Graph::new()).unwrap();
-    assert_eq!(
-    result.violations[0].severity,
-    Severity::Info
-);
+    assert_eq!(result.violations[0].severity, Severity::Info);
 }
 
 #[test]
