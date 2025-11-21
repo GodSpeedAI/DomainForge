@@ -102,6 +102,9 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::graph::Graph>()?;
     m.add_class::<python::registry::NamespaceRegistry>()?;
     m.add_class::<python::registry::NamespaceBinding>()?;
+    m.add_class::<python::policy::Severity>()?;
+    m.add_class::<python::policy::Violation>()?;
+    m.add_class::<python::policy::EvaluationResult>()?;
 
     Ok(())
 }

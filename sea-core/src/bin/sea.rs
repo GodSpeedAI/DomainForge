@@ -1,3 +1,4 @@
+#[cfg(feature = "shacl")]
 use sea_core::kg_import::ImportError;
 use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
 use sea_core::{import_kg_turtle, Graph, NamespaceRegistry};
@@ -14,6 +15,10 @@ fn main() {
 
     let command = &args[1];
     match command.as_str() {
+        "--version" | "-v" => {
+            println!("sea {}", env!("CARGO_PKG_VERSION"));
+            std::process::exit(0);
+        }
         "validate" => {
             let target = match args.get(2) {
                 Some(value) => PathBuf::from(value),

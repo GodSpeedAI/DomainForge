@@ -113,7 +113,11 @@ impl Expression {
                     if let Some(field_value) = value.get(field) {
                         Ok(Expression::Literal(field_value.clone()))
                     } else {
-                        Err(format!("Field '{}' not found in value", field))
+                        // For three-valued semantics, if a field is missing in a substituted
+                        // value, treat it as NULL/unknown rather than a fatal error. That way
+                        // quantifiers and nested expressions can evaluate to NULL when data
+                        // is optional.
+                        Ok(Expression::Literal(serde_json::Value::Null))
                     }
                 } else {
                     Ok(self.clone())
@@ -158,7 +162,7 @@ impl Expression {
                     if let Some(field_value) = value.get(member) {
                         Ok(Expression::Literal(field_value.clone()))
                     } else {
-                        Err(format!("Field '{}' not found in value", member))
+                        Ok(Expression::Literal(serde_json::Value::Null))
                     }
                 } else {
                     Ok(self.clone())
@@ -197,78 +201,119 @@ impl Expression {
         }
     }
 
-    fn get_collection(expr: &Expression, graph: &Graph) -> Result<Vec<serde_json::Value>, String> {
+    pub(crate) fn get_collection(
+        expr: &Expression,
+        graph: &Graph,
+    ) -> Result<Vec<serde_json::Value>, String> {
         match expr {
-            Expression::Variable(name) => {
-                match name.as_str() {
-                    "flows" => {
-                        let flows: Result<Vec<serde_json::Value>, String> = graph
-                            .all_flows()
-                            .iter()
-                            .map(|f| {
-                                let quantity = f.quantity().to_f64().ok_or_else(|| {
-                                    format!(
-                                        "Failed to convert flow quantity {} to f64",
-                                        f.quantity()
-                                    )
-                                })?;
-                                Ok(serde_json::json!({
-                                    "id": f.id().to_string(), // Keep as string for JSON compatibility
-                                    "from_entity": f.from_id().to_string(),
-                                    "to_entity": f.to_id().to_string(),
-                                    "resource": f.resource_id().to_string(),
-                                    "quantity": quantity,
-                                }))
-                            })
-                            .collect();
-                        flows
-                    }
-                    "entities" => {
-                        let entities: Vec<serde_json::Value> = graph
-                            .all_entities()
-                            .iter()
-                            .map(|e| {
-                                serde_json::json!({
-                                    "id": e.id().to_string(),
-                                    "name": e.name(),
-                                    "namespace": e.namespace(),
-                                })
-                            })
-                            .collect();
-                        Ok(entities)
-                    }
-                    "resources" => {
-                        let resources: Vec<serde_json::Value> = graph
-                            .all_resources()
-                            .iter()
-                            .map(|r| {
-                                serde_json::json!({
-                                    "id": r.id().to_string(),
-                                    "name": r.name(),
-                                    "namespace": r.namespace(),
-                                    "unit": r.unit(),
-                                })
-                            })
-                            .collect();
-                        Ok(resources)
-                    }
-                    "instances" => {
-                        let instances: Vec<serde_json::Value> = graph
-                            .all_instances()
-                            .iter()
-                            .map(|i| {
-                                serde_json::json!({
-                                    "id": i.id().to_string(),
-                                    "entity": i.entity_id().to_string(),
-                                    "resource": i.resource_id().to_string(),
-                                })
-                            })
-                            .collect();
-                        Ok(instances)
-                    }
-                    _ => Err(format!("Unknown collection: {}", name)),
+            Expression::Variable(name) => match name.as_str() {
+                "flows" => {
+                    let flows: Result<Vec<serde_json::Value>, String> = graph
+                        .all_flows()
+                        .iter()
+                        .map(|f| {
+                            let quantity = f.quantity().to_f64().ok_or_else(|| {
+                                format!("Failed to convert flow quantity {} to f64", f.quantity())
+                            })?;
+
+                            let mut map = serde_json::Map::new();
+                            map.insert("id".to_string(), serde_json::json!(f.id().to_string()));
+                            map.insert(
+                                "from_entity".to_string(),
+                                serde_json::json!(f.from_id().to_string()),
+                            );
+                            map.insert(
+                                "to_entity".to_string(),
+                                serde_json::json!(f.to_id().to_string()),
+                            );
+                            map.insert(
+                                "resource".to_string(),
+                                serde_json::json!(f.resource_id().to_string()),
+                            );
+                            map.insert("quantity".to_string(), serde_json::json!(quantity));
+
+                            for (k, v) in f.attributes().iter() {
+                                if matches!(
+                                    k.as_str(),
+                                    "id" | "from_entity" | "to_entity" | "resource" | "quantity"
+                                ) || map.contains_key(k)
+                                {
+                                    continue;
+                                }
+                                map.insert(k.clone(), v.clone());
+                            }
+                            Ok(serde_json::Value::Object(map))
+                        })
+                        .collect();
+                    flows
                 }
-            }
+                "entities" => {
+                    let entities: Vec<serde_json::Value> = graph
+                        .all_entities()
+                        .iter()
+                        .map(|e| {
+                            serde_json::json!({
+                                "id": e.id().to_string(),
+                                "name": e.name(),
+                                "namespace": e.namespace(),
+                            })
+                        })
+                        .collect();
+                    Ok(entities)
+                }
+                "resources" => {
+                    let resources: Vec<serde_json::Value> = graph
+                        .all_resources()
+                        .iter()
+                        .map(|r| {
+                            let mut map = serde_json::Map::new();
+                            map.insert("id".to_string(), serde_json::json!(r.id().to_string()));
+                            map.insert("name".to_string(), serde_json::json!(r.name()));
+                            map.insert("namespace".to_string(), serde_json::json!(r.namespace()));
+                            map.insert("unit".to_string(), serde_json::json!(r.unit()));
+                            for (k, v) in r.attributes().iter() {
+                                if matches!(k.as_str(), "id" | "name" | "namespace" | "unit")
+                                    || map.contains_key(k)
+                                {
+                                    continue;
+                                }
+                                map.insert(k.clone(), v.clone());
+                            }
+                            serde_json::Value::Object(map)
+                        })
+                        .collect();
+                    Ok(resources)
+                }
+                "instances" => {
+                    let instances: Vec<serde_json::Value> = graph
+                        .all_instances()
+                        .iter()
+                        .map(|i| {
+                            let mut map = serde_json::Map::new();
+                            map.insert("id".to_string(), serde_json::json!(i.id().to_string()));
+                            map.insert(
+                                "entity".to_string(),
+                                serde_json::json!(i.entity_id().to_string()),
+                            );
+                            map.insert(
+                                "resource".to_string(),
+                                serde_json::json!(i.resource_id().to_string()),
+                            );
+                            for (k, v) in i.attributes().iter() {
+                                if matches!(k.as_str(), "id" | "entity" | "resource")
+                                    || map.contains_key(k)
+                                {
+                                    continue;
+                                }
+                                map.insert(k.clone(), v.clone());
+                            }
+                            serde_json::Value::Object(map)
+                        })
+                        .collect();
+                    Ok(instances)
+                }
+                _ => Err(format!("Unknown collection: {}", name)),
+            },
             _ => Err("Collection expression must be a variable".to_string()),
         }
     }
@@ -277,7 +322,7 @@ impl Expression {
         matches!(expr, Expression::Literal(v) if v.as_bool() == Some(true))
     }
 
-    fn evaluate_aggregation(
+    pub(crate) fn evaluate_aggregation(
         function: &AggregateFunction,
         collection: &Expression,
         field: &Option<String>,
@@ -443,7 +488,7 @@ impl Expression {
         }
     }
 
-    fn evaluate_aggregation_comprehension(
+    pub(crate) fn evaluate_aggregation_comprehension(
         function: &AggregateFunction,
         variable: &str,
         collection: &Expression,
@@ -492,7 +537,7 @@ impl Expression {
         }
     }
 
-    fn fold_numeric(
+    pub(crate) fn fold_numeric(
         function: &AggregateFunction,
         values: &[serde_json::Value],
         target_unit: Option<&str>,
@@ -580,6 +625,11 @@ impl Expression {
     ) -> Result<Expression, String> {
         match (&left, &right) {
             (Expression::Literal(left_value), Expression::Literal(right_value)) => {
+                // Preserve tri-state semantics: if either operand is NULL, yield NULL.
+                if left_value.is_null() || right_value.is_null() {
+                    return Ok(Expression::Literal(serde_json::Value::Null));
+                }
+
                 let reduced = match op {
                     BinaryOp::Equal => serde_json::json!(left_value == right_value),
                     BinaryOp::NotEqual => serde_json::json!(left_value != right_value),
@@ -602,15 +652,36 @@ impl Expression {
                         }
                     }
                     BinaryOp::And | BinaryOp::Or => {
-                        let left_bool = left_value
-                            .as_bool()
-                            .ok_or_else(|| "Left operand is not boolean".to_string())?;
-                        let right_bool = right_value
-                            .as_bool()
-                            .ok_or_else(|| "Right operand is not boolean".to_string())?;
+                        let left_bool = match left_value {
+                            serde_json::Value::Bool(b) => Some(*b),
+                            serde_json::Value::Null => None,
+                            _ => return Err("Left operand is not boolean".to_string()),
+                        };
+                        let right_bool = match right_value {
+                            serde_json::Value::Bool(b) => Some(*b),
+                            serde_json::Value::Null => None,
+                            _ => return Err("Right operand is not boolean".to_string()),
+                        };
+
                         match op {
-                            BinaryOp::And => serde_json::json!(left_bool && right_bool),
-                            BinaryOp::Or => serde_json::json!(left_bool || right_bool),
+                            BinaryOp::And => {
+                                if left_bool == Some(false) || right_bool == Some(false) {
+                                    serde_json::json!(false)
+                                } else if left_bool.is_none() || right_bool.is_none() {
+                                    serde_json::Value::Null
+                                } else {
+                                    serde_json::json!(left_bool.unwrap() && right_bool.unwrap())
+                                }
+                            }
+                            BinaryOp::Or => {
+                                if left_bool == Some(true) || right_bool == Some(true) {
+                                    serde_json::json!(true)
+                                } else if left_bool.is_none() || right_bool.is_none() {
+                                    serde_json::Value::Null
+                                } else {
+                                    serde_json::json!(left_bool.unwrap() || right_bool.unwrap())
+                                }
+                            }
                             _ => unreachable!(),
                         }
                     }

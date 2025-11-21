@@ -232,6 +232,28 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Add association error: {}", e)))
     }
 
+    fn evaluate_policy(&self, policy_json: String) -> PyResult<super::policy::EvaluationResult> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| PyValueError::new_err(format!("Invalid Policy JSON: {}", e)))?;
+        let result = policy
+            .evaluate(&self.inner)
+            .map_err(|e| PyValueError::new_err(format!("Policy evaluation error: {}", e)))?;
+        Ok(result.into())
+    }
+
+    /// Set the evaluation mode for policy evaluation.
+    /// When `use_three_valued_logic` is True, policies will use three-valued logic (True, False, NULL).
+    /// When False, policies will use strict boolean logic (True, False).
+    fn set_evaluation_mode(&mut self, use_three_valued_logic: bool) {
+        self.inner.set_evaluation_mode(use_three_valued_logic);
+    }
+
+    /// Get the current evaluation mode.
+    /// Returns True if three-valued logic is enabled, False otherwise.
+    fn use_three_valued_logic(&self) -> bool {
+        self.inner.use_three_valued_logic()
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "Graph(entities={}, resources={}, flows={}, instances={})",

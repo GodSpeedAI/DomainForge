@@ -213,4 +213,25 @@ impl Resource {
     pub fn get_attribute(&self, key: &str) -> Option<&Value> {
         self.attributes.get(key)
     }
+
+    /// Returns all attributes as a reference.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use sea_core::primitives::Resource;
+    /// use sea_core::units::unit_from_string;
+    /// use serde_json::json;
+    ///
+    /// let mut resource = Resource::new_with_namespace("Gold", unit_from_string("kg"), "default".to_string());
+    /// resource.set_attribute("purity", json!(0.999));
+    /// resource.set_attribute("origin", json!("South Africa"));
+    ///
+    /// let attrs = resource.attributes();
+    /// assert_eq!(attrs.len(), 2);
+    /// assert_eq!(attrs.get("purity"), Some(&json!(0.999)));
+    /// ```
+    pub fn attributes(&self) -> &HashMap<String, Value> {
+        &self.attributes
+    }
 }

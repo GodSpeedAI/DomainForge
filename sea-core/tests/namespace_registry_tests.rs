@@ -5,7 +5,7 @@ use tempfile::tempdir;
 #[test]
 fn registry_loads_and_matches_patterns() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let logistics_dir = base.join("domains/logistics");
     fs::create_dir_all(&logistics_dir).unwrap();
@@ -46,7 +46,7 @@ patterns = ["domains/logistics/**/*.sea"]
 #[test]
 fn namespace_precedence_longest_prefix() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let logistics_dir = base.join("domains/logistics");
     fs::create_dir_all(&logistics_dir).unwrap();
@@ -80,7 +80,7 @@ patterns = ["domains/logistics/**/*.sea"]
 #[test]
 fn namespace_precedence_tie_break_alpha() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let logistics_dir = base.join("domains/logistics");
     fs::create_dir_all(&logistics_dir).unwrap();
@@ -114,7 +114,7 @@ patterns = ["domains/*/warehouse.sea"]
 #[test]
 fn namespace_precedence_error_on_ambiguity() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let logistics_dir = base.join("domains/logistics");
     fs::create_dir_all(&logistics_dir).unwrap();
@@ -148,7 +148,7 @@ patterns = ["domains/*/warehouse.sea"]
 #[test]
 fn registry_detects_conflict() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let logistics_dir = base.join("domains/logistics");
     fs::create_dir_all(&logistics_dir).unwrap();
@@ -183,7 +183,7 @@ patterns = ["domains/logistics/**/*.sea"]
 #[test]
 fn registry_resolve_files_error_on_ambiguity() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let logistics_dir = base.join("domains/logistics");
     fs::create_dir_all(&logistics_dir).unwrap();
@@ -216,7 +216,7 @@ patterns = ["domains/*/warehouse.sea"]
 #[test]
 fn discover_finds_parent_registry() {
     let temp = tempdir().unwrap();
-    let base = temp.path();
+    let base = temp.path().canonicalize().unwrap();
 
     let subdir = base.join("a/b/c");
     fs::create_dir_all(&subdir).unwrap();

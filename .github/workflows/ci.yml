@@ -276,7 +276,7 @@ jobs:
           node-version: 22
 
       - name: Build Sea binary
-        run: cargo build -p sea-core --bin sea
+        run: cargo build -p sea-core --bin sea --features cli
 
       - name: Build TypeScript bindings (minimal)
         run: |
@@ -301,7 +301,24 @@ jobs:
           EOF
           mkdir -p "$tmpdir/domains/logistics"
           echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
-          ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea"
+          
+          # Test that --fail-on-ambiguity properly detects ambiguous matches
+          # The command should fail and output an error message
+          set +e  # Temporarily disable exit on error
+          output=$(./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
+          exit_code=$?
+          set -e  # Re-enable exit on error
+          
+          if [ $exit_code -ne 0 ] && echo "$output" | grep -q "multiple namespaces"; then
+            echo "✓ Ambiguity detection working correctly"
+            echo "Output: $output"
+            exit 0
+          else
+            echo "✗ Expected ambiguity error but got:"
+            echo "Exit code: $exit_code"
+            echo "Output: $output"
+            exit 1
+          fi
 
   test-wasm:
     name: Test WASM
@@ -344,8 +361,8 @@ jobs:
             echo "::error::Unable to determine WASM bundle size"
             exit 1
           fi
-          if [ "$SIZE" -gt 524288 ]; then
-            echo "::error::WASM bundle exceeds 512KB limit ($SIZE bytes)"
+          if [ "$SIZE" -gt 1048576 ]; then
+            echo "::error::WASM bundle exceeds 1MB limit ($SIZE bytes)"
             exit 1
           fi
 

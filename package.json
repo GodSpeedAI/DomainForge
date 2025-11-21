@@ -5,8 +5,8 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "napi build --platform --release --cargo-cwd sea-core --features typescript",
-    "build:debug": "napi build --platform --cargo-cwd sea-core --features typescript",
+    "build": "napi build --platform --release --cargo-cwd sea-core --features typescript,three_valued_logic",
+    "build:debug": "napi build --platform --cargo-cwd sea-core --features typescript,three_valued_logic",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"

@@ -112,7 +112,7 @@ Create comprehensive projection mapping specifications in `sea-core/docs/specs/p
 
 ---
 
-#### [ ] 2. Operator Precedence Documentation and Three-Valued NULL Logic
+#### [x] 2. Operator Precedence Documentation and Three-Valued NULL Logic
 
 **Duration**: 1.5 weeks | **Priority**: P0 | **Complexity**: Medium
 

@@ -1,14 +1,15 @@
 mod core;
 mod expression;
 mod quantifier;
+pub mod three_valued;
 mod type_infer;
 mod violation;
-#[cfg(feature = "three_valued_logic")]
-mod three_valued;
+
+#[cfg(test)]
+mod three_valued_microbench;
 
 pub use core::{DeonticModality, EvaluationResult, Policy, PolicyKind, PolicyModality};
 pub use expression::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
+pub use three_valued::ThreeValuedBool;
 pub use type_infer::{infer_expression_type, ExpressionType};
 pub use violation::{Severity, Violation};
-#[cfg(feature = "three_valued_logic")]
-pub use three_valued::{ThreeValuedBool, aggregators as three_valued_aggregators};

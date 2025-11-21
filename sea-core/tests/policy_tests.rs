@@ -316,6 +316,39 @@ fn test_evaluate_not_false() {
 }
 
 #[test]
+fn member_access_missing_in_boolean_mode_returns_false_with_violation() {
+    let mut graph = build_sample_graph();
+    graph.set_evaluation_mode(false); // strict boolean path
+
+    let expr = Expression::member_access("Unknown", "attr");
+    let policy = Policy::new("Missing Member", expr);
+
+    let result = policy.evaluate(&graph).unwrap();
+
+    assert!(!result.is_satisfied);
+    assert_eq!(result.violations.len(), 1);
+}
+
+#[test]
+fn quantity_literal_boolean_context_errors() {
+    let graph = build_sample_graph();
+
+    let expr = Expression::QuantityLiteral {
+        value: Decimal::from(5),
+        unit: "kg".to_string(),
+    };
+
+    let policy = Policy::new("Quantity Bool Context", expr);
+    let err = policy.evaluate(&graph).unwrap_err();
+
+    assert!(
+        err.contains("quantity"),
+        "Expected quantity conversion error, got: {}",
+        err
+    );
+}
+
+#[test]
 fn test_evaluate_numeric_comparison_greater_than() {
     let graph = build_sample_graph();
 

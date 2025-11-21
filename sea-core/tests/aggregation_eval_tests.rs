@@ -52,6 +52,28 @@ fn test_count_flows() {
 }
 
 #[test]
+fn aggregation_in_boolean_context_errors() {
+    let graph = build_test_graph();
+
+    let policy = Policy::new(
+        "Bare Aggregation",
+        Expression::aggregation(
+            AggregateFunction::Count,
+            Expression::variable("flows"),
+            None::<&str>,
+            None,
+        ),
+    );
+
+    let err = policy.evaluate(&graph).unwrap_err();
+    assert!(
+        err.contains("Aggregation in boolean context requires explicit comparison"),
+        "Unexpected error: {}",
+        err
+    );
+}
+
+#[test]
 fn test_sum_quantities() {
     let graph = build_test_graph();
 

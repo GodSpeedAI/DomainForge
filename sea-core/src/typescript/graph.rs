@@ -260,6 +260,37 @@ impl Graph {
             .map_err(Error::from_reason)
     }
 
+    /// Evaluate a Policy JSON payload against this Graph.
+    ///
+    /// The `policy_json` argument must be the JSON representation of `crate::policy::Policy`
+    /// (including fields like `id`, `name`, `modality`, `kind`, `version`, and `expression`).
+    /// Returns `EvaluationResult` exposed to TypeScript via napi, or an error if the policy JSON
+    /// is invalid or evaluation fails.
+    #[napi]
+    pub fn evaluate_policy(&self, policy_json: String) -> Result<super::policy::EvaluationResult> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| Error::from_reason(format!("Invalid Policy JSON: {}", e)))?;
+        let result = policy
+            .evaluate(&self.inner)
+            .map_err(|e| Error::from_reason(format!("Policy evaluation error: {}", e)))?;
+        Ok(result.into())
+    }
+
+    /// Set the evaluation mode for policy evaluation.
+    /// When `useThreeValuedLogic` is true, policies will use three-valued logic (true, false, null).
+    /// When false, policies will use strict boolean logic (true, false).
+    #[napi]
+    pub fn set_evaluation_mode(&mut self, use_three_valued_logic: bool) {
+        self.inner.set_evaluation_mode(use_three_valued_logic);
+    }
+
+    /// Get the current evaluation mode.
+    /// Returns true if three-valued logic is enabled, false otherwise.
+    #[napi]
+    pub fn use_three_valued_logic(&self) -> bool {
+        self.inner.use_three_valued_logic()
+    }
+
     #[napi]
     pub fn to_string(&self) -> String {
         format!(
