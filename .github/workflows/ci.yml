@@ -276,7 +276,7 @@ jobs:
           node-version: 22
 
       - name: Build Sea binary
-        run: cargo build -p sea-core --bin sea
+        run: cargo build -p sea-core --bin sea --features cli
 
       - name: Build TypeScript bindings (minimal)
         run: |
