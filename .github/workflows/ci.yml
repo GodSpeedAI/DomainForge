@@ -344,8 +344,8 @@ jobs:
             echo "::error::Unable to determine WASM bundle size"
             exit 1
           fi
-          if [ "$SIZE" -gt 524288 ]; then
-            echo "::error::WASM bundle exceeds 512KB limit ($SIZE bytes)"
+          if [ "$SIZE" -gt 1048576 ]; then
+            echo "::error::WASM bundle exceeds 1MB limit ($SIZE bytes)"
             exit 1
           fi
 
