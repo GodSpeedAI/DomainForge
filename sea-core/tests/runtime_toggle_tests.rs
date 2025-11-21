@@ -29,7 +29,10 @@ fn test_runtime_toggle_three_valued_logic() {
     assert_eq!(result_with_tristate.is_satisfied_tristate, None);
     assert_eq!(result_with_tristate.is_satisfied, false);
     assert_eq!(result_with_tristate.violations.len(), 1);
-    assert_eq!(result_with_tristate.violations[0].severity, Severity::Error);
+    assert_eq!(
+    result_with_tristate.violations[0].severity,
+    Severity::Error
+);
 
     // Test with three-valued logic disabled
     graph.set_evaluation_mode(false);
@@ -39,7 +42,10 @@ fn test_runtime_toggle_three_valued_logic() {
     assert_eq!(result_without_tristate.is_satisfied_tristate, Some(false));
     assert_eq!(result_without_tristate.is_satisfied, false);
     assert_eq!(result_without_tristate.violations.len(), 1);
-    assert_eq!(result_without_tristate.violations[0].severity, Severity::Error);
+    assert_eq!(
+    result_without_tristate.violations[0].severity,
+    Severity::Error
+);
 }
 
 #[test]
