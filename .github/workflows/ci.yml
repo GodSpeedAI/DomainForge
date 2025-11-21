@@ -301,7 +301,15 @@ jobs:
           EOF
           mkdir -p "$tmpdir/domains/logistics"
           echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
-          ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea"
+          
+          # Test that --fail-on-ambiguity properly detects ambiguous matches
+          if ./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1 | grep -q "matched multiple namespaces"; then
+            echo "✓ Ambiguity detection working correctly"
+            exit 0
+          else
+            echo "✗ Expected ambiguity error but got different result"
+            exit 1
+          fi
 
   test-wasm:
     name: Test WASM
