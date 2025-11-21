@@ -12,4 +12,4 @@ pub use core::{DeonticModality, EvaluationResult, Policy, PolicyKind, PolicyModa
 pub use expression::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
 pub use type_infer::{infer_expression_type, ExpressionType};
 pub use violation::{Severity, Violation};
-pub use three_valued::{ThreeValuedBool, aggregators as three_valued_aggregators};
+pub use three_valued::ThreeValuedBool;

@@ -110,7 +110,7 @@ describe('NamespaceRegistry (TS)', () => {
         }
         expect(threw).toBe(true);
 
-        // resolve_files should error as well
+        // resolveFiles should error as well
         threw = false;
         try {
             reg.resolveFiles(true);

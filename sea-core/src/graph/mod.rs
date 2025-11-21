@@ -66,7 +66,6 @@ impl Graph {
         &mut self.config
     }
 
-
     pub fn entity_count(&self) -> usize {
         self.entities.len()
     }
@@ -434,8 +433,10 @@ impl Graph {
     /// collecting any violations produced. Returns a `ValidationResult`.
     pub fn validate(&self) -> ValidationResult {
         let mut all_violations: Vec<Violation> = Vec::new();
+        let use_three_valued_logic = self.config.use_three_valued_logic;
+
         for policy in self.policies.values() {
-            match policy.evaluate(self) {
+            match policy.evaluate_with_mode(self, use_three_valued_logic) {
                 Ok(eval) => {
                     all_violations.extend(eval.violations);
                 }

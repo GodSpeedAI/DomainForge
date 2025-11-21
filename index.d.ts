@@ -44,7 +44,7 @@ export interface EvaluationResult {
   /** Backwards compatible boolean: false if evaluation is unknown (NULL) */
   isSatisfied: boolean
   /** Tri-state evaluation result: true, false, or null (NULL) */
-  isSatisfiedTristate?: boolean
+  isSatisfiedTristate?: boolean | null
   /** List of violations */
   violations: Array<Violation>
 }
@@ -141,7 +141,7 @@ export declare class NamespaceBinding {
 }
 export declare class NamespaceRegistry {
   static fromFile(path: string): NamespaceRegistry
-  static discover(path: string): Self | null
+  static discover(path: string): NamespaceRegistry | null
   resolveFiles(failOnAmbiguity?: boolean | undefined | null): Array<NamespaceBinding>
   namespaceFor(path: string, failOnAmbiguity?: boolean | undefined | null): string
   get root(): string

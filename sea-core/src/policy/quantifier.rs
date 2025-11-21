@@ -639,15 +639,36 @@ impl Expression {
                         }
                     }
                     BinaryOp::And | BinaryOp::Or => {
-                        let left_bool = left_value
-                            .as_bool()
-                            .ok_or_else(|| "Left operand is not boolean".to_string())?;
-                        let right_bool = right_value
-                            .as_bool()
-                            .ok_or_else(|| "Right operand is not boolean".to_string())?;
+                        let left_bool = match left_value {
+                            serde_json::Value::Bool(b) => Some(*b),
+                            serde_json::Value::Null => None,
+                            _ => return Err("Left operand is not boolean".to_string()),
+                        };
+                        let right_bool = match right_value {
+                            serde_json::Value::Bool(b) => Some(*b),
+                            serde_json::Value::Null => None,
+                            _ => return Err("Right operand is not boolean".to_string()),
+                        };
+
                         match op {
-                            BinaryOp::And => serde_json::json!(left_bool && right_bool),
-                            BinaryOp::Or => serde_json::json!(left_bool || right_bool),
+                            BinaryOp::And => {
+                                if left_bool == Some(false) || right_bool == Some(false) {
+                                    serde_json::json!(false)
+                                } else if left_bool.is_none() || right_bool.is_none() {
+                                    serde_json::Value::Null
+                                } else {
+                                    serde_json::json!(left_bool.unwrap() && right_bool.unwrap())
+                                }
+                            }
+                            BinaryOp::Or => {
+                                if left_bool == Some(true) || right_bool == Some(true) {
+                                    serde_json::json!(true)
+                                } else if left_bool.is_none() || right_bool.is_none() {
+                                    serde_json::Value::Null
+                                } else {
+                                    serde_json::json!(left_bool.unwrap() || right_bool.unwrap())
+                                }
+                            }
                             _ => unreachable!(),
                         }
                     }

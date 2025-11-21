@@ -100,7 +100,7 @@ pub struct Violation {
 impl Violation {
     fn __repr__(&self) -> String {
         format!(
-            "Violation(name='{}', message='{}', severity={:?})",
+            "Violation(name='{}', message='{}', severity='{:?}')",
             self.name, self.message, self.severity
         )
     }

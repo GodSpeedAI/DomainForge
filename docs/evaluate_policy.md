@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `evaluate_policy` method provides a unified interface for evaluating SEA DSL policies against a graph Python, TypeScript/JavaScript and WebAssembly. It supports three-valued logic (True, False, NULL) for handling indeterminate evaluation results.
+The `evaluate_policy` method provides a unified interface for evaluating SEA DSL policies against a graph in Python, TypeScript/JavaScript and WebAssembly. It supports three-valued logic (True, False, NULL) for handling indeterminate evaluation results.
 
 ## API Reference
 
@@ -165,7 +165,7 @@ NULL evaluation results occur when:
 - Graph state is incomplete
 - Policy expression references non-existent entities or resources
 
-When a NULL result occurs, a violation is added using the policy modality's severity (Obligations/Prohibitions -> `Error`, Permissions -> `Info`) to explain the indeterminate state.
+When a NULL result occurs, a violation is added using the policy modality's severity: obligations and prohibitions are enforcement rules and map to `Error`, while permissions are advisory and map to `Info`. This clarifies the indeterminate state without silently ignoring missing data.
 
 ### Runtime Configuration
 

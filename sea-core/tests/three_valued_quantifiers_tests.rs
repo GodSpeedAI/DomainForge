@@ -140,5 +140,9 @@ fn test_nested_null_propagation_and_forall_unknown() {
     let result = policy.evaluate(&graph).unwrap();
     // All flows have Null tag; equality is Null -> AND is Null -> ForAll over Nulls yields Null
     assert_eq!(result.is_satisfied_tristate, None);
+    assert!(
+        !result.violations.is_empty(),
+        "Expected at least one violation when evaluation is NULL"
+    );
     assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Error);
 }

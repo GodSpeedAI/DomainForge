@@ -150,11 +150,21 @@ impl Policy {
     }
 
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
+        self.evaluate_with_mode(graph, graph.use_three_valued_logic())
+    }
+
+    pub fn evaluate_with_mode(
+        &self,
+        graph: &Graph,
+        use_three_valued_logic: bool,
+    ) -> Result<EvaluationResult, String> {
+        Self::validate_aggregation_usage(&self.expression, true)?;
+
         let expanded = self.expression.expand(graph)?;
 
         // Evaluate expression; runtime toggle chooses three-valued vs boolean path.
         // We compute the tri-state result and derive a backward-compatible boolean (false when Null).
-        let is_satisfied_tristate: Option<bool> = if graph.use_three_valued_logic() {
+        let is_satisfied_tristate: Option<bool> = if use_three_valued_logic {
             match self.evaluate_expression_three_valued(&expanded, graph)? {
                 ThreeValuedBool::True => Some(true),
                 ThreeValuedBool::False => Some(false),
@@ -188,6 +198,33 @@ impl Policy {
             is_satisfied_tristate,
             violations,
         })
+    }
+
+    fn validate_aggregation_usage(expr: &Expression, in_boolean_context: bool) -> Result<(), String> {
+        match expr {
+            Expression::Aggregation { .. } | Expression::AggregationComprehension { .. } => {
+                if in_boolean_context {
+                    Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string())
+                } else {
+                    Ok(())
+                }
+            }
+            Expression::Binary { op, left, right } => {
+                let child_boolean = matches!(op, BinaryOp::And | BinaryOp::Or);
+                Self::validate_aggregation_usage(left, child_boolean)?;
+                Self::validate_aggregation_usage(right, child_boolean)?;
+                Ok(())
+            }
+            Expression::Unary { op, operand } => {
+                let child_boolean = matches!(op, UnaryOp::Not);
+                Self::validate_aggregation_usage(operand, child_boolean)
+            }
+            Expression::Quantifier { collection, condition, .. } => {
+                Self::validate_aggregation_usage(collection, false)?;
+                Self::validate_aggregation_usage(condition, true)
+            }
+            _ => Ok(()),
+        }
     }
 
     fn evaluate_expression_boolean(&self, expr: &Expression, graph: &Graph) -> Result<bool, String> {
@@ -251,9 +288,15 @@ impl Policy {
             Expression::Quantifier { .. } => {
                 Err("Cannot evaluate non-expanded quantifier".to_string())
             }
-            Expression::MemberAccess { .. } => {
+            Expression::MemberAccess { object, member } => {
                 let value = self.get_runtime_value(expr, graph)?;
-                Ok(value.as_bool().unwrap_or(false))
+                match value.as_bool() {
+                    Some(v) => Ok(v),
+                    None => Err(format!(
+                        "Expected boolean value for member '{}.{}', but found {:?}",
+                        object, member, value
+                    )),
+                }
             }
             Expression::Aggregation { .. } => {
                 Err("Cannot evaluate non-expanded aggregation".to_string())
@@ -411,27 +454,9 @@ impl Policy {
                 let value = self.get_runtime_value(expr, graph)?;
                 Ok(T::from_option_bool(value.as_bool()))
             }
-            Expression::Aggregation { function, collection, field, filter } => {
-                // Aggregations in boolean contexts follow non-zero truthiness:
-                // Null -> Null, numeric -> non-zero is true and zero is false. Prefer explicit
-                // comparisons like COUNT(items) > 0 for clearer intent.
-                let v = Expression::evaluate_aggregation(function, collection, field, filter, graph)?;
-                // If this yields numeric, non-zero is true, zero is false; if Null then Null.
-                if v.is_null() {
-                    return Ok(T::Null);
-                }
-                if let Some(n) = v.as_f64() {
-                    return Ok(T::from_option_bool(Some(n != 0.0)));
-                }
-                Ok(T::Null)
-            }
-            Expression::AggregationComprehension { function, variable, collection, predicate, projection, target_unit } => {
-                let v = Expression::evaluate_aggregation_comprehension(function, variable, collection, predicate, projection, target_unit.as_deref(), graph)?;
-                if v.is_null() { return Ok(T::Null); }
-                if let Some(n) = v.as_f64() { return Ok(T::from_option_bool(Some(n != 0.0))); }
-                Ok(T::Null)
-            }
-            Expression::QuantityLiteral { .. } => Ok(T::Null),
+            Expression::Aggregation { .. } => Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string()),
+            Expression::AggregationComprehension { .. } => Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string()),
+            Expression::QuantityLiteral { .. } => Err("Cannot convert quantity to boolean; compare against a threshold instead".to_string()),
         }
     }
 
@@ -525,10 +550,30 @@ impl Policy {
                             return Ok(serde_json::json!(entity.namespace()));
                         }
                         if let Some(val) = entity.get_attribute(member) {
+                            if val.is_null() {
+                                log::debug!(
+                                    "Entity '{}' member '{}' present but NULL; returning Null",
+                                    object, member
+                                );
+                            }
                             return Ok(val.clone());
                         }
+                        log::debug!(
+                            "Entity '{}' found but member '{}' missing; returning Null",
+                            object, member
+                        );
                         return Ok(serde_json::Value::Null);
+                    } else {
+                        log::debug!(
+                            "Entity lookup for '{}' returned id {} but entity missing; returning Null",
+                            object, id
+                        );
                     }
+                } else {
+                    log::debug!(
+                        "Entity '{}' not found while resolving member '{}'; continuing lookup",
+                        object, member
+                    );
                 }
 
                 if let Some(id) = graph.find_resource_by_name(object) {
@@ -541,13 +586,37 @@ impl Policy {
                             return Ok(serde_json::json!(resource.unit()));
                         }
                         if let Some(val) = resource.get_attribute(member) {
+                            if val.is_null() {
+                                log::debug!(
+                                    "Resource '{}' member '{}' present but NULL; returning Null",
+                                    object, member
+                                );
+                            }
                             return Ok(val.clone());
                         }
+                        log::debug!(
+                            "Resource '{}' found but member '{}' missing; returning Null",
+                            object, member
+                        );
                         return Ok(serde_json::Value::Null);
+                    } else {
+                        log::debug!(
+                            "Resource lookup for '{}' returned id {} but resource missing; returning Null",
+                            object, id
+                        );
                     }
+                } else {
+                    log::debug!(
+                        "Resource '{}' not found while resolving member '{}'; returning Null",
+                        object, member
+                    );
                 }
 
                 // Not found: return Null to indicate unknown member
+                log::debug!(
+                    "Member access '{}.{}' did not resolve to entity or resource; returning Null",
+                    object, member
+                );
                 Ok(serde_json::Value::Null)
             }
             Expression::Aggregation { function, collection, field, filter } => {

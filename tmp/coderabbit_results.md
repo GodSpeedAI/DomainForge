@@ -6,193 +6,215 @@ Analyzing
 Reviewing
 
 ============================================================================
-File: docs/runtime_toggle_implementation.md
-Line: 96 to 116
+File: docs/cross_language_development.md
+Line: 348 to 407
+Type: refactor_suggestion
+
+[ ] Task:
+In docs/cross_language_development.md around lines 348 to 407, the "Adding New Features" workflow omits updating Cargo.toml and gating code for feature-flagged or language-specific dependencies; add a new step after "Implement in Rust core" instructing engineers to add a feature entry to Cargo.toml (listing the optional dependency or feature name) and update the Rust module with #[cfg(feature = "your-feature")] (and any pub use gating) so language-specific crates (e.g., PyO3-only crates) are behind the feature flag, then renumber subsequent steps accordingly.
+
+
+
+============================================================================
+File: sea-core/src/policy/mod.rs
+Line: 15
 Type: potential_issue
 
 [ ] Task:
-docs/runtime_toggle_implementation.md lines 96-116 and 160-192: the document shows conflicting status markers—sections for Python and TypeScript are labeled "(Planned)" earlier (around 96–107) while later sections are marked "✅ COMPLETED" (around 160–192); remove the "(Planned)" markers from the earlier Python and TypeScript headings/examples so both places consistently show completion, and scan the surrounding lines for any leftover "Planned" wording or checkmarks to ensure all status text is consistent and reflects "COMPLETED."
+In sea-core/src/policy/mod.rs around line 15 the file still has pub use three_valued::{ThreeValuedBool, aggregators as three_valued_aggregators}; which contradicts the PR summary that said these public re-exports were removed; decide and apply one of two fixes: either remove that line if the public API should be removed, or update the PR summary/docs to reflect that the re-export remains public (no code change) — perform the code removal when choosing to remove the API, or update the summary/commit message when choosing to keep it.
+
+
+
+============================================================================
+File: typescript-tests/registry.test.ts
+Line: 113
+Type: potential_issue
+
+[ ] Task:
+In typescript-tests/registry.test.ts around line 113, update the inline comment which references the old function name "resolve_files" to the new camelCase name "resolveFiles"; simply replace the comment text so it reads something like "// resolveFiles should error as well" to reflect the current method name.
+
+
+
+============================================================================
+File: docs/napi_build_troubleshooting.md
+Line: 49 to 52
+Type: nitpick
+
+
+
+
+============================================================================
+File: docs/napi_build_troubleshooting.md
+Line: 43
+Type: nitpick
+
+[ ] Task:
+In docs/napi_build_troubleshooting.md around line 43, the example only shows a Linux .so copy; update the doc to present platform-specific alternatives by replacing that single cp line with a bash code block containing three platform-specific cp examples (Linux .so -> linux node file, macOS .dylib -> darwin node file, and Windows .dll -> win32 node file) so users can follow the correct command for their OS or adapt to a variable.
+
+
+
+============================================================================
+File: index.d.ts
+Line: 144
+Type: potential_issue
+
+[ ] Task:
+In index.d.ts around line 144, the static method signature uses an invalid TypeScript type Self; replace it with the correct type NamespaceRegistry (i.e. change the return type to NamespaceRegistry | null) and ensure NamespaceRegistry is declared or imported in this declaration file so the type resolves.
 
 
 
 ============================================================================
 File: docs/cross_language_development.md
-Line: 213 to 239
+Line: 240 to 260
 Type: potential_issue
 
 [ ] Task:
-In docs/cross_language_development.md around lines 213–239 the Rust→Python and Rust→TypeScript conversion examples are identical and do not illustrate framework-specific APIs; update the two examples so PyO3 example demonstrates using IntoPy with an explicit Python GIL token and FromPyObject for deserialization (showing how to call .into_py(py) and accept Python in conversions), while the NAPI-RS/TypeScript example should show deriving serde::Serialize/Deserialize on the Rust type and using Env::to_js_value()/Env::from_js_value() (or equivalent napi serde helpers) to convert between Rust and JS values; replace the current identical From impls with two distinct examples that reflect those API differences and include brief comments indicating the need for GIL handling in PyO3 and serde+Env usage in NAPI-RS.
+In docs/cross_language_development.md around lines 240 to 260, the Rust example includes manual to_js/from_js methods and uses serde + napi helpers explicitly; update the example to remove these manual conversion methods and instead annotate the struct with #[napi(object)] (or appropriate current napi-rs attribute) and rely on automatic serialization by using the struct directly in #[napi] function signatures for parameters and return types; remove the impl block and show a simple struct declaration plus a short #[napi] function signature example that returns/accepts the struct to demonstrate idiomatic automatic conversion.
 
 
 
 ============================================================================
-File: docs/benchmark_tristate_performance.md
-Line: 31
+File: index.d.ts
+Line: 47
 Type: potential_issue
 
 [ ] Task:
-In docs/benchmark_tristate_performance.md around line 31, the phrase "Overhead: ~7.5% faster than strict baseline!" mixes terminology (overhead implies slowdown) with a speedup; change the label to match the result — either replace "Overhead" with "Speedup" or reword to "Performance: ~7.5% faster than strict baseline" (or if it was meant to be a slowdown, change the percentage/sign to reflect ~7.5% slower). Ensure the chosen term clearly matches the measured direction and update any adjacent caption/legend to remain consistent.
-
-
-
-============================================================================
-File: sea-core/src/primitives/instance.rs
-Line: 84 to 87
-Type: nitpick
-
-[ ] Task:
-In sea-core/src/primitives/instance.rs around lines 84 to 87, the method return type uses the full path std::collections::HashMap even though HashMap is already imported; change the signature to return &HashMap (i.e., replace std::collections::HashMap with the imported HashMap) so it matches project style and existing imports.
-
-
-
-============================================================================
-File: docs/benchmark_tristate_performance.md
-Line: 45
-Type: potential_issue
-
-[ ] Task:
-In docs/benchmark_tristate_performance.md around line 45, the summary text incorrectly says "~11% slower than strict baseline" while the measured time (7.33 µs vs baseline 8.23 µs) is ~11% faster; update the sentence to state "~11% faster than strict baseline" (or recompute and insert the exact percent if you prefer more precision) so it matches the comparison table at line 80 and ensure the sign/wording is consistent across the document.
-
-
-
-============================================================================
-File: sea-core/src/policy/three_valued_microbench.rs
-Line: 22 to 30
-Type: nitpick
-
-[ ] Task:
-In sea-core/src/policy/three_valued_microbench.rs around lines 22-30 and similarly for 43-48, the benchmark lacks warmup iterations and a correctness check; add a short warmup loop (e.g., 100 iterations) before each timed loop that computes the sum and use std::hint::black_box on the result to avoid optimization, then after each measured loop compute the expected sum from DATA_SIZE and assert equality with the actual Decimal sum (use Decimal::ZERO for accumulation and assert_eq! with a descriptive message) to verify correctness.
-
-
-
-============================================================================
-File: .gitignore
-Line: 111
-Type: potential_issue
-
-[ ] Task:
-In .gitignore around line 111, the pattern ".bak.coderabbit.yml" only matches a literal filename; change it to "*.bak.coderabbit.yml" so it matches any file ending with .bak.coderabbit.yml (e.g., foo.bak.coderabbit.yml); update the line to add the leading asterisk and save the .gitignore.
-
-
-
-============================================================================
-File: sea-core/tests/runtime_toggle_tests.rs
-Line: 5 to 39
-Type: potential_issue
-
-[ ] Task:
-In sea-core/tests/runtime_toggle_tests.rs around lines 5 to 39, the test currently uses Expression::Literal(true) (lines ~17-20) so both evaluation modes always return true and never exercise the entity's null "status" attribute; replace the policy creation with one that references the entity attribute "status" (e.g., a comparison between the attribute and a boolean literal) so the expression actually touches the null value, then update the assertions: for three-valued mode (lines ~26-29) expect the tristate result to be None (is_satisfied_tristate == None) and is_satisfied to be false or handled accordingly, and for boolean mode (lines ~35-38) expect the tristate result to be Some(false) (or the boolean-equivalent result) and is_satisfied to be false, adjusting violation count expectations as appropriate.
-
-
-
-============================================================================
-File: sea-core/src/typescript/graph.rs
-Line: 263 to 271
-Type: refactor_suggestion
-
-[ ] Task:
-In sea-core/src/typescript/graph.rs around lines 263 to 271, the public napi method evaluate_policy lacks documentation; add a Rust doc comment (///) immediately above the function that briefly describes: what the method does (evaluates a Policy against this Graph), the expected policy_json format (JSON representation of crate::policy::Policy, mention required fields or schema shape or point to crate::policy::Policy type), and what the method returns (a Result wrapping super::policy::EvaluationResult or an Error with messages for invalid JSON or evaluation failures). Keep the comment concise, reference TypeScript consumers that this is exposed via napi, and include examples of possible error conditions in one sentence if helpful.
+In index.d.ts around line 47, the isSatisfiedTristate declaration only allows boolean|undefined but docs say it can be true, false, or null; change the type to allow null by using "boolean | null" and keep the optional marker if the property may be omitted (isSatisfiedTristate?: boolean | null), or remove the optional marker if it must always be present (isSatisfiedTristate: boolean | null).
 
 
 
 ============================================================================
 File: tests/test_runtime_toggle.py
-Line: 63 to 87
+Line: 155 to 156
 Type: potential_issue
 
 [ ] Task:
-In tests/test_runtime_toggle.py around lines 63 to 87, add a new test that covers boolean-mode behavior for conditions that would be indeterminate under three-valued logic: create Graph(), call graph.set_evaluation_mode(False), build a policy whose expression is a MemberAccess against a non-existent object (e.g., object "NonExistent", member "attr"), call graph.evaluate_policy(json.dumps(policy)), and assert the boolean-mode expectations—specifically assert result.is_satisfied_tristate is False, assert result.is_satisfied is False, and assert any expected violation state (for example len(result.violations) > 0) so the test verifies how indeterminate conditions are coerced in boolean mode.
+In tests/test_runtime_toggle.py around lines 155 to 156, the file is missing a trailing newline; add a single newline character at the end of the file so the file ends with a newline (ensure the final line break is present and committed).
 
 
 
 ============================================================================
-File: wasm_demo.html
-Line: 198
-Type: potential_issue
-
-[ ] Task:
-In wasm_demo.html around line 198, there's a JavaScript syntax error due to an accidental space in the property name ("isSatisfied Tristate"). Replace the incorrect token with the correct property access "isSatisfiedTristate" so the line reads using result.isSatisfiedTristate (and keep the existing ternary check for undefined as-is).
-
-
-
-============================================================================
-File: typescript-tests/three_valued_eval.test.ts
-Line: 110 to 133
+File: sea-core/src/python/policy.rs
+Line: 101 to 106
 Type: nitpick
 
 [ ] Task:
-In typescript-tests/three_valued_eval.test.ts around lines 110-133, clarify that this test intentionally verifies modality-specific behavior (Prohibition vs Obligation) by adding a one-line comment above the policy setup, and replace the fragile expect(violation.message).toContain('violated') assertion with a more robust check such as asserting the message references the policy name (e.g., expect(violation.message).toMatch(new RegExp(policy.name, 'i'))) or otherwise checking for the policy id in the message; keep the other assertions (name and severity) as-is.
+In sea-core/src/python/policy.rs around lines 101 to 106, the __repr__ string prints severity without quotes (using {:?}) while name and message are quoted, so change the format to wrap severity in quotes (e.g., use severity='{:?}') to make output consistent with the other fields; update the format string accordingly so the final repr shows severity in quotes like the other string fields.
 
 
 
 ============================================================================
-File: sea-core/src/policy/core.rs
-Line: 178 to 183
+File: tests/test_runtime_toggle.py
+Line: 110
 Type: potential_issue
 
 [ ] Task:
-In sea-core/src/policy/core.rs around lines 178 to 183, UNKNOWN evaluations currently use a hardcoded Severity::Warning (line 182), which ignores the policy modality; change the code so the severity for UNKNOWN (and the violation case) is derived from the policy modality by calling self.modality.to_severity() instead of using Severity::Warning, ensuring Obligation/Prohibition policies yield Error-level severity where appropriate.
-
-
-
-============================================================================
-File: sea-core/src/policy/three_valued_microbench.rs
-Line: 51 to 54
-Type: potential_issue
-
-[ ] Task:
-In sea-core/src/policy/three_valued_microbench.rs around lines 51 to 54, the benchmark divides by baseline_duration.as_nanos() which can be zero and cause a panic; add a zero-duration guard before performing the division (e.g., compute let denom = baseline_duration.as_nanos().max(1) or return/skip if zero) and use denom in the division so the code never divides by zero and remains robust.
-
-
-
-============================================================================
-File: sea-core/src/graph/mod.rs
-Line: 32 to 33
-Type: refactor_suggestion
-
-[ ] Task:
-In sea-core/src/graph/mod.rs around lines 32-33, change the field declaration from a public pub config: GraphConfig to a private field (remove pub) so callers cannot mutate config directly; keep the #[serde(default)] attribute as-is, add any necessary accessor methods (e.g., pub fn config(&self) -> &GraphConfig and/or pub fn config_mut(&mut self) -> &mut GraphConfig or specific getters/setters) for read/write needs, update all call sites that reference graph.config to use the new accessors (or the existing set_evaluation_mode/use_three_valued_logic setters), and run cargo build/tests to fix any compile errors introduced by the visibility change.
+In tests/test_runtime_toggle.py around line 110, the inline comment uses Rust Option terminology "Some(true)" which can confuse Python readers; change the comment to Python-appropriate phrasing such as "should return True" or "should return a truthy value True" to clarify expected result, and update any other nearby comments using Rust-specific terms to standard Python wording for consistency.
 
 
 
 ============================================================================
 File: sea-core/tests/three_valued_quantifiers_tests.rs
-Line: 122 to 124
-Type: refactor_suggestion
+Line: 143
+Type: potential_issue
 
 [ ] Task:
-In sea-core/tests/three_valued_quantifiers_tests.rs around lines 122 to 124, there is a dead-code block that retrieves/clones flow1 but does nothing (the comment states flow1 already has the correct null tag); remove those lines entirely so the test doesn't contain unused retrieval/clone operations and keep the surrounding assertions intact.
+In sea-core/tests/three_valued_quantifiers_tests.rs around line 143, the test directly indexes result.violations[0] without first asserting the slice is non-empty; add a length check (e.g. assert!(!result.violations.is_empty()) or assert_eq!(result.violations.len(), 1) if a single violation is expected) immediately before the existing assertion so the test fails with a clear message instead of panicking when violations is empty.
+
+
+
+============================================================================
+File: sea-core/src/policy/three_valued_microbench.rs
+Line: 1 to 2
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/three_valued_microbench.rs around lines 1 to 2, the documented cargo command omits the --ignored flag so the test (marked with #[ignore] on line 12) will be skipped; update the doc comment to include --ignored (e.g. "Run with: cargo test --release -- --nocapture --ignored bench_microbench") so the ignored benchmark actually runs when using that command.
+
+
+
+============================================================================
+File: docs/evaluate_policy.md
+Line: 168
+Type: potential_issue
+
+[ ] Task:
+In docs/evaluate_policy.md around line 168, the phrase "policy modality's severity (Obligations/Prohibitions -> Error, Permissions -> Info)" uses modality terms that aren't defined in the document; either add a short explanatory sentence earlier (e.g., define modalities: Obligations/Prohibitions require enforcement and map to Error severity, Permissions are advisory and map to Info) or rewrite this line to avoid modality jargon (e.g., "use Error severity for enforcement rules and Info for advisory rules") so readers aren't confused; update the chosen place accordingly and keep the mapping example intact.
+
+
+
+============================================================================
+File: sea-core/src/graph/mod.rs
+Line: 49 to 68
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/graph/mod.rs around lines 49 to 68 (and note the extra blank line at 69), remove the stray blank line after the config_mut method; then verify and ensure policy evaluation actually respects the GraphConfig setting by updating the evaluation path: make policy.evaluate(...) read the flag from self.config.use_three_valued_logic (or accept an explicit parameter passed from the graph) and use it to switch between three-valued and strict-boolean logic, propagating this flag through any intermediate functions/call sites (including the call at line 438) so the chosen mode is honored at runtime.
+
+
+
+============================================================================
+File: docs/evaluate_policy.md
+Line: 5
+Type: potential_issue
+
+[ ] Task:
+In docs/evaluate_policy.md around line 5, the sentence reads "against a graph Python" which is grammatically incorrect; change it to "against a graph in Python" so the sentence becomes: The evaluate_policy method provides a unified interface for evaluating SEA DSL policies against a graph in Python, TypeScript/JavaScript and WebAssembly. Ensure spacing and punctuation remain consistent with the surrounding text.
 
 
 
 ============================================================================
 File: sea-core/src/policy/quantifier.rs
-Line: 272 to 279
+Line: 615 to 618
 Type: potential_issue
 
 [ ] Task:
-In sea-core/src/policy/quantifier.rs around lines 272–279, the code that builds the "instances" JSON currently merges instance attributes directly, which allows attributes to overwrite core fields ("id", "entity", "resource"); prevent this by filtering out those reserved keys from the attributes before merging (or by merging attributes into a nested "attributes" object) so core fields always take precedence — update the instance value construction to skip any attribute with key == "id" || key == "entity" || key == "resource" (and any other reserved core keys used elsewhere) when combining maps.
+In sea-core/src/policy/quantifier.rs around lines 615-618, the current unconditional NULL return when either operand is NULL breaks three-valued logic for AND/OR; change the logic to implement short-circuiting: if operator is AND and left_value is the boolean false return Literal(false); if operator is OR and left_value is the boolean true return Literal(true); similarly check right_value for short-circuits (right false for AND yields false, right true for OR yields true); otherwise, if either operand is NULL and no short-circuit applied, return Literal(Null); when both are non-NULL coerce to booleans and evaluate normally; ensure you construct serde_json::Value::Bool results and preserve Null where appropriate.
 
 
 
 ============================================================================
-File: sea-core/src/policy/quantifier.rs
-Line: 254 to 262
-Type: potential_issue
+File: sea-core/src/policy/core.rs
+Line: 515 to 552
+Type: nitpick
 
 [ ] Task:
-In sea-core/src/policy/quantifier.rs around lines 254 to 262, the current code inserts resource attributes directly into the JSON map which allows attributes to overwrite core fields like "id", "name", "namespace", and "unit". Fix by reserving those core keys: either (preferred) collect all attributes into a nested "attributes" object and insert that under the "attributes" key, or (alternatively) when merging attributes into the top-level map skip any attribute whose key equals one of the reserved keys ("id","name","namespace","unit") so core fields cannot be overwritten; ensure core fields are inserted explicitly after attributes are processed so they take precedence if you choose merging-with-skip.
+In sea-core/src/policy/core.rs around lines 515 to 552, the function currently returns serde_json::Value::Null in three distinct situations (object not found, object found but attribute missing, attribute exists but value is null) which hampers debugging; add debug-level logging at each return point to disambiguate: log when an entity/resource lookup fails (include object name and whether entity or resource lookup failed), log when an entity/resource is found but the requested member attribute is missing (include object name and member), and optionally log when an attribute is present but its JSON value is Null (include object name, member and that value is Null); keep the existing return values and log messages concise using log::debug! so behavior is unchanged but diagnostics are improved.
 
 
 
 ============================================================================
-File: sea-core/src/policy/quantifier.rs
-Line: 220 to 230
+File: sea-core/src/policy/core.rs
+Line: 414 to 427
+Type: nitpick
+
+[ ] Task:
+In sea-core/src/policy/core.rs around lines 414 to 427, the code implicitly converts aggregation results to boolean by treating non-zero as true and zero as false; change this to require explicit comparisons by returning an Err with a clear message like "Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)" when an Aggregation appears in a boolean context instead of performing non-zero truthiness conversion; alternatively, if you must preserve behavior for backward compatibility, emit a deprecation warning (log or diagnostics) whenever an aggregation is used in a boolean context and keep the current conversion, but prefer the error approach to force callers to write explicit comparisons.
+
+
+
+============================================================================
+File: sea-core/src/policy/core.rs
+Line: 254 to 257
 Type: potential_issue
 
 [ ] Task:
-In sea-core/src/policy/quantifier.rs around lines 220 to 230, attributes are merged after core fields which allows attribute keys "id", "from_entity", "to_entity", "resource", or "quantity" to overwrite core entries; change the loop that inserts attributes to skip any attribute whose key matches any of those core field names (exact string match) so you only insert non-conflicting keys (i.e., if k == "id" || k == "from_entity" || k == "to_entity" || k == "resource" || k == "quantity" then continue) and otherwise insert the attribute into the map as before.
+In sea-core/src/policy/core.rs around lines 254–257, the code silently converts non-boolean member values to false using unwrap_or(false); change this to validate the runtime value is boolean and return a type/error instead of hiding the problem. Replace the unwrap_or call with an explicit check on the returned RuntimeValue (or Result) and if it is not a boolean return an Err (or a semantic/type error) indicating the member is not a boolean or is missing, otherwise return the boolean; include the expression/member name in the error message for easier debugging.
 
+
+
+============================================================================
+File: sea-core/src/policy/core.rs
+Line: 434
+Type: potential_issue
+
+[ ] Task:
+In sea-core/src/policy/core.rs at line 434, the match arm for Expression::QuantityLiteral currently returns T::Null but should instead return an error; change it to return an Err containing an evaluation/type error that clearly states a quantity cannot be converted to a boolean (e.g., "cannot convert quantity to boolean" or similar), using the project’s existing EvalError/TypeError variant for invalid conversions; update or add tests expecting this error for boolean context with QuantityLiteral.
+
+File: README.md
+[ ] Task:
+
+Update to include instructions for toggling three-valued logic at runtime in the Rust, Python, TypeScript, and WebAssembly sections and ensure examples are consistent with the new API.Also, add a brief explanation of the behavior differences between three-valued and strict-boolean logic modes. Additionally, make it clearer that WebAssembly is supported and provide example code for toggling the evaluation mode in WASM.
 
 
 Review completed ✔

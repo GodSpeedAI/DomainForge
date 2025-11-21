@@ -107,7 +107,7 @@ def test_boolean_mode_behavior():
 
     result = graph.evaluate_policy(json.dumps(policy))
 
-    # Should return Some(true) for tristate in boolean mode
+    # Should return True for tristate in boolean mode
     assert result.is_satisfied_tristate is True
     assert result.is_satisfied is True
     assert len(result.violations) == 0

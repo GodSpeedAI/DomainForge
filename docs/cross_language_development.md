@@ -238,26 +238,31 @@ Python::with_gil(|py| {
 ### Rust → TypeScript
 
 ```rust
-use napi::{Env, JsUnknown};
+use napi::bindgen_prelude::Result;
+use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-struct EvaluationResult {
-    is_satisfied: bool,
-    is_satisfied_tristate: Option<bool>,
+#[derive(Debug, Serialize, Deserialize)]
+#[napi(object)]
+pub struct EvaluationResult {
+    pub is_satisfied: bool,
+    pub is_satisfied_tristate: Option<bool>,
 }
 
-impl EvaluationResult {
-    // serde + napi helpers handle conversion
-    fn to_js(&self, env: Env) -> napi::Result<JsUnknown> {
-        env.to_js_value(self)
-    }
-
-    fn from_js(env: Env, value: JsUnknown) -> napi::Result<Self> {
-        env.from_js_value(&value)
+#[napi]
+impl Graph {
+    #[napi]
+    pub fn evaluate_policy(&self, policy_json: String) -> Result<EvaluationResult> {
+        let result = self.inner.evaluate_policy(policy_json)?;
+        Ok(EvaluationResult {
+            is_satisfied: result.is_satisfied,
+            is_satisfied_tristate: result.is_satisfied_tristate,
+        })
     }
 }
 ```
+
+The `#[napi(object)]` attribute handles converting the struct to and from JavaScript automatically, so no manual `to_js`/`from_js` helpers are required.
 
 ## Naming Conventions
 
@@ -360,7 +365,12 @@ When adding a new feature that should be available in both languages:
    }
    ```
 
-2. **Add Python binding:**
+2. **Add feature gating in Cargo/Rust:**
+
+   - Add the feature entry in `Cargo.toml` and list any optional dependency it controls.
+   - Gate Rust modules and `pub use` exports with `#[cfg(feature = "your-feature")]` so language-specific code (e.g., PyO3-only types) only compiles when the feature is enabled.
+
+3. **Add Python binding:**
 
    ```rust
    // sea-core/src/python/graph.rs
@@ -374,7 +384,7 @@ When adding a new feature that should be available in both languages:
    }
    ```
 
-3. **Add TypeScript binding:**
+4. **Add TypeScript binding:**
 
    ```rust
    // sea-core/src/typescript/graph.rs
@@ -389,7 +399,7 @@ When adding a new feature that should be available in both languages:
    }
    ```
 
-4. **Export in Python:**
+5. **Export in Python:**
 
    ```python
    # python/sea_dsl/__init__.py
@@ -397,14 +407,14 @@ When adding a new feature that should be available in both languages:
    __all__ = ["Graph", "SomeType"]
    ```
 
-5. **Export in TypeScript:**
+6. **Export in TypeScript:**
 
    ```javascript
    // index.js
    module.exports.SomeType = nativeBinding.SomeType;
    ```
 
-6. **Add tests for both languages**
+7. **Add tests for both languages**
 
 ## Common Pitfalls
 

@@ -18,7 +18,7 @@ mod tests {
     #[cfg(feature = "three_valued_logic")]
     #[test]
     fn aggregator_nulls() {
-        use sea_core::policy::three_valued_aggregators as aggregators;
+        use sea_core::policy::three_valued::aggregators;
         use rust_decimal::Decimal;
 
         let vals: Vec<Option<Decimal>> = vec![Some(Decimal::new(1, 0)), None, Some(Decimal::new(3, 0))];

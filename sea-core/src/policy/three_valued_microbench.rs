@@ -1,5 +1,5 @@
 /// Simple micro-benchmark using std::time::Instant
-/// Run with: cargo test --release -- --nocapture bench_microbench
+/// Run with: cargo test --release -- --nocapture --ignored bench_microbench
 use rust_decimal::Decimal;
 use super::three_valued::aggregators::sum_nullable;
 

@@ -37,10 +37,17 @@ The Node.js native module (`.node` file) was built with the `python` feature ena
    cargo build --lib --features typescript,three_valued_logic
    ```
 
-3. **Copy the artifact to the Node.js module location:**
+3. **Copy the artifact to the Node.js module location (choose your platform):**
 
    ```bash
+   # Linux
    cp target/debug/libsea_core.so ../sea-core.linux-x64-gnu.node
+
+   # macOS
+   cp target/debug/libsea_core.dylib ../sea-core.darwin-x64.node
+
+   # Windows (PowerShell or Git Bash path separators)
+   cp target\\debug\\sea_core.dll ..\\sea-core.win32-x64.node
    ```
 
 4. **Verify the build is clean:**

@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use rust_decimal::Decimal;
-use sea_core::policy::three_valued_aggregators as aggregators;
+use sea_core::policy::three_valued::aggregators;
 
 fn bench_sum_nullable(c: &mut Criterion) {
     // Use the aggregator functions from the library

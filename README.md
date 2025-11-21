@@ -601,6 +601,61 @@ python -m pip install --upgrade pip
 just setup
 ```
 
+### ⚙️ Runtime Evaluation Modes
+
+- **Three-valued logic (default):** missing data yields `NULL`/`None`/`null` and the evaluator records an explanatory violation.
+- **Strict boolean logic:** missing or non-boolean data raises evaluation errors; write explicit comparisons such as `COUNT(flows) > 0`.
+
+**Rust**
+
+```rust
+use sea_core::Graph;
+
+let mut graph = Graph::new();
+graph.set_evaluation_mode(true); // three-valued (default)
+let tri_result = policy.evaluate(&graph)?;
+
+graph.set_evaluation_mode(false); // strict boolean
+let strict_result = policy.evaluate(&graph)?;
+```
+
+**Python**
+
+```python
+from sea_dsl import Graph
+
+graph = Graph()
+graph.set_evaluation_mode(True)   # three-valued (default)
+result = graph.evaluate_policy(policy_json)
+
+graph.set_evaluation_mode(False)  # strict boolean
+strict_result = graph.evaluate_policy(policy_json)
+```
+
+**TypeScript**
+
+```typescript
+import { Graph } from "@domainforge/sea";
+
+const graph = new Graph();
+graph.setEvaluationMode(true);  // three-valued (default)
+const result = graph.evaluatePolicy(policyJson);
+
+graph.setEvaluationMode(false); // strict boolean
+const strictResult = graph.evaluatePolicy(policyJson);
+```
+
+**WebAssembly (browser/edge)**
+
+```javascript
+import init, { Graph } from "./pkg/sea_core.js";
+
+await init();
+const graph = new Graph();
+graph.setEvaluationMode(false); // toggle strict boolean mode
+const result = graph.evaluatePolicy(policyJson);
+```
+
 ### 🔍 Debugging Tests in VS Code
 
 We added a `launch.json` with debug profiles for Python (pytest), TypeScript (Vitest), and Rust (CodeLLDB).
