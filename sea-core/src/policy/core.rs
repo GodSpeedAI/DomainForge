@@ -1,10 +1,9 @@
 use super::expression::{BinaryOp, Expression, UnaryOp};
 use super::violation::{Severity, Violation};
+use crate::policy::ThreeValuedBool;
 use crate::graph::Graph;
 use crate::{ConceptId, SemanticVersion};
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "three_valued_logic")]
-use crate::policy::ThreeValuedBool;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PolicyModality {
@@ -153,27 +152,16 @@ impl Policy {
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
         let expanded = self.expression.expand(graph)?;
 
-        // Evaluate expression. If three_valued_logic is enabled the
-        // evaluator may return a ThreeValuedBool; we compute the tri-state
-        // result and derive a backward-compatible boolean (false when Null).
-        let is_satisfied_tristate: Option<bool> = {
-            #[cfg(feature = "three_valued_logic")]
-            {
-                if graph.use_three_valued_logic() {
-                    match self.evaluate_expression_three_valued(&expanded, graph)? {
-                        ThreeValuedBool::True => Some(true),
-                        ThreeValuedBool::False => Some(false),
-                        ThreeValuedBool::Null => None,
-                    }
-                } else {
-                    Some(self.evaluate_expression_boolean(&expanded, graph)?)
-                }
+        // Evaluate expression; runtime toggle chooses three-valued vs boolean path.
+        // We compute the tri-state result and derive a backward-compatible boolean (false when Null).
+        let is_satisfied_tristate: Option<bool> = if graph.use_three_valued_logic() {
+            match self.evaluate_expression_three_valued(&expanded, graph)? {
+                ThreeValuedBool::True => Some(true),
+                ThreeValuedBool::False => Some(false),
+                ThreeValuedBool::Null => None,
             }
-
-            #[cfg(not(feature = "three_valued_logic"))]
-            {
-                Some(self.evaluate_expression_boolean(&expanded, graph)?)
-            }
+        } else {
+            Some(self.evaluate_expression_boolean(&expanded, graph)?)
         };
 
         let is_satisfied = is_satisfied_tristate.unwrap_or(false);
@@ -279,7 +267,6 @@ impl Policy {
         }
     }
 
-    #[cfg(feature = "three_valued_logic")]
     fn evaluate_expression_three_valued(
         &self,
         expr: &Expression,
