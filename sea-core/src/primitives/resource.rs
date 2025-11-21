@@ -213,4 +213,9 @@ impl Resource {
     pub fn get_attribute(&self, key: &str) -> Option<&Value> {
         self.attributes.get(key)
     }
+
+    /// Returns all attributes as a reference.
+    pub fn attributes(&self) -> &std::collections::HashMap<String, Value> {
+        &self.attributes
+    }
 }

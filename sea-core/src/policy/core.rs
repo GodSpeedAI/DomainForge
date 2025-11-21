@@ -40,7 +40,11 @@ pub struct Policy {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvaluationResult {
+    /// Backwards compatible boolean representing whether a policy was satisfied.
+    /// Defaults to `false` if the evaluator produced an unknown (NULL) result.
     pub is_satisfied: bool,
+    /// Tri-state evaluation result: Some(true/false) or None when evaluation is unknown.
+    pub is_satisfied_tristate: Option<bool>,
     pub violations: Vec<Violation>,
 }
 
@@ -147,44 +151,50 @@ impl Policy {
     }
 
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
+        #[cfg(not(feature = "three_valued_logic"))]
         let expanded = self.expression.expand(graph)?;
 
         // Evaluate expression. If three_valued_logic is enabled the
-        // evaluator may return a ThreeValuedBool; we convert to a strict
-        // bool here by treating Null as an error unless callers opt-in.
-        let is_satisfied = {
+        // evaluator may return a ThreeValuedBool; we compute the tri-state
+        // result and derive a backward-compatible boolean (false when Null).
+        let is_satisfied_tristate: Option<bool> = {
             #[cfg(feature = "three_valued_logic")]
             {
-                match self.evaluate_expression_three_valued(&expanded, graph)? {
-                    ThreeValuedBool::True => true,
-                    ThreeValuedBool::False => false,
-                    ThreeValuedBool::Null => {
-                        return Err(format!(
-                            "Policy '{}' evaluated to NULL (unknown). Enable three_valued_logic and handle unknowns explicitly.",
-                            self.name
-                        ));
-                    }
+                match self.evaluate_expression_three_valued(&self.expression, graph)? {
+                    ThreeValuedBool::True => Some(true),
+                    ThreeValuedBool::False => Some(false),
+                    ThreeValuedBool::Null => None,
                 }
             }
 
             #[cfg(not(feature = "three_valued_logic"))]
             {
-                self.evaluate_expression(&expanded, graph)?
+                Some(self.evaluate_expression(&expanded, graph)?)
             }
         };
 
-        let violations = if !is_satisfied {
+        let is_satisfied = is_satisfied_tristate.unwrap_or(false);
+
+        let violations = if is_satisfied_tristate == Some(true) {
+            vec![]
+        } else if is_satisfied_tristate == Some(false) {
             vec![Violation::new(
                 &self.name,
                 format!("Policy '{}' was violated", self.name),
                 self.modality.to_severity(),
             )]
         } else {
-            vec![]
+            // Unknown (NULL) evaluation: produce a WARNING-level violation by default.
+            vec![Violation::new(
+                &self.name,
+                format!("Policy '{}' evaluation is UNKNOWN (NULL)", self.name),
+                Severity::Warning,
+            )]
         };
 
         Ok(EvaluationResult {
             is_satisfied,
+            is_satisfied_tristate,
             violations,
         })
     }
@@ -287,18 +297,21 @@ impl Policy {
                     })
                 }
                 BinaryOp::Equal | BinaryOp::NotEqual => {
-                    // Comparisons that rely on missing literals should yield Null
-                    let left_val = self.get_literal_value(left);
-                    let right_val = self.get_literal_value(right);
-
+                    let left_val = self.get_runtime_value(left, graph);
+                    let right_val = self.get_runtime_value(right, graph);
                     match (left_val, right_val) {
                         (Ok(lv), Ok(rv)) => {
-                            let eq = match op {
-                                BinaryOp::Equal => lv == rv,
-                                BinaryOp::NotEqual => lv != rv,
-                                _ => unreachable!(),
-                            };
-                            Ok(T::from_option_bool(Some(eq)))
+                            // If either operand is JSON Null, the comparison yields Null.
+                            if lv.is_null() || rv.is_null() {
+                                Ok(T::Null)
+                            } else {
+                                let eq = match op {
+                                    BinaryOp::Equal => lv == rv,
+                                    BinaryOp::NotEqual => lv != rv,
+                                    _ => unreachable!(),
+                                };
+                                Ok(T::from_option_bool(Some(eq)))
+                            }
                         }
                         _ => Ok(T::Null),
                     }
@@ -307,18 +320,25 @@ impl Policy {
                 | BinaryOp::LessThan
                 | BinaryOp::GreaterThanOrEqual
                 | BinaryOp::LessThanOrEqual => {
-                    let left_n = self.get_numeric_value(left);
-                    let right_n = self.get_numeric_value(right);
-                    match (left_n, right_n) {
-                        (Ok(l), Ok(r)) => {
-                            let res = match op {
-                                BinaryOp::GreaterThan => l > r,
-                                BinaryOp::LessThan => l < r,
-                                BinaryOp::GreaterThanOrEqual => l >= r,
-                                BinaryOp::LessThanOrEqual => l <= r,
-                                _ => unreachable!(),
-                            };
-                            Ok(T::from_option_bool(Some(res)))
+                    // Use runtime retrieval which may yield serialization Null.
+                    let left_v = self.get_runtime_value(left, graph);
+                    let right_v = self.get_runtime_value(right, graph);
+                    match (left_v, right_v) {
+                        (Ok(lv), Ok(rv)) => {
+                            if lv.is_null() || rv.is_null() {
+                                Ok(T::Null)
+                            } else if let (Some(l), Some(r)) = (lv.as_f64(), rv.as_f64()) {
+                                let res = match op {
+                                    BinaryOp::GreaterThan => l > r,
+                                    BinaryOp::LessThan => l < r,
+                                    BinaryOp::GreaterThanOrEqual => l >= r,
+                                    BinaryOp::LessThanOrEqual => l <= r,
+                                    _ => unreachable!(),
+                                };
+                                Ok(T::from_option_bool(Some(res)))
+                            } else {
+                                Ok(T::Null)
+                            }
                         }
                         _ => Ok(T::Null),
                     }
@@ -327,17 +347,23 @@ impl Policy {
                     Err("Arithmetic operations not supported in boolean context".to_string())
                 }
                 BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => {
-                    let left_s = self.get_string_value(left);
-                    let right_s = self.get_string_value(right);
-                    match (left_s, right_s) {
-                        (Ok(l), Ok(r)) => {
-                            let ok = match op {
-                                BinaryOp::Contains => l.contains(&r),
-                                BinaryOp::StartsWith => l.starts_with(&r),
-                                BinaryOp::EndsWith => l.ends_with(&r),
-                                _ => unreachable!(),
-                            };
-                            Ok(T::from_option_bool(Some(ok)))
+                    let left_v = self.get_runtime_value(left, graph);
+                    let right_v = self.get_runtime_value(right, graph);
+                    match (left_v, right_v) {
+                        (Ok(lv), Ok(rv)) => {
+                            if lv.is_null() || rv.is_null() {
+                                Ok(T::Null)
+                            } else if let (Some(ls), Some(rs)) = (lv.as_str(), rv.as_str()) {
+                                let ok = match op {
+                                    BinaryOp::Contains => ls.contains(rs),
+                                    BinaryOp::StartsWith => ls.starts_with(rs),
+                                    BinaryOp::EndsWith => ls.ends_with(rs),
+                                    _ => unreachable!(),
+                                };
+                                Ok(T::from_option_bool(Some(ok)))
+                            } else {
+                                Ok(T::Null)
+                            }
                         }
                         _ => Ok(T::Null),
                     }
@@ -350,11 +376,69 @@ impl Policy {
                     UnaryOp::Negate => return Err("Negate operator not supported in boolean context".to_string()),
                 })
             }
-            Expression::Quantifier { .. }
-            | Expression::MemberAccess { .. }
-            | Expression::Aggregation { .. }
-            | Expression::AggregationComprehension { .. }
-            | Expression::QuantityLiteral { .. } => Ok(T::Null),
+            Expression::Quantifier { quantifier, variable, collection, condition } => {
+                // Evaluate quantifiers with three-valued semantics
+                let items = Expression::get_collection(collection, graph)?;
+                use super::expression::Quantifier as Q;
+
+                let mut saw_true = 0usize;
+                let mut saw_false = 0usize;
+                let mut saw_null = 0usize;
+
+                for item in items {
+                    let substituted = condition.substitute(variable, &item)?;
+                    let val = self.evaluate_expression_three_valued(&substituted, graph)?;
+                    match val {
+                        T::True => saw_true += 1,
+                        T::False => saw_false += 1,
+                        T::Null => saw_null += 1,
+                    }
+                }
+
+                match quantifier {
+                    Q::ForAll => {
+                        if saw_false > 0 { return Ok(T::False); }
+                        if saw_null > 0 { return Ok(T::Null); }
+                        Ok(T::True)
+                    }
+                    Q::Exists => {
+                        if saw_true > 0 { return Ok(T::True); }
+                        if saw_null > 0 { return Ok(T::Null); }
+                        Ok(T::False)
+                    }
+                    Q::ExistsUnique => {
+                        if saw_true > 1 { return Ok(T::False); }
+                        if saw_true == 1 && saw_null == 0 { return Ok(T::True); }
+                        if saw_true == 1 && saw_null > 0 { return Ok(T::Null); }
+                        if saw_true == 0 && saw_null > 0 { return Ok(T::Null); }
+                        Ok(T::False)
+                    }
+                }
+            }
+            Expression::MemberAccess { object, member } => {
+                // Resolve object/member to a runtime value and convert to bool
+                let value = self.get_runtime_value(expr, graph)?;
+                Ok(T::from_option_bool(value.as_bool()))
+            }
+            Expression::Aggregation { function, collection, field, filter } => {
+                // Evaluate aggregation and map the result to Null or a boolean
+                let v = Expression::evaluate_aggregation(function, collection, field, filter, graph)?;
+                // If this yields numeric, non-zero is true, zero is false; if Null then Null.
+                if v.is_null() {
+                    return Ok(T::Null);
+                }
+                if let Some(n) = v.as_f64() {
+                    return Ok(T::from_option_bool(Some(n != 0.0)));
+                }
+                Ok(T::Null)
+            }
+            Expression::AggregationComprehension { function, variable, collection, predicate, projection, target_unit } => {
+                let v = Expression::evaluate_aggregation_comprehension(function, variable, collection, predicate, projection, target_unit.as_deref(), graph)?;
+                if v.is_null() { return Ok(T::Null); }
+                if let Some(n) = v.as_f64() { return Ok(T::from_option_bool(Some(n != 0.0))); }
+                Ok(T::Null)
+            }
+            Expression::QuantityLiteral { .. } => Ok(T::Null),
         }
     }
 
@@ -427,6 +511,61 @@ impl Policy {
                 .map(|s| s.to_string())
                 .ok_or_else(|| "Expected string literal".to_string()),
             _ => Err("Expected literal value".to_string()),
+        }
+    }
+
+    #[cfg(feature = "three_valued_logic")]
+    fn get_runtime_value(&self, expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
+        match expr {
+            Expression::Literal(v) => Ok(v.clone()),
+            Expression::MemberAccess { object, member } => {
+                // Try resolving as entity
+                if let Some(id) = graph.find_entity_by_name(object) {
+                    if let Some(entity) = graph.get_entity(&id) {
+                        // Special known members
+                        if member == "id" {
+                            return Ok(serde_json::json!(entity.id().to_string()));
+                        } else if member == "name" {
+                            return Ok(serde_json::json!(entity.name()));
+                        } else if member == "namespace" {
+                            return Ok(serde_json::json!(entity.namespace()));
+                        }
+                        if let Some(val) = entity.get_attribute(member) {
+                            return Ok(val.clone());
+                        }
+                        return Ok(serde_json::Value::Null);
+                    }
+                }
+
+                if let Some(id) = graph.find_resource_by_name(object) {
+                    if let Some(resource) = graph.get_resource(&id) {
+                        if member == "id" {
+                            return Ok(serde_json::json!(resource.id().to_string()));
+                        } else if member == "name" {
+                            return Ok(serde_json::json!(resource.name()));
+                        } else if member == "unit" {
+                            return Ok(serde_json::json!(resource.unit()));
+                        }
+                        if let Some(val) = resource.get_attribute(member) {
+                            return Ok(val.clone());
+                        }
+                        return Ok(serde_json::Value::Null);
+                    }
+                }
+
+                // Not found: return Null to indicate unknown member
+                Ok(serde_json::Value::Null)
+            }
+            Expression::Aggregation { function, collection, field, filter } => {
+                let v = Expression::evaluate_aggregation(function, collection, field, filter, graph)?;
+                Ok(v)
+            }
+            Expression::AggregationComprehension { function, variable, collection, predicate, projection, target_unit } => {
+                let v = Expression::evaluate_aggregation_comprehension(function, variable, collection, predicate, projection, target_unit.as_deref(), graph)?;
+                Ok(v)
+            }
+            Expression::QuantityLiteral { value, unit } => Ok(serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit})),
+            _ => Err("Expected a runtime-resolvable expression (literal, member access, or aggregation)".to_string()),
         }
     }
 }

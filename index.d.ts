@@ -27,6 +27,27 @@ export const enum BinaryOp {
   StartsWith = 13,
   EndsWith = 14
 }
+/** Severity level for policy violations */
+export const enum Severity {
+  Error = 0,
+  Warning = 1,
+  Info = 2
+}
+/** A policy violation */
+export interface Violation {
+  name: string
+  message: string
+  severity: Severity
+}
+/** Result of evaluating a policy against a graph */
+export interface EvaluationResult {
+  /** Backwards compatible boolean: false if evaluation is unknown (NULL) */
+  isSatisfied: boolean
+  /** Tri-state evaluation result: true, false, or null (NULL) */
+  isSatisfiedTristate?: boolean
+  /** List of violations */
+  violations: Array<Violation>
+}
 export declare class Graph {
   constructor()
   addEntity(entity: Entity): void
@@ -56,6 +77,9 @@ export declare class Graph {
   static parse(source: string): Graph
   exportCalm(): string
   static importCalm(calmJson: string): Graph
+  addPolicy(policyJson: string): void
+  addAssociation(owner: string, owned: string, relType: string): void
+  evaluatePolicy(policyJson: string): EvaluationResult
   toString(): string
 }
 export declare class Entity {
@@ -99,18 +123,16 @@ export declare class Instance {
   getAttribute(key: string): string | null
   toString(): string
 }
-
 export declare class NamespaceBinding {
   constructor(path: string, namespace: string)
   get path(): string
   get namespace(): string
 }
-
 export declare class NamespaceRegistry {
-  static from_file(path: string): NamespaceRegistry
-  static discover(path: string): NamespaceRegistry | null
-  resolve_files(fail_on_ambiguity?: boolean): Array<NamespaceBinding>
-  namespace_for(path: string, fail_on_ambiguity?: boolean): string
+  static fromFile(path: string): NamespaceRegistry
+  static discover(path: string): Self | null
+  resolveFiles(failOnAmbiguity?: boolean | undefined | null): Array<NamespaceBinding>
+  namespaceFor(path: string, failOnAmbiguity?: boolean | undefined | null): string
   get root(): string
-  get default_namespace(): string
+  get defaultNamespace(): string
 }

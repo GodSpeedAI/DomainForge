@@ -106,5 +106,7 @@ Thumbs.db
 # Sensitive files (auto-detected)
 node_modules
 
+# Workspace
 *.bak
 .bak.coderabbit.yml
+docs/plans/

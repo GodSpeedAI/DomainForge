@@ -63,6 +63,65 @@ impl From<BinaryOp> for RustBinaryOp {
     }
 }
 
+/// Severity level for policy violations
+#[napi]
+pub enum Severity {
+    Error,
+    Warning,
+    Info,
+}
+
+impl From<crate::policy::Severity> for Severity {
+    fn from(severity: crate::policy::Severity) -> Self {
+        match severity {
+            crate::policy::Severity::Error => Severity::Error,
+            crate::policy::Severity::Warning => Severity::Warning,
+            crate::policy::Severity::Info => Severity::Info,
+        }
+    }
+}
+
+/// A policy violation
+#[napi(object)]
+#[derive(Clone)]
+pub struct Violation {
+    pub name: String,
+    pub message: String,
+    pub severity: Severity,
+}
+
+impl From<crate::policy::Violation> for Violation {
+    fn from(v: crate::policy::Violation) -> Self {
+        Self {
+            name: v.policy_name,
+            message: v.message,
+            severity: v.severity.into(),
+        }
+    }
+}
+
+/// Result of evaluating a policy against a graph
+#[napi(object)]
+#[derive(Clone)]
+pub struct EvaluationResult {
+    /// Backwards compatible boolean: false if evaluation is unknown (NULL)
+    pub is_satisfied: bool,
+    /// Tri-state evaluation result: true, false, or null (NULL)
+    pub is_satisfied_tristate: Option<bool>,
+    /// List of violations
+    pub violations: Vec<Violation>,
+}
+
+impl From<crate::policy::EvaluationResult> for EvaluationResult {
+    fn from(result: crate::policy::EvaluationResult) -> Self {
+        Self {
+            is_satisfied: result.is_satisfied,
+            is_satisfied_tristate: result.is_satisfied_tristate,
+            violations: result.violations.into_iter().map(|v| v.into()).collect(),
+        }
+    }
+}
+
 // Note: Full Expression and Policy bindings would require:
 // 1. Expression struct with methods for each variant
 // 2. Policy struct with evaluate method

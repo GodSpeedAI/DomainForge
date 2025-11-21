@@ -261,6 +261,16 @@ impl Graph {
     }
 
     #[napi]
+    pub fn evaluate_policy(&self, policy_json: String) -> Result<super::policy::EvaluationResult> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| Error::from_reason(format!("Invalid Policy JSON: {}", e)))?;
+        let result = policy
+            .evaluate(&self.inner)
+            .map_err(|e| Error::from_reason(format!("Policy evaluation error: {}", e)))?;
+        Ok(result.into())
+    }
+
+    #[napi]
     pub fn to_string(&self) -> String {
         format!(
             "Graph(entities={}, resources={}, flows={}, instances={})",

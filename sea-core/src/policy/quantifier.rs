@@ -113,7 +113,11 @@ impl Expression {
                     if let Some(field_value) = value.get(field) {
                         Ok(Expression::Literal(field_value.clone()))
                     } else {
-                        Err(format!("Field '{}' not found in value", field))
+                        // For three-valued semantics, if a field is missing in a substituted
+                        // value, treat it as NULL/unknown rather than a fatal error. That way
+                        // quantifiers and nested expressions can evaluate to NULL when data
+                        // is optional.
+                        Ok(Expression::Literal(serde_json::Value::Null))
                     }
                 } else {
                     Ok(self.clone())
@@ -158,7 +162,7 @@ impl Expression {
                     if let Some(field_value) = value.get(member) {
                         Ok(Expression::Literal(field_value.clone()))
                     } else {
-                        Err(format!("Field '{}' not found in value", member))
+                        Ok(Expression::Literal(serde_json::Value::Null))
                     }
                 } else {
                     Ok(self.clone())
@@ -197,7 +201,7 @@ impl Expression {
         }
     }
 
-    fn get_collection(expr: &Expression, graph: &Graph) -> Result<Vec<serde_json::Value>, String> {
+    pub(crate) fn get_collection(expr: &Expression, graph: &Graph) -> Result<Vec<serde_json::Value>, String> {
         match expr {
             Expression::Variable(name) => {
                 match name.as_str() {
@@ -212,13 +216,18 @@ impl Expression {
                                         f.quantity()
                                     )
                                 })?;
-                                Ok(serde_json::json!({
-                                    "id": f.id().to_string(), // Keep as string for JSON compatibility
-                                    "from_entity": f.from_id().to_string(),
-                                    "to_entity": f.to_id().to_string(),
-                                    "resource": f.resource_id().to_string(),
-                                    "quantity": quantity,
-                                }))
+
+                                let mut map = serde_json::Map::new();
+                                map.insert("id".to_string(), serde_json::json!(f.id().to_string()));
+                                map.insert("from_entity".to_string(), serde_json::json!(f.from_id().to_string()));
+                                map.insert("to_entity".to_string(), serde_json::json!(f.to_id().to_string()));
+                                map.insert("resource".to_string(), serde_json::json!(f.resource_id().to_string()));
+                                map.insert("quantity".to_string(), serde_json::json!(quantity));
+
+                                for (k, v) in f.attributes().iter() {
+                                    map.insert(k.clone(), v.clone());
+                                }
+                                Ok(serde_json::Value::Object(map))
                             })
                             .collect();
                         flows
@@ -242,12 +251,15 @@ impl Expression {
                             .all_resources()
                             .iter()
                             .map(|r| {
-                                serde_json::json!({
-                                    "id": r.id().to_string(),
-                                    "name": r.name(),
-                                    "namespace": r.namespace(),
-                                    "unit": r.unit(),
-                                })
+                                let mut map = serde_json::Map::new();
+                                map.insert("id".to_string(), serde_json::json!(r.id().to_string()));
+                                map.insert("name".to_string(), serde_json::json!(r.name()));
+                                map.insert("namespace".to_string(), serde_json::json!(r.namespace()));
+                                map.insert("unit".to_string(), serde_json::json!(r.unit()));
+                                for (k, v) in r.attributes().iter() {
+                                    map.insert(k.clone(), v.clone());
+                                }
+                                serde_json::Value::Object(map)
                             })
                             .collect();
                         Ok(resources)
@@ -257,11 +269,14 @@ impl Expression {
                             .all_instances()
                             .iter()
                             .map(|i| {
-                                serde_json::json!({
-                                    "id": i.id().to_string(),
-                                    "entity": i.entity_id().to_string(),
-                                    "resource": i.resource_id().to_string(),
-                                })
+                                let mut map = serde_json::Map::new();
+                                map.insert("id".to_string(), serde_json::json!(i.id().to_string()));
+                                map.insert("entity".to_string(), serde_json::json!(i.entity_id().to_string()));
+                                map.insert("resource".to_string(), serde_json::json!(i.resource_id().to_string()));
+                                for (k, v) in i.attributes().iter() {
+                                    map.insert(k.clone(), v.clone());
+                                }
+                                serde_json::Value::Object(map)
                             })
                             .collect();
                         Ok(instances)
@@ -277,7 +292,7 @@ impl Expression {
         matches!(expr, Expression::Literal(v) if v.as_bool() == Some(true))
     }
 
-    fn evaluate_aggregation(
+    pub(crate) fn evaluate_aggregation(
         function: &AggregateFunction,
         collection: &Expression,
         field: &Option<String>,
@@ -443,7 +458,7 @@ impl Expression {
         }
     }
 
-    fn evaluate_aggregation_comprehension(
+    pub(crate) fn evaluate_aggregation_comprehension(
         function: &AggregateFunction,
         variable: &str,
         collection: &Expression,
@@ -492,7 +507,7 @@ impl Expression {
         }
     }
 
-    fn fold_numeric(
+    pub(crate) fn fold_numeric(
         function: &AggregateFunction,
         values: &[serde_json::Value],
         target_unit: Option<&str>,

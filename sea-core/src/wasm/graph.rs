@@ -377,6 +377,17 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
+    #[wasm_bindgen(js_name = evaluatePolicy)]
+    pub fn evaluate_policy(&self, policy_json: String) -> Result<crate::wasm::policy::EvaluationResult, JsValue> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| JsValue::from_str(&format!("Invalid Policy JSON: {}", e)))?;
+        
+        let result = policy.evaluate(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Policy evaluation error: {}", e)))?;
+        
+        Ok(result.into())
+    }
+
     #[wasm_bindgen(js_name = toJSON)]
     pub fn to_json(&self) -> Result<JsValue, JsValue> {
         serde_wasm_bindgen::to_value(&self.inner)

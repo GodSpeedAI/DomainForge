@@ -1,8 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use rust_decimal::Decimal;
+use sea_core::policy::three_valued_aggregators as aggregators;
 
 fn bench_sum_nullable(c: &mut Criterion) {
-    use crate::policy::three_valued::aggregators;
+    // Use the aggregator functions from the library
 
     let mut group = c.benchmark_group("three_valued_sum");
 

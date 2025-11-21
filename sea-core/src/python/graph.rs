@@ -232,6 +232,15 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Add association error: {}", e)))
     }
 
+    fn evaluate_policy(&self, policy_json: String) -> PyResult<super::policy::EvaluationResult> {
+        let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
+            .map_err(|e| PyValueError::new_err(format!("Invalid Policy JSON: {}", e)))?;
+        let result = policy
+            .evaluate(&self.inner)
+            .map_err(|e| PyValueError::new_err(format!("Policy evaluation error: {}", e)))?;
+        Ok(result.into())
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "Graph(entities={}, resources={}, flows={}, instances={})",

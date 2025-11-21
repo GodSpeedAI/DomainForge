@@ -34,5 +34,5 @@ dev = [
 [tool.maturin]
 python-source = "python"
 module-name = "sea_dsl"
-features = ["python"]
+features = ["python", "three_valued_logic"]
 manifest-path = "sea-core/Cargo.toml"

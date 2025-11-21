@@ -25,14 +25,14 @@ describe('NamespaceRegistry (TS)', () => {
         const content = `version = 1\ndefault_namespace = "default"\n\n[[namespaces]]\nnamespace = "logistics"\npatterns = ["domains/logistics/**/*.sea"]\n`;
         fs.writeFileSync(registryPath, content);
 
-        const reg = NamespaceRegistry.from_file(registryPath);
+        const reg = NamespaceRegistry.fromFile(registryPath);
         expect(reg).toBeDefined();
-        const files = reg.resolve_files();
+        const files = reg.resolveFiles();
         expect(files.length).toBe(1);
         expect(files[0].path).toBe(filePath);
         expect(files[0].namespace).toBe('logistics');
 
-        const ns = reg.namespace_for(filePath);
+        const ns = reg.namespaceFor(filePath);
         expect(ns).toBe('logistics');
     });
 
@@ -53,9 +53,9 @@ describe('NamespaceRegistry (TS)', () => {
         const content = `version = 1\ndefault_namespace = "default"\n\n[[namespaces]]\nnamespace = "short"\npatterns = ["domains/**/*.sea"]\n\n[[namespaces]]\nnamespace = "long"\npatterns = ["domains/logistics/**/*.sea"]\n`;
         fs.writeFileSync(registryPath, content);
 
-        const reg = NamespaceRegistry.from_file(registryPath);
+        const reg = NamespaceRegistry.fromFile(registryPath);
         expect(reg).toBeDefined();
-        const ns = reg.namespace_for(filePath);
+        const ns = reg.namespaceFor(filePath);
         expect(ns).toBe('long');
     });
 
@@ -76,9 +76,9 @@ describe('NamespaceRegistry (TS)', () => {
         const content = `version = 1\ndefault_namespace = "default"\n\n[[namespaces]]\nnamespace = "logistics"\npatterns = ["domains/*/warehouse.sea"]\n\n[[namespaces]]\nnamespace = "finance"\npatterns = ["domains/*/warehouse.sea"]\n`;
         fs.writeFileSync(registryPath, content);
 
-        const reg = NamespaceRegistry.from_file(registryPath);
+        const reg = NamespaceRegistry.fromFile(registryPath);
         expect(reg).toBeDefined();
-        const ns = reg.namespace_for(filePath);
+        const ns = reg.namespaceFor(filePath);
         expect(ns).toBe('finance');
     });
 
@@ -99,12 +99,12 @@ describe('NamespaceRegistry (TS)', () => {
         const content = `version = 1\ndefault_namespace = "default"\n\n[[namespaces]]\nnamespace = "logistics"\npatterns = ["domains/*/warehouse.sea"]\n\n[[namespaces]]\nnamespace = "finance"\npatterns = ["domains/*/warehouse.sea"]\n`;
         fs.writeFileSync(registryPath, content);
 
-        const reg = NamespaceRegistry.from_file(registryPath);
+        const reg = NamespaceRegistry.fromFile(registryPath);
         expect(reg).toBeDefined();
         let threw = false;
         try {
             // pass true to indicate failing on ambiguity
-            reg.namespace_for(filePath, true);
+            reg.namespaceFor(filePath, true);
         } catch (err) {
             threw = true;
         }
@@ -113,7 +113,7 @@ describe('NamespaceRegistry (TS)', () => {
         // resolve_files should error as well
         threw = false;
         try {
-            reg.resolve_files(true);
+            reg.resolveFiles(true);
         } catch (err) {
             threw = true;
         }

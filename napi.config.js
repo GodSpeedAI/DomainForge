@@ -1,7 +1,7 @@
 module.exports = {
     cargo: {
         cargoManifestPath: './sea-core/Cargo.toml',
-        cargoFeatures: ['typescript'],
+        cargoFeatures: ['typescript', 'three_valued_logic'],
     },
     packageName: '@domainforge/sea',
     packageJsonPath: './package.json',
