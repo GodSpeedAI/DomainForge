@@ -1,7 +1,5 @@
 //! Three-valued boolean logic (SQL-like UNKNOWN) for SEA policy evaluation.
-//! This module is enabled when the `three_valued_logic` feature is set.
 
-#[cfg(feature = "three_valued_logic")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ThreeValuedBool {
     True,
@@ -9,7 +7,6 @@ pub enum ThreeValuedBool {
     Null,
 }
 
-#[cfg(feature = "three_valued_logic")]
 impl ThreeValuedBool {
     pub fn and(self, other: Self) -> Self {
         use ThreeValuedBool::*;
@@ -92,7 +89,6 @@ impl ThreeValuedBool {
     }
 }
 
-#[cfg(feature = "three_valued_logic")]
 pub mod aggregators {
     use rust_decimal::Decimal;
 

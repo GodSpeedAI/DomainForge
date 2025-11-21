@@ -3,7 +3,6 @@ use super::violation::{Severity, Violation};
 use crate::graph::Graph;
 use crate::{ConceptId, SemanticVersion};
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "three_valued_logic")]
 use crate::policy::ThreeValuedBool;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -151,26 +150,18 @@ impl Policy {
     }
 
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
-        #[cfg(not(feature = "three_valued_logic"))]
-        let expanded = self.expression.expand(graph)?;
-
-        // Evaluate expression. If three_valued_logic is enabled the
+        // Evaluate expression. If three_valued_logic is enabled at runtime, the
         // evaluator may return a ThreeValuedBool; we compute the tri-state
         // result and derive a backward-compatible boolean (false when Null).
-        let is_satisfied_tristate: Option<bool> = {
-            #[cfg(feature = "three_valued_logic")]
-            {
-                match self.evaluate_expression_three_valued(&self.expression, graph)? {
-                    ThreeValuedBool::True => Some(true),
-                    ThreeValuedBool::False => Some(false),
-                    ThreeValuedBool::Null => None,
-                }
+        let is_satisfied_tristate: Option<bool> = if graph.config.use_three_valued_logic {
+            match self.evaluate_expression_three_valued(&self.expression, graph)? {
+                ThreeValuedBool::True => Some(true),
+                ThreeValuedBool::False => Some(false),
+                ThreeValuedBool::Null => None,
             }
-
-            #[cfg(not(feature = "three_valued_logic"))]
-            {
-                Some(self.evaluate_expression(&expanded, graph)?)
-            }
+        } else {
+            let expanded = self.expression.expand(graph)?;
+            Some(self.evaluate_expression(&expanded, graph)?)
         };
 
         let is_satisfied = is_satisfied_tristate.unwrap_or(false);
@@ -275,7 +266,6 @@ impl Policy {
         }
     }
 
-    #[cfg(feature = "three_valued_logic")]
     fn evaluate_expression_three_valued(
         &self,
         expr: &Expression,
@@ -415,7 +405,7 @@ impl Policy {
                     }
                 }
             }
-            Expression::MemberAccess { object, member } => {
+            Expression::MemberAccess { object: _, member: _ } => {
                 // Resolve object/member to a runtime value and convert to bool
                 let value = self.get_runtime_value(expr, graph)?;
                 Ok(T::from_option_bool(value.as_bool()))
@@ -514,7 +504,6 @@ impl Policy {
         }
     }
 
-    #[cfg(feature = "three_valued_logic")]
     fn get_runtime_value(&self, expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),

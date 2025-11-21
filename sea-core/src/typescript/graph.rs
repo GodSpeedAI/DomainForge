@@ -270,6 +270,21 @@ impl Graph {
         Ok(result.into())
     }
 
+    /// Set the evaluation mode for policy evaluation.
+    /// When `useThreeValuedLogic` is true, policies will use three-valued logic (true, false, null).
+    /// When false, policies will use strict boolean logic (true, false).
+    #[napi]
+    pub fn set_evaluation_mode(&mut self, use_three_valued_logic: bool) {
+        self.inner.set_evaluation_mode(use_three_valued_logic);
+    }
+
+    /// Get the current evaluation mode.
+    /// Returns true if three-valued logic is enabled, false otherwise.
+    #[napi]
+    pub fn use_three_valued_logic(&self) -> bool {
+        self.inner.use_three_valued_logic()
+    }
+
     #[napi]
     pub fn to_string(&self) -> String {
         format!(

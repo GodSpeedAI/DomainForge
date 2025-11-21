@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `evaluate_policy` method provides a unified interface for evaluating SEA DSL policies against a graph in both Python and TypeScript/JavaScript. It supports three-valued logic (True, False, NULL) for handling indeterminate evaluation results.
+The `evaluate_policy` method provides a unified interface for evaluating SEA DSL policies against a graph Python, TypeScript/JavaScript and WebAssembly. It supports three-valued logic (True, False, NULL) for handling indeterminate evaluation results.
 
 ## API Reference
 
@@ -166,6 +166,67 @@ NULL evaluation results occur when:
 - Policy expression references non-existent entities or resources
 
 When a NULL result occurs, a `Warning`-level violation is automatically added to explain the indeterminate state.
+
+### Runtime Configuration
+
+You can toggle between three-valued logic and strict boolean logic at runtime:
+
+**Python:**
+
+```python
+from sea_dsl import Graph
+
+graph = Graph()
+
+# Enable three-valued logic (default)
+graph.set_evaluation_mode(True)
+
+# Disable three-valued logic (strict boolean)
+graph.set_evaluation_mode(False)
+
+# Check current mode
+is_tristate = graph.use_three_valued_logic()
+```
+
+**TypeScript:**
+
+```typescript
+import { Graph } from "@domainforge/sea";
+
+const graph = new Graph();
+
+// Enable three-valued logic (default)
+graph.setEvaluationMode(true);
+
+// Disable three-valued logic (strict boolean)
+graph.setEvaluationMode(false);
+
+// Check current mode
+const isTristate = graph.useThreeValuedLogic();
+```
+
+**WebAssembly:**
+
+```javascript
+import init, { Graph } from "./sea-core/pkg/sea_core.js";
+
+await init();
+const graph = new Graph();
+
+// Enable three-valued logic (default)
+graph.setEvaluationMode(true);
+
+// Disable three-valued logic (strict boolean)
+graph.setEvaluationMode(false);
+
+// Check current mode
+const isTristate = graph.useThreeValuedLogic();
+```
+
+**Behavior Differences:**
+
+- **Three-valued logic enabled (default)**: Comparisons involving `NULL` values yield `NULL` results, and quantifiers propagate `NULL` appropriately.
+- **Three-valued logic disabled**: Expressions are expanded and evaluated using strict boolean logic, where missing data causes evaluation errors rather than `NULL` results.
 
 ## Usage Examples
 

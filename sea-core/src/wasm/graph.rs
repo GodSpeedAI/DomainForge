@@ -388,6 +388,21 @@ impl Graph {
         Ok(result.into())
     }
 
+    /// Set the evaluation mode for policy evaluation.
+    /// When `useThreeValuedLogic` is true, policies will use three-valued logic (true, false, null).
+    /// When false, policies will use strict boolean logic (true, false).
+    #[wasm_bindgen(js_name = setEvaluationMode)]
+    pub fn set_evaluation_mode(&mut self, use_three_valued_logic: bool) {
+        self.inner.set_evaluation_mode(use_three_valued_logic);
+    }
+
+    /// Get the current evaluation mode.
+    /// Returns true if three-valued logic is enabled, false otherwise.
+    #[wasm_bindgen(js_name = useThreeValuedLogic)]
+    pub fn use_three_valued_logic(&self) -> bool {
+        self.inner.use_three_valued_logic()
+    }
+
     #[wasm_bindgen(js_name = toJSON)]
     pub fn to_json(&self) -> Result<JsValue, JsValue> {
         serde_wasm_bindgen::to_value(&self.inner)
