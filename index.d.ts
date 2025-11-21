@@ -44,7 +44,7 @@ export interface EvaluationResult {
   /** Backwards compatible boolean: false if evaluation is unknown (NULL) */
   isSatisfied: boolean
   /** Tri-state evaluation result: true, false, or null (NULL) */
-  isSatisfiedTristate?: boolean | null
+  isSatisfiedTristate?: boolean
   /** List of violations */
   violations: Array<Violation>
 }
@@ -79,6 +79,14 @@ export declare class Graph {
   static importCalm(calmJson: string): Graph
   addPolicy(policyJson: string): void
   addAssociation(owner: string, owned: string, relType: string): void
+  /**
+   * Evaluate a Policy JSON payload against this Graph.
+   *
+   * The `policy_json` argument must be the JSON representation of `crate::policy::Policy`
+   * (including fields like `id`, `name`, `modality`, `kind`, `version`, and `expression`).
+   * Returns `EvaluationResult` exposed to TypeScript via napi, or an error if the policy JSON
+   * is invalid or evaluation fails.
+   */
   evaluatePolicy(policyJson: string): EvaluationResult
   /**
    * Set the evaluation mode for policy evaluation.
@@ -141,7 +149,7 @@ export declare class NamespaceBinding {
 }
 export declare class NamespaceRegistry {
   static fromFile(path: string): NamespaceRegistry
-  static discover(path: string): NamespaceRegistry | null
+  static discover(path: string): Self | null
   resolveFiles(failOnAmbiguity?: boolean | undefined | null): Array<NamespaceBinding>
   namespaceFor(path: string, failOnAmbiguity?: boolean | undefined | null): string
   get root(): string

@@ -3,7 +3,7 @@ mod expression;
 mod quantifier;
 mod type_infer;
 mod violation;
-mod three_valued;
+pub mod three_valued;
 
 #[cfg(test)]
 mod three_valued_microbench;
