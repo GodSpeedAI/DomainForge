@@ -30,7 +30,7 @@ pub struct Graph {
     instances: IndexMap<ConceptId, Instance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
-    pub config: GraphConfig,
+    config: GraphConfig,
 }
 
 impl Graph {
@@ -56,6 +56,14 @@ impl Graph {
     /// Get the current evaluation mode.
     pub fn use_three_valued_logic(&self) -> bool {
         self.config.use_three_valued_logic
+    }
+
+    pub fn config(&self) -> &GraphConfig {
+        &self.config
+    }
+
+    pub fn config_mut(&mut self) -> &mut GraphConfig {
+        &mut self.config
     }
 
 

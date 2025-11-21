@@ -94,13 +94,13 @@ def test_policy_evaluates_to_null():
     assert result.is_satisfied is False
     # The tristate field should be None to indicate unknown/NULL
     assert result.is_satisfied_tristate is None
-    # Should have a warning-level violation indicating unknown evaluation
+    # Violation severity follows the policy modality even when evaluation is NULL
     assert len(result.violations) == 1
     assert (
         "UNKNOWN" in result.violations[0].message
         or "NULL" in result.violations[0].message
     )
-    assert result.violations[0].severity == Severity.Warning
+    assert result.violations[0].severity == Severity.Error
 
 
 def test_evaluation_result_repr():

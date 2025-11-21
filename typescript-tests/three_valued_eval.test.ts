@@ -90,13 +90,13 @@ describe('Three-valued policy evaluation', () => {
     expect(result.isSatisfied).toBe(false);
     // The tristate field should be undefined (missing) to indicate indeterminate result
     expect(result.isSatisfiedTristate).toBeUndefined();
-    // Should have a warning-level violation indicating unknown evaluation
+    // Violation severity follows the policy modality even when evaluation is NULL
     expect(result.violations).toHaveLength(1);
     expect(
       result.violations[0].message.includes('UNKNOWN') ||
         result.violations[0].message.includes('NULL')
     ).toBe(true);
-    expect(result.violations[0].severity).toBe(Severity.Warning);
+    expect(result.violations[0].severity).toBe(Severity.Error);
   });
 
   it('should handle invalid policy JSON', () => {
@@ -110,6 +110,7 @@ describe('Three-valued policy evaluation', () => {
   it('should include violation details', () => {
     const graph = new Graph();
 
+    // Ensure violation messaging reflects the modality (Prohibition) rather than a generic failure.
     const policy = {
       id: '00000000-0000-0000-0000-000000000005',
       name: 'ViolatedPolicy',
@@ -128,7 +129,7 @@ describe('Three-valued policy evaluation', () => {
     expect(result.violations.length).toBeGreaterThan(0);
     const violation = result.violations[0];
     expect(violation.name).toBe('ViolatedPolicy');
-    expect(violation.message).toContain('violated');
+    expect(violation.message).toMatch(new RegExp(policy.name, 'i'));
     expect(violation.severity).toBe(Severity.Error);
   });
 });

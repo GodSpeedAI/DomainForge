@@ -82,7 +82,7 @@ impl Instance {
     }
 
     /// Returns all attributes as a reference.
-    pub fn attributes(&self) -> &std::collections::HashMap<String, Value> {
+    pub fn attributes(&self) -> &HashMap<String, Value> {
         &self.attributes
     }
 }

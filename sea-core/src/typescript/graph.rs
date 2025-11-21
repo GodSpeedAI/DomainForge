@@ -260,6 +260,12 @@ impl Graph {
             .map_err(Error::from_reason)
     }
 
+    /// Evaluate a Policy JSON payload against this Graph.
+    ///
+    /// The `policy_json` argument must be the JSON representation of `crate::policy::Policy`
+    /// (including fields like `id`, `name`, `modality`, `kind`, `version`, and `expression`).
+    /// Returns `EvaluationResult` exposed to TypeScript via napi, or an error if the policy JSON
+    /// is invalid or evaluation fails.
     #[napi]
     pub fn evaluate_policy(&self, policy_json: String) -> Result<super::policy::EvaluationResult> {
         let policy: crate::policy::Policy = serde_json::from_str(&policy_json)

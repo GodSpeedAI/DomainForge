@@ -55,7 +55,7 @@ describe('Runtime toggle for three-valued logic', () => {
     expect(result.isSatisfiedTristate).toBeUndefined();
     expect(result.isSatisfied).toBe(false);
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].severity).toBe(Severity.Warning);
+    expect(result.violations[0].severity).toBe(Severity.Error);
   });
 
   it('should use strict boolean logic when three-valued mode is disabled', () => {

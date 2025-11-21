@@ -159,16 +159,20 @@ impl Policy {
         let is_satisfied_tristate: Option<bool> = {
             #[cfg(feature = "three_valued_logic")]
             {
-                match self.evaluate_expression_three_valued(&expanded, graph)? {
-                    ThreeValuedBool::True => Some(true),
-                    ThreeValuedBool::False => Some(false),
-                    ThreeValuedBool::Null => None,
+                if graph.use_three_valued_logic() {
+                    match self.evaluate_expression_three_valued(&expanded, graph)? {
+                        ThreeValuedBool::True => Some(true),
+                        ThreeValuedBool::False => Some(false),
+                        ThreeValuedBool::Null => None,
+                    }
+                } else {
+                    Some(self.evaluate_expression_boolean(&expanded, graph)?)
                 }
             }
 
             #[cfg(not(feature = "three_valued_logic"))]
             {
-                Some(self.evaluate_expression(&expanded, graph)?)
+                Some(self.evaluate_expression_boolean(&expanded, graph)?)
             }
         };
 
@@ -183,11 +187,11 @@ impl Policy {
                 self.modality.to_severity(),
             )]
         } else {
-            // Unknown (NULL) evaluation: produce a WARNING-level violation by default.
+            // Unknown (NULL) evaluation: severity follows the policy modality.
             vec![Violation::new(
                 &self.name,
                 format!("Policy '{}' evaluation is UNKNOWN (NULL)", self.name),
-                Severity::Warning,
+                self.modality.to_severity(),
             )]
         };
 
@@ -198,8 +202,7 @@ impl Policy {
         })
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
-    fn evaluate_expression(&self, expr: &Expression, graph: &Graph) -> Result<bool, String> {
+    fn evaluate_expression_boolean(&self, expr: &Expression, graph: &Graph) -> Result<bool, String> {
         match expr {
             Expression::Literal(v) => v
                 .as_bool()
@@ -209,8 +212,8 @@ impl Policy {
             }
             Expression::Binary { op, left, right } => match op {
                 BinaryOp::And | BinaryOp::Or => {
-                    let left_val = self.evaluate_expression(left, graph)?;
-                    let right_val = self.evaluate_expression(right, graph)?;
+                    let left_val = self.evaluate_expression_boolean(left, graph)?;
+                    let right_val = self.evaluate_expression_boolean(right, graph)?;
 
                     Ok(match op {
                         BinaryOp::And => left_val && right_val,
@@ -249,7 +252,7 @@ impl Policy {
                     }),
             },
             Expression::Unary { op, operand } => {
-                let val = self.evaluate_expression(operand, graph)?;
+                let val = self.evaluate_expression_boolean(operand, graph)?;
                 Ok(match op {
                     UnaryOp::Not => !val,
                     UnaryOp::Negate => {
@@ -261,7 +264,8 @@ impl Policy {
                 Err("Cannot evaluate non-expanded quantifier".to_string())
             }
             Expression::MemberAccess { .. } => {
-                Err("Cannot evaluate non-expanded member access".to_string())
+                let value = self.get_runtime_value(expr, graph)?;
+                Ok(value.as_bool().unwrap_or(false))
             }
             Expression::Aggregation { .. } => {
                 Err("Cannot evaluate non-expanded aggregation".to_string())
@@ -444,55 +448,55 @@ impl Policy {
         }
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
     fn compare_values<F>(
         &self,
         left: &Expression,
         right: &Expression,
-        _graph: &Graph,
+        graph: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
         F: Fn(&serde_json::Value, &serde_json::Value) -> bool,
     {
-        let left_val = self.get_literal_value(left)?;
-        let right_val = self.get_literal_value(right)?;
+        let left_val = self
+            .get_literal_value(left)
+            .or_else(|_| self.get_runtime_value(left, graph))?;
+        let right_val = self
+            .get_literal_value(right)
+            .or_else(|_| self.get_runtime_value(right, graph))?;
         Ok(op(&left_val, &right_val))
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
     fn compare_numeric<F>(
         &self,
         left: &Expression,
         right: &Expression,
-        _graph: &Graph,
+        graph: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
         F: Fn(f64, f64) -> bool,
     {
-        let left_val = self.get_numeric_value(left)?;
-        let right_val = self.get_numeric_value(right)?;
+        let left_val = self.get_numeric_value(left, graph)?;
+        let right_val = self.get_numeric_value(right, graph)?;
         Ok(op(left_val, right_val))
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
     fn compare_strings<F>(
         &self,
         left: &Expression,
         right: &Expression,
-        _graph: &Graph,
+        graph: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
         F: Fn(&str, &str) -> bool,
     {
-        let left_val = self.get_string_value(left)?;
-        let right_val = self.get_string_value(right)?;
+        let left_val = self.get_string_value(left, graph)?;
+        let right_val = self.get_string_value(right, graph)?;
         Ok(op(&left_val, &right_val))
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
     fn get_literal_value(&self, expr: &Expression) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),
@@ -500,29 +504,24 @@ impl Policy {
         }
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
-    fn get_numeric_value(&self, expr: &Expression) -> Result<f64, String> {
-        match expr {
-            Expression::Literal(v) => v
-                .as_f64()
-                .or_else(|| v.as_i64().map(|i| i as f64))
-                .ok_or_else(|| "Expected numeric literal".to_string()),
-            _ => Err("Expected literal value".to_string()),
-        }
+    fn get_numeric_value(&self, expr: &Expression, graph: &Graph) -> Result<f64, String> {
+        let v = self
+            .get_literal_value(expr)
+            .or_else(|_| self.get_runtime_value(expr, graph))?;
+        v.as_f64()
+            .or_else(|| v.as_i64().map(|i| i as f64))
+            .ok_or_else(|| "Expected numeric value".to_string())
     }
 
-    #[cfg(not(feature = "three_valued_logic"))]
-    fn get_string_value(&self, expr: &Expression) -> Result<String, String> {
-        match expr {
-            Expression::Literal(v) => v
-                .as_str()
-                .map(|s| s.to_string())
-                .ok_or_else(|| "Expected string literal".to_string()),
-            _ => Err("Expected literal value".to_string()),
-        }
+    fn get_string_value(&self, expr: &Expression, graph: &Graph) -> Result<String, String> {
+        let v = self
+            .get_literal_value(expr)
+            .or_else(|_| self.get_runtime_value(expr, graph))?;
+        v.as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Expected string value".to_string())
     }
 
-    #[cfg(feature = "three_valued_logic")]
     fn get_runtime_value(&self, expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),

@@ -165,7 +165,7 @@ NULL evaluation results occur when:
 - Graph state is incomplete
 - Policy expression references non-existent entities or resources
 
-When a NULL result occurs, a `Warning`-level violation is automatically added to explain the indeterminate state.
+When a NULL result occurs, a violation is added using the policy modality's severity (Obligations/Prohibitions -> `Error`, Permissions -> `Info`) to explain the indeterminate state.
 
 ### Runtime Configuration
 

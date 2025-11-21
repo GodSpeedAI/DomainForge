@@ -13,14 +13,16 @@ mod microbench {
     fn bench_microbench_sum_comparison() {
         const ITERATIONS: usize = 10_000;
         const DATA_SIZE: usize = 1_000;
+        const WARMUP_ITERS: usize = 100;
 
         // Baseline: strict sum with manual loop (more comparable to nullable version)
         let data_strict: Vec<Decimal> = (0..DATA_SIZE)
             .map(|i| Decimal::new(i as i64, 0))
             .collect();
 
-        let baseline_warmup_iters = (ITERATIONS / 10).max(1);
-        for _ in 0..baseline_warmup_iters {
+        let expected_strict_sum: Decimal = data_strict.iter().copied().sum();
+
+        for _ in 0..WARMUP_ITERS {
             let mut total = Decimal::ZERO;
             for item in &data_strict {
                 total += *item;
@@ -29,14 +31,21 @@ mod microbench {
         }
 
         let start = Instant::now();
+        let mut last_strict_total = Decimal::ZERO;
         for _ in 0..ITERATIONS {
             let mut total = Decimal::ZERO;
             for item in &data_strict {
                 total += *item;
             }
             std::hint::black_box(total);
+            last_strict_total = total;
         }
         let baseline_duration = start.elapsed();
+        assert_eq!(
+            last_strict_total, expected_strict_sum,
+            "strict sum should equal the arithmetic series of {} elements",
+            DATA_SIZE
+        );
 
         // Nullable sum with 10% nulls
         let data_nullable: Vec<Option<Decimal>> = (0..DATA_SIZE)
@@ -49,25 +58,31 @@ mod microbench {
             })
             .collect();
 
-        for _ in 0..100usize {
-            std::hint::black_box(sum_nullable(&data_nullable));
-        }
+        let expected_nullable_sum = sum_nullable(&data_nullable);
 
-        let start = Instant::now();
-        for _ in 0..ITERATIONS {
+        for _ in 0..WARMUP_ITERS {
             let result = sum_nullable(&data_nullable);
             std::hint::black_box(result);
         }
+
+        let start = Instant::now();
+        let mut last_nullable_result = None;
+        for _ in 0..ITERATIONS {
+            let result = sum_nullable(&data_nullable);
+            std::hint::black_box(result);
+            last_nullable_result = result;
+        }
         let nullable_duration = start.elapsed();
+        assert_eq!(
+            last_nullable_result, expected_nullable_sum,
+            "nullable sum result should match expectation for data with 10% nulls"
+        );
 
         // Calculate overhead
         let baseline_nanos = baseline_duration.as_nanos();
+        let denom = baseline_nanos.max(1);
         let nullable_nanos = nullable_duration.as_nanos();
-        let overhead_pct = if baseline_nanos == 0 {
-            0.0
-        } else {
-            ((nullable_nanos as f64 / baseline_nanos as f64) - 1.0) * 100.0
-        };
+        let overhead_pct = ((nullable_nanos as f64 / denom as f64) - 1.0) * 100.0;
 
         println!("\n=== Micro-Benchmark Results ===");
         println!("Iterations: {}", ITERATIONS);

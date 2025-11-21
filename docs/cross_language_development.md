@@ -211,29 +211,50 @@ impl Graph {
 ### Rust → Python
 
 ```rust
-// Automatic conversion via From trait
-impl From<crate::policy::EvaluationResult> for python::EvaluationResult {
-    fn from(result: crate::policy::EvaluationResult) -> Self {
-        Self {
-            is_satisfied: result.is_satisfied,
-            is_satisfied_tristate: result.is_satisfied_tristate,
-            violations: result.violations.into_iter().map(|v| v.into()).collect(),
-        }
+use pyo3::{FromPyObject, IntoPy, PyAny, PyObject, Python};
+use pythonize::{depythonize, pythonize};
+
+// GIL is required for both directions
+impl IntoPy<PyObject> for crate::policy::EvaluationResult {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        pythonize(py, &self).expect("serialize EvaluationResult for Python")
     }
 }
+
+impl<'py> FromPyObject<'py> for crate::policy::EvaluationResult {
+    fn extract(ob: &'py PyAny) -> pyo3::PyResult<Self> {
+        depythonize(ob)
+    }
+}
+
+// Usage with GIL token
+Python::with_gil(|py| {
+    let py_value: PyObject = result.clone().into_py(py);
+    let round_trip: crate::policy::EvaluationResult = py_value.extract(py)?;
+    // ...
+});
 ```
 
 ### Rust → TypeScript
 
 ```rust
-// Automatic conversion via From trait + NAPI
-impl From<crate::policy::EvaluationResult> for typescript::EvaluationResult {
-    fn from(result: crate::policy::EvaluationResult) -> Self {
-        Self {
-            is_satisfied: result.is_satisfied,
-            is_satisfied_tristate: result.is_satisfied_tristate,
-            violations: result.violations.into_iter().map(|v| v.into()).collect(),
-        }
+use napi::{Env, JsUnknown};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct EvaluationResult {
+    is_satisfied: bool,
+    is_satisfied_tristate: Option<bool>,
+}
+
+impl EvaluationResult {
+    // serde + napi helpers handle conversion
+    fn to_js(&self, env: Env) -> napi::Result<JsUnknown> {
+        env.to_js_value(self)
+    }
+
+    fn from_js(env: Env, value: JsUnknown) -> napi::Result<Self> {
+        env.from_js_value(&value)
     }
 }
 ```

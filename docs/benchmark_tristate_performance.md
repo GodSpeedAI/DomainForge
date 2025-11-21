@@ -28,7 +28,7 @@ The tri-state (nullable) logic implementation shows **minimal overhead** compare
 #### Typical Case: 10% Nulls
 
 - **sum_nullable/10pct_null**: `7.61 µs` (7.41 - 7.85 µs)
-  - **Overhead: ~7.5%** faster than strict baseline!
+  - **Speedup: ~7.5% faster than strict baseline**
   - The `any_null` flag allows early detection
   - Fewer actual additions due to nulls
 

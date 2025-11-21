@@ -57,7 +57,33 @@ def test_three_valued_mode_returns_null():
     assert result.is_satisfied_tristate is None
     assert result.is_satisfied is False
     assert len(result.violations) == 1
-    assert result.violations[0].severity == Severity.Warning
+    assert result.violations[0].severity == Severity.Error
+
+
+def test_boolean_mode_coerces_indeterminate_to_false():
+    """Boolean mode turns indeterminate member access into a false result with a violation."""
+    graph = Graph()
+    graph.set_evaluation_mode(False)
+
+    policy = {
+        "id": "00000000-0000-0000-0000-000000000004",
+        "name": "MissingDataPolicy",
+        "namespace": "test",
+        "version": {"major": 1, "minor": 0, "patch": 0},
+        "expression": {"MemberAccess": {"object": "NonExistent", "member": "attr"}},
+        "modality": "Obligation",
+        "kind": "Constraint",
+        "priority": 0,
+        "rationale": None,
+        "tags": [],
+    }
+
+    result = graph.evaluate_policy(json.dumps(policy))
+
+    assert result.is_satisfied_tristate is False
+    assert result.is_satisfied is False
+    assert len(result.violations) > 0
+    assert result.violations[0].severity == Severity.Error
 
 
 def test_boolean_mode_behavior():

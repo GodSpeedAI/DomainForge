@@ -100,7 +100,7 @@ let is_tristate = graph.use_three_valued_logic();
 
 - Comparisons involving `NULL` values yield `NULL` results
 - Quantifiers (`ForAll`, `Exists`, `ExistsUnique`) propagate `NULL` appropriately
-- Missing data results in `NULL` evaluation with a `Warning`-level violation
+- Missing data results in `NULL` evaluation with a violation severity derived from the policy modality
 
 ### Three-Valued Logic Disabled
 

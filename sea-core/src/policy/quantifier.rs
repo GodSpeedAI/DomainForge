@@ -228,7 +228,8 @@ impl Expression {
                                     if matches!(
                                         k.as_str(),
                                         "id" | "from_entity" | "to_entity" | "resource" | "quantity"
-                                    ) {
+                                    ) || map.contains_key(k)
+                                    {
                                         continue;
                                     }
                                     map.insert(k.clone(), v.clone());
@@ -263,7 +264,9 @@ impl Expression {
                                 map.insert("namespace".to_string(), serde_json::json!(r.namespace()));
                                 map.insert("unit".to_string(), serde_json::json!(r.unit()));
                                 for (k, v) in r.attributes().iter() {
-                                    if matches!(k.as_str(), "id" | "name" | "namespace" | "unit") {
+                                    if matches!(k.as_str(), "id" | "name" | "namespace" | "unit")
+                                        || map.contains_key(k)
+                                    {
                                         continue;
                                     }
                                     map.insert(k.clone(), v.clone());
@@ -283,7 +286,9 @@ impl Expression {
                                 map.insert("entity".to_string(), serde_json::json!(i.entity_id().to_string()));
                                 map.insert("resource".to_string(), serde_json::json!(i.resource_id().to_string()));
                                 for (k, v) in i.attributes().iter() {
-                                    if matches!(k.as_str(), "id" | "entity" | "resource") {
+                                    if matches!(k.as_str(), "id" | "entity" | "resource")
+                                        || map.contains_key(k)
+                                    {
                                         continue;
                                     }
                                     map.insert(k.clone(), v.clone());

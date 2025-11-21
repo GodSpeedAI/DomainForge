@@ -55,9 +55,9 @@ fn test_forall_with_nulls_results_in_unknown() {
     assert!(!result.is_satisfied);
     // New tri-state shows None for Unknown
     assert_eq!(result.is_satisfied_tristate, None);
-    // Violations should indicate Unknown as a warning by default
+    // Violations should indicate Unknown with severity derived from modality
     assert_eq!(result.violations.len(), 1);
-    assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Warning);
+    assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Error);
 }
 
 #[test]
@@ -140,5 +140,5 @@ fn test_nested_null_propagation_and_forall_unknown() {
     let result = policy.evaluate(&graph).unwrap();
     // All flows have Null tag; equality is Null -> AND is Null -> ForAll over Nulls yields Null
     assert_eq!(result.is_satisfied_tristate, None);
-    assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Warning);
+    assert_eq!(result.violations[0].severity, sea_core::policy::Severity::Error);
 }
