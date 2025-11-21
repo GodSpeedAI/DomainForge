@@ -98,6 +98,55 @@ const violations: Violation[] = result.violations;
 - `Severity.Warning` - Warning-level violation
 - `Severity.Info` - Informational violation
 
+### WebAssembly (Browser)
+
+```javascript
+import init, { Graph, Severity } from "./sea-core/pkg/sea_core.js";
+
+// Initialize WASM module
+await init();
+
+// Create and populate a graph
+const graph = new Graph();
+// ... add entities, resources, flows, etc.
+
+// Evaluate a policy
+const policyJson = `
+{
+    "name": "MyPolicy",
+    "expression": { ... },
+    "severity": "Error"
+}
+`;
+
+const result = graph.evaluatePolicy(policyJson);
+
+// Access results
+const isSatisfied = result.isSatisfied;
+const isSatisfiedTristate = result.isSatisfiedTristate; // undefined for NULL
+const violations = result.violations;
+```
+
+#### WASM Types
+
+**`EvaluationResult`**
+
+- `isSatisfied: boolean` - Backward-compatible boolean result (false if evaluation is NULL)
+- `isSatisfiedTristate?: boolean` - Three-valued result (true, false, or undefined for NULL)
+- `violations: Violation[]` - Array of policy violations
+
+**`Violation`**
+
+- `name: string` - Policy name that was violated
+- `message: string` - Human-readable violation message
+- `severity: Severity` - Violation severity level
+
+**`Severity`** (Enum)
+
+- `Severity.Error` - Critical violation
+- `Severity.Warning` - Warning-level violation
+- `Severity.Info` - Informational violation
+
 ## Three-Valued Logic
 
 The policy evaluator supports three-valued logic to handle cases where evaluation cannot be definitively determined:
