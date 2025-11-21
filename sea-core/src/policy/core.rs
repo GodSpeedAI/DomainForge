@@ -362,7 +362,7 @@ impl Policy {
             Expression::Unary { op, operand } => {
                 let v = self.evaluate_expression_three_valued(operand, graph)?;
                 Ok(match op {
-                    UnaryOp::Not => v.not(),
+                    UnaryOp::Not => !v,
                     UnaryOp::Negate => return Err("Negate operator not supported in boolean context".to_string()),
                 })
             }
@@ -436,7 +436,7 @@ impl Policy {
         &self,
         left: &Expression,
         right: &Expression,
-        _graph: &Graph,
+        _: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
@@ -451,7 +451,7 @@ impl Policy {
         &self,
         left: &Expression,
         right: &Expression,
-        _graph: &Graph,
+        _: &Graph,
         op: F,
     ) -> Result<bool, String>
     where
@@ -466,7 +466,7 @@ impl Policy {
         &self,
         left: &Expression,
         right: &Expression,
-        _graph: &Graph,
+        _: &Graph,
         op: F,
     ) -> Result<bool, String>
     where

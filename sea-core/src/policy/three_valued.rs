@@ -26,18 +26,14 @@ impl ThreeValuedBool {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn not(self) -> Self {
-        use ThreeValuedBool::*;
-        match self {
-            True => False,
-            False => True,
-            Null => Null,
-        }
+        !self
     }
 
     pub fn implies(self, other: Self) -> Self {
         // A -> B == (not A) or B
-        self.not().or(other)
+        (!self).or(other)
     }
 
     pub fn from_option_bool(v: Option<bool>) -> Self {
@@ -89,6 +85,19 @@ impl ThreeValuedBool {
     }
 }
 
+impl std::ops::Not for ThreeValuedBool {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        use ThreeValuedBool::*;
+        match self {
+            True => False,
+            False => True,
+            Null => Null,
+        }
+    }
+}
+
 pub mod aggregators {
     use rust_decimal::Decimal;
 
@@ -108,10 +117,8 @@ pub mod aggregators {
     /// Sum that ignores NULLs.
     pub fn sum_nonnull(items: &[Option<Decimal>]) -> Decimal {
         let mut total = Decimal::ZERO;
-        for item in items {
-            if let Some(v) = item {
-                total += *v;
-            }
+        for v in items.iter().flatten() {
+            total += *v;
         }
         total
     }
