@@ -290,9 +290,10 @@ impl Policy {
             }
             Expression::MemberAccess { object, member } => {
                 let value = self.get_runtime_value(expr, graph)?;
-                match value.as_bool() {
-                    Some(v) => Ok(v),
-                    None => Err(format!(
+                match value {
+                    serde_json::Value::Bool(v) => Ok(v),
+                    serde_json::Value::Null => Ok(false),
+                    _ => Err(format!(
                         "Expected boolean value for member '{}.{}', but found {:?}",
                         object, member, value
                     )),

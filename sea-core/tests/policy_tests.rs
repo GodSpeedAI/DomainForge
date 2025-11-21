@@ -316,6 +316,20 @@ fn test_evaluate_not_false() {
 }
 
 #[test]
+fn member_access_missing_in_boolean_mode_returns_false_with_violation() {
+    let mut graph = build_sample_graph();
+    graph.set_evaluation_mode(false); // strict boolean path
+
+    let expr = Expression::member_access("Unknown", "attr");
+    let policy = Policy::new("Missing Member", expr);
+
+    let result = policy.evaluate(&graph).unwrap();
+
+    assert!(!result.is_satisfied);
+    assert_eq!(result.violations.len(), 1);
+}
+
+#[test]
 fn quantity_literal_boolean_context_errors() {
     let graph = build_sample_graph();
 
