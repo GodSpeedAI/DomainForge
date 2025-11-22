@@ -75,9 +75,8 @@ jobs:
 
       - name: Validate and Report
         id: validate
-        continue-on-error: true
         run: |
-          ./target/release/sea validate --format json models/ > results.json
+          ./target/release/sea validate --format json models/ > results.json || true
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
       - name: Parse Results
@@ -145,7 +144,7 @@ validate_models:
     - cargo build --release --bin sea --features cli
 
   script:
-    - ../target/release/sea validate --format json ../models/ > validation-results.json
+    - ./target/release/sea validate --format json ../models/ > validation-results.json
 
   artifacts:
     when: always
@@ -166,7 +165,7 @@ validate_models:
 
   script:
     - |
-      ../target/release/sea validate --format json ../models/ > results.json || true
+      ./target/release/sea validate --format json ../models/ > results.json || true
       python3 << 'EOF'
       import json
       import sys
@@ -266,7 +265,7 @@ jobs:
       - run:
           name: Validate Models
           command: |
-            ./target/release/sea validate --format json models/ > results.json || true
+            sea-core/target/release/sea validate --format json models/ > results.json || true
 
       - run:
           name: Report Results

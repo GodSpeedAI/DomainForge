@@ -41,11 +41,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "endLine": end_line,
                 "endColumn": end_column,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::TypeError {
             expected_type,
@@ -60,11 +56,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "found": found_type,
                 "suggestion": suggestion,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::UnitError {
             expected,
@@ -79,11 +71,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "foundDimension": format!("{}", found),
                 "suggestion": suggestion,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::UndefinedReference {
             reference_type,
@@ -98,11 +86,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "name": name,
                 "suggestion": suggestion,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::ScopeError {
             variable,
@@ -117,11 +101,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "availableIn": available_in,
                 "suggestion": suggestion,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::DuplicateDeclaration {
             name,
@@ -135,11 +115,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "firstLocation": first_location,
                 "secondLocation": second_location,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::DeterminismError { hint, .. } => {
             let metadata = serde_json::json!({
@@ -147,11 +123,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "errorType": error_type,
                 "hint": hint,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
         ValidationError::InvalidExpression { suggestion, .. } => {
             let metadata = serde_json::json!({
@@ -159,13 +131,17 @@ pub fn to_napi_error(err: ValidationError) -> Error {
                 "errorType": error_type,
                 "suggestion": suggestion,
             });
-            error.reason = format!(
-                "{}\n__metadata__: {}",
-                error.reason,
-                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
-            );
+            attach_metadata(&mut error, metadata);
         }
     }
 
     error
+}
+
+fn attach_metadata(error: &mut Error, metadata: serde_json::Value) {
+    error.reason = format!(
+        "{}\n__metadata__: {}",
+        error.reason,
+        serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
+    );
 }

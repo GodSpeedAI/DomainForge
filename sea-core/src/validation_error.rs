@@ -2,7 +2,7 @@ use crate::units::Dimension;
 use std::fmt;
 
 /// Threshold for fuzzy matching suggestions (Levenshtein distance)
-/// Threshold for fuzzy matching suggestions (Levenshtein distance)
+
 pub const FUZZY_MATCH_THRESHOLD: usize = 2;
 
 /// Position in source code (line and column, 1-indexed)
@@ -316,7 +316,7 @@ impl ValidationError {
                 ..
             } => {
                 // We ignore errors here as this is just for reporting
-                let start = Position::new(*line, *column).unwrap_or(Position { line: 1, column: 1 });
+                let start = Position::new(*line, *column).unwrap_or_else(|_| Position::new(1, 1).unwrap());
                 let end = match (end_line, end_column) {
                     (Some(el), Some(ec)) => Position::new(*el, *ec).unwrap_or(start),
                     _ => start,

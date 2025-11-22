@@ -945,6 +945,7 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 | 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md)              | SEA ↔ CALM conversion specification                            |
 | 🎓 [**Examples**](examples/)                                   | Browser demo and parser examples                               |
 | 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)    | Configure `.sea-registry.toml` and workspace glob patterns     |
+| 📖 [**Error Code Catalog**](docs/specs/error_codes.md)         | Complete list of validation error codes and fixes              |
 
 ### 🆕 Recent API Changes (November 2025)
 

@@ -8,7 +8,7 @@ use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 
 /// Convert ValidationError to appropriate Python exception with custom attributes
-/// Convert ValidationError to appropriate Python exception with custom attributes
+
 pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
     let code = err.error_code().as_str().to_string();
 
@@ -23,10 +23,11 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc_obj = exc.value(py);
             
             // Set custom attributes
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("line", line);
-            let _ = exc_obj.setattr("column", column);
-            let _ = exc_obj.setattr("error_type", "SyntaxError");
+            // Set custom attributes
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("line", line) { return e; }
+            if let Err(e) = exc_obj.setattr("column", column) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "SyntaxError") { return e; }
             
             exc
         }
@@ -40,16 +41,16 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "TypeError");
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "TypeError") { return e; }
             if let Some(exp) = expected_type {
-                let _ = exc_obj.setattr("expected", exp);
+                if let Err(e) = exc_obj.setattr("expected", exp) { return e; }
             }
             if let Some(fnd) = found_type {
-                let _ = exc_obj.setattr("found", fnd);
+                if let Err(e) = exc_obj.setattr("found", fnd) { return e; }
             }
             if let Some(sug) = suggestion {
-                let _ = exc_obj.setattr("suggestion", sug);
+                if let Err(e) = exc_obj.setattr("suggestion", sug) { return e; }
             }
             
             exc
@@ -67,12 +68,12 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "UnitError");
-            let _ = exc_obj.setattr("expected_dimension", format!("{:?}", expected));
-            let _ = exc_obj.setattr("found_dimension", format!("{:?}", found));
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "UnitError") { return e; }
+            if let Err(e) = exc_obj.setattr("expected_dimension", format!("{:?}", expected)) { return e; }
+            if let Err(e) = exc_obj.setattr("found_dimension", format!("{:?}", found)) { return e; }
             if let Some(sug) = suggestion {
-                let _ = exc_obj.setattr("suggestion", sug);
+                if let Err(e) = exc_obj.setattr("suggestion", sug) { return e; }
             }
             
             exc
@@ -87,12 +88,12 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "ReferenceError");
-            let _ = exc_obj.setattr("reference_type", reference_type);
-            let _ = exc_obj.setattr("name", name);
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "ReferenceError") { return e; }
+            if let Err(e) = exc_obj.setattr("reference_type", reference_type) { return e; }
+            if let Err(e) = exc_obj.setattr("name", name) { return e; }
             if let Some(sug) = suggestion {
-                let _ = exc_obj.setattr("suggestion", sug);
+                if let Err(e) = exc_obj.setattr("suggestion", sug) { return e; }
             }
             
             exc
@@ -106,11 +107,11 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "ScopeError");
-            let _ = exc_obj.setattr("variable", variable);
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "ScopeError") { return e; }
+            if let Err(e) = exc_obj.setattr("variable", variable) { return e; }
             if let Some(sug) = suggestion {
-                let _ = exc_obj.setattr("suggestion", sug);
+                if let Err(e) = exc_obj.setattr("suggestion", sug) { return e; }
             }
             
             exc
@@ -127,11 +128,11 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "DuplicateDeclaration");
-            let _ = exc_obj.setattr("name", name);
-            let _ = exc_obj.setattr("first_location", first_location);
-            let _ = exc_obj.setattr("second_location", second_location);
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "DuplicateDeclaration") { return e; }
+            if let Err(e) = exc_obj.setattr("name", name) { return e; }
+            if let Err(e) = exc_obj.setattr("first_location", first_location) { return e; }
+            if let Err(e) = exc_obj.setattr("second_location", second_location) { return e; }
             
             exc
         }
@@ -139,9 +140,9 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "DeterminismError");
-            let _ = exc_obj.setattr("hint", hint);
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "DeterminismError") { return e; }
+            if let Err(e) = exc_obj.setattr("hint", hint) { return e; }
             
             exc
         }
@@ -153,10 +154,10 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
             
-            let _ = exc_obj.setattr("code", code);
-            let _ = exc_obj.setattr("error_type", "InvalidExpression");
+            if let Err(e) = exc_obj.setattr("code", code) { return e; }
+            if let Err(e) = exc_obj.setattr("error_type", "InvalidExpression") { return e; }
             if let Some(sug) = suggestion {
-                let _ = exc_obj.setattr("suggestion", sug);
+                if let Err(e) = exc_obj.setattr("suggestion", sug) { return e; }
             }
             
             exc

@@ -6,6 +6,7 @@ use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use serde_json::to_string_pretty;
 use clap::{Parser, Subcommand, ValueEnum};
+use colored::Colorize;
 
 #[derive(Parser)]
 #[command(name = "sea", version, about = "SEA DSL CLI")]
@@ -72,7 +73,7 @@ enum RegistryCommands {
 #[derive(Parser)]
 struct ImportArgs {
     #[arg(long, value_enum)]
-    format: ImportFormat, // "sbvr" or "kg"
+    format: ImportFormat,
     
     file: PathBuf,
 }
@@ -324,7 +325,7 @@ fn report_validation(
             if result.error_count > 0 {
                 let msg = format!("Validation failed: {} errors", result.error_count);
                 if use_color {
-                    println!("\x1b[31m{}\x1b[0m", msg);
+                    println!("{}", msg.red());
                 } else {
                     println!("{}", msg);
                 }
@@ -337,9 +338,9 @@ fn report_validation(
                     };
                     let severity_colored = if use_color {
                         match v.severity {
-                            sea_core::policy::Severity::Error => format!("\x1b[31m{}\x1b[0m", severity),
-                            sea_core::policy::Severity::Warning => format!("\x1b[33m{}\x1b[0m", severity),
-                            sea_core::policy::Severity::Info => format!("\x1b[34m{}\x1b[0m", severity),
+                            sea_core::policy::Severity::Error => severity.red().to_string(),
+                            sea_core::policy::Severity::Warning => severity.yellow().to_string(),
+                            sea_core::policy::Severity::Info => severity.blue().to_string(),
                         }
                     } else {
                         severity.to_string()
@@ -357,7 +358,7 @@ fn report_validation(
                     result.violations.len()
                 );
                 if use_color {
-                    println!("\x1b[32m{}\x1b[0m", msg);
+                    println!("{}", msg.green());
                 } else {
                     println!("{}", msg);
                 }
