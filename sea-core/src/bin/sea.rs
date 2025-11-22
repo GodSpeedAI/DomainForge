@@ -20,18 +20,8 @@ fn main() {
             std::process::exit(0);
         }
         "validate" => {
-            let target = match args.get(2) {
-                Some(value) => PathBuf::from(value),
-                None => {
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            if let Err(err) = run_validate(&target) {
-                eprintln!("{}", err);
-                std::process::exit(1);
-            }
-            if let Err(err) = run_validate(&target) {
+            let (target, format, use_color, show_source) = parse_validate_args(&args);
+            if let Err(err) = run_validate(&target, format, use_color, show_source) {
                 eprintln!("{}", err);
                 std::process::exit(1);
             }
@@ -203,19 +193,89 @@ fn main() {
 
 fn print_usage() {
     eprintln!("Usage:");
-    eprintln!("  sea validate <file-or-directory>");
+    eprintln!("  sea validate [options] <file-or-directory>");
     eprintln!("  sea registry <subcommand> [args]");
+    eprintln!("");
+    eprintln!("Validate options:");
+    eprintln!("  --format <json|human|lsp>  Output format (default: human)");
+    eprintln!("  --no-color                 Disable colored output");
+    eprintln!("  --no-source                Hide source code snippets");
 }
 
-fn run_validate(target: &Path) -> Result<(), String> {
+#[derive(Debug, Clone, Copy)]
+enum OutputFormat {
+    Json,
+    Human,
+    Lsp,
+}
+
+fn parse_validate_args(args: &[String]) -> (PathBuf, OutputFormat, bool, bool) {
+    let mut format = OutputFormat::Human;
+    let mut use_color = true;
+    let mut show_source = true;
+    let mut target: Option<PathBuf> = None;
+
+    let mut i = 2; // Skip "sea" and "validate"
+    while i < args.len() {
+        match args[i].as_str() {
+            "--format" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("Error: --format requires an argument");
+                    print_usage();
+                    std::process::exit(2);
+                }
+                format = match args[i].as_str() {
+                    "json" => OutputFormat::Json,
+                    "human" => OutputFormat::Human,
+                    "lsp" => OutputFormat::Lsp,
+                    other => {
+                        eprintln!("Error: unknown format '{}'. Use json, human, or lsp", other);
+                        std::process::exit(2);
+                    }
+                };
+            }
+            "--no-color" => {
+                use_color = false;
+            }
+            "--no-source" => {
+                show_source = false;
+            }
+            arg if arg.starts_with("--") => {
+                eprintln!("Error: unknown flag '{}'", arg);
+                print_usage();
+                std::process::exit(2);
+            }
+            _ => {
+                if target.is_some() {
+                    eprintln!("Error: unexpected argument '{}'", args[i]);
+                    print_usage();
+                    std::process::exit(2);
+                }
+                target = Some(PathBuf::from(&args[i]));
+            }
+        }
+        i += 1;
+    }
+
+    let target = target.unwrap_or_else(|| {
+        eprintln!("Error: missing file or directory argument");
+        print_usage();
+        std::process::exit(2);
+    });
+
+    (target, format, use_color, show_source)
+}
+
+fn run_validate(target: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
     if target.is_dir() {
-        validate_directory(target)
+        validate_directory(target, format, use_color, show_source)
     } else {
-        validate_file(target)
+        validate_file(target, format, use_color, show_source)
     }
 }
 
-fn validate_file(path: &Path) -> Result<(), String> {
+fn validate_file(path: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
     let source = read_to_string(path)
         .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))?;
     let registry = NamespaceRegistry::discover(path).map_err(|e| e.to_string())?;
@@ -225,10 +285,10 @@ fn validate_file(path: &Path) -> Result<(), String> {
     let options = ParseOptions { default_namespace };
     let graph = parse_to_graph_with_options(&source, &options)
         .map_err(|e| format!("Parse failed for {}: {}", path.display(), e))?;
-    report_validation(graph)
+    report_validation(graph, Some(&source), format, use_color, show_source)
 }
 
-fn validate_directory(path: &Path) -> Result<(), String> {
+fn validate_directory(path: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| format!("Failed to load registry near {}: {}", path.display(), e))?
         .ok_or_else(|| {
@@ -263,34 +323,72 @@ fn validate_directory(path: &Path) -> Result<(), String> {
             .map_err(|e| format!("Failed to merge {}: {}", binding.path.display(), e))?;
     }
 
-    report_validation(graph)
+    report_validation(graph, None, format, use_color, show_source)
 }
 
-fn report_validation(graph: Graph) -> Result<(), String> {
+fn report_validation(
+    graph: Graph,
+    _source: Option<&str>,
+    format: OutputFormat,
+    _use_color: bool,
+    _show_source: bool,
+) -> Result<(), String> {
     let result = graph.validate();
-    if result.error_count > 0 {
-        println!("Validation failed: {} errors", result.error_count);
-        for v in result.violations {
-            println!(
-                "- [{}] {}: {}",
-                match v.severity {
-                    sea_core::policy::Severity::Error => "ERROR",
-                    sea_core::policy::Severity::Warning => "WARN",
-                    sea_core::policy::Severity::Info => "INFO",
-                },
-                v.policy_name,
-                v.message
-            );
+    
+    // For now, we keep the existing policy violation reporting
+    // In the future, we could convert policy violations to ValidationErrors
+    // and use the formatters
+    match format {
+        OutputFormat::Json => {
+            // JSON output for policy violations
+            let json_output = serde_json::json!({
+                "error_count": result.error_count,
+                "violations": result.violations.iter().map(|v| {
+                    serde_json::json!({
+                        "severity": match v.severity {
+                            sea_core::policy::Severity::Error => "error",
+                            sea_core::policy::Severity::Warning => "warning",
+                            sea_core::policy::Severity::Info => "info",
+                        },
+                        "policy_name": v.policy_name,
+                        "message": v.message,
+                    })
+                }).collect::<Vec<_>>(),
+            });
+            println!("{}", serde_json::to_string_pretty(&json_output).unwrap());
         }
+        OutputFormat::Human | OutputFormat::Lsp => {
+            // Human-readable output (LSP not applicable for policy violations)
+            if result.error_count > 0 {
+                println!("Validation failed: {} errors", result.error_count);
+                for v in &result.violations {
+                    println!(
+                        "- [{}] {}: {}",
+                        match v.severity {
+                            sea_core::policy::Severity::Error => "ERROR",
+                            sea_core::policy::Severity::Warning => "WARN",
+                            sea_core::policy::Severity::Info => "INFO",
+                        },
+                        v.policy_name,
+                        v.message
+                    );
+                }
+            } else {
+                println!(
+                    "Validation succeeded: {} violations total",
+                    result.violations.len()
+                );
+            }
+        }
+    }
+    
+    if result.error_count > 0 {
         Err("Validation errors detected".into())
     } else {
-        println!(
-            "Validation succeeded: {} violations total",
-            result.violations.len()
-        );
         Ok(())
     }
 }
+
 
 fn print_registry_usage() {
     eprintln!("Usage:");
