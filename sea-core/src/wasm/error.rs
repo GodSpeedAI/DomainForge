@@ -135,12 +135,12 @@ pub fn to_js_error(err: ValidationError) -> JsValue {
         "metadata": metadata
     });
 
-    // Serialize to JSON string
-    let error_json = serde_json::to_string(&error_object).unwrap_or_else(|_| {
-        // Fallback if serialization fails - ensure message is escaped
-        let escaped_message = message.replace('"', "\\\"").replace('\n', "\\n");
-        format!(r#"{{"message": "{}", "metadata": {{}}}}"#, escaped_message)
-    });
-
-    JsValue::from_str(&error_json)
+    // Convert to JsValue using serde-wasm-bindgen
+    match serde_wasm_bindgen::to_value(&error_object) {
+        Ok(val) => val,
+        Err(_) => {
+            // Fallback to string if serialization fails
+            JsValue::from_str(&message)
+        }
+    }
 }

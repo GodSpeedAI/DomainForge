@@ -302,21 +302,26 @@ impl DiagnosticFormatter for LspFormatter {
             message
         };
 
-        let range_json = if let Some(r) = range {
-            format!(
-                r#"{{"start": {{"line": {}, "character": {}}}, "end": {{"line": {}, "character": {}}}}}"#,
-                r.start.line - 1, // LSP uses 0-indexed lines
-                r.start.column - 1,
-                r.end.line - 1,
-                r.end.column - 1
-            )
+        let range_value = if let Some(r) = range {
+            serde_json::json!({
+                "start": {
+                    "line": r.start.line.saturating_sub(1),
+                    "character": r.start.column.saturating_sub(1)
+                },
+                "end": {
+                    "line": r.end.line.saturating_sub(1),
+                    "character": r.end.column.saturating_sub(1)
+                }
+            })
         } else {
-            r#"{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}"#
-                .to_string()
+            serde_json::json!({
+                "start": { "line": 0, "character": 0 },
+                "end": { "line": 0, "character": 0 }
+            })
         };
 
         let diagnostic = serde_json::json!({
-            "range": serde_json::from_str::<serde_json::Value>(&range_json).unwrap_or(serde_json::json!({})),
+            "range": range_value,
             "severity": severity,
             "code": code.as_str(),
             "source": "sea-dsl",

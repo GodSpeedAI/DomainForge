@@ -44,7 +44,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::TypeError {
@@ -63,7 +63,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::UnitError {
@@ -75,14 +75,14 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             let metadata = serde_json::json!({
                 "code": code,
                 "errorType": error_type,
-                "expectedDimension": format!("{:?}", expected),
-                "foundDimension": format!("{:?}", found),
+                "expectedDimension": format!("{}", expected),
+                "foundDimension": format!("{}", found),
                 "suggestion": suggestion,
             });
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::UndefinedReference {
@@ -101,7 +101,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::ScopeError {
@@ -120,7 +120,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::DuplicateDeclaration {
@@ -138,7 +138,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::DeterminismError { hint, .. } => {
@@ -150,7 +150,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
         ValidationError::InvalidExpression { suggestion, .. } => {
@@ -162,7 +162,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             error.reason = format!(
                 "{}\n__metadata__: {}",
                 error.reason,
-                serde_json::to_string(&metadata).unwrap_or_default()
+                serde_json::to_string(&metadata).unwrap_or_else(|e| format!("serialization_error: {}", e))
             );
         }
     }

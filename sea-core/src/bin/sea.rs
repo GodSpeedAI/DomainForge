@@ -2,78 +2,114 @@
 use sea_core::kg_import::ImportError;
 use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
 use sea_core::{import_kg_turtle, Graph, NamespaceRegistry};
-use std::env;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
-use serde_json::{json, to_string_pretty};
+use serde_json::to_string_pretty;
+use clap::{Parser, Subcommand, ValueEnum};
+
+#[derive(Parser)]
+#[command(name = "sea", version, about = "SEA DSL CLI")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Validate(ValidateArgs),
+    Registry(RegistryArgs),
+    Import(ImportArgs),
+}
+
+#[derive(Parser)]
+struct ValidateArgs {
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    format: OutputFormat,
+
+    #[arg(long)]
+    no_color: bool,
+
+    #[arg(long)]
+    no_source: bool,
+
+    #[arg(required = true)]
+    target: PathBuf,
+}
+
+#[derive(ValueEnum, Clone, Debug, Copy)]
+enum OutputFormat {
+    Json,
+    Human,
+    Lsp,
+}
+
+#[derive(Parser)]
+struct RegistryArgs {
+    #[command(subcommand)]
+    command: RegistryCommands,
+}
+
+#[derive(Subcommand)]
+enum RegistryCommands {
+    List {
+        #[arg(long)]
+        fail_on_ambiguity: bool,
+        path: Option<PathBuf>,
+    },
+    Resolve {
+        #[arg(long)]
+        fail_on_ambiguity: bool,
+        file: PathBuf,
+    },
+}
+
+#[derive(Parser)]
+struct ImportArgs {
+    #[arg(long)]
+    format: String, // "sbvr" or "kg"
+    
+    file: PathBuf,
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        print_usage();
-        std::process::exit(2);
-    }
+    let cli = Cli::parse();
 
-    let command = &args[1];
-    match command.as_str() {
-        "--version" | "-v" => {
-            println!("sea {}", env!("CARGO_PKG_VERSION"));
-            std::process::exit(0);
-        }
-        "validate" => {
-            let (target, format, use_color, show_source) = parse_validate_args(&args);
-            if let Err(err) = run_validate(&target, format, use_color, show_source) {
+    match cli.command {
+        Commands::Validate(args) => {
+            let use_color = !args.no_color;
+            let show_source = !args.no_source;
+            if let Err(err) = run_validate(&args.target, args.format, use_color, show_source) {
                 eprintln!("{}", err);
                 std::process::exit(1);
             }
         }
-        "registry" => {
-            // subcommands: list, resolve
-            let sub = match args.get(2).map(String::as_str) {
-                Some(value) => value,
-                None => {
-                    print_registry_usage();
-                    std::process::exit(2);
-                }
-            };
-            match sub {
-                "list" => {
-                    let (fail_on_ambiguity, path) = parse_registry_list_args(&args);
+        Commands::Registry(args) => {
+            match args.command {
+                RegistryCommands::List { fail_on_ambiguity, path } => {
                     let path_ref = path.as_deref().unwrap_or_else(|| Path::new("."));
                     if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
                         eprintln!("{}", err);
                         std::process::exit(1);
                     }
                 }
-                "resolve" => {
-                    let (fail_on_ambiguity, file) = parse_registry_resolve_args(&args);
+                RegistryCommands::Resolve { fail_on_ambiguity, file } => {
                     if let Err(err) = registry_resolve(&file, fail_on_ambiguity) {
                         eprintln!("{}", err);
                         std::process::exit(1);
                     }
                 }
-                _ => {
-                    print_registry_usage();
-                    std::process::exit(2);
-                }
             }
         }
-        "import" => {
-            if args.len() < 5 || args[2] != "--format" {
-                eprintln!("Usage: sea import --format <sbvr|kg> <file>");
-                std::process::exit(2);
-            }
-            let format = &args[3];
-            let filepath = &args[4];
-            let source = match read_to_string(filepath) {
+        Commands::Import(args) => {
+            let source = match read_to_string(&args.file) {
                 Ok(s) => s,
                 Err(e) => {
-                    eprintln!("Failed to read file {}: {}", filepath, e);
+                    eprintln!("Failed to read file {}: {}", args.file.display(), e);
                     std::process::exit(1);
                 }
             };
 
-            match format.as_str() {
+            match args.format.as_str() {
                 "sbvr" => match sea_core::SbvrModel::from_xmi(&source) {
                     Ok(model) => match model.to_graph() {
                         Ok(graph) => {
@@ -180,92 +216,12 @@ fn main() {
                     }
                 }
                 _ => {
-                    eprintln!("Unsupported format: {}", format);
+                    eprintln!("Unsupported format: {}", args.format);
                     std::process::exit(2);
                 }
             }
-        }
-        _ => {
-            print_usage();
-            std::process::exit(2);
         }
     }
-}
-
-fn print_usage() {
-    eprintln!("Usage:");
-    eprintln!("  sea validate [options] <file-or-directory>");
-    eprintln!("  sea registry <subcommand> [args]");
-    eprintln!("");
-    eprintln!("Validate options:");
-    eprintln!("  --format <json|human|lsp>  Output format (default: human)");
-    eprintln!("  --no-color                 Disable colored output");
-    eprintln!("  --no-source                Hide source code snippets");
-}
-
-#[derive(Debug, Clone, Copy)]
-enum OutputFormat {
-    Json,
-    Human,
-    Lsp,
-}
-
-fn parse_validate_args(args: &[String]) -> (PathBuf, OutputFormat, bool, bool) {
-    let mut format = OutputFormat::Human;
-    let mut use_color = true;
-    let mut show_source = true;
-    let mut target: Option<PathBuf> = None;
-
-    let mut i = 2; // Skip "sea" and "validate"
-    while i < args.len() {
-        match args[i].as_str() {
-            "--format" => {
-                i += 1;
-                if i >= args.len() {
-                    eprintln!("Error: --format requires an argument");
-                    print_usage();
-                    std::process::exit(2);
-                }
-                format = match args[i].as_str() {
-                    "json" => OutputFormat::Json,
-                    "human" => OutputFormat::Human,
-                    "lsp" => OutputFormat::Lsp,
-                    other => {
-                        eprintln!("Error: unknown format '{}'. Use json, human, or lsp", other);
-                        std::process::exit(2);
-                    }
-                };
-            }
-            "--no-color" => {
-                use_color = false;
-            }
-            "--no-source" => {
-                show_source = false;
-            }
-            arg if arg.starts_with("--") => {
-                eprintln!("Error: unknown flag '{}'", arg);
-                print_usage();
-                std::process::exit(2);
-            }
-            _ => {
-                if target.is_some() {
-                    eprintln!("Error: unexpected argument '{}'", args[i]);
-                    print_usage();
-                    std::process::exit(2);
-                }
-                target = Some(PathBuf::from(&args[i]));
-            }
-        }
-        i += 1;
-    }
-
-    let target = target.unwrap_or_else(|| {
-        eprintln!("Error: missing file or directory argument");
-        print_usage();
-        std::process::exit(2);
-    });
-
-    (target, format, use_color, show_source)
 }
 
 fn run_validate(target: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
@@ -331,7 +287,7 @@ fn report_validation(
     graph: Graph,
     _source: Option<&str>,
     format: OutputFormat,
-    _use_color: bool,
+    use_color: bool,
     _show_source: bool,
 ) -> Result<(), String> {
     let result = graph.validate();
@@ -367,24 +323,45 @@ fn report_validation(
         OutputFormat::Human | OutputFormat::Lsp => {
             // Human-readable output (LSP not applicable for policy violations)
             if result.error_count > 0 {
-                println!("Validation failed: {} errors", result.error_count);
+                let msg = format!("Validation failed: {} errors", result.error_count);
+                if use_color {
+                    println!("\x1b[31m{}\x1b[0m", msg);
+                } else {
+                    println!("{}", msg);
+                }
+
                 for v in &result.violations {
+                    let severity = match v.severity {
+                        sea_core::policy::Severity::Error => "ERROR",
+                        sea_core::policy::Severity::Warning => "WARN",
+                        sea_core::policy::Severity::Info => "INFO",
+                    };
+                    let severity_colored = if use_color {
+                        match v.severity {
+                            sea_core::policy::Severity::Error => format!("\x1b[31m{}\x1b[0m", severity),
+                            sea_core::policy::Severity::Warning => format!("\x1b[33m{}\x1b[0m", severity),
+                            sea_core::policy::Severity::Info => format!("\x1b[34m{}\x1b[0m", severity),
+                        }
+                    } else {
+                        severity.to_string()
+                    };
                     println!(
                         "- [{}] {}: {}",
-                        match v.severity {
-                            sea_core::policy::Severity::Error => "ERROR",
-                            sea_core::policy::Severity::Warning => "WARN",
-                            sea_core::policy::Severity::Info => "INFO",
-                        },
+                        severity_colored,
                         v.policy_name,
                         v.message
                     );
                 }
             } else {
-                println!(
+                let msg = format!(
                     "Validation succeeded: {} violations total",
                     result.violations.len()
                 );
+                if use_color {
+                    println!("\x1b[32m{}\x1b[0m", msg);
+                } else {
+                    println!("{}", msg);
+                }
             }
         }
     }
@@ -393,76 +370,6 @@ fn report_validation(
         Err("Validation errors detected".into())
     } else {
         Ok(())
-    }
-}
-
-
-fn print_registry_usage() {
-    eprintln!("Usage:");
-    eprintln!("  sea registry list [--fail-on-ambiguity] [<path>]");
-    eprintln!("  sea registry resolve [--fail-on-ambiguity] <file>");
-}
-
-fn parse_registry_list_args(args: &[String]) -> (bool, Option<PathBuf>) {
-    let mut fail_on_ambiguity = false;
-    let mut path: Option<PathBuf> = None;
-
-    for arg in args.iter().skip(3) {
-        if arg == "--fail-on-ambiguity" {
-            fail_on_ambiguity = true;
-            continue;
-        }
-
-        if arg.starts_with("--") {
-            eprintln!("Unknown registry flag: {}", arg);
-            print_registry_usage();
-            std::process::exit(2);
-        }
-
-        if path.is_some() {
-            eprintln!("Unexpected positional argument: {}", arg);
-            print_registry_usage();
-            std::process::exit(2);
-        }
-
-        path = Some(PathBuf::from(arg));
-    }
-
-    (fail_on_ambiguity, path)
-}
-
-fn parse_registry_resolve_args(args: &[String]) -> (bool, PathBuf) {
-    let mut fail_on_ambiguity = false;
-    let mut file: Option<PathBuf> = None;
-
-    for arg in args.iter().skip(3) {
-        if arg == "--fail-on-ambiguity" {
-            fail_on_ambiguity = true;
-            continue;
-        }
-
-        if arg.starts_with("--") {
-            eprintln!("Unknown registry flag: {}", arg);
-            print_registry_usage();
-            std::process::exit(2);
-        }
-
-        if file.is_some() {
-            eprintln!("Unexpected positional argument: {}", arg);
-            print_registry_usage();
-            std::process::exit(2);
-        }
-
-        file = Some(PathBuf::from(arg));
-    }
-
-    match file {
-        Some(path) => (fail_on_ambiguity, path),
-        None => {
-            eprintln!("Usage: sea registry resolve [--fail-on-ambiguity] <file>");
-            print_registry_usage();
-            std::process::exit(2);
-        }
     }
 }
 

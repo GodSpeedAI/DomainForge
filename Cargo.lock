@@ -2355,6 +2355,7 @@ version = "0.0.1"
 dependencies = [
  "assert_cmd",
  "chrono",
+ "clap 4.5.51",
  "criterion",
  "getrandom 0.3.4",
  "globset",

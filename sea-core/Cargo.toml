@@ -31,6 +31,7 @@ serde-wasm-bindgen = { version = "0.6", optional = true }
 percent-encoding = "2.3.2"
 roxmltree = "0.21.1"
 oxigraph = { version = "0.3", optional = true }
+clap = { version = "4.4", features = ["derive"], optional = true }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -61,7 +62,7 @@ python = ["pyo3", "pythonize"]
 typescript = ["napi", "napi-derive"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 shacl = ["oxigraph"]
-cli = ["three_valued_logic"]
+cli = ["three_valued_logic", "clap"]
 three_valued_logic = []
 
 ## NOTE: Profiles are managed at the workspace root (Cargo.toml). Please

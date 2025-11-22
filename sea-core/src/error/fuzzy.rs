@@ -30,8 +30,12 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     }
 
     // Use the shorter string for the columns to minimize space
-    let (short, long) = if a_len < b_len { (a, b) } else { (b, a) };
-    let short_len = short.chars().count();
+    // Use the shorter string for the columns to minimize space
+    let (short, long, short_len) = if a_len < b_len { 
+        (a, b, a_len) 
+    } else { 
+        (b, a, b_len) 
+    };
 
     // We only need two rows for the dynamic programming table
     let mut prev_row: Vec<usize> = (0..=short_len).collect();
@@ -213,7 +217,12 @@ mod tests {
             "Ware".to_string(),
         ];
         let suggestions = suggest_similar("War", &candidates, 5);
-        // "Ware" is closest (distance 1), then "Warehouse" (distance 5), then "Warehouses" (distance 6)
+        // "Ware" is closest (distance 1), then "Warehouse" (distance 6), then "Warehouses" (distance 7)
+        // Note: Warehouse and Warehouses exceed threshold 5, so they are filtered out if threshold was applied strictly
+        // But here we passed 5, so "Warehouse" (6) and "Warehouses" (7) are excluded.
+        // Wait, "Ware" to "War" is distance 1.
+        // "Warehouse" to "War" is distance 6.
+        // "Warehouses" to "War" is distance 7.
         assert_eq!(suggestions[0], "Ware");
     }
 
