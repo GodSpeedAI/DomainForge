@@ -6,7 +6,9 @@
 /// - Fuzzy string matching for "did you mean?" suggestions
 /// - Multiple diagnostic output formatters (JSON, Human-readable, LSP)
 
+pub mod diagnostics;
 pub mod fuzzy;
 
 // Re-export commonly used types
 pub use crate::validation_error::{ErrorCode, Position, SourceRange, ValidationError};
+pub use diagnostics::{DiagnosticFormatter, HumanFormatter, JsonFormatter, LspFormatter};

@@ -112,3 +112,101 @@ fn test_error_code_description() {
     assert_eq!(ErrorCode::E003_UnitMismatch.description(), "Unit mismatch");
     assert_eq!(ErrorCode::E402_DeterminismViolation.description(), "Determinism violation");
 }
+
+// Formatter tests
+use sea_core::error::{DiagnosticFormatter, HumanFormatter, JsonFormatter, LspFormatter};
+
+#[test]
+fn test_json_formatter_output() {
+    let error = ValidationError::syntax_error_with_range("unexpected token", 10, 5, 10, 15);
+    let formatter = JsonFormatter;
+    let output = formatter.format(&error, None);
+
+    // Verify it's valid JSON
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("Valid JSON");
+    assert_eq!(parsed["code"], "E005");
+    assert_eq!(parsed["severity"], "error");
+    assert_eq!(parsed["range"]["start"]["line"], 10);
+    assert_eq!(parsed["range"]["start"]["column"], 5);
+}
+
+#[test]
+fn test_json_formatter_with_fuzzy_suggestion() {
+    let candidates = vec!["Warehouse".to_string(), "Factory".to_string()];
+    let error = ValidationError::undefined_entity_with_candidates(
+        "Warehous",
+        "line 10",
+        &candidates,
+    );
+    let formatter = JsonFormatter;
+    let output = formatter.format(&error, None);
+
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("Valid JSON");
+    assert_eq!(parsed["code"], "E001");
+    assert!(parsed["hint"].as_str().unwrap().contains("Warehouse"));
+}
+
+#[test]
+fn test_human_formatter_basic() {
+    let error = ValidationError::undefined_entity("TestEntity", "line 5");
+    let formatter = HumanFormatter::new(false, false);
+    let output = formatter.format(&error, None);
+
+    assert!(output.contains("error[E001]"));
+    assert!(output.contains("TestEntity"));
+}
+
+#[test]
+fn test_human_formatter_with_source() {
+    let source = r#"Entity "Warehouse" in logistics
+Entity "Factory" in manufacturing
+Flow "Steel" from "Warehous" to "Factory" quantity 100
+"#;
+
+    let error = ValidationError::syntax_error_with_range("typo in entity name", 3, 19, 3, 28);
+    let formatter = HumanFormatter::new(false, true);
+    let output = formatter.format(&error, Some(source));
+
+    // Should include source snippet
+    assert!(output.contains("Warehous"));
+    assert!(output.contains("^^^"));
+}
+
+#[test]
+fn test_lsp_formatter_output() {
+    let error = ValidationError::syntax_error_with_range("test", 10, 5, 10, 15);
+    let formatter = LspFormatter;
+    let output = formatter.format(&error, None);
+
+    // Verify it's valid JSON
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("Valid JSON");
+    assert_eq!(parsed["severity"], 1); // Error
+    assert_eq!(parsed["code"], "E005");
+    assert_eq!(parsed["source"], "sea-dsl");
+    // LSP uses 0-indexed lines
+    assert_eq!(parsed["range"]["start"]["line"], 9);
+}
+
+#[test]
+fn test_format_multiple_errors_json() {
+    use sea_core::error::diagnostics::format_errors_json;
+
+    let errors = vec![
+        ValidationError::syntax_error("error 1", 1, 1),
+        ValidationError::undefined_entity("Test", "line 5"),
+        ValidationError::unit_mismatch(
+            sea_core::units::Dimension::Mass,
+            sea_core::units::Dimension::Currency,
+            "line 10",
+        ),
+    ];
+
+    let output = format_errors_json(&errors);
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("Valid JSON");
+
+    assert!(parsed.is_array());
+    assert_eq!(parsed.as_array().unwrap().len(), 3);
+    assert_eq!(parsed[0]["code"], "E005");
+    assert_eq!(parsed[1]["code"], "E001");
+    assert_eq!(parsed[2]["code"], "E003");
+}
