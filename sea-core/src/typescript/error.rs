@@ -94,7 +94,7 @@ pub fn to_napi_error(err: ValidationError) -> Error {
             let metadata = serde_json::json!({
                 "code": code,
                 "errorType": error_type,
-                "referenceType": reference_type,
+                "referenceType": reference_type.to_string(),
                 "name": name,
                 "suggestion": suggestion,
             });

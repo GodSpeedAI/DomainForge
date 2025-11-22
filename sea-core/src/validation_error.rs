@@ -2,7 +2,8 @@ use crate::units::Dimension;
 use std::fmt;
 
 /// Threshold for fuzzy matching suggestions (Levenshtein distance)
-const FUZZY_MATCH_THRESHOLD: usize = 2;
+/// Threshold for fuzzy matching suggestions (Levenshtein distance)
+pub const FUZZY_MATCH_THRESHOLD: usize = 2;
 
 /// Position in source code (line and column, 1-indexed)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,11 +13,12 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new(line: usize, column: usize) -> Self {
+    pub fn new(line: usize, column: usize) -> Result<Self, String> {
         if line == 0 || column == 0 {
-            panic!("Position line and column must be >= 1. Got line={}, column={}", line, column);
+            Err(format!("Position line and column must be >= 1. Got line={}, column={}", line, column))
+        } else {
+            Ok(Self { line, column })
         }
-        Self { line, column }
     }
 }
 
@@ -43,19 +45,19 @@ impl SourceRange {
         start_col: usize,
         end_line: usize,
         end_col: usize,
-    ) -> Self {
-        Self {
-            start: Position::new(start_line, start_col),
-            end: Position::new(end_line, end_col),
-        }
+    ) -> Result<Self, String> {
+        Ok(Self {
+            start: Position::new(start_line, start_col)?,
+            end: Position::new(end_line, end_col)?,
+        })
     }
 
-    pub fn single_position(line: usize, column: usize) -> Self {
-        let pos = Position::new(line, column);
-        Self {
+    pub fn single_position(line: usize, column: usize) -> Result<Self, String> {
+        let pos = Position::new(line, column)?;
+        Ok(Self {
             start: pos,
             end: pos,
-        }
+        })
     }
 }
 
@@ -210,6 +212,27 @@ impl fmt::Display for ErrorCode {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReferenceType {
+    Entity,
+    Resource,
+    Variable,
+    Flow,
+    Other(String),
+}
+
+impl fmt::Display for ReferenceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReferenceType::Entity => write!(f, "Entity"),
+            ReferenceType::Resource => write!(f, "Resource"),
+            ReferenceType::Variable => write!(f, "Variable"),
+            ReferenceType::Flow => write!(f, "Flow"),
+            ReferenceType::Other(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ValidationError {
     SyntaxError {
@@ -243,7 +266,7 @@ pub enum ValidationError {
         hint: String,
     },
     UndefinedReference {
-        reference_type: String,
+        reference_type: ReferenceType,
         name: String,
         location: String,
         suggestion: Option<String>,
@@ -270,10 +293,10 @@ impl ValidationError {
             ValidationError::ScopeError { .. } => ErrorCode::E300_VariableNotInScope,
             ValidationError::DeterminismError { .. } => ErrorCode::E402_DeterminismViolation,
             ValidationError::UndefinedReference { reference_type, .. } => {
-                match reference_type.as_str() {
-                    "Entity" => ErrorCode::E001_UndefinedEntity,
-                    "Resource" => ErrorCode::E002_UndefinedResource,
-                    "Variable" => ErrorCode::E008_UndefinedVariable,
+                match reference_type {
+                    ReferenceType::Entity => ErrorCode::E001_UndefinedEntity,
+                    ReferenceType::Resource => ErrorCode::E002_UndefinedResource,
+                    ReferenceType::Variable => ErrorCode::E008_UndefinedVariable,
                     _ => ErrorCode::E301_UndefinedReference,
                 }
             }
@@ -292,9 +315,10 @@ impl ValidationError {
                 end_column,
                 ..
             } => {
-                let start = Position::new(*line, *column);
+                // We ignore errors here as this is just for reporting
+                let start = Position::new(*line, *column).unwrap_or(Position { line: 1, column: 1 });
                 let end = match (end_line, end_column) {
-                    (Some(el), Some(ec)) => Position::new(*el, *ec),
+                    (Some(el), Some(ec)) => Position::new(*el, *ec).unwrap_or(start),
                     _ => start,
                 };
                 Some(SourceRange::new(start, end))
@@ -392,7 +416,7 @@ impl ValidationError {
         location: impl Into<String>,
     ) -> Self {
         Self::UndefinedReference {
-            reference_type: reference_type.into(),
+            reference_type: ReferenceType::Other(reference_type.into()),
             name: name.into(),
             location: location.into(),
             suggestion: None,
@@ -464,7 +488,7 @@ impl ValidationError {
     pub fn undefined_entity(name: impl Into<String>, location: impl Into<String>) -> Self {
         let name = name.into();
         Self::UndefinedReference {
-            reference_type: "Entity".to_string(),
+            reference_type: ReferenceType::Entity,
             name: name.clone(),
             location: location.into(),
             suggestion: Some(format!("Did you mean to define 'Entity \"{}\"'?", name)),
@@ -475,7 +499,7 @@ impl ValidationError {
     pub fn undefined_resource(name: impl Into<String>, location: impl Into<String>) -> Self {
         let name = name.into();
         Self::UndefinedReference {
-            reference_type: "Resource".to_string(),
+            reference_type: ReferenceType::Resource,
             name: name.clone(),
             location: location.into(),
             suggestion: Some(format!("Did you mean to define 'Resource \"{}\"'?", name)),
@@ -486,7 +510,7 @@ impl ValidationError {
     pub fn undefined_flow(name: impl Into<String>, location: impl Into<String>) -> Self {
         let name = name.into();
         Self::UndefinedReference {
-            reference_type: "Flow".to_string(),
+            reference_type: ReferenceType::Flow,
             name: name.clone(),
             location: location.into(),
             suggestion: Some(format!(
@@ -564,24 +588,43 @@ impl ValidationError {
     /// * `name` - The undefined entity name
     /// * `location` - Source location of the error
     /// * `candidates` - Available entity names to suggest
+    fn undefined_reference_with_candidates(
+        reference_type: ReferenceType,
+        name: String,
+        location: String,
+        candidates: &[String],
+    ) -> Self {
+        use crate::error::fuzzy::find_best_match;
+        
+        let suggestion = find_best_match(&name, candidates, FUZZY_MATCH_THRESHOLD)
+            .map(|match_name| format!("Did you mean '{}'?", match_name))
+            .or_else(|| Some(format!("Did you mean to define '{} \"{}\"'?", reference_type, name)));
+
+        Self::UndefinedReference {
+            reference_type,
+            name,
+            location,
+            suggestion,
+        }
+    }
+
+    /// Create an undefined entity error with fuzzy matching suggestions
+    /// 
+    /// # Arguments
+    /// * `name` - The undefined entity name
+    /// * `location` - Source location of the error
+    /// * `candidates` - Available entity names to suggest
     pub fn undefined_entity_with_candidates(
         name: impl Into<String>,
         location: impl Into<String>,
         candidates: &[String],
     ) -> Self {
-        use crate::error::fuzzy::find_best_match;
-        
-        let name = name.into();
-        let suggestion = find_best_match(&name, candidates, FUZZY_MATCH_THRESHOLD)
-            .map(|match_name| format!("Did you mean '{}'?", match_name))
-            .or_else(|| Some(format!("Did you mean to define 'Entity \"{}\"'?", name)));
-
-        Self::UndefinedReference {
-            reference_type: "Entity".to_string(),
-            name,
-            location: location.into(),
-            suggestion,
-        }
+        Self::undefined_reference_with_candidates(
+            ReferenceType::Entity,
+            name.into(),
+            location.into(),
+            candidates,
+        )
     }
 
     /// Create an undefined resource error with fuzzy matching suggestions
@@ -590,19 +633,12 @@ impl ValidationError {
         location: impl Into<String>,
         candidates: &[String],
     ) -> Self {
-        use crate::error::fuzzy::find_best_match;
-        
-        let name = name.into();
-        let suggestion = find_best_match(&name, candidates, FUZZY_MATCH_THRESHOLD)
-            .map(|match_name| format!("Did you mean '{}'?", match_name))
-            .or_else(|| Some(format!("Did you mean to define 'Resource \"{}\"'?", name)));
-
-        Self::UndefinedReference {
-            reference_type: "Resource".to_string(),
-            name,
-            location: location.into(),
-            suggestion,
-        }
+        Self::undefined_reference_with_candidates(
+            ReferenceType::Resource,
+            name.into(),
+            location.into(),
+            candidates,
+        )
     }
 
     /// Create an undefined variable error with fuzzy matching suggestions
@@ -616,13 +652,14 @@ impl ValidationError {
         let name = name.into();
         let matches = suggest_similar(&name, candidates, FUZZY_MATCH_THRESHOLD);
         let suggestion = if !matches.is_empty() {
-            Some(format!("Did you mean '{}'?", matches.join("', '")))
+            let quoted: Vec<String> = matches.iter().map(|m| format!("'{}'", m)).collect();
+            Some(format!("Did you mean {}?", quoted.join(", ")))
         } else {
             Some("No similar variables found in scope.".to_string())
         };
 
         Self::UndefinedReference {
-            reference_type: "Variable".to_string(),
+            reference_type: ReferenceType::Variable,
             name,
             location: location.into(),
             suggestion,

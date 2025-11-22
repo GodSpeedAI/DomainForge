@@ -30,7 +30,6 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     }
 
     // Use the shorter string for the columns to minimize space
-    // Use the shorter string for the columns to minimize space
     let (short, long, short_len) = if a_len < b_len { 
         (a, b, a_len) 
     } else { 
@@ -41,10 +40,12 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     let mut prev_row: Vec<usize> = (0..=short_len).collect();
     let mut curr_row: Vec<usize> = vec![0; short_len + 1];
 
+    let short_chars: Vec<char> = short.chars().collect();
+
     for (i, long_char) in long.chars().enumerate() {
         curr_row[0] = i + 1;
 
-        for (j, short_char) in short.chars().enumerate() {
+        for (j, &short_char) in short_chars.iter().enumerate() {
             let cost = if long_char == short_char { 0 } else { 1 };
 
             curr_row[j + 1] = std::cmp::min(
@@ -217,13 +218,9 @@ mod tests {
             "Ware".to_string(),
         ];
         let suggestions = suggest_similar("War", &candidates, 5);
-        // "Ware" is closest (distance 1), then "Warehouse" (distance 6), then "Warehouses" (distance 7)
-        // Note: Warehouse and Warehouses exceed threshold 5, so they are filtered out if threshold was applied strictly
-        // But here we passed 5, so "Warehouse" (6) and "Warehouses" (7) are excluded.
-        // Wait, "Ware" to "War" is distance 1.
-        // "Warehouse" to "War" is distance 6.
-        // "Warehouses" to "War" is distance 7.
-        assert_eq!(suggestions[0], "Ware");
+        // "Ware" (dist 1), "Warehouse" (dist 6), "Warehouses" (dist 7).
+        // With threshold 5, only "Ware" is expected.
+        assert_eq!(suggestions, vec!["Ware"]);
     }
 
     #[test]

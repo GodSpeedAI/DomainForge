@@ -43,6 +43,12 @@ enum OutputFormat {
     Lsp,
 }
 
+#[derive(ValueEnum, Clone, Debug, Copy)]
+enum ImportFormat {
+    Sbvr,
+    Kg,
+}
+
 #[derive(Parser)]
 struct RegistryArgs {
     #[command(subcommand)]
@@ -65,8 +71,8 @@ enum RegistryCommands {
 
 #[derive(Parser)]
 struct ImportArgs {
-    #[arg(long)]
-    format: String, // "sbvr" or "kg"
+    #[arg(long, value_enum)]
+    format: ImportFormat, // "sbvr" or "kg"
     
     file: PathBuf,
 }
@@ -109,8 +115,8 @@ fn main() {
                 }
             };
 
-            match args.format.as_str() {
-                "sbvr" => match sea_core::SbvrModel::from_xmi(&source) {
+            match args.format {
+                ImportFormat::Sbvr => match sea_core::SbvrModel::from_xmi(&source) {
                     Ok(model) => match model.to_graph() {
                         Ok(graph) => {
                             println!(
@@ -131,7 +137,7 @@ fn main() {
                         std::process::exit(1);
                     }
                 },
-                "kg" => {
+                ImportFormat::Kg => {
                     // If the source looks like XML (starts with <), prefer RDF/XML import path
                     let src_trim = source.trim_start();
                     if src_trim.starts_with('<') {
@@ -214,10 +220,6 @@ fn main() {
                             }
                         }
                     }
-                }
-                _ => {
-                    eprintln!("Unsupported format: {}", args.format);
-                    std::process::exit(2);
                 }
             }
         }
@@ -314,10 +316,7 @@ fn report_validation(
             });
             match to_string_pretty(&json_output) {
                 Ok(s) => println!("{}", s),
-                Err(e) => {
-                    eprintln!("Failed to serialize output: {}", e);
-                    std::process::exit(1);
-                }
+                Err(e) => return Err(format!("Failed to serialize output: {}", e)),
             }
         }
         OutputFormat::Human | OutputFormat::Lsp => {

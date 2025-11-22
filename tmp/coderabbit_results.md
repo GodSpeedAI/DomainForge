@@ -1,105 +1,88 @@
-Starting CodeRabbit review in plain text mode...
-
-Connecting to review service
-Setting up
-Analyzing
-Reviewing
-
-============================================================================
-File: docs/specs/error_codes.md
-Line: 89 to 107
-Type: refactor_suggestion
-
-[x] Task:
-In docs/specs/error_codes.md around lines 89-107 (and also covering 130-145 and 170-187) the entries for E004, E006 and E008 are placeholders without concrete SEA DSL examples; replace each placeholder with a short, concrete SEA DSL snippet that reproduces the error, followed by the expected error message/diagnostic (matching the style used in E001–E003), e.g. for E004 show a literal assignment with mismatched types and include "expected vs found" output, for E006 provide the DSL code that triggers the specific error (e.g. undefined variable or arity mismatch) and its diagnostic, and for E008 provide the code that triggers that error and its diagnostic; ensure each entry follows the same structure and formatting as the other entries (title, description, code block, expected output, and common fixes).
-
-
-
-============================================================================
-File: docs/guides/cicd_integration.md
-Line: 360
-Type: potential_issue
-
-[x] Task:
-In docs/guides/cicd_integration.md around line 360 the Dockerfile CMD is set to ["validate", "--help"] which causes the container to print help by default; change the CMD to ["validate"] so the container runs the validation command when no args are provided (or remove the CMD entirely if you prefer requiring explicit commands) and update the line to reflect the new default behavior.
-
-
-
-============================================================================
-File: docs/specs/error_codes.md
-Line: 1 to 19
-Type: potential_issue
-
-
-
-
 ============================================================================
 File: docs/guides/cicd_integration.md
 Line: 155
 Type: potential_issue
 
 [x] Task:
-In docs/guides/cicd_integration.md around line 155, the docs incorrectly show "junit: validation-results.json" which tells GitLab to parse JSON as JUnit XML; either remove the junit reports directive or replace it with a path to a valid JUnit XML file (e.g., validation-results.xml) and document a transformation step that converts your JSON output into JUnit XML before the report upload (or alternatively show the correct GitLab artifact/report key for JSON if you intend to keep JSON).
+In docs/guides/cicd_integration.md around line 155, the CI example incorrectly declares a JSON file (validation-results.json) as a JUnit report which will cause GitLab to fail parsing; remove the reports -> junit: declaration (or replace it with an appropriate JSON artifact declaration) so the file is not treated as a JUnit report and update any accompanying explanation to reflect that JSON outputs should be published as artifacts or transformed to JUnit before using reports:junit.
 
 
 
 ============================================================================
-File: sea-core/src/validation_error.rs
-Line: 264 to 283
+File: sea-core/src/bin/sea.rs
+Line: 315 to 321
 Type: potential_issue
 
 [x] Task:
-In sea-core/src/validation_error.rs around lines 264 to 283, the match on reference_type.as_str() is brittle; replace the string-based reference_type with a small enum (e.g., ReferenceType { Entity, Resource, Variable, Flow, Other }) and change the ValidationError::UndefinedReference variant to store ReferenceType instead of String, update all constructors/creators of UndefinedReference to pass the enum, and update the error_code() match arm to match on the enum variants (Entity -> E001, Resource -> E002, Variable -> E008, default/Other/Flow -> E301); ensure any serialization/Display/FromStr uses the new enum where needed so compilation succeeds.
+In sea-core/src/bin/sea.rs around lines 315 to 321, the code currently calls std::process::exit(1) when JSON serialization fails which bypasses the function's Result return type; instead return an Err from this function containing the serialization error (or map it into the function's error type) so the caller can handle it. Replace the eprintln + process::exit path with converting the serde_json error into the function's error Result (e.g., return Err(anyhow::Error::from(e)) or use map_err and the ? operator) and remove the direct process exit to maintain consistent error propagation.
 
 
 
 ============================================================================
 File: sea-core/src/validation_error.rs
-Line: 561 to 630
-Type: nitpick
+Line: 4 to 5
+Type: potential_issue
 
 [x] Task:
-In sea-core/src/validation_error.rs around lines 561-630, the constructors import crate::error::fuzzy (used at lines ~572, ~593, ~614) but that module and the exported functions find_best_match and suggest_similar must be present and public; add or expose crate::error::fuzzy with public functions find_best_match(&str, &[String], f64) -> Option and suggest_similar(&str, &[String], f64) -> Vec (or adjust signatures to match callers), and either unify the API (use one function consistently) or document the intentional difference between entity/resource (single best match) vs variable (multiple suggestions) in comments or function docs so the design is explicit.
+In sea-core/src/validation_error.rs around lines 4 to 5, the FUZZY_MATCH_THRESHOLD constant is declared without pub but the review notes and summary claim it should be public; if external modules need to read this threshold, add the pub keyword to make it pub const FUZZY_MATCH_THRESHOLD: usize = 2; and otherwise leave it private and update the summary to avoid stating it is public.
 
 
 
 ============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 11
-Type: nitpick
+File: sea-core/src/validation_error.rs
+Line: 265 to 283
+Type: potential_issue
 
 [x] Task:
-In sea-core/src/typescript/error.rs around line 11, the expression err.error_code().as_str().to_string() is doing redundant conversions; inspect the signature of error_code() and simplify: if it returns String, use that value directly or clone it (avoid as_str().to_string()); if it returns &str, call to_string()/to_owned() on the &str; alternatively change the method to return an owned String or implement Into and use a single conversion. Make the minimal change to eliminate the unnecessary as_str().to_string() call so you only perform one allocation/clone.
+In sea-core/src/validation_error.rs around lines 265 to 283 the mapping for UndefinedReference currently matches on a String (reference_type) which is fragile; replace the String with a dedicated enum (e.g., pub enum ReferenceType { Entity, Resource, Variable, Flow, Other }) and change the ValidationError::UndefinedReference variant to use ReferenceType instead of String, then update the match in error_code() to match on ReferenceType::Entity / Resource / Variable / Flow / Other producing the correct ErrorCode; also update all constructors and places that create UndefinedReference to build the enum (or implement FromStr/From or serde conversion where needed) so pattern matching is type-safe and does not fall back to E301_UndefinedReference unexpectedly.
 
 
 
 ============================================================================
-File: sea-core/src/error/diagnostics.rs
-Line: 64 to 65
-Type: nitpick
-
-[x] Task:
-In sea-core/src/error/diagnostics.rs around lines 64–65, the JsonDiagnostic construction uses code.as_str().to_string(), which redundantly converts the value; replace that with a single conversion or the value itself—use code.to_string() if code is &str (or code.to_owned()), or just use code directly if it is already a String—to eliminate the unnecessary as_str().to_string() call.
-
-
-
-============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 27 to 168
+File: sea-core/src/validation_error.rs
+Line: 567 to 606
 Type: refactor_suggestion
 
 [x] Task:
-In sea-core/src/typescript/error.rs around lines 27-168 the metadata formatting is duplicated across multiple ValidationError arms; extract a helper like attach_metadata(error: &mut Error, code: String, error_type: &str, metadata: serde_json::Value) that merges the passed metadata with "code" and "errorType", serializes it with serde_json::to_string and falls back to a safe serialization error string on failure, then set error.reason = format!("{}\n__metadata__: {}", error.reason, metadata_str); and replace each match arm to build only the per-error metadata object and call attach_metadata(&mut error, code, error_type, metadata) to remove the repeated formatting logic.
+In sea-core/src/validation_error.rs around lines 567-606, the two functions undefined_entity_with_candidates and undefined_resource_with_candidates are duplicated except for the reference_type string; extract a private helper (e.g., undefined_reference_with_candidates) that accepts reference_type (or definition_template), name, location, candidates and reuses crate::error::fuzzy::find_best_match with FUZZY_MATCH_THRESHOLD to build the same suggestion logic, then replace the two existing functions to call this helper passing "Entity" and "Resource" respectively so behavior remains identical but duplication is removed.
 
 
 
 ============================================================================
-File: sea-core/src/wasm/error.rs
-Line: 13
+File: sea-core/src/bin/sea.rs
+Line: 323 to 324
+Type: potential_issue
+
+
+
+
+============================================================================
+File: sea-core/src/error/fuzzy.rs
+Line: 213 to 227
 Type: potential_issue
 
 [x] Task:
-In sea-core/src/wasm/error.rs around line 13, the exported function to_js_error lacks the #[wasm_bindgen] attribute so it cannot be called from JavaScript; add #[wasm_bindgen] directly above the pub fn declaration and ensure the module imports wasm_bindgen::prelude::* (or wasm_bindgen::prelude::wasm_bindgen) at the top of the file so the attribute is recognized, then rebuild to verify the symbol is exported to JS.
+In sea-core/src/error/fuzzy.rs around lines 213 to 227, the test contains a rambling, confusing comment that calculates distances then questions filtering behavior; replace that block with a concise comment (or remove the extra lines) that states the distances clearly and the intended expectation: "Ware" distance 1, "Warehouse" distance 6, "Warehouses" distance 7, and with threshold 5 only "Ware" is expected, then assert accordingly.
+
+
+
+============================================================================
+File: sea-core/src/error/fuzzy.rs
+Line: 32 to 33
+Type: potential_issue
+
+[x] Task:
+In sea-core/src/error/fuzzy.rs around lines 32 to 33 there are two identical comment lines ("Use the shorter string for the columns to minimize space"); remove the duplicate so only one of these comments remains (delete the redundant line).
+
+
+
+============================================================================
+File: sea-core/src/bin/sea.rs
+Line: 67 to 72
+Type: nitpick
+
+[x] Task:
+In sea-core/src/bin/sea.rs around lines 67 to 72, the ImportArgs.format field is a String with allowed values in a comment; replace it with a ValueEnum-backed enum (e.g., ImportFormat with variants Sbvr and Kg) and derive clap::ValueEnum (plus Deserialize if needed), then change ImportArgs.format type to that enum; update line 112 to use the enum variant match (replace string comparison with ImportFormat::Sbvr) and update line 134 similarly to match ImportFormat::Kg; finally remove lines 218-221 (the former catch-all string case) since it is unreachable after switching to the enum.
 
 
 
@@ -109,152 +92,37 @@ Line: 14 to 21
 Type: potential_issue
 
 [x] Task:
-In sea-core/src/validation_error.rs around lines 14 to 21, the Position::new constructor currently panics when line or column is 0; change it to return Result (or a suitable error type) instead of panicking, returning Ok(Self{...}) on valid inputs and Err(...) with a clear error on invalid inputs, and update all callers to handle the Result (using ? where appropriate or matching the error) so no library code panics on bad user input.
-
-
-
-============================================================================
-File: sea-core/src/wasm/error.rs
-Line: 46 to 128
-Type: potential_issue
-
-
-
-
-============================================================================
-File: sea-core/src/python/error.rs
-Line: 11 to 166
-Type: potential_issue
-
+In sea-core/src/validation_error.rs around lines 14 to 21, replace the panicking Position::new with a fallible constructor returning Result (e.g., pub fn new(line: usize, column: usize) -> Result) that validates line and column are >= 1 and returns Err with a clear message when invalid, otherwise Ok(Self { line, column }); then update all call sites to handle the Result (propagate with ? where appropriate or map the error into your validation error type) so invalid external input no longer causes a panic.
 
 
 
 ============================================================================
 File: sea-core/src/validation_error.rs
-Line: 36 to 51
+Line: 617 to 620
 Type: potential_issue
 
 [x] Task:
-In sea-core/src/validation_error.rs around lines 36 to 51, the constructors for SourceRange do not validate that the start Position is  end, panic (or assert) with a clear message including both positions, then apply the same validation in from_line_col() after constructing the start and end Positions so invalid ranges like "5:10 to 3:2" are rejected with a helpful error message.
-
-
-
-============================================================================
-File: sea-core/src/wasm/error.rs
-Line: 145
-Type: nitpick
-
-[x] Task:
-In sea-core/src/wasm/error.rs around line 145, the code currently returns a JSON string via JsValue::from_str(&error_json); instead, remove the manual JSON string construction (lines ~138-143) and return a real JS object by replacing that call with JsValue::from_serde(&error_struct) (or the error struct/ map you built) and propagate or map the serde_json::to_value result to JsValue as needed; ensure you handle the Result from from_serde (or unwrap/map_err to JsValue::from_str on serialization error) so the function returns a proper JsValue representing an object rather than a JSON string.
-
-
-
-============================================================================
-File: sea-core/src/python/error.rs
-Line: 26 to 29
-Type: potential_issue
-
-
-
-
-============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 44 to 48
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/typescript/error.rs around lines 44 to 48 (and similarly update lines 66, 85, 104, 123, 141, 153, 165), the code currently uses serde_json::to_string(...).unwrap_or_default() which silently swallows serialization errors and drops metadata; change this to handle the Result explicitly: attempt serde_json::to_string(&metadata), match or use map_or_else to produce either the serialized string or a clear fallback that includes the serialization error (e.g., format!("serialization_error: {}", err)), and then append that result to error.reason so serialization failures are visible rather than silently ignored. Ensure the same explicit handling pattern is applied at the other listed line locations.
-
-
-
-============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 78 to 79
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/typescript/error.rs around lines 78-79, the code uses format!("{:?}", expected) and format!("{:?}", found) which emits Rust Debug output; change these to use Display formatting (e.g. format!("{}", expected) / expected.to_string()) and update the dimension types to implement std::fmt::Display with a clean user-facing representation if they do not already implement it; ensure any custom formatting logic lives on the dimension types' Display impl and update callers to use Display rather than Debug.
-
-
-
-============================================================================
-File: sea-core/src/error/diagnostics.rs
-Line: 305 to 319
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/error/diagnostics.rs around lines 305 to 319, stop building range as a formatted JSON string and parsing it; instead create a serde_json::Value directly with serde_json::json! — e.g. compute a range_value using if let Some(r) = range { json!({"start": {"line": r.start.line - 1, "character": r.start.column - 1}, "end": {"line": r.end.line - 1, "character": r.end.column - 1}}) } else { json!({"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}) } and then use that range_value for the "range" field in the diagnostic object instead of parsing a string with from_str/unwrap.
-
-
-
-============================================================================
-File: sea-core/src/bin/sea.rs
-Line: 213 to 269
-Type: nitpick
-
-[x] Task:
-In sea-core/src/bin/sea.rs around lines 213 to 269, replace the manual argument parsing with clap: add clap = "4" to Cargo.toml, derive Parser on a new ValidateArgs struct that exposes long flags (format with a value enum default "human", no-color and no-source as booleans, and a positional target PathBuf), implement or derive clap::ValueEnum for OutputFormat if needed, call ValidateArgs::parse() at the start of the validate command and map its fields to the existing (target, format, use_color, show_source) return values, and remove the manual loop and error/usage exits so clap handles validation and help automatically.
-
-
-
-============================================================================
-File: sea-core/src/bin/sea.rs
-Line: 8
-Type: nitpick
-
-[x] Task:
-In sea-core/src/bin/sea.rs around line 8, the use statement imports serde_json::json but the code always calls the macro with full qualification (serde_json::json!) so this import is unused; remove the json identifier from the use line (leaving to_string_pretty) or delete the entire use if no other items are used, and run cargo check to confirm no unused-import warnings remain.
-
-
-
-============================================================================
-File: sea-core/src/python/error.rs
-Line: 14 to 165
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/python/error.rs around lines 14 to 165, the function unconditionally calls Python::with_gil(...) which forces GIL acquisition even when the caller already has a Python token; refactor the function to accept a py: Python parameter instead, remove the Python::with_gil wrapper, replace all uses of .value(py) and setattr calls with the provided py token, and update any callers to pass their existing py (or call .py() on GIL-bound objects) so GIL ownership is handled by the caller; ensure the function signature and lifetimes use Python and that optional fields are handled the same as before.
-
-
-
-============================================================================
-File: sea-core/src/bin/sea.rs
-Line: 330 to 397
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/bin/sea.rs around lines 330-397, the function report_validation accepts unused parameters _use_color and _show_source (and the CLI accepts flags that do nothing); remove these unimplemented flags by deleting the parameters from report_validation's signature and all call sites, update the CLI argument parsing to stop exposing --no-color/--no-source (or, alternatively, implement their behavior), and simplify output logic to respect the remaining parameters; ensure compilation by updating all places that invoke report_validation to the new signature and run cargo build/tests.
-
-
-
-============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 1 to 8
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/typescript/error.rs around lines 1-8, the module embeds JSON into error.reason instead of producing a proper napi-rs JS Error with typed properties; replace the string-concatenation approach by constructing a napi JsError (or napi::Error) on the Rust side, set standard fields (message, name, code, cause) and map ValidationError variants to stable codes like "INVALID_FIELD"/"UNKNOWN_ERROR", and attach a single JsObject under a well-named key (e.g., details) containing line, column and context so TypeScript callers can access error.code and error.details.line directly; return/throw that JsError instead of an ad-hoc string-embedded object.
+In sea-core/src/validation_error.rs around lines 617–620, the suggestion string produces asymmetric quoting when there are multiple matches; fix it by quoting each candidate individually and joining with a simple comma+space. Replace the current join usage with something that maps each match to a quoted form (e.g. format!("'{}'", m)) and then join with ", ", then insert that into the "Did you mean {}?" format so each suggestion appears as 'var1', 'var2' with balanced quotes.
 
 
 
 ============================================================================
 File: sea-core/src/error/fuzzy.rs
-Line: 216
+Line: 44 to 60
 Type: potential_issue
 
 [x] Task:
-In sea-core/src/error/fuzzy.rs around line 216, the inline comment lists incorrect Levenshtein distances; update it so it reads that "Ware" is distance 1, "Warehouse" is distance 6 (not 5), and "Warehouses" is distance 7 (not 6), and note that the latter two exceed the threshold and therefore won't appear in results.
+In sea-core/src/error/fuzzy.rs around lines 44 to 60, the inner loop calls short.chars() on every iteration of the outer loop which reconstructs the iterator each time and re-validates UTF-8 boundaries, causing unnecessary overhead; fix this by collecting short.chars() once into a Vec (and optionally collect long.chars() as well) before the loops, then iterate over the collected vector(s) with enumerate so the inner loop uses the precomputed char slice rather than re-creating the iterator on each outer iteration.
 
 
 
 ============================================================================
-File: sea-core/src/error/fuzzy.rs
-Line: 32 to 34
+File: sea-core/src/typescript/error.rs
+Line: 44 to 47
 Type: nitpick
 
 [x] Task:
-In sea-core/src/error/fuzzy.rs around lines 32 to 34, the code recomputes short.chars().count() even though a_len and b_len were already computed earlier; change the assignment so short_len is set by reusing the precomputed a_len or b_len depending on which string was chosen (if a_len < b_len use a_len else use b_len) instead of calling short.chars().count(), eliminating the redundant O(n) computation.
-
+Fixed ReferenceType serialization in TypeScript error conversion.
 
 
 Review completed ✔

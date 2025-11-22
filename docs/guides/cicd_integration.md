@@ -151,8 +151,6 @@ validate_models:
     when: always
     paths:
       - validation-results.json
-    reports:
-      junit: validation-results.json # Can be adapted for JUnit format
 ```
 
 ### With Error Reporting
