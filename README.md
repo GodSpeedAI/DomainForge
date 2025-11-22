@@ -2,7 +2,7 @@
 
 ### **Transform Business Logic into Executable Architecture**
 
-> *Build enterprise models that business analysts can read and machines can execute*
+> _Build enterprise models that business analysts can read and machines can execute_
 
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
@@ -187,15 +187,15 @@ model.policy(
 <details>
 <summary><h2>📊 What You Get vs Traditional Approaches</h2></summary>
 
-| Traditional Approach | With SEA DSL |
-|---------------------|--------------|
-| 📄 Write requirements in Word | 📄 Write executable models that validate themselves |
-| 🔀 Business logic scattered across systems | 🎯 Single source of truth for domain rules |
-| 🐌 Slow, manual compliance checks | ⚡ Instant validation (<100ms for 10K entities) |
-| 🌐 Different rules in Python vs TypeScript | 🔒 Identical behavior across all languages |
-| 🤔 "What did we agree on?" | 📖 The model *is* the agreement |
-| 🔧 Manual architecture documentation | 📐 Auto-export to FINOS CALM |
-| ⏰ Days to update cross-system logic | ⚡ Update once, deploy everywhere |
+| Traditional Approach                       | With SEA DSL                                        |
+| ------------------------------------------ | --------------------------------------------------- |
+| 📄 Write requirements in Word              | 📄 Write executable models that validate themselves |
+| 🔀 Business logic scattered across systems | 🎯 Single source of truth for domain rules          |
+| 🐌 Slow, manual compliance checks          | ⚡ Instant validation (<100ms for 10K entities)     |
+| 🌐 Different rules in Python vs TypeScript | 🔒 Identical behavior across all languages          |
+| 🤔 "What did we agree on?"                 | 📖 The model _is_ the agreement                     |
+| 🔧 Manual architecture documentation       | 📐 Auto-export to FINOS CALM                        |
+| ⏰ Days to update cross-system logic       | ⚡ Update once, deploy everywhere                   |
 
 </details>
 
@@ -267,24 +267,29 @@ Models separate concerns cleanly:
 ### 🎯 Design Principles
 
 1. **🧱 Layered Architecture**: Vocabulary → Facts → Rules (ADR-001)
+
    - No circular dependencies between layers
    - Clear separation of concerns
 
 2. **⚡ Performance First**: <100ms validation for 10K nodes
+
    - Rust's zero-cost abstractions
    - IndexMap-based graph storage for O(1) lookups + deterministic iteration
 
 3. **🔄 Deterministic Behavior**: Consistent results across runs
+
    - IndexMap ensures stable iteration order (not HashMap)
    - Critical for reproducible policy evaluation
    - Test reproducibility guaranteed
 
 4. **🌍 Cross-Language Parity**: 100% identical semantics
+
    - All bindings wrap Rust core (never duplicate logic)
    - Extensive parity testing ensures equivalence
    - 342+ tests maintaining cross-language consistency
 
 5. **📊 Standards Compliance**:
+
    - SBVR-aligned policy expressions (OMG standard)
    - FINOS CALM bidirectional conversion
    - JSON Schema validated exports
@@ -338,31 +343,31 @@ model.policy(
 ### 💰 **Finance: Payment Processing**
 
 ```typescript
-const model = new Model('payment-system');
+const model = new Model("payment-system");
 
-const customer = model.entity('Customer Account');
-const merchant = model.entity('Merchant Account');
-const gateway = model.entity('Payment Gateway');
+const customer = model.entity("Customer Account");
+const merchant = model.entity("Merchant Account");
+const gateway = model.entity("Payment Gateway");
 
-const money = model.resource('USD', { unit: 'dollars' });
+const money = model.resource("USD", { unit: "dollars" });
 
 const payment = model.flow({
-  name: 'Customer Payment',
+  name: "Customer Payment",
   resource: money,
   from: customer,
   to: merchant,
   via: gateway,
-  quantity: 99.99
+  quantity: 99.99,
 });
 
 // Policy: Fraud detection
 model.policy({
-  name: 'Unusual Activity Detection',
+  name: "Unusual Activity Detection",
   expression: `
     forall c in Entity where c.type = 'Customer':
       sum(Flow.quantity where Flow.from = c and Flow.timestamp > now() - 1hour) <= 10000
   `,
-  severity: 'error'
+  severity: "error",
 });
 ```
 
@@ -503,6 +508,143 @@ See `docs/reference/sea-registry.md` and `schemas/sea-registry.schema.json` for 
 
 **Tip**: The CLI supports an optional `--fail-on-ambiguity` flag for `registry resolve` and `registry list` to make resolution fail when two matching namespace rules have an equal literal prefix length. By default, the resolver falls back to an alphabetical tie-breaker.
 
+### 🔍 **Enhanced Diagnostics & Error Handling**
+
+SEA provides comprehensive error diagnostics with multiple output formats, fuzzy matching for suggestions, and native error types for all language bindings.
+
+#### Error Codes
+
+All validation errors include structured error codes (E001-E599) organized by category:
+
+- **E001-E099**: Syntax and Parsing Errors
+- **E100-E199**: Type System Errors
+- **E200-E299**: Unit and Dimension Errors
+- **E300-E399**: Scope and Reference Errors
+- **E400-E499**: Policy Validation Errors
+- **E500-E599**: Namespace and Module Errors
+
+See the complete [Error Code Catalog](docs/specs/error_codes.md) for detailed descriptions and fixes.
+
+#### Diagnostic Formatters
+
+**CLI Output Formats:**
+
+```bash
+# Human-readable output with colors and source snippets (default)
+sea validate myfile.sea
+
+# JSON output for CI/CD integration
+sea validate --format json myfile.sea
+
+# LSP format for IDE integration
+sea validate --format lsp myfile.sea
+
+# Disable colors for piping
+sea validate --format human --no-color myfile.sea
+
+# Hide source code snippets
+sea validate --no-source mydir/
+```
+
+**Programmatic Usage:**
+
+```rust
+use sea_core::error::diagnostics::{HumanFormatter, JsonFormatter, DiagnosticFormatter};
+
+let error = ValidationError::undefined_entity("Warehouse", "line 10");
+
+// Human-readable with colors
+let formatter = HumanFormatter::new(true, true);
+println!("{}", formatter.format(&error, Some(source_code)));
+
+// JSON for tools
+let json_formatter = JsonFormatter;
+println!("{}", json_formatter.format(&error, None));
+```
+
+#### Fuzzy Matching Suggestions
+
+Errors automatically suggest similar names when you make typos:
+
+```python
+# Your code:
+Flow "Materials" from "Warehous" to "Factory"
+
+# Error output:
+Error[E001]: Undefined Entity: 'Warehous' at line 1
+  --> 1:23
+  |
+1 | Flow "Materials" from "Warehous" to "Factory"
+  |                       ^^^^^^^^^^
+  |
+  hint: Did you mean 'Warehouse'?
+```
+
+The fuzzy matcher uses Levenshtein distance to find similar names within an edit distance of 2.
+
+#### Native Error Types
+
+Each language binding provides native, idiomatic error types:
+
+**Python:**
+
+```python
+from sea_dsl import Graph
+
+try:
+    graph = Graph.parse(source)
+except Exception as e:
+    print(f"{e.error_type}[{e.code}]: {e}")
+    if hasattr(e, 'suggestion'):
+        print(f"Hint: {e.suggestion}")
+    if hasattr(e, 'line'):
+        print(f"Location: line {e.line}, column {e.column}")
+```
+
+**TypeScript:**
+
+```typescript
+import { Graph } from "@domainforge/sea";
+
+try {
+  const graph = Graph.parse(source);
+} catch (e: any) {
+  // Parse embedded metadata
+  const metadata = JSON.parse(e.message.split("__metadata__: ")[1]);
+  console.error(`${metadata.errorType}[${metadata.code}]: ${e.message}`);
+  if (metadata.suggestion) {
+    console.log(`Hint: ${metadata.suggestion}`);
+  }
+}
+```
+
+**WASM/JavaScript:**
+
+```javascript
+import { Graph } from "@domainforge/sea-wasm";
+
+try {
+  const graph = Graph.parse(source);
+} catch (e) {
+  const [msg, meta] = e.split("__SEA_DSL_ERROR_METADATA__: ");
+  const metadata = JSON.parse(meta);
+  console.error(`${metadata.errorType}[${metadata.code}]: ${msg}`);
+  if (metadata.suggestion) {
+    console.log(`Hint: ${metadata.suggestion}`);
+  }
+}
+```
+
+**Key Features:**
+
+- ✅ **30+ structured error codes** with detailed descriptions
+- ✅ **Fuzzy matching** for "did you mean?" suggestions
+- ✅ **Multiple output formats**: JSON, Human-readable, LSP
+- ✅ **Source code snippets** with caret indicators
+- ✅ **Color-coded output** (can be disabled)
+- ✅ **Native error types** for Python, TypeScript, and WASM
+- ✅ **Precise source locations** with line and column numbers
+
 </details>
 
 ---
@@ -638,7 +780,7 @@ strict_result = graph.evaluate_policy(policy_json)
 import { Graph } from "@domainforge/sea";
 
 const graph = new Graph();
-graph.setEvaluationMode(true);  // three-valued (default)
+graph.setEvaluationMode(true); // three-valued (default)
 const result = graph.evaluatePolicy(policyJson);
 
 graph.setEvaluationMode(false); // strict boolean
@@ -792,17 +934,17 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 <details>
 <summary><h2>📖 Documentation & Resources</h2></summary>
 
-| Resource | Description |
-|----------|-------------|
+| Resource                                                       | Description                                                    |
+| -------------------------------------------------------------- | -------------------------------------------------------------- |
 | 📘 [**Copilot Instructions**](.github/copilot-instructions.md) | **⭐ Essential guide for AI coding agents** (updated Nov 2025) |
-| 🔗 [**API Specification**](docs/specs/api_specification.md) | Complete API reference for all languages |
-| 📙 [**Product Requirements**](docs/specs/prd.md) | PRD with success metrics and requirements |
-| 📕 [**System Design**](docs/specs/sds.md) | Technical specifications and component design |
-| 🏛️ [**Architecture Decisions**](docs/specs/adr.md) | 8 ADRs documenting key architectural choices |
-| 📋 [**Implementation Plans**](docs/plans/) | Phase-by-phase TDD implementation guides |
-| 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md) | SEA ↔ CALM conversion specification |
-| 🎓 [**Examples**](examples/) | Browser demo and parser examples |
-| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md) | Configure `.sea-registry.toml` and workspace glob patterns |
+| 🔗 [**API Specification**](docs/specs/api_specification.md)    | Complete API reference for all languages                       |
+| 📙 [**Product Requirements**](docs/specs/prd.md)               | PRD with success metrics and requirements                      |
+| 📕 [**System Design**](docs/specs/sds.md)                      | Technical specifications and component design                  |
+| 🏛️ [**Architecture Decisions**](docs/specs/adr.md)             | 8 ADRs documenting key architectural choices                   |
+| 📋 [**Implementation Plans**](docs/plans/)                     | Phase-by-phase TDD implementation guides                       |
+| 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md)              | SEA ↔ CALM conversion specification                            |
+| 🎓 [**Examples**](examples/)                                   | Browser demo and parser examples                               |
+| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)    | Configure `.sea-registry.toml` and workspace glob patterns     |
 
 ### 🆕 Recent API Changes (November 2025)
 
