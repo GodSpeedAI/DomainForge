@@ -16,6 +16,21 @@ pub enum Dimension {
     Custom(String),
 }
 
+impl std::fmt::Display for Dimension {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Dimension::Mass => write!(f, "Mass"),
+            Dimension::Length => write!(f, "Length"),
+            Dimension::Volume => write!(f, "Volume"),
+            Dimension::Currency => write!(f, "Currency"),
+            Dimension::Time => write!(f, "Time"),
+            Dimension::Temperature => write!(f, "Temperature"),
+            Dimension::Count => write!(f, "Count"),
+            Dimension::Custom(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Unit {
     symbol: String,

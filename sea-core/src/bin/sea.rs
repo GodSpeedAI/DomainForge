@@ -5,6 +5,7 @@ use sea_core::{import_kg_turtle, Graph, NamespaceRegistry};
 use std::env;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
+use serde_json::{json, to_string_pretty};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -355,7 +356,13 @@ fn report_validation(
                     })
                 }).collect::<Vec<_>>(),
             });
-            println!("{}", serde_json::to_string_pretty(&json_output).unwrap());
+            match to_string_pretty(&json_output) {
+                Ok(s) => println!("{}", s),
+                Err(e) => {
+                    eprintln!("Failed to serialize output: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         OutputFormat::Human | OutputFormat::Lsp => {
             // Human-readable output (LSP not applicable for policy violations)

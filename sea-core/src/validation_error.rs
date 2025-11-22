@@ -1,6 +1,9 @@
 use crate::units::Dimension;
 use std::fmt;
 
+/// Threshold for fuzzy matching suggestions (Levenshtein distance)
+const FUZZY_MATCH_THRESHOLD: usize = 2;
+
 /// Position in source code (line and column, 1-indexed)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
@@ -10,6 +13,9 @@ pub struct Position {
 
 impl Position {
     pub fn new(line: usize, column: usize) -> Self {
+        if line == 0 || column == 0 {
+            panic!("Position line and column must be >= 1. Got line={}, column={}", line, column);
+        }
         Self { line, column }
     }
 }
@@ -566,7 +572,7 @@ impl ValidationError {
         use crate::error::fuzzy::find_best_match;
         
         let name = name.into();
-        let suggestion = find_best_match(&name, candidates, 2)
+        let suggestion = find_best_match(&name, candidates, FUZZY_MATCH_THRESHOLD)
             .map(|match_name| format!("Did you mean '{}'?", match_name))
             .or_else(|| Some(format!("Did you mean to define 'Entity \"{}\"'?", name)));
 
@@ -587,7 +593,7 @@ impl ValidationError {
         use crate::error::fuzzy::find_best_match;
         
         let name = name.into();
-        let suggestion = find_best_match(&name, candidates, 2)
+        let suggestion = find_best_match(&name, candidates, FUZZY_MATCH_THRESHOLD)
             .map(|match_name| format!("Did you mean '{}'?", match_name))
             .or_else(|| Some(format!("Did you mean to define 'Resource \"{}\"'?", name)));
 
@@ -608,7 +614,7 @@ impl ValidationError {
         use crate::error::fuzzy::suggest_similar;
         
         let name = name.into();
-        let matches = suggest_similar(&name, candidates, 2);
+        let matches = suggest_similar(&name, candidates, FUZZY_MATCH_THRESHOLD);
         let suggestion = if !matches.is_empty() {
             Some(format!("Did you mean '{}'?", matches.join("', '")))
         } else {

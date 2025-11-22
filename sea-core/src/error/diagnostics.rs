@@ -104,11 +104,15 @@ impl DiagnosticFormatter for JsonFormatter {
     fn format(&self, error: &ValidationError, _source: Option<&str>) -> String {
         let diagnostic = JsonDiagnostic::from_validation_error(error);
         serde_json::to_string_pretty(&diagnostic).unwrap_or_else(|_| {
-            format!(
-                r#"{{"code": "{}", "severity": "error", "message": "{}"}}"#,
-                error.error_code().as_str(),
-                error.to_string().replace('"', "\\\"")
-            )
+            // Fallback: create a minimal JSON object manually but safely
+            let fallback = serde_json::json!({
+                "code": error.error_code().as_str(),
+                "severity": "error",
+                "message": error.to_string()
+            });
+            serde_json::to_string(&fallback).unwrap_or_else(|_| {
+                r#"{"code": "UNKNOWN", "severity": "error", "message": "Failed to serialize error"}"#.to_string()
+            })
         })
     }
 }
@@ -205,7 +209,7 @@ impl HumanFormatter {
                 };
 
                 let caret_padding = " ".repeat(start_col);
-                let carets = "^".repeat((end_col - start_col).max(1));
+                let carets = "^".repeat(end_col.saturating_sub(start_col).max(1));
                 output.push_str(&format!(
                     "{}{}{}\n",
                     padding,
@@ -311,13 +315,17 @@ impl DiagnosticFormatter for LspFormatter {
                 .to_string()
         };
 
-        format!(
-            r#"{{"range": {}, "severity": {}, "code": "{}", "source": "sea-dsl", "message": "{}"}}"#,
-            range_json,
-            severity,
-            code.as_str(),
-            full_message.replace('"', "\\\"").replace('\n', "\\n")
-        )
+        let diagnostic = serde_json::json!({
+            "range": serde_json::from_str::<serde_json::Value>(&range_json).unwrap_or(serde_json::json!({})),
+            "severity": severity,
+            "code": code.as_str(),
+            "source": "sea-dsl",
+            "message": full_message
+        });
+        
+        serde_json::to_string(&diagnostic).unwrap_or_else(|_| {
+             r#"{"severity": 1, "message": "Failed to serialize diagnostic"}"#.to_string()
+        })
     }
 }
 
@@ -384,11 +392,12 @@ mod tests {
         let formatter = LspFormatter;
         let output = formatter.format(&error, None);
 
-        assert!(output.contains(r#""severity": 1"#)); // Error
-        assert!(output.contains(r#""code": "E005""#));
-        assert!(output.contains(r#""source": "sea-dsl""#));
+        let json: serde_json::Value = serde_json::from_str(&output).expect("should be valid json");
+        assert_eq!(json["severity"], 1);
+        assert_eq!(json["code"], "E005");
+        assert_eq!(json["source"], "sea-dsl");
         // LSP uses 0-indexed lines
-        assert!(output.contains(r#""line": 9"#));
+        assert_eq!(json["range"]["start"]["line"], 9);
     }
 
     #[test]

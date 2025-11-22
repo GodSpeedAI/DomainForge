@@ -66,8 +66,8 @@ pub fn to_js_error(err: ValidationError) -> JsValue {
             serde_json::json!({
                 "code": code,
                 "errorType": error_type,
-                "expectedDimension": format!("{:?}", expected),
-                "foundDimension": format!("{:?}", found),
+                "expectedDimension": format!("{}", expected),
+                "foundDimension": format!("{}", found),
                 "suggestion": suggestion,
             })
         }
@@ -129,11 +129,18 @@ pub fn to_js_error(err: ValidationError) -> JsValue {
     };
 
     // Create error message with embedded metadata
-    let error_msg = format!(
-        "{}\n__SEA_DSL_ERROR_METADATA__: {}",
-        message,
-        serde_json::to_string(&metadata).unwrap_or_default()
-    );
+    // Create error object with message and metadata
+    let error_object = serde_json::json!({
+        "message": message,
+        "metadata": metadata
+    });
 
-    JsValue::from_str(&error_msg)
+    // Serialize to JSON string
+    let error_json = serde_json::to_string(&error_object).unwrap_or_else(|_| {
+        // Fallback if serialization fails - ensure message is escaped
+        let escaped_message = message.replace('"', "\\\"").replace('\n', "\\n");
+        format!(r#"{{"message": "{}", "metadata": {{}}}}"#, escaped_message)
+    });
+
+    JsValue::from_str(&error_json)
 }

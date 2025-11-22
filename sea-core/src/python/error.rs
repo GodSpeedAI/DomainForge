@@ -11,15 +11,15 @@ use pyo3::prelude::*;
 pub fn to_python_exception(err: ValidationError) -> PyErr {
     let code = err.error_code().as_str().to_string();
 
-    match err {
-        ValidationError::SyntaxError {
-            message,
-            line,
-            column,
-            ..
-        } => {
-            Python::with_gil(|py| {
-                let exc = PyException::new_err(message.clone());
+    Python::with_gil(|py| {
+        match err {
+            ValidationError::SyntaxError {
+                message,
+                line,
+                column,
+                ..
+            } => {
+                let exc = PyException::new_err(message);
                 let exc_obj = exc.value(py);
                 
                 // Set custom attributes
@@ -29,17 +29,15 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 let _ = exc_obj.setattr("error_type", "SyntaxError");
                 
                 exc
-            })
-        }
-        ValidationError::TypeError {
-            message,
-            expected_type,
-            found_type,
-            suggestion,
-            ..
-        } => {
-            Python::with_gil(|py| {
-                let exc = PyException::new_err(message.clone());
+            }
+            ValidationError::TypeError {
+                message,
+                expected_type,
+                found_type,
+                suggestion,
+                ..
+            } => {
+                let exc = PyException::new_err(message);
                 let exc_obj = exc.value(py);
                 
                 let _ = exc_obj.setattr("code", code);
@@ -55,15 +53,13 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 }
                 
                 exc
-            })
-        }
-        ValidationError::UnitError {
-            expected,
-            found,
-            suggestion,
-            ..
-        } => {
-            Python::with_gil(|py| {
+            }
+            ValidationError::UnitError {
+                expected,
+                found,
+                suggestion,
+                ..
+            } => {
                 let message = format!(
                     "Unit mismatch: expected {:?}, found {:?}",
                     expected, found
@@ -80,15 +76,13 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 }
                 
                 exc
-            })
-        }
-        ValidationError::UndefinedReference {
-            reference_type,
-            name,
-            suggestion,
-            ..
-        } => {
-            Python::with_gil(|py| {
+            }
+            ValidationError::UndefinedReference {
+                reference_type,
+                name,
+                suggestion,
+                ..
+            } => {
                 let message = format!("Undefined {}: '{}'", reference_type, name);
                 let exc = PyException::new_err(message);
                 let exc_obj = exc.value(py);
@@ -102,14 +96,12 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 }
                 
                 exc
-            })
-        }
-        ValidationError::ScopeError {
-            variable,
-            suggestion,
-            ..
-        } => {
-            Python::with_gil(|py| {
+            }
+            ValidationError::ScopeError {
+                variable,
+                suggestion,
+                ..
+            } => {
                 let message = format!("Variable '{}' not in scope", variable);
                 let exc = PyException::new_err(message);
                 let exc_obj = exc.value(py);
@@ -122,14 +114,12 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 }
                 
                 exc
-            })
-        }
-        ValidationError::DuplicateDeclaration {
-            name,
-            first_location,
-            second_location,
-        } => {
-            Python::with_gil(|py| {
+            }
+            ValidationError::DuplicateDeclaration {
+                name,
+                first_location,
+                second_location,
+            } => {
                 let message = format!(
                     "Duplicate declaration of '{}': first at {}, duplicate at {}",
                     name, first_location, second_location
@@ -144,10 +134,8 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 let _ = exc_obj.setattr("second_location", second_location);
                 
                 exc
-            })
-        }
-        ValidationError::DeterminismError { message, hint } => {
-            Python::with_gil(|py| {
+            }
+            ValidationError::DeterminismError { message, hint } => {
                 let exc = PyException::new_err(message);
                 let exc_obj = exc.value(py);
                 
@@ -156,14 +144,12 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 let _ = exc_obj.setattr("hint", hint);
                 
                 exc
-            })
-        }
-        ValidationError::InvalidExpression {
-            message,
-            suggestion,
-            ..
-        } => {
-            Python::with_gil(|py| {
+            }
+            ValidationError::InvalidExpression {
+                message,
+                suggestion,
+                ..
+            } => {
                 let exc = PyException::new_err(message);
                 let exc_obj = exc.value(py);
                 
@@ -174,7 +160,7 @@ pub fn to_python_exception(err: ValidationError) -> PyErr {
                 }
                 
                 exc
-            })
+            }
         }
-    }
+    })
 }

@@ -32,7 +32,6 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     // Use the shorter string for the columns to minimize space
     let (short, long) = if a_len < b_len { (a, b) } else { (b, a) };
     let short_len = short.chars().count();
-    let _long_len = long.chars().count();
 
     // We only need two rows for the dynamic programming table
     let mut prev_row: Vec<usize> = (0..=short_len).collect();
