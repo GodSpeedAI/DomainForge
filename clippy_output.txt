@@ -1,0 +1,80 @@
+    Checking sea-core v0.0.1 (/home/sprime01/projects/domainforge/sea-core)
+error: empty line after doc comment
+  --> sea-core/src/error/fuzzy.rs:5:1
+   |
+ 5 | / /// resource names, or other identifiers.
+ 6 | |
+   | |_^
+...
+21 |   pub fn levenshtein_distance(a: &str, b: &str) -> usize {
+   |   --------------------------- the comment documents this function
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#empty_line_after_doc_comments
+   = note: `-D clippy::empty-line-after-doc-comments` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::empty_line_after_doc_comments)]`
+   = help: if the empty line is unintentional, remove it
+help: if the comment should document the parent module use an inner doc comment
+   |
+ 1 ~ //! Fuzzy string matching for "did you mean?" suggestions
+ 2 ~ //!
+ 3 ~ //! This module implements the Levenshtein distance algorithm (Wagner-Fischer)
+ 4 ~ //! to provide helpful suggestions when users make typos in entity names,
+ 5 ~ //! resource names, or other identifiers.
+   |
+help: if the documentation should include the empty line include it in the comment
+   |
+ 6 | ///
+   |
+
+error: empty line after doc comment
+ --> sea-core/src/validation_error.rs:4:1
+  |
+4 | / /// Threshold for fuzzy matching suggestions (Levenshtein distance)
+5 | |
+  | |_^
+6 |   pub const FUZZY_MATCH_THRESHOLD: usize = 2;
+  |   ------------------------------- the comment documents this constant item
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#empty_line_after_doc_comments
+  = help: if the empty line is unintentional, remove it
+
+error: empty line after doc comment
+  --> sea-core/src/python/error.rs:9:1
+   |
+ 9 | / /// Convert ValidationError to appropriate Python exception with custom attributes
+10 | |
+   | |_^
+11 |   pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
+   |   -------------------------- the comment documents this function
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#empty_line_after_doc_comments
+   = help: if the empty line is unintentional, remove it
+
+error: the loop variable `line_idx` is used to index `lines`
+   --> sea-core/src/error/diagnostics.rs:192:25
+    |
+192 |         for line_idx in start_line..=end_line.min(lines.len() - 1) {
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+192 -         for line_idx in start_line..=end_line.min(lines.len() - 1) {
+192 +         for (line_idx, <item>) in lines.iter().enumerate().take(end_line.min(lines.len() - 1) + 1).skip(start_line) {
+    |
+
+error: `to_string` applied to a type that implements `Display` in `format!` args
+   --> sea-core/src/error/diagnostics.rs:256:18
+    |
+256 |             error.to_string()
+    |                  ^^^^^^^^^^^^ help: remove this
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#to_string_in_format_args
+    = note: `-D clippy::to-string-in-format-args` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::to_string_in_format_args)]`
+
+error: could not compile `sea-core` (lib) due to 5 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `sea-core` (lib test) due to 5 previous errors

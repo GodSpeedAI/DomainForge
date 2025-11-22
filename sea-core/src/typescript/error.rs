@@ -1,8 +1,7 @@
 /// TypeScript-native error handling for sea_dsl
-/// 
+///
 /// This module provides error conversion that creates native JavaScript/TypeScript
 /// Error objects with typed properties. TypeScript users should never see Rust errors.
-
 use crate::validation_error::ValidationError;
 use napi::bindgen_prelude::*;
 

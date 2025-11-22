@@ -1,19 +1,18 @@
 /// Fuzzy string matching for "did you mean?" suggestions
-/// 
+///
 /// This module implements the Levenshtein distance algorithm (Wagner-Fischer)
 /// to provide helpful suggestions when users make typos in entity names,
 /// resource names, or other identifiers.
-
 /// Calculate the Levenshtein distance between two strings
-/// 
+///
 /// Uses the Wagner-Fischer dynamic programming algorithm with O(mn) time complexity
 /// and O(min(m,n)) space complexity.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use sea_core::error::fuzzy::levenshtein_distance;
-/// 
+///
 /// assert_eq!(levenshtein_distance("kitten", "sitting"), 3);
 /// assert_eq!(levenshtein_distance("Saturday", "Sunday"), 3);
 /// assert_eq!(levenshtein_distance("", "abc"), 3);
@@ -30,10 +29,10 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     }
 
     // Use the shorter string for the columns to minimize space
-    let (short, long, short_len) = if a_len < b_len { 
-        (a, b, a_len) 
-    } else { 
-        (b, a, b_len) 
+    let (short, long, short_len) = if a_len < b_len {
+        (a, b, a_len)
+    } else {
+        (b, a, b_len)
     };
 
     // We only need two rows for the dynamic programming table
@@ -50,8 +49,8 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
 
             curr_row[j + 1] = std::cmp::min(
                 std::cmp::min(
-                    curr_row[j] + 1,      // insertion
-                    prev_row[j + 1] + 1,  // deletion
+                    curr_row[j] + 1,     // insertion
+                    prev_row[j + 1] + 1, // deletion
                 ),
                 prev_row[j] + cost, // substitution
             );
@@ -64,27 +63,27 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
 }
 
 /// Find similar strings within a given edit distance threshold
-/// 
+///
 /// Returns all candidates that are within `threshold` edits of the target string,
 /// sorted by distance (closest first).
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `target` - The string to match against
 /// * `candidates` - Potential matches to consider
 /// * `threshold` - Maximum edit distance to include (default recommendation: 2)
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use sea_core::error::fuzzy::suggest_similar;
-/// 
+///
 /// let candidates = vec![
 ///     "Warehouse".to_string(),
 ///     "Factory".to_string(),
 ///     "Supplier".to_string(),
 /// ];
-/// 
+///
 /// let suggestions = suggest_similar("Warehous", &candidates, 2);
 /// assert_eq!(suggestions, vec!["Warehouse"]);
 /// ```
@@ -108,26 +107,26 @@ pub fn suggest_similar(target: &str, candidates: &[String], threshold: usize) ->
 }
 
 /// Find the single best match for a target string
-/// 
+///
 /// Returns the closest match if it's within the threshold, otherwise None.
 /// If multiple candidates have the same distance, returns the first alphabetically.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `target` - The string to match against
 /// * `candidates` - Potential matches to consider
 /// * `threshold` - Maximum edit distance to accept (default recommendation: 2)
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use sea_core::error::fuzzy::find_best_match;
-/// 
+///
 /// let candidates = vec![
 ///     "Warehouse".to_string(),
 ///     "Factory".to_string(),
 /// ];
-/// 
+///
 /// assert_eq!(find_best_match("Warehous", &candidates, 2), Some("Warehouse".to_string()));
 /// assert_eq!(find_best_match("XYZ", &candidates, 2), None);
 /// ```

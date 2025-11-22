@@ -1,13 +1,12 @@
 /// WASM-native error handling for sea_dsl
-/// 
+///
 /// This module provides error conversion that creates error messages with embedded
 /// metadata for WASM bindings. JavaScript users get structured error information.
-
 use crate::validation_error::ValidationError;
 use wasm_bindgen::prelude::*;
 
 /// Convert ValidationError to JsValue error string with embedded metadata
-/// 
+///
 /// The error message includes JSON metadata that JavaScript can parse to get
 /// structured error information including error codes, types, and suggestions.
 pub fn to_js_error(err: ValidationError) -> JsValue {

@@ -1,10 +1,9 @@
 /// Diagnostic formatters for ValidationError
-/// 
+///
 /// Provides multiple output formats for error diagnostics:
 /// - JSON: Machine-readable format for CI/CD tools
 /// - Human: Color-coded format with source snippets for developers
 /// - LSP: Language Server Protocol compatible format for IDEs
-
 use crate::validation_error::{SourceRange, ValidationError};
 use serde::{Deserialize, Serialize};
 
@@ -190,11 +189,16 @@ impl HumanFormatter {
         }
 
         // Show the error line(s)
+        // Show the error line(s)
+        #[allow(clippy::needless_range_loop)]
         for line_idx in start_line..=end_line.min(lines.len() - 1) {
             let line_num = line_idx + 1;
             output.push_str(&format!(
                 "{} | {}\n",
-                self.colorize(&format!("{:>width$}", line_num, width = line_num_width), "blue"),
+                self.colorize(
+                    &format!("{:>width$}", line_num, width = line_num_width),
+                    "blue"
+                ),
                 lines[line_idx]
             ));
 
@@ -251,30 +255,26 @@ impl DiagnosticFormatter for HumanFormatter {
             "{}[{}]: {}\n",
             severity_colored,
             self.colorize(code.as_str(), "bold"),
-            error.to_string()
+            error
         );
 
         // Add source snippet if available
         if self.show_source {
             if let (Some(src), Some(range)) = (source, error.range()) {
+                output.push_str(&format!("  {} {}\n", self.colorize("-->", "blue"), range));
+                output.push_str(&self.format_source_snippet(src, range));
+            } else if let Some(location) = error.location_string() {
                 output.push_str(&format!(
                     "  {} {}\n",
                     self.colorize("-->", "blue"),
-                    range
+                    location
                 ));
-                output.push_str(&self.format_source_snippet(src, range));
-            } else if let Some(location) = error.location_string() {
-                output.push_str(&format!("  {} {}\n", self.colorize("-->", "blue"), location));
             }
         }
 
         // Add hint if available
         if let Some(hint) = JsonDiagnostic::extract_hint(error) {
-            output.push_str(&format!(
-                "  {} {}\n",
-                self.colorize("hint:", "cyan"),
-                hint
-            ));
+            output.push_str(&format!("  {} {}\n", self.colorize("hint:", "cyan"), hint));
         }
 
         output
@@ -289,7 +289,7 @@ impl DiagnosticFormatter for LspFormatter {
         let code = error.error_code();
         let severity = match error {
             ValidationError::DeterminismError { .. } => 2, // Warning
-            _ => 1,                                         // Error
+            _ => 1,                                        // Error
         };
 
         let range = error.range();
@@ -327,9 +327,9 @@ impl DiagnosticFormatter for LspFormatter {
             "source": "sea-dsl",
             "message": full_message
         });
-        
+
         serde_json::to_string(&diagnostic).unwrap_or_else(|_| {
-             r#"{"severity": 1, "message": "Failed to serialize diagnostic"}"#.to_string()
+            r#"{"severity": 1, "message": "Failed to serialize diagnostic"}"#.to_string()
         })
     }
 }

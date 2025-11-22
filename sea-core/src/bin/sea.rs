@@ -1,12 +1,12 @@
+use clap::{Parser, Subcommand, ValueEnum};
+use colored::Colorize;
 #[cfg(feature = "shacl")]
 use sea_core::kg_import::ImportError;
 use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
 use sea_core::{import_kg_turtle, Graph, NamespaceRegistry};
+use serde_json::to_string_pretty;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
-use serde_json::to_string_pretty;
-use clap::{Parser, Subcommand, ValueEnum};
-use colored::Colorize;
 
 #[derive(Parser)]
 #[command(name = "sea", version, about = "SEA DSL CLI")]
@@ -74,7 +74,7 @@ enum RegistryCommands {
 struct ImportArgs {
     #[arg(long, value_enum)]
     format: ImportFormat,
-    
+
     file: PathBuf,
 }
 
@@ -90,23 +90,27 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Commands::Registry(args) => {
-            match args.command {
-                RegistryCommands::List { fail_on_ambiguity, path } => {
-                    let path_ref = path.as_deref().unwrap_or_else(|| Path::new("."));
-                    if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
-                        eprintln!("{}", err);
-                        std::process::exit(1);
-                    }
-                }
-                RegistryCommands::Resolve { fail_on_ambiguity, file } => {
-                    if let Err(err) = registry_resolve(&file, fail_on_ambiguity) {
-                        eprintln!("{}", err);
-                        std::process::exit(1);
-                    }
+        Commands::Registry(args) => match args.command {
+            RegistryCommands::List {
+                fail_on_ambiguity,
+                path,
+            } => {
+                let path_ref = path.as_deref().unwrap_or_else(|| Path::new("."));
+                if let Err(err) = registry_list(path_ref, fail_on_ambiguity) {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
                 }
             }
-        }
+            RegistryCommands::Resolve {
+                fail_on_ambiguity,
+                file,
+            } => {
+                if let Err(err) = registry_resolve(&file, fail_on_ambiguity) {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                }
+            }
+        },
         Commands::Import(args) => {
             let source = match read_to_string(&args.file) {
                 Ok(s) => s,
@@ -227,7 +231,12 @@ fn main() {
     }
 }
 
-fn run_validate(target: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
+fn run_validate(
+    target: &Path,
+    format: OutputFormat,
+    use_color: bool,
+    show_source: bool,
+) -> Result<(), String> {
     if target.is_dir() {
         validate_directory(target, format, use_color, show_source)
     } else {
@@ -235,7 +244,12 @@ fn run_validate(target: &Path, format: OutputFormat, use_color: bool, show_sourc
     }
 }
 
-fn validate_file(path: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
+fn validate_file(
+    path: &Path,
+    format: OutputFormat,
+    use_color: bool,
+    show_source: bool,
+) -> Result<(), String> {
     let source = read_to_string(path)
         .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))?;
     let registry = NamespaceRegistry::discover(path).map_err(|e| e.to_string())?;
@@ -248,7 +262,12 @@ fn validate_file(path: &Path, format: OutputFormat, use_color: bool, show_source
     report_validation(graph, Some(&source), format, use_color, show_source)
 }
 
-fn validate_directory(path: &Path, format: OutputFormat, use_color: bool, show_source: bool) -> Result<(), String> {
+fn validate_directory(
+    path: &Path,
+    format: OutputFormat,
+    use_color: bool,
+    show_source: bool,
+) -> Result<(), String> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| format!("Failed to load registry near {}: {}", path.display(), e))?
         .ok_or_else(|| {
@@ -294,7 +313,7 @@ fn report_validation(
     _show_source: bool,
 ) -> Result<(), String> {
     let result = graph.validate();
-    
+
     // For now, we keep the existing policy violation reporting
     // In the future, we could convert policy violations to ValidationErrors
     // and use the formatters
@@ -345,12 +364,7 @@ fn report_validation(
                     } else {
                         severity.to_string()
                     };
-                    println!(
-                        "- [{}] {}: {}",
-                        severity_colored,
-                        v.policy_name,
-                        v.message
-                    );
+                    println!("- [{}] {}: {}", severity_colored, v.policy_name, v.message);
                 }
             } else {
                 let msg = format!(
@@ -365,7 +379,7 @@ fn report_validation(
             }
         }
     }
-    
+
     if result.error_count > 0 {
         Err("Validation errors detected".into())
     } else {

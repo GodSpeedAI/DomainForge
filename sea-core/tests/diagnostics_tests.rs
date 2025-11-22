@@ -17,7 +17,7 @@ fn test_error_code_assignment() {
 fn test_source_range_from_syntax_error() {
     let err = ValidationError::syntax_error_with_range("test", 10, 5, 10, 15);
     let range = err.range().expect("Should have range");
-    
+
     assert_eq!(range.start.line, 10);
     assert_eq!(range.start.column, 5);
     assert_eq!(range.end.line, 10);
@@ -41,11 +41,7 @@ fn test_fuzzy_matching_undefined_entity() {
         "Supplier".to_string(),
     ];
 
-    let err = ValidationError::undefined_entity_with_candidates(
-        "Warehous",
-        "line 10",
-        &candidates,
-    );
+    let err = ValidationError::undefined_entity_with_candidates("Warehous", "line 10", &candidates);
 
     let suggestion = match err {
         ValidationError::UndefinedReference { suggestion, .. } => suggestion,
@@ -64,11 +60,7 @@ fn test_fuzzy_matching_undefined_resource() {
         "Copper".to_string(),
     ];
 
-    let err = ValidationError::undefined_resource_with_candidates(
-        "Stel",
-        "line 15",
-        &candidates,
-    );
+    let err = ValidationError::undefined_resource_with_candidates("Stel", "line 15", &candidates);
 
     let suggestion = match err {
         ValidationError::UndefinedReference { suggestion, .. } => suggestion,
@@ -83,11 +75,7 @@ fn test_fuzzy_matching_undefined_resource() {
 fn test_fuzzy_matching_no_candidates() {
     let candidates = vec!["Warehouse".to_string(), "Factory".to_string()];
 
-    let err = ValidationError::undefined_entity_with_candidates(
-        "XYZ",
-        "line 10",
-        &candidates,
-    );
+    let err = ValidationError::undefined_entity_with_candidates("XYZ", "line 10", &candidates);
 
     let suggestion = match err {
         ValidationError::UndefinedReference { suggestion, .. } => suggestion,
@@ -108,9 +96,15 @@ fn test_error_code_display() {
 
 #[test]
 fn test_error_code_description() {
-    assert_eq!(ErrorCode::E001_UndefinedEntity.description(), "Undefined entity");
+    assert_eq!(
+        ErrorCode::E001_UndefinedEntity.description(),
+        "Undefined entity"
+    );
     assert_eq!(ErrorCode::E003_UnitMismatch.description(), "Unit mismatch");
-    assert_eq!(ErrorCode::E402_DeterminismViolation.description(), "Determinism violation");
+    assert_eq!(
+        ErrorCode::E402_DeterminismViolation.description(),
+        "Determinism violation"
+    );
 }
 
 // Formatter tests
@@ -133,11 +127,8 @@ fn test_json_formatter_output() {
 #[test]
 fn test_json_formatter_with_fuzzy_suggestion() {
     let candidates = vec!["Warehouse".to_string(), "Factory".to_string()];
-    let error = ValidationError::undefined_entity_with_candidates(
-        "Warehous",
-        "line 10",
-        &candidates,
-    );
+    let error =
+        ValidationError::undefined_entity_with_candidates("Warehous", "line 10", &candidates);
     let formatter = JsonFormatter;
     let output = formatter.format(&error, None);
 

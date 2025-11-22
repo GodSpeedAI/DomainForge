@@ -2,7 +2,6 @@ use crate::units::Dimension;
 use std::fmt;
 
 /// Threshold for fuzzy matching suggestions (Levenshtein distance)
-
 pub const FUZZY_MATCH_THRESHOLD: usize = 2;
 
 /// Position in source code (line and column, 1-indexed)
@@ -15,7 +14,10 @@ pub struct Position {
 impl Position {
     pub fn new(line: usize, column: usize) -> Result<Self, String> {
         if line == 0 || column == 0 {
-            Err(format!("Position line and column must be >= 1. Got line={}, column={}", line, column))
+            Err(format!(
+                "Position line and column must be >= 1. Got line={}, column={}",
+                line, column
+            ))
         } else {
             Ok(Self { line, column })
         }
@@ -66,7 +68,11 @@ impl fmt::Display for SourceRange {
         if self.start == self.end {
             write!(f, "{}", self.start)
         } else if self.start.line == self.end.line {
-            write!(f, "{}:{}-{}", self.start.line, self.start.column, self.end.column)
+            write!(
+                f,
+                "{}:{}-{}",
+                self.start.line, self.start.column, self.end.column
+            )
         } else {
             write!(f, "{} to {}", self.start, self.end)
         }
@@ -88,32 +94,32 @@ pub enum ErrorCode {
     E008_UndefinedVariable,
     E009_InvalidQuantity,
     E010_InvalidIdentifier,
-    
+
     // E100-E199: Type system errors
     E100_IncompatibleTypes,
     E101_InvalidTypeConversion,
     E102_TypeInferenceFailed,
     E103_InvalidOperandType,
     E104_InvalidComparisonType,
-    
+
     // E200-E299: Unit and dimension errors
     E200_DimensionMismatch,
     E201_InvalidUnit,
     E202_UnitConversionFailed,
     E203_IncompatibleDimensions,
-    
+
     // E300-E399: Scope and reference errors
     E300_VariableNotInScope,
     E301_UndefinedReference,
     E302_CircularReference,
     E303_InvalidReference,
-    
+
     // E400-E499: Policy validation errors
     E400_PolicyEvaluationFailed,
     E401_InvalidPolicyExpression,
     E402_DeterminismViolation,
     E403_InvalidModality,
-    
+
     // E500-E599: Namespace and module errors
     E500_NamespaceNotFound,
     E501_AmbiguousNamespace,
@@ -135,32 +141,32 @@ impl ErrorCode {
             ErrorCode::E008_UndefinedVariable => "E008",
             ErrorCode::E009_InvalidQuantity => "E009",
             ErrorCode::E010_InvalidIdentifier => "E010",
-            
+
             // Type system
             ErrorCode::E100_IncompatibleTypes => "E100",
             ErrorCode::E101_InvalidTypeConversion => "E101",
             ErrorCode::E102_TypeInferenceFailed => "E102",
             ErrorCode::E103_InvalidOperandType => "E103",
             ErrorCode::E104_InvalidComparisonType => "E104",
-            
+
             // Units and dimensions
             ErrorCode::E200_DimensionMismatch => "E200",
             ErrorCode::E201_InvalidUnit => "E201",
             ErrorCode::E202_UnitConversionFailed => "E202",
             ErrorCode::E203_IncompatibleDimensions => "E203",
-            
+
             // Scope and references
             ErrorCode::E300_VariableNotInScope => "E300",
             ErrorCode::E301_UndefinedReference => "E301",
             ErrorCode::E302_CircularReference => "E302",
             ErrorCode::E303_InvalidReference => "E303",
-            
+
             // Policy validation
             ErrorCode::E400_PolicyEvaluationFailed => "E400",
             ErrorCode::E401_InvalidPolicyExpression => "E401",
             ErrorCode::E402_DeterminismViolation => "E402",
             ErrorCode::E403_InvalidModality => "E403",
-            
+
             // Namespace and modules
             ErrorCode::E500_NamespaceNotFound => "E500",
             ErrorCode::E501_AmbiguousNamespace => "E501",
@@ -212,7 +218,7 @@ impl fmt::Display for ErrorCode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum ReferenceType {
     Entity,
     Resource,
@@ -292,14 +298,12 @@ impl ValidationError {
             ValidationError::UnitError { .. } => ErrorCode::E003_UnitMismatch,
             ValidationError::ScopeError { .. } => ErrorCode::E300_VariableNotInScope,
             ValidationError::DeterminismError { .. } => ErrorCode::E402_DeterminismViolation,
-            ValidationError::UndefinedReference { reference_type, .. } => {
-                match reference_type {
-                    ReferenceType::Entity => ErrorCode::E001_UndefinedEntity,
-                    ReferenceType::Resource => ErrorCode::E002_UndefinedResource,
-                    ReferenceType::Variable => ErrorCode::E008_UndefinedVariable,
-                    _ => ErrorCode::E301_UndefinedReference,
-                }
-            }
+            ValidationError::UndefinedReference { reference_type, .. } => match reference_type {
+                ReferenceType::Entity => ErrorCode::E001_UndefinedEntity,
+                ReferenceType::Resource => ErrorCode::E002_UndefinedResource,
+                ReferenceType::Variable => ErrorCode::E008_UndefinedVariable,
+                _ => ErrorCode::E301_UndefinedReference,
+            },
             ValidationError::DuplicateDeclaration { .. } => ErrorCode::E007_DuplicateDeclaration,
             ValidationError::InvalidExpression { .. } => ErrorCode::E006_InvalidExpression,
         }
@@ -316,7 +320,8 @@ impl ValidationError {
                 ..
             } => {
                 // We ignore errors here as this is just for reporting
-                let start = Position::new(*line, *column).unwrap_or_else(|_| Position::new(1, 1).unwrap());
+                let start =
+                    Position::new(*line, *column).unwrap_or_else(|_| Position::new(1, 1).unwrap());
                 let end = match (end_line, end_column) {
                     (Some(el), Some(ec)) => Position::new(*el, *ec).unwrap_or(start),
                     _ => start,
@@ -583,7 +588,7 @@ impl ValidationError {
     }
 
     /// Create an undefined entity error with fuzzy matching suggestions
-    /// 
+    ///
     /// # Arguments
     /// * `name` - The undefined entity name
     /// * `location` - Source location of the error
@@ -595,10 +600,15 @@ impl ValidationError {
         candidates: &[String],
     ) -> Self {
         use crate::error::fuzzy::find_best_match;
-        
+
         let suggestion = find_best_match(&name, candidates, FUZZY_MATCH_THRESHOLD)
             .map(|match_name| format!("Did you mean '{}'?", match_name))
-            .or_else(|| Some(format!("Did you mean to define '{} \"{}\"'?", reference_type, name)));
+            .or_else(|| {
+                Some(format!(
+                    "Did you mean to define '{} \"{}\"'?",
+                    reference_type, name
+                ))
+            });
 
         Self::UndefinedReference {
             reference_type,
@@ -609,7 +619,7 @@ impl ValidationError {
     }
 
     /// Create an undefined entity error with fuzzy matching suggestions
-    /// 
+    ///
     /// # Arguments
     /// * `name` - The undefined entity name
     /// * `location` - Source location of the error
@@ -648,7 +658,7 @@ impl ValidationError {
         candidates: &[String],
     ) -> Self {
         use crate::error::fuzzy::suggest_similar;
-        
+
         let name = name.into();
         let matches = suggest_similar(&name, candidates, FUZZY_MATCH_THRESHOLD);
         let suggestion = if !matches.is_empty() {
