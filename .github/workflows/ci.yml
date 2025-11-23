@@ -35,7 +35,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/index
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index-${{ hashFiles('Cargo.lock') }}
 
       - name: Cache cargo build
         uses: actions/cache@v4
@@ -44,7 +44,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-
 
@@ -85,7 +85,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
 
@@ -201,7 +201,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
 
@@ -248,7 +248,7 @@ jobs:
           path: |
             ~/.cargo/registry/index
             sea-core/target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('Cargo.lock') }}
 
       - name: Install dependencies
         run: npm ci
@@ -301,14 +301,14 @@ jobs:
           EOF
           mkdir -p "$tmpdir/domains/logistics"
           echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
-          
+
           # Test that --fail-on-ambiguity properly detects ambiguous matches
           # The command should fail and output an error message
           set +e  # Temporarily disable exit on error
           output=$(./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
           exit_code=$?
           set -e  # Re-enable exit on error
-          
+
           if [ $exit_code -ne 0 ] && echo "$output" | grep -q "multiple namespaces"; then
             echo "✓ Ambiguity detection working correctly"
             echo "Output: $output"
@@ -341,7 +341,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
 
