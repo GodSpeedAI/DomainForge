@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/index
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index-${{ hashFiles(format('{0}/Cargo.lock', github.workspace)) }}
 
       - name: Cache cargo build
         uses: actions/cache@v4
@@ -48,7 +48,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-${{ hashFiles(format('{0}/Cargo.lock', github.workspace)) }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-build-
 
@@ -89,7 +89,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles(format('{0}/Cargo.lock', github.workspace)) }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
 
@@ -205,7 +205,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles(format('{0}/Cargo.lock', github.workspace)) }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
 
@@ -252,7 +252,7 @@ jobs:
           path: |
             ~/.cargo/registry/index
             sea-core/target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles(format('{0}/Cargo.lock', github.workspace)) }}
 
       - name: Install dependencies
         run: npm ci
@@ -345,7 +345,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles(format('{0}/Cargo.lock', github.workspace)) }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
 
