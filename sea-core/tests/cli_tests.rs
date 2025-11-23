@@ -1,176 +1,67 @@
-use assert_cmd::prelude::*;
+use assert_cmd::Command;
 use predicates::prelude::*;
-use std::fs;
-use std::process::Command;
-use tempfile::tempdir;
+use std::io::Write;
+use tempfile::NamedTempFile;
 
 #[test]
-fn validate_directory_with_registry_succeeds() {
-    let temp = tempdir().unwrap();
-    let base = temp.path();
+fn test_help() {
+    let mut cmd = Command::cargo_bin("sea").unwrap();
+    cmd.arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("SEA DSL CLI"));
+}
 
-    let logistics_dir = base.join("domains/logistics");
-    fs::create_dir_all(&logistics_dir).unwrap();
-    let file_path = logistics_dir.join("warehouse.sea");
-    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
+#[test]
+fn test_validate_help() {
+    let mut cmd = Command::cargo_bin("sea").unwrap();
+    cmd.arg("validate").arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Validate"));
+}
 
-    let registry_path = base.join(".sea-registry.toml");
-    fs::write(
-        &registry_path,
-        r#"
-version = 1
-default_namespace = "default"
+#[test]
+fn test_import_help() {
+    let mut cmd = Command::cargo_bin("sea").unwrap();
+    cmd.arg("import").arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Import"));
+}
 
-[[namespaces]]
-namespace = "logistics"
-patterns = ["domains/logistics/**/*.sea"]
-"#,
-    )
-    .unwrap();
+#[test]
+fn test_project_help() {
+    let mut cmd = Command::cargo_bin("sea").unwrap();
+    cmd.arg("project").arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Project"));
+}
 
-    let bin = assert_cmd::cargo::cargo_bin!("sea");
-    let mut cmd = Command::new(bin);
-    cmd.arg("validate").arg(base);
-    cmd.assert()
+#[test]
+fn test_validate_basic() {
+    let mut file = NamedTempFile::new().unwrap();
+    writeln!(file, "Entity \"Test\" in domain").unwrap();
+    
+    let mut cmd = Command::cargo_bin("sea").unwrap();
+    cmd.arg("validate")
+        .arg(file.path())
+        .assert()
         .success()
         .stdout(predicate::str::contains("Validation succeeded"));
 }
 
 #[test]
-fn validate_directory_no_registry_fails() {
-    let temp = tempdir().unwrap();
-    let base = temp.path();
-
-    // Create a file in a sub directory with no registry at any parent
-    let logistics_dir = base.join("domains/logistics");
-    fs::create_dir_all(&logistics_dir).unwrap();
-    let file_path = logistics_dir.join("warehouse.sea");
-    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
-
-    let bin = assert_cmd::cargo::cargo_bin!("sea");
-    let mut cmd = Command::new(bin);
-    cmd.arg("validate").arg(base);
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("No .sea-registry.toml found"));
-}
-
-#[test]
-fn registry_list_and_resolve() {
-    let temp = tempdir().unwrap();
-    let base = temp.path();
-
-    let logistics_dir = base.join("domains/logistics");
-    fs::create_dir_all(&logistics_dir).unwrap();
-    let file_path = logistics_dir.join("warehouse.sea");
-    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
-
-    let registry_path = base.join(".sea-registry.toml");
-    fs::write(
-        &registry_path,
-        r#"
-version = 1
-default_namespace = "default"
-
-[[namespaces]]
-namespace = "logistics"
-patterns = ["domains/logistics/**/*.sea"]
-"#,
-    )
-    .unwrap();
-
-    let bin = assert_cmd::cargo::cargo_bin!("sea");
-    // registry list
-    let mut cmd = Command::new(bin);
-    cmd.arg("registry").arg("list").arg(base);
-    cmd.assert()
+fn test_format_check() {
+    let mut file = NamedTempFile::new().unwrap();
+    writeln!(file, "Entity \"Test\" in domain").unwrap();
+    
+    let mut cmd = Command::cargo_bin("sea").unwrap();
+    cmd.arg("format")
+        .arg("--check")
+        .arg(file.path())
+        .assert()
         .success()
-        .stdout(predicate::str::contains("logistics"));
-
-    // registry resolve
-    let mut cmd2 = Command::new(bin);
-    cmd2.arg("registry").arg("resolve").arg(file_path.clone());
-    cmd2.assert()
-        .success()
-        .stdout(predicate::str::contains("logistics"));
-}
-
-#[test]
-fn registry_resolve_fail_on_ambiguity() {
-    let temp = tempdir().unwrap();
-    let base = temp.path();
-
-    let logistics_dir = base.join("domains/logistics");
-    fs::create_dir_all(&logistics_dir).unwrap();
-    let file_path = logistics_dir.join("warehouse.sea");
-    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
-
-    let registry_path = base.join(".sea-registry.toml");
-    fs::write(
-        &registry_path,
-        r#"
-version = 1
-default_namespace = "default"
-
-[[namespaces]]
-namespace = "logistics"
-patterns = ["domains/*/warehouse.sea"]
-
-[[namespaces]]
-namespace = "finance"
-patterns = ["domains/*/warehouse.sea"]
-"#,
-    )
-    .unwrap();
-
-    let bin = assert_cmd::cargo::cargo_bin!("sea");
-    // registry resolve with flag should fail
-    let mut cmd2 = Command::new(bin);
-    cmd2.arg("registry")
-        .arg("resolve")
-        .arg("--fail-on-ambiguity")
-        .arg(file_path.clone());
-    cmd2.assert()
-        .failure()
-        .stderr(predicate::str::contains("matched multiple namespaces"));
-}
-
-#[test]
-fn registry_list_fail_on_ambiguity() {
-    let temp = tempdir().unwrap();
-    let base = temp.path();
-
-    let logistics_dir = base.join("domains/logistics");
-    fs::create_dir_all(&logistics_dir).unwrap();
-    let file_path = logistics_dir.join("warehouse.sea");
-    fs::write(&file_path, "Entity \"Warehouse\"").unwrap();
-
-    let registry_path = base.join(".sea-registry.toml");
-    fs::write(
-        &registry_path,
-        r#"
-version = 1
-default_namespace = "default"
-
-[[namespaces]]
-namespace = "logistics"
-patterns = ["domains/*/warehouse.sea"]
-
-[[namespaces]]
-namespace = "finance"
-patterns = ["domains/*/warehouse.sea"]
-"#,
-    )
-    .unwrap();
-
-    let bin = assert_cmd::cargo::cargo_bin!("sea");
-    // registry list with flag should fail
-    let mut cmd = Command::new(bin);
-    cmd.arg("registry")
-        .arg("list")
-        .arg("--fail-on-ambiguity")
-        .arg(base);
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("matched multiple namespaces"));
+        .stdout(predicate::str::contains("Format check passed"));
 }

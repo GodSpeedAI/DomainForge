@@ -112,6 +112,28 @@ python examples/camera_factory.py
 
 ---
 
+## 💻 CLI Usage
+
+The SEA CLI allows you to validate, import, and export models directly from the terminal.
+
+```bash
+# Install
+cargo install --path sea-core --features cli
+
+# Validate a file
+sea validate model.sea
+
+# Export to CALM
+sea project --format calm model.sea architecture.json
+
+# Import from Knowledge Graph
+sea import --format kg model.ttl
+```
+
+[Full CLI Reference](docs/reference/cli.md)
+
+---
+
 <details>
 <summary><h2>🧩 The Five Building Blocks (Click to expand)</h2></summary>
 

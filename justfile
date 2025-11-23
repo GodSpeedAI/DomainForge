@@ -9,6 +9,18 @@ rust-test:
     @echo "Running Rust tests..."
     cargo test -p sea-core --features cli
 
+# Test all CLI commands
+cli-test:
+    cargo test -p sea-core --test cli_tests --features cli
+
+# Run CLI validation examples
+cli-validate:
+    cd sea-core/examples/cli && ./validate_example.sh
+
+# Run CLI import/export workflow
+cli-workflow:
+    cd sea-core/examples/cli && ./import_export_workflow.sh
+
 build-rust-tests:
     @echo "Build Rust tests without running them (to prepare debug binaries)"
     cargo test -p sea-core --features cli --no-run

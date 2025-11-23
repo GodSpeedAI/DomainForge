@@ -109,4 +109,4 @@ node_modules
 # Workspace
 *.bak
 *.bak.coderabbit.yml
-docs/plans/
+#docs/plans/

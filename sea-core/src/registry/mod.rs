@@ -240,7 +240,7 @@ impl NamespaceRegistry {
         if current.is_file() {
             path_buf = current
                 .parent()
-                .map(|p| p.to_path_buf())
+                .map(|p| if p.as_os_str().is_empty() { PathBuf::from(".") } else { p.to_path_buf() })
                 .unwrap_or_else(|| PathBuf::from("."));
             current = &path_buf;
         }

@@ -41,6 +41,9 @@ pub mod uuid_module;
 pub mod validation_error;
 pub mod validation_result;
 
+#[cfg(feature = "cli")]
+pub mod cli;
+
 #[cfg(feature = "python")]
 pub mod python;
 
