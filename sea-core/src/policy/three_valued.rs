@@ -99,6 +99,7 @@ impl std::ops::Not for ThreeValuedBool {
 }
 
 pub mod aggregators {
+    #![allow(dead_code)]
     use rust_decimal::Decimal;
 
     /// Sum that returns None (Null) if any element is missing.

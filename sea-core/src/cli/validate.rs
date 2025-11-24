@@ -1,11 +1,11 @@
-use clap::{Parser, ValueEnum};
-use colored::Colorize;
 use crate::parser::{parse_to_graph_with_options, ParseOptions};
 use crate::{Graph, NamespaceRegistry};
+use anyhow::{Context, Result};
+use clap::{Parser, ValueEnum};
+use colored::Colorize;
 use serde_json::to_string_pretty;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
-use anyhow::{Context, Result};
 
 #[derive(Parser)]
 pub struct ValidateArgs {
@@ -36,13 +36,9 @@ pub fn run(args: ValidateArgs) -> Result<()> {
     }
 }
 
-fn validate_file(
-    path: &Path,
-    format: OutputFormat,
-    use_color: bool,
-) -> Result<()> {
-    let source = read_to_string(path)
-        .with_context(|| format!("Failed to read file {}", path.display()))?;
+fn validate_file(path: &Path, format: OutputFormat, use_color: bool) -> Result<()> {
+    let source =
+        read_to_string(path).with_context(|| format!("Failed to read file {}", path.display()))?;
     let registry = NamespaceRegistry::discover(path).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let default_namespace = registry
         .as_ref()
@@ -53,11 +49,7 @@ fn validate_file(
     report_validation(graph, format, use_color)
 }
 
-fn validate_directory(
-    path: &Path,
-    format: OutputFormat,
-    use_color: bool,
-) -> Result<()> {
+fn validate_directory(path: &Path, format: OutputFormat, use_color: bool) -> Result<()> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| anyhow::anyhow!("Failed to load registry near {}: {}", path.display(), e))?
         .ok_or_else(|| {
@@ -95,11 +87,7 @@ fn validate_directory(
     report_validation(graph, format, use_color)
 }
 
-fn report_validation(
-    graph: Graph,
-    format: OutputFormat,
-    use_color: bool,
-) -> Result<()> {
+fn report_validation(graph: Graph, format: OutputFormat, use_color: bool) -> Result<()> {
     let result = graph.validate();
 
     match format {
@@ -118,7 +106,10 @@ fn report_validation(
                     })
                 }).collect::<Vec<_>>(),
             });
-            println!("{}", to_string_pretty(&json_output).context("Failed to serialize output")?);
+            println!(
+                "{}",
+                to_string_pretty(&json_output).context("Failed to serialize output")?
+            );
         }
         OutputFormat::Human | OutputFormat::Lsp => {
             if result.error_count > 0 {

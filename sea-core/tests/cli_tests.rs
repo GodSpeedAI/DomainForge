@@ -5,7 +5,7 @@ use tempfile::NamedTempFile;
 
 /// Helper function to test help output for a command
 fn run_help_test(args: &[&str], expected: &str) {
-    let mut cmd = Command::cargo_bin("sea").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("sea"));
     cmd.args(args)
         .assert()
         .success()
@@ -37,8 +37,8 @@ fn test_validate_basic() {
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "Entity \"Test\" in domain").unwrap();
     file.flush().unwrap();
-    
-    let mut cmd = Command::cargo_bin("sea").unwrap();
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("sea"));
     cmd.arg("validate")
         .arg(file.path())
         .assert()
@@ -51,8 +51,8 @@ fn test_format_check() {
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "Entity \"Test\" in domain").unwrap();
     file.flush().unwrap();
-    
-    let mut cmd = Command::cargo_bin("sea").unwrap();
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("sea"));
     cmd.arg("format")
         .arg(file.path())
         .assert()
