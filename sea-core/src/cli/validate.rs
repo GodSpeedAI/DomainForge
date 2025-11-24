@@ -15,15 +15,6 @@ pub struct ValidateArgs {
     #[arg(long)]
     pub no_color: bool,
 
-    #[arg(long)]
-    pub no_source: bool,
-
-    #[arg(long)]
-    pub strict: bool,
-
-    #[arg(long)]
-    pub round_trip: Option<String>,
-
     #[arg(required = true)]
     pub target: PathBuf,
 }
@@ -37,12 +28,11 @@ pub enum OutputFormat {
 
 pub fn run(args: ValidateArgs) -> Result<()> {
     let use_color = !args.no_color;
-    let show_source = !args.no_source;
 
     if args.target.is_dir() {
-        validate_directory(&args.target, args.format, use_color, show_source)
+        validate_directory(&args.target, args.format, use_color)
     } else {
-        validate_file(&args.target, args.format, use_color, show_source)
+        validate_file(&args.target, args.format, use_color)
     }
 }
 
@@ -50,7 +40,6 @@ fn validate_file(
     path: &Path,
     format: OutputFormat,
     use_color: bool,
-    show_source: bool,
 ) -> Result<()> {
     let source = read_to_string(path)
         .with_context(|| format!("Failed to read file {}", path.display()))?;
@@ -61,14 +50,13 @@ fn validate_file(
     let options = ParseOptions { default_namespace };
     let graph = parse_to_graph_with_options(&source, &options)
         .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", path.display(), e))?;
-    report_validation(graph, Some(&source), format, use_color, show_source)
+    report_validation(graph, format, use_color)
 }
 
 fn validate_directory(
     path: &Path,
     format: OutputFormat,
     use_color: bool,
-    show_source: bool,
 ) -> Result<()> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| anyhow::anyhow!("Failed to load registry near {}: {}", path.display(), e))?
@@ -104,15 +92,13 @@ fn validate_directory(
             .map_err(|e| anyhow::anyhow!("Failed to merge {}: {}", binding.path.display(), e))?;
     }
 
-    report_validation(graph, None, format, use_color, show_source)
+    report_validation(graph, format, use_color)
 }
 
 fn report_validation(
     graph: Graph,
-    _source: Option<&str>,
     format: OutputFormat,
     use_color: bool,
-    _show_source: bool,
 ) -> Result<()> {
     let result = graph.validate();
 

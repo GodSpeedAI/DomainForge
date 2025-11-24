@@ -6,9 +6,6 @@ use anyhow::{Context, Result};
 
 #[derive(Parser)]
 pub struct FormatArgs {
-    #[arg(long)]
-    pub check: bool,
-
     pub file: PathBuf,
 }
 
@@ -17,13 +14,8 @@ pub fn run(args: FormatArgs) -> Result<()> {
         .with_context(|| format!("Failed to read file {}", args.file.display()))?;
 
     // Verify it parses
-    parse(&source).map_err(|e| anyhow::anyhow!("Parse failed: {}", e))?;
+    parse(&source).map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", args.file.display(), e))?;
 
-    if args.check {
-        println!("Format check passed (syntax only)");
-    } else {
-        println!("Formatting not yet implemented");
-    }
-
-    Ok(())
+    // Formatting is not yet implemented
+    anyhow::bail!("Formatting not yet implemented. Only syntax validation is currently supported.");
 }

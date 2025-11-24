@@ -13,10 +13,10 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
 
-    #[arg(long, global = true)]
+    #[arg(long, global = true, conflicts_with = "quiet")]
     pub verbose: bool,
 
-    #[arg(long, global = true)]
+    #[arg(long, global = true, conflicts_with = "verbose")]
     pub quiet: bool,
 
     #[arg(long, global = true, value_enum, default_value_t = ColorChoice::Auto)]

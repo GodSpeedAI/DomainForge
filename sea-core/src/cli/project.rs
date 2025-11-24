@@ -25,7 +25,8 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         .with_context(|| format!("Failed to read input file {}", args.input.display()))?;
 
     // Parse input
-    let registry = NamespaceRegistry::discover(&args.input).map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let registry = NamespaceRegistry::discover(&args.input)
+        .context("discovering namespace registry")?;
     let default_namespace = registry
         .as_ref()
         .and_then(|reg| reg.namespace_for(&args.input).map(|ns| ns.to_string()));
@@ -47,7 +48,7 @@ pub fn run(args: ProjectArgs) -> Result<()> {
             let kg = crate::KnowledgeGraph::from_graph(&graph)
                 .map_err(|e| anyhow::anyhow!("Failed to convert to Knowledge Graph: {}", e))?;
             
-            let output_str = if args.output.extension().map_or(false, |ext| ext == "xml" || ext == "rdf") {
+            let output_str = if args.output.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xml") || ext.eq_ignore_ascii_case("rdf")) {
                 kg.to_rdf_xml()
             } else {
                 kg.to_turtle()
@@ -55,7 +56,7 @@ pub fn run(args: ProjectArgs) -> Result<()> {
 
             write(&args.output, output_str)
                 .with_context(|| format!("Failed to write output to {}", args.output.display()))?;
-             println!("Projected to KG: {}", args.output.display());
+            println!("Projected to KG: {}", args.output.display());
         }
     }
 

@@ -21,6 +21,17 @@ pub enum ImportFormat {
     Kg,
 }
 
+/// Helper function to print import success message with graph statistics
+fn print_import_success(graph: &crate::Graph, format_desc: &str) {
+    println!(
+        "Imported {} to Graph: entities={} resources={} flows={}",
+        format_desc,
+        graph.entity_count(),
+        graph.resource_count(),
+        graph.flow_count()
+    );
+}
+
 pub fn run(args: ImportArgs) -> Result<()> {
     let source = read_to_string(&args.file)
         .with_context(|| format!("Failed to read file {}", args.file.display()))?;
@@ -29,12 +40,7 @@ pub fn run(args: ImportArgs) -> Result<()> {
         ImportFormat::Sbvr => match crate::SbvrModel::from_xmi(&source) {
             Ok(model) => match model.to_graph() {
                 Ok(graph) => {
-                    println!(
-                        "Imported SBVR to Graph: entities={} resources={} flows={}",
-                        graph.entity_count(),
-                        graph.resource_count(),
-                        graph.flow_count()
-                    );
+                    print_import_success(&graph, "SBVR");
                     Ok(())
                 }
                 Err(e) => Err(anyhow::anyhow!("Failed to convert SBVR to Graph: {}", e)),
@@ -43,12 +49,18 @@ pub fn run(args: ImportArgs) -> Result<()> {
         },
         ImportFormat::Kg => {
             let src_trim = source.trim_start();
-            if src_trim.starts_with('<') {
+            // More specific RDF/XML detection: check for XML declaration or RDF namespace
+            let is_likely_rdfxml = src_trim.starts_with("<?xml") 
+                || src_trim.starts_with("<rdf:") 
+                || src_trim.starts_with("<rdf ") 
+                || src_trim.contains("xmlns:rdf");
+            
+            if is_likely_rdfxml {
                 #[cfg(feature = "shacl")]
                 {
                     match crate::import_kg_rdfxml(&source) {
                         Ok(graph) => {
-                            println!("Imported KG (RDF/XML) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
+                            print_import_success(&graph, "KG (RDF/XML)");
                             Ok(())
                         }
                         Err(err_rdf) => match err_rdf {
@@ -59,7 +71,7 @@ pub fn run(args: ImportArgs) -> Result<()> {
                                 let err_rdf_msg = other.to_string();
                                 match import_kg_turtle(&source) {
                                     Ok(graph) => {
-                                        println!("Imported KG (Turtle) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
+                                        print_import_success(&graph, "KG (Turtle)");
                                         Ok(())
                                     }
                                     Err(err_turtle) => {
@@ -74,18 +86,18 @@ pub fn run(args: ImportArgs) -> Result<()> {
                 {
                     match import_kg_turtle(&source) {
                         Ok(graph) => {
-                            println!("Imported KG (Turtle) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
+                            print_import_success(&graph, "KG (Turtle)");
                             Ok(())
                         }
                         Err(err) => {
-                            Err(anyhow::anyhow!("Failed to import KG: {}", err))
+                            Err(anyhow::anyhow!("Failed to import KG: {}. Consider enabling the 'shacl' feature for RDF/XML support.", err))
                         }
                     }
                 }
             } else {
                 match import_kg_turtle(&source) {
                     Ok(graph) => {
-                        println!("Imported KG (Turtle) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
+                        print_import_success(&graph, "KG (Turtle)");
                         Ok(())
                     }
                     Err(err_turtle) => {
@@ -93,7 +105,7 @@ pub fn run(args: ImportArgs) -> Result<()> {
                         {
                             match crate::import_kg_rdfxml(&source) {
                                 Ok(graph) => {
-                                    println!("Imported KG (RDF/XML) to Graph: entities={} resources={} flows={}", graph.entity_count(), graph.resource_count(), graph.flow_count());
+                                    print_import_success(&graph, "KG (RDF/XML)");
                                     Ok(())
                                 }
                                 Err(err_rdf) => match err_rdf {

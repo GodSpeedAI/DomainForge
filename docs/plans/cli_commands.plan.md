@@ -162,8 +162,8 @@ fn main() -> anyhow::Result<()> {
 Dependencies and features:
 
 - Ensure `clap = { version = "4", features = ["derive", "cargo", "env"] }`
-- Enable `oxigraph` for SHACL validation: `oxigraph = { version = "0.4", optional = true }`
-- Add feature flag: `shacl = ["oxigraph"]`
+- Enable `oxirs-shacl` for SHACL validation: `oxirs-shacl = { version = "", optional = true }`
+- Add feature flag: `shacl = ["oxirs-shacl"]`
 - Consider adding:
   - `serde_json` for JSON output
   - `colored` or `termcolor` for colored terminal output
@@ -207,19 +207,15 @@ Add recipes for CLI testing:
 ```makefile
 # Test all CLI commands
 cli-test:
-    cargo test --test cli_tests
+    cargo test -p sea-core --test cli_tests --features cli
 
 # Run CLI validation examples
 cli-validate:
-    cargo run --bin sea -- validate examples/**/*.sea
+    cd sea-core/examples/cli && ./validate_example.sh
 
-# Test round-trip conversion
-cli-round-trip FORMAT:
-    cargo run --bin sea -- validate --round-trip {{FORMAT}} examples/basic.sea
-
-# Run policy tests
-cli-test-policies:
-    cargo run --bin sea -- test examples/**/*.sea.test
+# Run CLI import/export workflow
+cli-workflow:
+    cd sea-core/examples/cli && ./import_export_workflow.sh
 ```
 
 ## Verification Plan

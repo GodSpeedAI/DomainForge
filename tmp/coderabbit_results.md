@@ -6,159 +6,88 @@ Analyzing
 Reviewing
 
 ============================================================================
-File: docs/specs/error_codes.md
-Line: 89 to 106
-Type: potential_issue
-
-
-
-
-============================================================================
-File: docs/specs/error_codes.md
-Line: 67 to 87
+File: sea-core/src/cli/validate.rs
+Line: 110 to 116
 Type: potential_issue
 
 [x] Task:
-docs/specs/error_codes.md lines 67-87 (also check 292-309): E003 and E200 are duplicated semantic errors for unit/dimension mismatches; either consolidate them into a single canonical error code or clearly differentiate their semantics. Pick one code (e.g., E003) and merge descriptions, examples, and common fixes into that entry, remove the duplicate entry (or convert the other into a redirect/alias), update surrounding headings/categories to reflect the single code, update any in-repo references/tests that emit or check E200 to use the canonical code, and add a note in the merged entry showing expected vs found dimensions as suggested.
-
-
+In sea-core/src/cli/validate.rs around lines 110 to 116, the parameters \_source and \_show_source are declared but unused so the --no-source flag has no effect; either implement source display or remove the flag and parameters. To fix: if keeping the flag, use \_show_source to conditionally include the raw source text in the serialized output (e.g., add a "source" field to the JSON only when \_show_source is true) and ensure \_source is supplied where called; otherwise remove \_source and \_show_source from the function signature, delete the no_source field from ValidateArgs and any CLI wiring for that flag, and remove related dead code. Ensure update of tests and call sites accordingly.
 
 ============================================================================
-File: sea-core/src/python/error.rs
-Line: 26 to 28
+File: sea-core/src/cli/validate_kg.rs
+Line: 15 to 16
 Type: potential_issue
 
 [x] Task:
-In sea-core/src/python/error.rs around lines 26 to 28 (and similarly for ranges 43-53, 70-76, 90-96, 109-114, 130-134, 142-144, 156-160), the code silently ignores failures from exc_obj.setattr(...) using let _ =, which can mask errors and leave exceptions missing attributes; update these calls to either propagate the error (return/throw a PyErr) or at minimum log/warn and return a failure so the caller fails fast. Concretely, replace each let _ = exc_obj.setattr("...", value); with a checked call that uses exc_obj.setattr(...)? (or handles the Result by mapping the Err to a Python exception and returning it) or calls the logger to record the error and then returns an Err, and apply the same change consistently across all match arms and specified line ranges.
-
-
+In sea-core/src/cli/validate_kg.rs around lines 15 to 16, the current content-based heuristic (checking source.trim_start().starts_with(' RDF/XML, otherwise treat as Turtle), and for files without extensions implement a safer fallback: either attempt to parse as RDF/XML (allowing leading processing instructions/comments) and on parse failure fall back to Turtle, or try parsing with both parsers and pick the one that succeeds; include clear logging when ambiguous or when parsing falls back.
 
 ============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 27 to 168
-Type: refactor_suggestion
-
-[x] Task:
-In sea-core/src/typescript/error.rs around lines 27 to 168, the eight match arms duplicate the same logic of building a serde_json metadata value, serializing it and appending it to error.reason; extract that duplication into a new helper function with signature like fn attach_metadata(error: &mut Error, metadata: serde_json::Value) that performs the formatting and uses serde_json::to_string(&metadata).unwrap_or_else(|_| r#"{"error":"serialization_failed"}"#.to_string()) for the fallback, then replace each arm’s serialization+format block with a call to attach_metadata(&mut error, metadata) so each branch only builds the metadata value and delegates attachment to the helper.
-
-
-
-============================================================================
-File: sea-core/Cargo.toml
-Line: 34
+File: sea-core/src/cli/validate.rs
+Line: 21 to 25
 Type: potential_issue
 
 [x] Task:
-In sea-core/Cargo.toml around line 34, the clap dependency pins the minor series to "4.4"; update the version to the newer 4.x patch line by changing the dependency declaration to use "4.5" (i.e., set version = "4.5" while keeping features = ["derive"] and optional = true) so the crate receives the latest maintenance updates within the 4.x series.
-
-
+In sea-core/src/cli/validate.rs around lines 21 to 25, the ValidateArgs struct exposes strict and round_trip CLI options that are unused; either remove these fields from the public CLI definition or implement their behavior in the validation flow: for removal, delete the fields and any parsing/flag wiring so they are no longer surfaced to users; for implementation, wire strict into validation logic to toggle failure levels (e.g., treat warnings as errors) and wire round_trip to perform a parse-serialize-parse comparison after validation (failing if the round-trip differs), and update help text and tests accordingly.
 
 ============================================================================
-File: sea-core/src/python/error.rs
-Line: 10 to 11
+File: sea-core/src/cli/format.rs
+Line: 20
+Type: potential_issue
+
+[x] Task:
+In sea-core/src/cli/format.rs around line 20, the parse error currently bails with a message that omits the file path; change the bail to include the file path (use the same path variable/Display used for the I/O errors on line 17) by formatting the error message to include the file path (e.g., path.display() or path.to_string_lossy()) so the resulting anyhow::bail! message contains the file path for easier debugging.
+
+============================================================================
+File: docs/reference/cli.md
+Line: 84 to 86
+Type: potential_issue
+
+[x] Task:
+In docs/reference/cli.md around lines 84 to 86, the usage for the sea validate-kg command is missing the [OPTIONS] indicator and the documented options themselves; update the usage line to include [OPTIONS] and add the following options under the command description: --shapes , --format , --json, and --severity so the CLI docs match the plan (lines ~128-133).
+
+============================================================================
+File: docs/reference/cli.md
+Line: 38 to 46
+Type: potential_issue
+
+[x] Task:
+In docs/reference/cli.md around lines 38 to 46, the import command reference is missing the optional [OUTPUT] parameter and the additional options from the plan; update the usage line to include the optional [OUTPUT] argument and add documentation entries for --validate, --merge , and --namespace under the import command section, briefly describing each option (validate runs input checks, merge specifies a file to merge, namespace sets the target namespace) so the reference matches the plan.
+
+============================================================================
+File: docs/reference/cli.md
+Line: 51 to 59
+Type: potential_issue
+
+[x] Task:
+In docs/reference/cli.md around lines 51 to 59, the documentation for the project command is missing three options referenced earlier in the plan; add entries for --output-dir , --pretty, and --validate to the Formats/format section (or the command's options list) so they are documented consistently. For each option, add a one-line description: --output-dir to specify target directory for generated files, --pretty to produce human-readable/formatted output, and --validate to run validation after generation.
+
+============================================================================
+File: docs/reference/cli.md
+Line: 76 to 78
+Type: potential_issue
+
+[x] Task:
+In docs/reference/cli.md around lines 76 to 78, the test command documentation is incomplete — update the usage to "sea test [OPTIONS] [PATTERN]" with PATTERN optional and add the missing options from the plan: document --pattern (glob pattern to select test files), --filter (run only tests matching regex), --verbose (enable verbose output), --fail-fast (stop on first failure), and --json (emit machine-readable JSON output); for each option include its flag, argument form if any, and a one-line description consistent with surrounding docs.
+
+============================================================================
+File: docs/reference/cli.md
+Line: 27 to 32
+Type: potential_issue
+
+[x] Task:
+In docs/reference/cli.md around lines 27 to 32, the CLI options list is inconsistent with the implementation plan (docs/plans/cli_commands.plan.md lines 73–79): it omits --json, --exit-code, --fix, --config and includes an extra --no-source, and the --format flag overlap with a planned --json flag. Update this docs file to match the agreed API: either replace --format with the planned flags (add --json, --exit-code, --fix, --config) and remove --no-source, or explicitly document how --format and --json coexist; ensure flag names, defaults, and descriptions mirror the plan file exactly and note any behavioral differences (e.g., precedence between --format and --json).
+
+============================================================================
+File: docs/reference/cli.md
+Line: 64 to 71
+Type: potential_issue
+
+[x] Task:
+In docs/reference/cli.md around lines 64 to 71, the "format" command docs are incomplete — update the usage to accept multiple files using ... and add the missing options from the plan: --write, --config , --line-length , and --indent ; ensure each option has a one-line description and the usage line and examples reflect the multi-file usage and these flags so the documentation matches the planned behavior.
+
+============================================================================
+File: sea-core/src/cli/import.rs
+Line: 2
 Type: nitpick
-
-[x] Task:
-In sea-core/src/python/error.rs around lines 10 to 11, there are two identical documentation comment lines ("Convert ValidationError to appropriate Python exception with custom attributes"); remove the duplicate so the doc comment appears only once (delete one of the two lines), keeping the remaining comment intact and ensuring surrounding spacing/newlines remain consistent.
-
-
-
-============================================================================
-File: README.md
-Line: 526
-Type: potential_issue
-
-[x] Task:
-In README.md around line 526, the sentence references docs/specs/error_codes.md but the "📖 Documentation & Resources" table (lines ~937–948) lacks an entry for the Error Code Catalog; add a new row to that resources table linking to docs/specs/error_codes.md with an appropriate label (e.g., "Error Code Catalog") and brief description so the reference in line 526 appears in the table and documentation remains consistent.
-
-
-
-============================================================================
-File: sea-core/src/typescript/error.rs
-Line: 44 to 47
-Type: potential_issue
-
-
-
-
-============================================================================
-File: sea-core/src/bin/sea.rs
-Line: 327
-Type: nitpick
-
-[x] Task:
-In sea-core/src/bin/sea.rs around lines 327, 340-342 and 360 the code prints colored output using hardcoded ANSI escape codes; replace those raw escape sequences with a terminal-coloring crate (e.g., colored or termcolor). Add the chosen crate to Cargo.toml, import and use its API to construct colored/styled strings only when use_color is true (fall back to plain strings when false or when terminal does not support color), and update the print/println calls to use the library’s formatting methods to ensure cross-platform capability and proper terminal detection.
-
-
-
-============================================================================
-File: sea-core/src/bin/sea.rs
-Line: 74 to 75
-Type: nitpick
-
-[x] Task:
-In sea-core/src/bin/sea.rs around lines 74 to 75, the inline comment "// \"sbvr\" or \"kg\"" on the format: ImportFormat argument is redundant because the ImportFormat enum already constrains allowed values; remove that trailing comment so the field reads simply format: ImportFormat, (or replace with a brief doc comment if you want user-visible help via clap).
-
-
-
-============================================================================
-File: docs/guides/cicd_integration.md
-Line: 143 to 148
-Type: potential_issue
-
-[x] Task:
-In docs/guides/cicd_integration.md around lines 143 to 148, the CI script calls the built binary using ../target/release/sea after doing cd sea-core, but Cargo places target/ in the current directory; update the binary path to ./target/release/sea (or just target/release/sea) in the script line so it points to the correct location and writes output to validation-results.json.
-
-
-
-============================================================================
-File: docs/guides/cicd_integration.md
-Line: 260 to 269
-Type: potential_issue
-
-[x] Task:
-In docs/guides/cicd_integration.md around lines 260 to 269, the Validate Models step references the binary as ./target/release/sea but the Build SEA CLI step ran from the sea-core directory; update the Validate Models command to point to the binary from the project root by using sea-core/target/release/sea so the CI can find the built binary without changing directories.
-
-
-
-============================================================================
-File: docs/guides/cicd_integration.md
-Line: 163 to 169
-Type: potential_issue
-
-[x] Task:
-In docs/guides/cicd_integration.md around lines 163 to 169, the script runs the binary from the wrong path after changing directory into sea-core; update the binary path from ../target/release/sea to ./target/release/sea in the script block (preserve the redirection and the trailing "|| true") so the command runs the built binary in sea-core's target directory.
-
-
-
-============================================================================
-File: sea-core/src/validation_error.rs
-Line: 4 to 5
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/validation_error.rs around lines 4 to 5, there are two identical doc comments "Threshold for fuzzy matching suggestions (Levenshtein distance)"; remove the duplicate so the docstring appears only once (delete one of the two identical lines) to avoid repetition.
-
-
-
-============================================================================
-File: docs/guides/cicd_integration.md
-Line: 76 to 81
-Type: potential_issue
-
-[x] Task:
-In docs/guides/cicd_integration.md around lines 76 to 81, the step uses continue-on-error: true which causes the shell to report a successful exit (0) and makes the echoed exit_code misleading; update the run block so the validation command is executed with a trailing "|| true" (i.e. run the validate command redirecting output to results.json and append "|| true") before capturing and echoing $?, ensuring the step doesn't fail but the actual validation exit code can be preserved for downstream checks.
-
-
-
-============================================================================
-File: sea-core/src/validation_error.rs
-Line: 308 to 327
-Type: nitpick
-
-[x] Task:
-In sea-core/src/validation_error.rs around lines 308 to 327, the fallback Position is constructed with struct literal Position { line: 1, column: 1 } which bypasses the validated Position::new constructor; replace that literal with a validated construction (e.g. Position::new(1, 1).unwrap()) so the code consistently uses Position::new for creating Positions in both the start fallback and any other local fallbacks.
-
-
 
 Review completed ✔
