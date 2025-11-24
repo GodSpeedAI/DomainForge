@@ -5,7 +5,9 @@
 //! 2. Resource
 //! 3. Flow
 //! 4. Instance
-//! 5. Policy
+//! 5. Role
+//! 6. Relation
+//! 7. Policy
 //!
 //! ## Building
 //!

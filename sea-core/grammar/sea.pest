@@ -15,11 +15,11 @@ annotation = {
 }
 
 annotation_name = {
-    ^"namespace" | ^"version" | ^"owner"
+    ^"namespace" | ^"version" | ^"owner" | ^"collation" | ^"asof"
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | policy_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | policy_decl | role_decl | relation_decl | instance_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -45,9 +45,10 @@ resource_decl = {
 
 // Flow Declaration
 // Syntax: Flow "ResourceName" from "EntityA" to "EntityB" quantity 100
+// Syntax: Flow "ResourceName" from "EntityA" to "EntityB" quantity 100 "USD"
 // Syntax: Flow "ResourceName" from "EntityA" to "EntityB"
 flow_decl = {
-    ^"flow" ~ string_literal ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number)?
+    ^"flow" ~ string_literal ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number ~ string_literal?)?
 }
 
 // Dimension Declaration
@@ -79,7 +80,7 @@ policy_annotation = {
 }
 
 policy_annotation_name = {
-    ^"rationale" | ^"tags"
+    ^"rationale" | ^"tags" | ^"severity"
 }
 
 string_array = { "[" ~ string_literal ~ ("," ~ string_literal)* ~ "]" }
@@ -197,3 +198,42 @@ boolean = { ^"true" | ^"false" }
 // Identifier (Unicode support - letters, numbers, underscore)
 // Must start with letter (including Unicode) or underscore
 identifier = @{ (LETTER | "_") ~ (LETTER | NUMBER | "_")* }
+
+// Role Declaration
+// Syntax: Role "Payer" for entity "Party"
+role_decl = {
+    ^"role" ~ string_literal ~ ^"for" ~ ^"entity" ~ string_literal
+}
+
+// Relation Declaration
+// Syntax: Relation "Payment" { subject role "Payer" object role "Payee" via flow "MoneyTransfer" }
+// Syntax: Relation "Ownership" { subject role "Owner" object role "Asset" }
+relation_decl = {
+    ^"relation" ~ string_literal ~ "{" ~ relation_body_item* ~ "}"
+}
+
+relation_body_item = {
+    relation_subject |
+    relation_object |
+    relation_via
+}
+
+relation_subject = { ^"subject" ~ ^"role" ~ string_literal }
+relation_object = { ^"object" ~ ^"role" ~ string_literal }
+relation_via = { ^"via" ~ ^"flow" ~ string_literal }
+
+// Instance Declaration
+// Syntax: Instance "Batch-123" of resource "Steel" at entity "Warehouse"
+// Syntax: Instance "Batch-123" of resource "Steel" at entity "Warehouse" { status "in-stock" }
+instance_decl = {
+    ^"instance" ~ string_literal ~ ^"of" ~ ^"resource" ~ string_literal ~ ^"at" ~ ^"entity" ~ string_literal ~ instance_body?
+}
+
+instance_body = {
+    "{" ~ property_assignment* ~ "}"
+}
+
+property_assignment = {
+    identifier ~ string_literal
+}
+

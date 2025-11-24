@@ -1,5 +1,6 @@
 use crate::policy::{Policy, Severity, Violation};
-use crate::primitives::{Entity, Flow, Instance, Resource};
+
+use crate::primitives::{Entity, Flow, Instance, Relation, Resource, Role};
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -28,6 +29,11 @@ pub struct Graph {
     resources: IndexMap<ConceptId, Resource>,
     flows: IndexMap<ConceptId, Flow>,
     instances: IndexMap<ConceptId, Instance>,
+
+    #[serde(default)]
+    roles: IndexMap<ConceptId, Role>,
+    #[serde(default)]
+    relations: IndexMap<ConceptId, Relation>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
     config: GraphConfig,
@@ -43,6 +49,9 @@ impl Graph {
             && self.resources.is_empty()
             && self.flows.is_empty()
             && self.instances.is_empty()
+
+            && self.roles.is_empty()
+            && self.relations.is_empty()
             && self.policies.is_empty()
     }
 
@@ -355,6 +364,142 @@ impl Graph {
         self.instances.values().collect()
     }
 
+
+
+    pub fn role_count(&self) -> usize {
+        self.roles.len()
+    }
+
+    pub fn add_role(&mut self, role: Role) -> Result<(), String> {
+        let id = role.id().clone();
+        if self.roles.contains_key(&id) {
+            return Err(format!("Role with ID {} already exists", id));
+        }
+        if !self.entities.contains_key(role.entity_id()) {
+            return Err("Entity not found".to_string());
+        }
+        self.roles.insert(id, role);
+        Ok(())
+    }
+
+    pub fn has_role(&self, id: &ConceptId) -> bool {
+        self.roles.contains_key(id)
+    }
+
+    pub fn get_role(&self, id: &ConceptId) -> Option<&Role> {
+        self.roles.get(id)
+    }
+
+    pub fn remove_role(&mut self, id: &ConceptId) -> Result<Role, String> {
+        // Check for references in relations
+        let referencing_relations: Vec<String> = self
+            .relations
+            .values()
+            .filter(|rel| {
+                rel.subject_role_id() == Some(id) || rel.object_role_id() == Some(id)
+            })
+            .map(|rel| rel.id().to_string())
+            .collect();
+
+        if !referencing_relations.is_empty() {
+            return Err(format!(
+                "Cannot remove role {} because it is referenced by relations: {}",
+                id,
+                referencing_relations.join(", ")
+            ));
+        }
+
+        self.roles
+            .shift_remove(id)
+            .ok_or_else(|| format!("Role with ID {} not found", id))
+    }
+
+    pub fn all_roles(&self) -> Vec<&Role> {
+        self.roles.values().collect()
+    }
+
+    pub fn relation_count(&self) -> usize {
+        self.relations.len()
+    }
+
+    pub fn add_relation(&mut self, relation: Relation) -> Result<(), String> {
+        let id = relation.id().clone();
+        if self.relations.contains_key(&id) {
+            return Err(format!("Relation with ID {} already exists", id));
+        }
+        
+        if let Some(role_id) = relation.subject_role_id() {
+            if !self.roles.contains_key(role_id) {
+                return Err("Subject role not found".to_string());
+            }
+        }
+        
+        if let Some(role_id) = relation.object_role_id() {
+            if !self.roles.contains_key(role_id) {
+                return Err("Object role not found".to_string());
+            }
+        }
+        
+        if let Some(resource_id) = relation.via_resource_id() {
+            if !self.resources.contains_key(resource_id) {
+                return Err("Via resource not found".to_string());
+            }
+
+            // Validate that a flow exists between the entities of the subject and object roles
+            if let (Some(subject_role_id), Some(object_role_id)) =
+                (relation.subject_role_id(), relation.object_role_id())
+            {
+                // We've already checked that these roles exist above
+                let subject_role = self.roles.get(subject_role_id).unwrap();
+                let object_role = self.roles.get(object_role_id).unwrap();
+
+                let from_entity = subject_role.entity_id();
+                let to_entity = object_role.entity_id();
+
+                let flow_exists = self.flows.values().any(|f| {
+                    f.resource_id() == resource_id
+                        && f.from_id() == from_entity
+                        && f.to_id() == to_entity
+                });
+
+                if !flow_exists {
+                    return Err(format!(
+                        "Relation implies a flow of resource '{}' from entity '{}' to entity '{}', but no such flow exists",
+                        resource_id, from_entity, to_entity
+                    ));
+                }
+            } else {
+                // If via_resource is specified, we generally expect both roles to be present to define the flow.
+                // However, we can be lenient or strict here. Let's enforce it for now as it makes sense.
+                return Err(
+                    "Relation with 'via flow' must have both subject and object roles defined"
+                        .to_string(),
+                );
+            }
+        }
+        
+        self.relations.insert(id, relation);
+        Ok(())
+    }
+
+    pub fn has_relation(&self, id: &ConceptId) -> bool {
+        self.relations.contains_key(id)
+    }
+
+    pub fn get_relation(&self, id: &ConceptId) -> Option<&Relation> {
+        self.relations.get(id)
+    }
+
+    pub fn remove_relation(&mut self, id: &ConceptId) -> Result<Relation, String> {
+        self.relations
+            .shift_remove(id)
+            .ok_or_else(|| format!("Relation with ID {} not found", id))
+    }
+
+    pub fn all_relations(&self) -> Vec<&Relation> {
+        self.relations.values().collect()
+    }
+
     pub fn policy_count(&self) -> usize {
         self.policies.len()
     }
@@ -402,6 +547,9 @@ impl Graph {
             resources,
             flows,
             instances,
+
+            roles,
+            relations,
             policies,
             config: _,
         } = other;
@@ -420,6 +568,14 @@ impl Graph {
 
         for flow in flows.into_values() {
             self.add_flow(flow)?;
+        }
+
+        for role in roles.into_values() {
+            self.add_role(role)?;
+        }
+
+        for relation in relations.into_values() {
+            self.add_relation(relation)?;
         }
 
         for policy in policies.into_values() {

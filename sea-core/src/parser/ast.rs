@@ -5,7 +5,7 @@ use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp,
 };
-use crate::primitives::{Entity, Flow, Resource};
+use crate::primitives::{Entity, Flow, Instance, Relation, Resource, Role};
 use crate::units::unit_from_string;
 use crate::SemanticVersion;
 use pest::iterators::{Pair, Pairs};
@@ -21,6 +21,8 @@ pub struct FileMetadata {
     pub namespace: Option<String>,
     pub version: Option<String>,
     pub owner: Option<String>,
+    pub collation: Option<String>,
+    pub as_of: Option<String>,
 }
 
 /// Policy metadata
@@ -31,6 +33,7 @@ pub struct PolicyMetadata {
     pub priority: Option<i32>,
     pub rationale: Option<String>,
     pub tags: Vec<String>,
+    pub severity: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,6 +74,7 @@ pub enum AstNode {
         from_entity: String,
         to_entity: String,
         quantity: Option<i32>,
+        unit: Option<String>,
     },
     Dimension {
         name: String,
@@ -86,6 +90,22 @@ pub enum AstNode {
         version: Option<String>,
         metadata: PolicyMetadata,
         expression: Expression,
+    },
+    Role {
+        name: String,
+        entity: String,
+    },
+    Relation {
+        name: String,
+        subject_role: Option<String>,
+        object_role: Option<String>,
+        via_flow: Option<String>,
+    },
+    Instance {
+        name: String,
+        resource: String,
+        entity: String,
+        properties: HashMap<String, String>,
     },
 }
 
@@ -151,6 +171,8 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
                 "namespace" => metadata.namespace = Some(value_str),
                 "version" => metadata.version = Some(value_str),
                 "owner" => metadata.owner = Some(value_str),
+                "collation" => metadata.collation = Some(value_str),
+                "asof" => metadata.as_of = Some(value_str),
                 _ => {
                     return Err(ParseError::GrammarError(format!(
                         "Unknown annotation: {}",
@@ -173,6 +195,9 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
         Rule::resource_decl => parse_resource(pair),
         Rule::flow_decl => parse_flow(pair),
         Rule::policy_decl => parse_policy(pair),
+        Rule::role_decl => parse_role(pair),
+        Rule::relation_decl => parse_relation(pair),
+        Rule::instance_decl => parse_instance(pair),
         _ => Err(ParseError::GrammarError(format!(
             "Unexpected rule: {:?}",
             pair.as_rule()
@@ -326,17 +351,23 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected to entity".to_string()))?,
     )?;
 
-    let quantity = if let Some(qty_pair) = inner.next() {
-        Some(parse_number(qty_pair)?)
-    } else {
-        None
-    };
+    let mut quantity = None;
+    let mut unit = None;
+
+    if let Some(qty_pair) = inner.next() {
+        quantity = Some(parse_number(qty_pair)?);
+        // Check for optional unit
+        if let Some(unit_pair) = inner.next() {
+            unit = Some(parse_string_literal(unit_pair)?);
+        }
+    }
 
     Ok(AstNode::Flow {
         resource_name,
         from_entity,
         to_entity,
         quantity,
+        unit,
     })
 }
 
@@ -356,6 +387,7 @@ fn parse_policy(pair: Pair<Rule>) -> ParseResult<AstNode> {
         priority: None,
         rationale: None,
         tags: Vec::new(),
+        severity: None,
     };
     let mut version: Option<String> = None;
 
@@ -441,6 +473,9 @@ fn parse_policy_annotation(pair: Pair<Rule>, metadata: &mut PolicyMetadata) -> P
                 metadata.tags.push(parse_string_literal(value)?);
             }
         }
+        "severity" => {
+            metadata.severity = Some(parse_string_literal(value)?);
+        }
         _ => {
             return Err(ParseError::GrammarError(format!(
                 "Unknown policy annotation: {}",
@@ -450,6 +485,127 @@ fn parse_policy_annotation(pair: Pair<Rule>, metadata: &mut PolicyMetadata) -> P
     }
 
     Ok(())
+}
+
+/// Parse role declaration
+fn parse_role(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected role name".to_string()))?,
+    )?;
+
+    let entity = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected entity name".to_string()))?,
+    )?;
+
+    Ok(AstNode::Role { name, entity })
+}
+
+/// Parse relation declaration
+fn parse_relation(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected relation name".to_string()))?,
+    )?;
+
+    let mut subject_role = None;
+    let mut object_role = None;
+    let mut via_flow = None;
+
+    for item in inner {
+        if item.as_rule() == Rule::relation_body_item {
+            let inner_rule = item.into_inner().next().unwrap();
+            match inner_rule.as_rule() {
+                Rule::relation_subject => {
+                    let value_pair = inner_rule.into_inner().next().unwrap();
+                    subject_role = Some(parse_string_literal(value_pair)?);
+                }
+                Rule::relation_object => {
+                    let value_pair = inner_rule.into_inner().next().unwrap();
+                    object_role = Some(parse_string_literal(value_pair)?);
+                }
+                Rule::relation_via => {
+                    let value_pair = inner_rule.into_inner().next().unwrap();
+                    via_flow = Some(parse_string_literal(value_pair)?);
+                }
+                _ => {
+                    return Err(ParseError::GrammarError(format!(
+                        "Unexpected relation body rule: {:?}",
+                        inner_rule.as_rule()
+                    )))
+                }
+            }
+        }
+    }
+
+    Ok(AstNode::Relation {
+        name,
+        subject_role,
+        object_role,
+        via_flow,
+    })
+}
+
+/// Parse instance declaration
+fn parse_instance(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected instance name".to_string()))?,
+    )?;
+
+    let resource = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
+    )?;
+
+    let entity = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected entity name".to_string()))?,
+    )?;
+
+    let mut properties = HashMap::new();
+
+    // Parse optional instance body
+    for item in inner {
+        if item.as_rule() == Rule::instance_body {
+            for prop in item.into_inner() {
+                if prop.as_rule() == Rule::property_assignment {
+                    let mut prop_inner = prop.into_inner();
+                    let key = parse_identifier(
+                        prop_inner
+                            .next()
+                            .ok_or_else(|| ParseError::GrammarError("Expected property key".to_string()))?,
+                    )?;
+                    let value = parse_string_literal(
+                        prop_inner
+                            .next()
+                            .ok_or_else(|| ParseError::GrammarError("Expected property value".to_string()))?,
+                    )?;
+                    properties.insert(key, value);
+                }
+            }
+        }
+    }
+
+    Ok(AstNode::Instance {
+        name,
+        resource,
+        entity,
+        properties,
+    })
 }
 
 /// Parse expression
@@ -1057,13 +1213,79 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         }
     }
 
-    // Second pass: Add flows
+    let mut role_map = HashMap::new();
+
+    // Second pass: Add roles and instances
+    for node in &ast.declarations {
+        match node {
+            AstNode::Role { name, entity } => {
+                let entity_id = entity_map
+                    .get(entity)
+                    .ok_or_else(|| ParseError::undefined_entity(entity))?;
+
+                let namespace = ast
+                    .metadata
+                    .namespace
+                    .as_ref()
+                    .cloned()
+                    .or_else(|| options.default_namespace.clone())
+                    .unwrap_or_else(|| "default".to_string());
+
+                let role = Role::new(name.clone(), entity_id.clone(), namespace);
+                let role_id = role.id().clone();
+                graph.add_role(role).map_err(|e| {
+                    ParseError::GrammarError(format!("Failed to add role: {}", e))
+                })?;
+                role_map.insert(name.clone(), role_id);
+            }
+            AstNode::Instance {
+                name: _,
+                resource,
+                entity,
+                properties,
+            } => {
+                let resource_id = resource_map
+                    .get(resource)
+                    .ok_or_else(|| ParseError::undefined_resource(resource))?;
+
+                let entity_id = entity_map
+                    .get(entity)
+                    .ok_or_else(|| ParseError::undefined_entity(entity))?;
+
+                let namespace = ast
+                    .metadata
+                    .namespace
+                    .as_ref()
+                    .cloned()
+                    .or_else(|| options.default_namespace.clone())
+                    .unwrap_or_else(|| "default".to_string());
+
+                let mut instance = Instance::new_with_namespace(
+                    resource_id.clone(),
+                    entity_id.clone(),
+                    namespace,
+                );
+
+                for (key, value) in properties {
+                    instance.set_attribute(key.clone(), JsonValue::String(value.clone()));
+                }
+
+                graph.add_instance(instance).map_err(|e| {
+                    ParseError::GrammarError(format!("Failed to add instance: {}", e))
+                })?;
+            }
+            _ => {}
+        }
+    }
+
+    // Third pass: Add flows
     for node in &ast.declarations {
         if let AstNode::Flow {
             resource_name,
             from_entity,
             to_entity,
             quantity,
+            unit: _,
         } = node
         {
             let from_id = entity_map
@@ -1087,7 +1309,75 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         }
     }
 
-    // Third pass: Add policies
+
+
+    // Fourth pass: Add relations
+    for node in &ast.declarations {
+        if let AstNode::Relation {
+            name,
+            subject_role,
+            object_role,
+            via_flow,
+        } = node
+        {
+            let namespace = ast
+                .metadata
+                .namespace
+                .as_ref()
+                .cloned()
+                .or_else(|| options.default_namespace.clone())
+                .unwrap_or_else(|| "default".to_string());
+
+            let subject_role_id = if let Some(role_name) = subject_role {
+                Some(
+                    role_map
+                        .get(role_name)
+                        .ok_or_else(|| ParseError::GrammarError(format!("Undefined role: {}", role_name)))?
+                        .clone(),
+                )
+            } else {
+                None
+            };
+
+            let object_role_id = if let Some(role_name) = object_role {
+                Some(
+                    role_map
+                        .get(role_name)
+                        .ok_or_else(|| ParseError::GrammarError(format!("Undefined role: {}", role_name)))?
+                        .clone(),
+                )
+            } else {
+                None
+            };
+
+            // For now, we resolve via_flow to a Resource ID, assuming the relation
+            // refers to the resource being transferred.
+            let via_resource_id = if let Some(resource_name) = via_flow {
+                Some(
+                    resource_map
+                        .get(resource_name)
+                        .ok_or_else(|| ParseError::undefined_resource(resource_name))?
+                        .clone(),
+                )
+            } else {
+                None
+            };
+
+            let relation = Relation::new(
+                name.clone(),
+                namespace,
+                subject_role_id,
+                object_role_id,
+                via_resource_id,
+            );
+
+            graph.add_relation(relation).map_err(|e| {
+                ParseError::GrammarError(format!("Failed to add relation: {}", e))
+            })?;
+        }
+    }
+
+    // Fifth pass: Add policies
     for node in &ast.declarations {
         if let AstNode::Policy {
             name,

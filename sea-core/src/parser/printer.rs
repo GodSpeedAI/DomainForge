@@ -50,13 +50,82 @@ impl PrettyPrinter {
                     from_entity,
                     to_entity,
                     quantity,
+                    unit,
                 } => {
                     let qty = quantity.unwrap_or(0);
+                    let flow_str = if let Some(u) = unit {
+                        format!(
+                            "Flow \"{}\" from \"{}\" to \"{}\" quantity {} \"{}\"",
+                            resource_name, from_entity, to_entity, qty, u
+                        )
+                    } else {
+                        format!(
+                            "Flow \"{}\" from \"{}\" to \"{}\" quantity {}",
+                            resource_name, from_entity, to_entity, qty
+                        )
+                    };
+                    let _ = writeln!(output, "{}", flow_str);
+                }
+                crate::parser::ast::AstNode::Role { name, entity } => {
+                    let _ = writeln!(output, "Role \"{}\" for entity \"{}\"", name, entity);
+                }
+                crate::parser::ast::AstNode::Relation {
+                    name,
+                    subject_role,
+                    object_role,
+                    via_flow,
+                } => {
+                    let _ = writeln!(output, "Relation \"{}\" {{", name);
+                    if let Some(s) = subject_role {
+                        let _ = writeln!(
+                            output,
+                            "{}subject role \"{}\"",
+                            " ".repeat(self.indent_width),
+                            s
+                        );
+                    }
+                    if let Some(o) = object_role {
+                        let _ = writeln!(
+                            output,
+                            "{}object role \"{}\"",
+                            " ".repeat(self.indent_width),
+                            o
+                        );
+                    }
+                    if let Some(v) = via_flow {
+                        let _ = writeln!(
+                            output,
+                            "{}via flow \"{}\"",
+                            " ".repeat(self.indent_width),
+                            v
+                        );
+                    }
+                    let _ = writeln!(output, "}}");
+                }
+                crate::parser::ast::AstNode::Instance {
+                    name,
+                    resource,
+                    entity,
+                    properties,
+                } => {
                     let _ = writeln!(
                         output,
-                        "Flow \"{}\" from \"{}\" to \"{}\" quantity {}",
-                        resource_name, from_entity, to_entity, qty
+                        "Instance \"{}\" of resource \"{}\" at entity \"{}\"",
+                        name, resource, entity
                     );
+                    if !properties.is_empty() {
+                        let _ = writeln!(output, "{{");
+                        for (k, v) in properties {
+                            let _ = writeln!(
+                                output,
+                                "{}{} \"{}\"",
+                                " ".repeat(self.indent_width),
+                                k,
+                                v
+                            );
+                        }
+                        let _ = writeln!(output, "}}");
+                    }
                 }
                 crate::parser::ast::AstNode::Policy {
                     name,
