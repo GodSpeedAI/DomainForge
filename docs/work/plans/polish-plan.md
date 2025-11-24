@@ -935,7 +935,7 @@ mod tests {
 
 ---
 
-#### [ ] 9. Quantity Rendering, Type Inference, Lint, and AST Export
+#### [x] 9. Quantity Rendering, Type Inference, Lint, and AST Export
 
 **Duration**: 1 week | **Priority**: P1 | **Complexity**: Low
 
