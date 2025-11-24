@@ -7,11 +7,17 @@ pub struct SeaParser;
 
 pub mod ast;
 pub mod error;
+pub mod lint;
+pub mod printer;
 pub mod string_utils;
 
 pub use ast::parse_expression_from_str;
-pub use ast::{parse_source, Ast, AstNode};
+pub use ast::parse_source;
+pub use ast::Ast;
+pub use ast::AstNode;
 pub use error::{ParseError, ParseResult};
+pub use lint::*;
+pub use printer::PrettyPrinter;
 pub use string_utils::unescape_string;
 
 /// Controls how the SEA parser interprets declarations.

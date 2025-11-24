@@ -10,9 +10,13 @@ homepage = "https://github.com/GodSpeedAI/DomainForge"
 repository = "https://github.com/GodSpeedAI/DomainForge"
 
 [dependencies]
-uuid = { version = "1.6", features = ["v4", "v5", "v7", "serde", "rng-getrandom"] }
+uuid = { version = "1.10", features = ["v4", "v5", "v7", "serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+thiserror = "1.0"
+icu_decimal = "1.5"
+icu_locid = "1.5"
+fixed_decimal = "0.5"
 rust_decimal = { version = "1.33", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 pest = "2.7"
