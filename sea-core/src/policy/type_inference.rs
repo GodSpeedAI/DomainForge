@@ -37,12 +37,14 @@ pub fn check_comparison(left: &ExprType, right: &ExprType) -> Result<(), TypeErr
         }
         (ExprType::Quantity { .. }, ExprType::Numeric) => {
             return Err(TypeError::MixedQuantityNumeric {
-                hint: "Quantities require explicit units. Did you mean 'value as \"unit\"'?".to_string(),
+                hint: "Quantities require explicit units. Did you mean 'value as \"unit\"'?"
+                    .to_string(),
             });
         }
         (ExprType::Numeric, ExprType::Quantity { .. }) => {
             return Err(TypeError::MixedQuantityNumeric {
-                hint: "Quantities require explicit units. Did you mean 'value as \"unit\"'?".to_string(),
+                hint: "Quantities require explicit units. Did you mean 'value as \"unit\"'?"
+                    .to_string(),
             });
         }
         (ExprType::Numeric, ExprType::Numeric) => {}

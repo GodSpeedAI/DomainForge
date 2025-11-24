@@ -11,6 +11,12 @@ pub struct Linter {
     keywords: HashSet<String>,
 }
 
+impl Default for Linter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Linter {
     pub fn new() -> Self {
         Self {

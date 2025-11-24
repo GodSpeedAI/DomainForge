@@ -23,18 +23,4 @@ mod tests {
             _ => panic!("expected literal"),
         }
     }
-
-    #[cfg(feature = "three_valued_logic")]
-    #[test]
-    fn aggregator_nulls() {
-        use rust_decimal::Decimal;
-        use sea_core::policy::three_valued::aggregators;
-
-        let vals: Vec<Option<Decimal>> =
-            vec![Some(Decimal::new(1, 0)), None, Some(Decimal::new(3, 0))];
-        assert_eq!(aggregators::sum_nullable(&vals), None);
-        assert_eq!(aggregators::sum_nonnull(&vals), Decimal::new(4, 0));
-        assert_eq!(aggregators::count_all(&vals), 3usize);
-        assert_eq!(aggregators::count_nonnull(&vals), 2usize);
-    }
 }

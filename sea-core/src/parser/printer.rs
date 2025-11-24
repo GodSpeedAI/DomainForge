@@ -39,7 +39,9 @@ impl PrettyPrinter {
                 crate::parser::ast::AstNode::Entity { name, .. } => {
                     let _ = writeln!(output, "Entity \"{}\"", name);
                 }
-                crate::parser::ast::AstNode::Resource { name, unit_name, .. } => {
+                crate::parser::ast::AstNode::Resource {
+                    name, unit_name, ..
+                } => {
                     let unit = unit_name.as_deref().unwrap_or("units");
                     let _ = writeln!(output, "Resource \"{}\" ({})", name, unit);
                 }

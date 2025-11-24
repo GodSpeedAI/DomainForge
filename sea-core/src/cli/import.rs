@@ -1,8 +1,8 @@
-use clap::{Parser, ValueEnum};
 use crate::import_kg_turtle;
+use anyhow::{Context, Result};
+use clap::{Parser, ValueEnum};
 use std::fs::read_to_string;
 use std::path::PathBuf;
-use anyhow::{Context, Result};
 
 #[cfg(feature = "shacl")]
 use crate::kg_import::ImportError;
@@ -50,11 +50,11 @@ pub fn run(args: ImportArgs) -> Result<()> {
         ImportFormat::Kg => {
             let src_trim = source.trim_start();
             // More specific RDF/XML detection: check for XML declaration or RDF namespace
-            let is_likely_rdfxml = src_trim.starts_with("<?xml") 
-                || src_trim.starts_with("<rdf:") 
-                || src_trim.starts_with("<rdf ") 
+            let is_likely_rdfxml = src_trim.starts_with("<?xml")
+                || src_trim.starts_with("<rdf:")
+                || src_trim.starts_with("<rdf ")
                 || src_trim.contains("xmlns:rdf");
-            
+
             if is_likely_rdfxml {
                 #[cfg(feature = "shacl")]
                 {
@@ -64,9 +64,7 @@ pub fn run(args: ImportArgs) -> Result<()> {
                             Ok(())
                         }
                         Err(err_rdf) => match err_rdf {
-                            ImportError::ShaclValidation(msg) => {
-                                Err(anyhow::anyhow!("{}", msg))
-                            }
+                            ImportError::ShaclValidation(msg) => Err(anyhow::anyhow!("{}", msg)),
                             other => {
                                 let err_rdf_msg = other.to_string();
                                 match import_kg_turtle(&source) {
@@ -74,9 +72,11 @@ pub fn run(args: ImportArgs) -> Result<()> {
                                         print_import_success(&graph, "KG (Turtle)");
                                         Ok(())
                                     }
-                                    Err(err_turtle) => {
-                                        Err(anyhow::anyhow!("Failed to import KG as RDF/XML: {}; as Turtle: {}", err_rdf_msg, err_turtle))
-                                    }
+                                    Err(err_turtle) => Err(anyhow::anyhow!(
+                                        "Failed to import KG as RDF/XML: {}; as Turtle: {}",
+                                        err_rdf_msg,
+                                        err_turtle
+                                    )),
                                 }
                             }
                         },
@@ -108,15 +108,17 @@ pub fn run(args: ImportArgs) -> Result<()> {
                                     print_import_success(&graph, "KG (RDF/XML)");
                                     Ok(())
                                 }
-                                Err(err_rdf) => match err_rdf {
-                                    ImportError::ShaclValidation(msg) => {
-                                        Err(anyhow::anyhow!("{}", msg))
+                                Err(err_rdf) => {
+                                    match err_rdf {
+                                        ImportError::ShaclValidation(msg) => {
+                                            Err(anyhow::anyhow!("{}", msg))
+                                        }
+                                        other => {
+                                            let err_rdf_msg = other.to_string();
+                                            Err(anyhow::anyhow!("Failed to import KG as Turtle: {}; and as RDF/XML: {}", err_turtle, err_rdf_msg))
+                                        }
                                     }
-                                    other => {
-                                        let err_rdf_msg = other.to_string();
-                                        Err(anyhow::anyhow!("Failed to import KG as Turtle: {}; and as RDF/XML: {}", err_turtle, err_rdf_msg))
-                                    }
-                                },
+                                }
                             }
                         }
                         #[cfg(not(feature = "shacl"))]

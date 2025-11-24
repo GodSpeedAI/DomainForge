@@ -1,6 +1,6 @@
 use icu_locid::locale;
-use sea_core::primitives::Quantity;
 use sea_core::primitives::quantity::QuantityFormatter;
+use sea_core::primitives::Quantity;
 use sea_core::units::Dimension;
 
 #[test]
