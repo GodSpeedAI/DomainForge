@@ -12,12 +12,15 @@ pub struct Quantity {
 }
 
 impl Quantity {
-    pub fn new(value: f64, unit: String, dimension: Dimension) -> Self {
-        Self {
+    pub fn new(value: f64, unit: String, dimension: Dimension) -> Result<Self, String> {
+        if !value.is_finite() {
+            return Err(format!("Quantity value must be finite, got {}", value));
+        }
+        Ok(Self {
             value,
             unit,
             dimension,
-        }
+        })
     }
 }
 
@@ -30,17 +33,17 @@ pub struct QuantityFormatter {
 
 impl QuantityFormatter {
     pub fn new(locale: Locale) -> Self {
-        let formatter = FixedDecimalFormatter::try_new(&locale.clone().into(), Default::default())
+        let formatter = FixedDecimalFormatter::try_new(&(&locale).into(), Default::default())
             .expect("Failed to create FixedDecimalFormatter");
         Self { formatter, locale }
     }
 
-    pub fn format(&self, quantity: &Quantity) -> String {
+    pub fn format(&self, quantity: &Quantity) -> Result<String, String> {
         // Convert f64 to FixedDecimal for formatting
         // FixedDecimal::from_str handles float string representation
         let decimal = fixed_decimal::FixedDecimal::from_str(&quantity.value.to_string())
-            .unwrap_or_else(|_| fixed_decimal::FixedDecimal::from(0));
+            .map_err(|e| format!("Failed to convert quantity value to decimal: {}", e))?;
         let formatted_value = self.formatter.format(&decimal).to_string();
-        format!("{} \"{}\"", formatted_value, quantity.unit)
+        Ok(format!("{} \"{}\"", formatted_value, quantity.unit))
     }
 }

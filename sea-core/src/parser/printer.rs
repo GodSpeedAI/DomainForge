@@ -9,13 +9,19 @@ pub struct PrettyPrinter {
     trailing_commas: bool,
 }
 
-impl PrettyPrinter {
-    pub fn new() -> Self {
+impl Default for PrettyPrinter {
+    fn default() -> Self {
         Self {
             indent_width: 4,
             max_line_length: 80,
             trailing_commas: false,
         }
+    }
+}
+
+impl PrettyPrinter {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn print(&self, ast: &Ast) -> String {
@@ -23,19 +29,19 @@ impl PrettyPrinter {
 
         // File header
         if let Some(ns) = &ast.metadata.namespace {
-            writeln!(output, "namespace {}", ns).unwrap();
-            writeln!(output).unwrap();
+            let _ = writeln!(output, "namespace {}", ns);
+            let _ = writeln!(output);
         }
 
         // Declarations
         for decl in &ast.declarations {
             match decl {
                 crate::parser::ast::AstNode::Entity { name, .. } => {
-                    writeln!(output, "Entity \"{}\"", name).unwrap();
+                    let _ = writeln!(output, "Entity \"{}\"", name);
                 }
                 crate::parser::ast::AstNode::Resource { name, unit_name, .. } => {
                     let unit = unit_name.as_deref().unwrap_or("units");
-                    writeln!(output, "Resource \"{}\" ({})", name, unit).unwrap();
+                    let _ = writeln!(output, "Resource \"{}\" ({})", name, unit);
                 }
                 crate::parser::ast::AstNode::Flow {
                     resource_name,
@@ -44,12 +50,11 @@ impl PrettyPrinter {
                     quantity,
                 } => {
                     let qty = quantity.unwrap_or(0);
-                    writeln!(
+                    let _ = writeln!(
                         output,
                         "Flow \"{}\" from \"{}\" to \"{}\" quantity {}",
                         resource_name, from_entity, to_entity, qty
-                    )
-                    .unwrap();
+                    );
                 }
                 crate::parser::ast::AstNode::Policy {
                     name,
@@ -57,15 +62,14 @@ impl PrettyPrinter {
                     expression,
                     ..
                 } => {
-                    writeln!(output, "Policy \"{}\" {{", name).unwrap();
+                    let _ = writeln!(output, "Policy \"{}\" {{", name);
                     // Simple indentation for expression
-                    // Note: expression printing is simplified here, ideally we'd have an expression printer
-                    writeln!(output, "{}{:?}", " ".repeat(self.indent_width), expression).unwrap();
-                    writeln!(output, "}}").unwrap();
+                    let _ = writeln!(output, "{}{}", " ".repeat(self.indent_width), expression);
+                    let _ = writeln!(output, "}}");
                 }
                 _ => {} // Handle other nodes if necessary
             }
-            writeln!(output).unwrap();
+            let _ = writeln!(output);
         }
 
         output

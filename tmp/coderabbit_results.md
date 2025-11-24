@@ -6,88 +6,131 @@ Analyzing
 Reviewing
 
 ============================================================================
-File: sea-core/src/cli/validate.rs
-Line: 110 to 116
+File: schemas/ast-v1.schema.json
+Line: 53 to 62
 Type: potential_issue
 
-[x] Task:
-In sea-core/src/cli/validate.rs around lines 110 to 116, the parameters \_source and \_show_source are declared but unused so the --no-source flag has no effect; either implement source display or remove the flag and parameters. To fix: if keeping the flag, use \_show_source to conditionally include the raw source text in the serialized output (e.g., add a "source" field to the JSON only when \_show_source is true) and ensure \_source is supplied where called; otherwise remove \_source and \_show_source from the function signature, delete the no_source field from ValidateArgs and any CLI wiring for that flag, and remove related dead code. Ensure update of tests and call sites accordingly.
+[x] Taskt:
+In schemas/ast-v1.schema.json around lines 53 to 62, the Flow.quantity property currently allows any number; restrict it to positive values by adding an exclusive minimum constraint so quantity must be greater than 0 (e.g., add "minimum": 0 and "exclusiveMinimum": true to the quantity schema). Ensure the schema remains valid JSON Schema and update any related validators/tests if they assume non-positive values.
+
+
 
 ============================================================================
-File: sea-core/src/cli/validate_kg.rs
-Line: 15 to 16
+File: schemas/ast-v1.schema.json
+Line: 5 to 29
 Type: potential_issue
 
-[x] Task:
-In sea-core/src/cli/validate_kg.rs around lines 15 to 16, the current content-based heuristic (checking source.trim_start().starts_with(' RDF/XML, otherwise treat as Turtle), and for files without extensions implement a safer fallback: either attempt to parse as RDF/XML (allowing leading processing instructions/comments) and on parse failure fall back to Turtle, or try parsing with both parsers and pick the one that succeeds; include clear logging when ambiguous or when parsing falls back.
+[x] Taskt:
+In schemas/ast-v1.schema.json around lines 5–29, the root schema is missing a "required" array so mandatory top-level properties aren't enforced; add a "required" property listing the fields that must be present (for example "version", "namespace", "entities", "resources", and "flows" — adjust to your DSL if some are optional), and optionally add "minItems": 1 to the array schemas (entities/resources/flows) to ensure they are non-empty when required; keep the existing type/pattern constraints intact.
+
+
 
 ============================================================================
-File: sea-core/src/cli/validate.rs
-Line: 21 to 25
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/cli/validate.rs around lines 21 to 25, the ValidateArgs struct exposes strict and round_trip CLI options that are unused; either remove these fields from the public CLI definition or implement their behavior in the validation flow: for removal, delete the fields and any parsing/flag wiring so they are no longer surfaced to users; for implementation, wire strict into validation logic to toggle failure levels (e.g., treat warnings as errors) and wire round_trip to perform a parse-serialize-parse comparison after validation (failing if the round-trip differs), and update help text and tests accordingly.
-
-============================================================================
-File: sea-core/src/cli/format.rs
-Line: 20
-Type: potential_issue
-
-[x] Task:
-In sea-core/src/cli/format.rs around line 20, the parse error currently bails with a message that omits the file path; change the bail to include the file path (use the same path variable/Display used for the I/O errors on line 17) by formatting the error message to include the file path (e.g., path.display() or path.to_string_lossy()) so the resulting anyhow::bail! message contains the file path for easier debugging.
-
-============================================================================
-File: docs/reference/cli.md
-Line: 84 to 86
-Type: potential_issue
-
-[x] Task:
-In docs/reference/cli.md around lines 84 to 86, the usage for the sea validate-kg command is missing the [OPTIONS] indicator and the documented options themselves; update the usage line to include [OPTIONS] and add the following options under the command description: --shapes , --format , --json, and --severity so the CLI docs match the plan (lines ~128-133).
-
-============================================================================
-File: docs/reference/cli.md
-Line: 38 to 46
-Type: potential_issue
-
-[x] Task:
-In docs/reference/cli.md around lines 38 to 46, the import command reference is missing the optional [OUTPUT] parameter and the additional options from the plan; update the usage line to include the optional [OUTPUT] argument and add documentation entries for --validate, --merge , and --namespace under the import command section, briefly describing each option (validate runs input checks, merge specifies a file to merge, namespace sets the target namespace) so the reference matches the plan.
-
-============================================================================
-File: docs/reference/cli.md
-Line: 51 to 59
-Type: potential_issue
-
-[x] Task:
-In docs/reference/cli.md around lines 51 to 59, the documentation for the project command is missing three options referenced earlier in the plan; add entries for --output-dir , --pretty, and --validate to the Formats/format section (or the command's options list) so they are documented consistently. For each option, add a one-line description: --output-dir to specify target directory for generated files, --pretty to produce human-readable/formatted output, and --validate to run validation after generation.
-
-============================================================================
-File: docs/reference/cli.md
-Line: 76 to 78
-Type: potential_issue
-
-[x] Task:
-In docs/reference/cli.md around lines 76 to 78, the test command documentation is incomplete — update the usage to "sea test [OPTIONS] [PATTERN]" with PATTERN optional and add the missing options from the plan: document --pattern (glob pattern to select test files), --filter (run only tests matching regex), --verbose (enable verbose output), --fail-fast (stop on first failure), and --json (emit machine-readable JSON output); for each option include its flag, argument form if any, and a one-line description consistent with surrounding docs.
-
-============================================================================
-File: docs/reference/cli.md
-Line: 27 to 32
-Type: potential_issue
-
-[x] Task:
-In docs/reference/cli.md around lines 27 to 32, the CLI options list is inconsistent with the implementation plan (docs/plans/cli_commands.plan.md lines 73–79): it omits --json, --exit-code, --fix, --config and includes an extra --no-source, and the --format flag overlap with a planned --json flag. Update this docs file to match the agreed API: either replace --format with the planned flags (add --json, --exit-code, --fix, --config) and remove --no-source, or explicitly document how --format and --json coexist; ensure flag names, defaults, and descriptions mirror the plan file exactly and note any behavioral differences (e.g., precedence between --format and --json).
-
-============================================================================
-File: docs/reference/cli.md
-Line: 64 to 71
-Type: potential_issue
-
-[x] Task:
-In docs/reference/cli.md around lines 64 to 71, the "format" command docs are incomplete — update the usage to accept multiple files using ... and add the missing options from the plan: --write, --config , --line-length , and --indent ; ensure each option has a one-line description and the usage line and examples reflect the multi-file usage and these flags so the documentation matches the planned behavior.
-
-============================================================================
-File: sea-core/src/cli/import.rs
-Line: 2
+File: sea-core/src/parser/lint.rs
+Line: 1 to 33
 Type: nitpick
+
+[x] Taskt:
+In sea-core/src/parser/lint.rs around lines 1 to 33, add an implementation of the Default trait for Linter since new() takes no parameters; implement Default by returning Self::new() so callers can use Linter::default() and derive/construct more idiomatically across code that expects Default.
+
+
+
+============================================================================
+File: sea-core/src/parser/mod.rs
+Line: 19
+Type: potential_issue
+
+[x] Taskt:
+In sea-core/src/parser/mod.rs around line 19, the current wildcard re-export pub use lint::*; exposes all public items from the lint module and risks accidental breaking changes and name collisions; replace it with explicit re-exports by listing only the specific public types/functions/constants you intend to expose (e.g., pub use lint::Foo; pub use lint::bar_fn; etc.). Inspect sea-core/src/parser/lint.rs (or lint/mod.rs) for its public items, pick the intended public API surface, and update line 19 to a set of explicit pub use lint::; statements matching those names; run cargo check to ensure no missing exports or name conflicts remain.
+
+
+
+============================================================================
+File: sea-core/tests/quantity_tests.rs
+Line: 27 to 28
+Type: potential_issue
+
+[x] Taskt:
+In sea-core/tests/quantity_tests.rs around lines 27-28, replace the fragile substring checks that assert separately for "1" and "500" with a single pattern-based assertion that verifies the full thousand-separated number format; use a regex like r#""\d{1,3}(?:[ ,]\d{3})*""# to match numbers with space or comma thousands separators (and keep the existing check that the string contains "\"EUR\""), i.e. assert that formatted matches the regex for the whole number token and that the currency "EUR" is present.
+
+
+
+============================================================================
+File: sea-core/src/primitives/quantity.rs
+Line: 7 to 12
+Type: potential_issue
+
+[x] Taskt:
+In sea-core/src/primitives/quantity.rs around lines 7–12, the public f64 value (and public unit/dimension) allows callers to set NaN/Infinity or domain-invalid values; make the struct fields private, add a validated constructor (e.g., new or try_new) that checks value.is_finite() and enforces domain rules (e.g., non-negative for mass/other relevant dimensions) and returns Result/Err, add simple getter methods for value, unit, and dimension as suggested, update any serde usage if needed (private fields are fine with derive) and change call sites to use the constructor/getters instead of writing fields directly.
+
+
+
+============================================================================
+File: sea-core/src/parser/printer.rs
+Line: 26 to 27
+Type: nitpick
+
+[x] Taskt:
+In sea-core/src/parser/printer.rs around lines 26 to 27, the code uses unwrap() on writeln! calls that write to a String; replace those unwrap() calls with explicit, intentional ignoring of the Result by using let _ = writeln!(output, "namespace {}", ns) and let _ = writeln!(output) so the writes remain infallible but signal purposeful omission of error handling.
+
+
+
+============================================================================
+File: sea-core/src/primitives/quantity.rs
+Line: 14 to 22
+Type: potential_issue
+
+[x] Taskt:
+In sea-core/src/primitives/quantity.rs around lines 14–22, the Quantity::new constructor currently accepts any f64 including NaN and Infinity; update it to validate the value using value.is_finite() and fail fast on invalid numbers. Change the signature to return a Result (e.g., Result or Result), check if value.is_finite() and return an Err with a clear message for NaN/Infinity, otherwise construct and return Ok(Self { ... }); keep the rest of the fields unchanged.
+
+
+
+============================================================================
+File: sea-core/src/parser/printer.rs
+Line: 13 to 19
+Type: nitpick
+
+[x] Taskt:
+In sea-core/src/parser/printer.rs around lines 13 to 19, implement the Rust Default trait for the struct (replace or augment the existing new() implementation) so the default values (indent_width: 4, max_line_length: 80, trailing_commas: false) are provided via impl Default for ... { fn default() -> Self { ... } }, and then have pub fn new() -> Self simply call Self::default(); update visibility and imports if needed and remove duplicated literal construction to keep new() delegating to Default.
+
+
+
+============================================================================
+File: sea-core/src/primitives/quantity.rs
+Line: 33
+Type: nitpick
+
+[x] Taskt:
+In sea-core/src/primitives/quantity.rs around line 33, the call uses locale.clone().into() which performs an unnecessary allocation; change it to (&locale).into() (or locale.into() if the conversion accepts a reference) so the FixedDecimalFormatter::try_new receives a borrowed conversion and avoids cloning the locale.
+
+
+
+============================================================================
+File: sea-core/src/parser/printer.rs
+Line: 54 to 65
+Type: potential_issue
+
+[x] Taskt:
+In sea-core/src/parser/printer.rs around lines 54 to 65 the Policy branch prints the policy expression using debug formatting ({:?}), which is not production-ready; replace the debug output with a proper expression printer (either call an existing expression pretty-print function or implement Display/pretty_print on the expression AST and write that to output with correct indentation) and add a short TODO noting that expression printing should be tested and cover nested/complex expressions; ensure the new printing uses the same writeln! pattern and propagates errors instead of unwrapping where practical.
+
+
+
+============================================================================
+File: sea-core/src/primitives/quantity.rs
+Line: 32 to 35
+Type: potential_issue
+
+
+
+
+============================================================================
+File: sea-core/src/primitives/quantity.rs
+Line: 38 to 45
+Type: potential_issue
+
+[x] Taskt:
+In sea-core/src/primitives/quantity.rs around lines 38-45, the current code converts f64 -> String -> FixedDecimal and uses unwrap_or_else to silently replace parse failures with 0; this masks precision loss and parsing errors. Replace the silent fallback: construct FixedDecimal directly from the f64 if available (e.g. FixedDecimal::from_f64 or appropriate try_from API) or propagate the conversion error by changing the function signature to return Result (or a domain error type) and return Err on conversion failure; ensure callers handle the Result instead of receiving a silently zeroed value.
+
+
 
 Review completed ✔
