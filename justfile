@@ -113,7 +113,12 @@ ci-test-rust:
 # Run Python tests (CI variant)
 ci-test-python:
     @echo "Running Python tests (CI)..."
-    pytest tests/
+    # Prefer the virtualenv python if it exists to avoid system site-packages and PEP 668 restrictions
+    if [ -x ".venv/bin/python" ]; then \
+        .venv/bin/python -m pytest tests/; \
+    else \
+        python3 -m pytest tests/ || python -m pytest tests/; \
+    fi
 
 # Run TypeScript tests (CI variant)
 ci-test-ts:

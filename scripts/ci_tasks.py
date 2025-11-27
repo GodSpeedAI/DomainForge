@@ -56,7 +56,7 @@ def check_size(file_path: str, max_bytes: int, label: str = "File") -> int:
         )
         return 1
 
-    print(f"✓ {label} is within size limit ({max_mb:.2f} MB)")
+    print(f"[OK] {label} is within size limit ({max_mb:.2f} MB)")
     return 0
 
 
@@ -114,7 +114,7 @@ def package_archive(
                         if file.is_file():
                             arcname = base_name / file.relative_to(input_p)
                             zf.write(file, arcname)
-            print(f"✓ Created ZIP archive: {output_p}")
+            print(f"[OK] Created ZIP archive: {output_p}")
 
         elif archive_format == "tar.gz":
             with tarfile.open(output_p, "w:gz") as tf:
@@ -122,7 +122,7 @@ def package_archive(
                     tf.add(input_p, arcname=base_name)
                 else:
                     tf.add(input_p, arcname=base_name)
-            print(f"✓ Created tar.gz archive: {output_p}")
+            print(f"[OK] Created tar.gz archive: {output_p}")
 
         else:
             print(
@@ -196,7 +196,7 @@ def verify_cli_binary(binary_path: str, expected_output: Optional[str] = None) -
             return 1
 
         output = result.stdout + result.stderr
-        print("✓ Binary executed successfully")
+        print("[OK] Binary executed successfully")
         print(f"Output: {output.strip()}")
 
         if expected_output and expected_output not in output:
@@ -251,7 +251,7 @@ def unpack_and_verify(archive_path: str, binary_name: str) -> int:
             )
             return 1
 
-        print(f"✓ Unpacked archive to {temp_dir}")
+        print(f"[OK] Unpacked archive to {temp_dir}")
 
         # Find the binary
         binary_path = None
