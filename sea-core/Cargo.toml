@@ -27,7 +27,7 @@ globset = "0.4"
 globwalk = "0.9"
 toml = { version = "0.8", features = ["parse"] }
 pyo3 = { version = "0.24.1", features = ["extension-module"], optional = true }
-pythonize = { version = "0.24", optional = true }
+pythonize = { version = "0.27", optional = true }
 napi = { version = "2.16", features = ["async"], optional = true }
 napi-derive = { version = "2.16", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
