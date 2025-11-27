@@ -9,10 +9,10 @@ permissions:
   contents: write
 
 env:
-  CACHE_VERSION: v2
-  WASM_MAX_BYTES: 524288
-  CLI_MAX_BYTES: 52428800
-  CLI_ARTIFACT_MAX_BYTES: 73400320
+  CACHE_VERSION: v3
+  WASM_MAX_BYTES: "524288" # 512KB
+  CLI_MAX_BYTES: "52428800" # 50MB
+  CLI_ARTIFACT_MAX_BYTES: "73400320" # 70MB
 
 jobs:
   build-release:
@@ -35,6 +35,9 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }} --features cli
         working-directory: sea-core
@@ -45,7 +48,6 @@ jobs:
           CLI_BIN=$(python3 scripts/resolve_rust_binary.py --workspace "$(pwd)" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable)
           echo "Resolved CLI binary: $CLI_BIN"
           echo "CLI_BIN=$CLI_BIN" >> "$GITHUB_ENV"
-          echo "CLI_BIN_DIR=$(dirname "$CLI_BIN")" >> "$GITHUB_ENV"
 
       - name: Resolve CLI binary path (windows)
         if: matrix.os == 'windows-latest'
@@ -55,112 +57,36 @@ jobs:
           $cliBin = python scripts/resolve_rust_binary.py --workspace "$workspace" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable
           Write-Host "Resolved CLI binary: $cliBin"
           "CLI_BIN=$cliBin" >> $env:GITHUB_ENV
-          $cliDir = Split-Path -Parent $cliBin
-          "CLI_BIN_DIR=$cliDir" >> $env:GITHUB_ENV
 
-      - name: Run built CLI binary (--version) to verify runtime (non-windows)
-        if: matrix.os != 'windows-latest'
-        run: |
-          echo "Using CLI binary: $CLI_BIN"
-          export LD_LIBRARY_PATH="$CLI_BIN_DIR:$LD_LIBRARY_PATH"
-          export DYLD_LIBRARY_PATH="$CLI_BIN_DIR:$DYLD_LIBRARY_PATH"
-          "$CLI_BIN" --version || (echo "::error::Failed to run built CLI binary"; ls -la "$CLI_BIN_DIR"; exit 1)
+      - name: Verify CLI binary executes
+        run: just ci-verify-binary "${{ env.CLI_BIN }}"
 
-      - name: Check CLI binary size (non-windows)
-        if: matrix.os != 'windows-latest'
+      - name: Check CLI binary size
+        run: just ci-check-binary-size "${{ env.CLI_BIN }}" "${{ env.CLI_MAX_BYTES }}"
+
+      - name: Package artifacts
         run: |
-          SIZE=$(python3 -c 'import os; print(os.path.getsize(os.environ["CLI_BIN"]))')
-          echo "CLI binary size: $SIZE bytes"
-          if [ "$SIZE" -gt ${{ env.CLI_MAX_BYTES }} ]; then
-            echo "::error::CLI binary exceeds ${CLI_MAX_BYTES} bytes ($SIZE)";
-            exit 1
+          ARCHIVE="sea-core-${{ matrix.target }}"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ARCHIVE="${ARCHIVE}.zip"
+          else
+            ARCHIVE="${ARCHIVE}.tar.gz"
           fi
-
-      - name: Run built CLI binary (--version) to verify runtime (windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Write-Host "Using CLI binary: $env:CLI_BIN"
-          $env:PATH = "$env:CLI_BIN_DIR;$env:PATH"
-          & "$env:CLI_BIN" --version
-
-      - name: Check CLI binary size (windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $size = (Get-Item "$env:CLI_BIN").Length
-          Write-Host "CLI binary size: $size bytes"
-          if ($size -gt $env:CLI_MAX_BYTES) { Write-Error "CLI binary exceeds $env:CLI_MAX_BYTES bytes ($size)"; exit 1 }
-
-      - name: Package artifacts (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $artifact = "sea-core-${{ matrix.target }}.zip"
-          $binaryName = Split-Path -Leaf $env:CLI_BIN
-          Push-Location $env:CLI_BIN_DIR
-          7z a "$env:GITHUB_WORKSPACE/$artifact" $binaryName
-          Pop-Location
-
-      - name: Verify packaged CLI artifact runs (windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $zipPath = "sea-core-${{ matrix.target }}.zip"
-          $binaryName = Split-Path -Leaf $env:CLI_BIN
-          Write-Host "Testing package: $zipPath"
-          Expand-Archive -LiteralPath $zipPath -DestinationPath ./tmp_unpacked -Force
-          Push-Location ./tmp_unpacked
-          $env:PATH = (Get-Location).Path + ";$env:PATH"
-          & .\$binaryName --version
-          Pop-Location
-
-      - name: Check packaged artifact size (windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $zipPath = "sea-core-${{ matrix.target }}.zip"
-          $size = (Get-Item $zipPath).Length
-          Write-Host "Packaged artifact size (zip): $size bytes"
-          if ($size -gt $env:CLI_ARTIFACT_MAX_BYTES) { Write-Error "Packaged CLI artifact exceeds $env:CLI_ARTIFACT_MAX_BYTES bytes ($size)"; exit 1 }
-
-      - name: Package artifacts (Unix)
-        if: matrix.os != 'windows-latest'
+          just ci-package-binary "${{ env.CLI_BIN }}" "$ARCHIVE"
+          echo "ARCHIVE_PATH=$ARCHIVE" >> "$GITHUB_ENV"
         shell: bash
-        run: |
-          ART="sea-core-${{ matrix.target }}.tar.gz"
-          BIN_NAME="$(basename "$CLI_BIN")"
-          tar czf "$ART" -C "$CLI_BIN_DIR" "$BIN_NAME"
 
-      - name: Verify packaged CLI artifact runs (non-windows)
-        if: matrix.os != 'windows-latest'
-        run: |
-          ART=sea-core-${{ matrix.target }}.tar.gz
-          BIN_NAME="$(basename "$CLI_BIN")"
-          echo "Testing package: $ART"
-          mkdir -p tmp_unpacked
-          tar -xzf "$ART" -C tmp_unpacked
-          pushd tmp_unpacked >/dev/null
-          export LD_LIBRARY_PATH="$(pwd):$LD_LIBRARY_PATH"
-          export DYLD_LIBRARY_PATH="$(pwd):$DYLD_LIBRARY_PATH"
-          "./$BIN_NAME" --version || (echo "::error::Failed to run packaged CLI binary"; ls -la; exit 1)
-          popd >/dev/null
+      - name: Verify packaged archive
+        run: just ci-verify-package "${{ env.ARCHIVE_PATH }}" "sea"
 
-      - name: Check packaged artifact size (non-windows)
-        if: matrix.os != 'windows-latest'
-        run: |
-          ART=sea-core-${{ matrix.target }}.tar.gz
-          SIZE=$(stat -c%s "$ART")
-          echo "Packaged artifact size (tar.gz): $SIZE bytes"
-          if [ "$SIZE" -gt ${{ env.CLI_ARTIFACT_MAX_BYTES }} ]; then
-            echo "::error::Packaged CLI artifact exceeds ${CLI_ARTIFACT_MAX_BYTES} bytes ($SIZE)"; exit 1
-          fi
+      - name: Check packaged artifact size
+        run: just ci-check-package-size "${{ env.ARCHIVE_PATH }}" "${{ env.CLI_ARTIFACT_MAX_BYTES }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: sea-core-${{ matrix.target }}
-          path: sea-core-${{ matrix.target }}.*
+          path: ${{ env.ARCHIVE_PATH }}
 
   build-python-wheels:
     name: Build Python Wheels (${{ matrix.target }})
@@ -212,6 +138,9 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -220,9 +149,9 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
@@ -234,16 +163,8 @@ jobs:
 
       - name: Check WASM bundle size
         run: |
-          SIZE=$(stat -c%s "sea-core/pkg/sea_core_bg.wasm")
-          echo "WASM bundle size: $SIZE bytes"
-          if [ -z "$SIZE" ] || ! [[ "$SIZE" =~ ^[0-9]+$ ]]; then
-            echo "::error::Unable to determine WASM bundle size"
-            exit 1
-          fi
-          if [ "$SIZE" -gt ${{ env.WASM_MAX_BYTES }} ]; then
-            echo "::error::WASM bundle exceeds ${WASM_MAX_BYTES} limit ($SIZE bytes)"
-            exit 1
-          fi
+          WASM_FILE="sea-core/pkg/sea_core_bg.wasm"
+          python3 scripts/ci_tasks.py check-size --file "$WASM_FILE" --max-bytes "${{ env.WASM_MAX_BYTES }}" --label "WASM bundle"
 
       - name: Package WASM artifacts
         run: |
