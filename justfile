@@ -100,3 +100,52 @@ setup:
 python-clean:
     @echo "Removing Python virtual environment (.venv)"
     if [ -d .venv ]; then rm -rf .venv || true; fi
+
+# ============================================================================
+# CI-specific recipes (used by GitHub Actions)
+# ============================================================================
+
+# Run Rust tests (CI variant)
+ci-test-rust:
+    @echo "Running Rust tests (CI)..."
+    cargo test --verbose --workspace --features cli
+
+# Run Python tests (CI variant)
+ci-test-python:
+    @echo "Running Python tests (CI)..."
+    # Prefer the virtualenv python if it exists to avoid system site-packages and PEP 668 restrictions
+    if [ -x ".venv/bin/python" ]; then \
+        .venv/bin/python -m pytest tests/; \
+    else \
+        python3 -m pytest tests/ || python -m pytest tests/; \
+    fi
+
+# Run TypeScript tests (CI variant)
+ci-test-ts:
+    @echo "Running TypeScript tests (CI)..."
+    npm test
+
+# Verify CLI binary can execute
+ci-verify-binary BINARY_PATH:
+    @echo "Verifying CLI binary: {{BINARY_PATH}}"
+    python3 scripts/ci_tasks.py verify-cli --binary "{{BINARY_PATH}}"
+
+# Check CLI binary size
+ci-check-binary-size BINARY_PATH MAX_BYTES="52428800":
+    @echo "Checking binary size: {{BINARY_PATH}}"
+    python3 scripts/ci_tasks.py check-size --file "{{BINARY_PATH}}" --max-bytes {{MAX_BYTES}} --label "CLI binary"
+
+# Package CLI binary for release
+ci-package-binary BINARY_PATH OUTPUT_PATH:
+    @echo "Packaging binary: {{BINARY_PATH}} -> {{OUTPUT_PATH}}"
+    python3 scripts/ci_tasks.py package --input "{{BINARY_PATH}}" --output "{{OUTPUT_PATH}}"
+
+# Verify packaged archive
+ci-verify-package ARCHIVE_PATH BINARY_NAME="sea":
+    @echo "Verifying packaged archive: {{ARCHIVE_PATH}}"
+    python3 scripts/ci_tasks.py unpack-verify --archive "{{ARCHIVE_PATH}}" --binary-name "{{BINARY_NAME}}"
+
+# Check packaged artifact size
+ci-check-package-size ARCHIVE_PATH MAX_BYTES="73400320":
+    @echo "Checking package size: {{ARCHIVE_PATH}}"
+    python3 scripts/ci_tasks.py check-size --file "{{ARCHIVE_PATH}}" --max-bytes {{MAX_BYTES}} --label "Packaged artifact"

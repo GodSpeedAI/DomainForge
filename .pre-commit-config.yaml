@@ -3,28 +3,35 @@
 # Run manually: pre-commit run --all-files
 
 repos:
-  # Rust formatting
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
+  # Rust formatting - using local hooks since doublify/pre-commit-rust is unmaintained
+  - repo: local
     hooks:
-      - id: fmt
+      - id: cargo-fmt
         name: cargo fmt
-        args: ["--all", "--"]
-      - id: clippy
+        entry: cargo fmt
+        args: ["--all", "--", "--check"]
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-clippy
         name: cargo clippy
+        entry: cargo clippy
         args: ["--all-targets", "--all-features", "--", "-D", "warnings"]
+        language: system
+        types: [rust]
+        pass_filenames: false
 
   # Python formatting
   - repo: https://github.com/psf/black
-    rev: 24.3.0
+    rev: 24.10.0
     hooks:
       - id: black
         language_version: python3.11
-        files: '^(tests/|python/|fix_.*\.py$)'
+        files: '^(tests/|python/|scripts/|fix_.*\.py$)'
 
   # YAML linting
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
         files: '\.(yaml|yml)$'
@@ -36,9 +43,9 @@ repos:
 
   # TypeScript/JavaScript formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [javascript, typescript, json, markdown]
         files: '\.(js|ts|json|md)$'
-        exclude: "(node_modules|pkg|target|sea-core/target)"
+        exclude: "(node_modules|pkg|target|sea-core/target|package-lock.json)"
