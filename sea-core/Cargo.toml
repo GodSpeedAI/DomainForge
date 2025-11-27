@@ -46,7 +46,7 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 [dev-dependencies]
 proptest = "1.0"
 wasm-bindgen-test = "0.3"
-jsonschema = "0.18"
+jsonschema = "0.37"
 roxmltree = "0.21.1"
 rust_decimal_macros = "1.33"
 tempfile = "3.12"
