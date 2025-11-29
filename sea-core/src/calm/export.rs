@@ -163,6 +163,8 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
     match expr {
         Expression::Literal(v) => v.to_string(),
         Expression::QuantityLiteral { value, unit } => format!("{} \"{}\"", value, unit),
+        Expression::TimeLiteral(timestamp) => format!("\"{}\"", timestamp),
+        Expression::IntervalLiteral { start, end } => format!("interval(\"{}\", \"{}\")", start, end),
         Expression::Variable(s) => s.to_string(),
         Expression::Binary { op, left, right } => {
             let op_str = match op {
@@ -181,6 +183,9 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 BinaryOp::Contains => "contains",
                 BinaryOp::StartsWith => "startswith",
                 BinaryOp::EndsWith => "endswith",
+                BinaryOp::Before => "before",
+                BinaryOp::After => "after",
+                BinaryOp::During => "during",
             };
             format!(
                 "({} {} {})",

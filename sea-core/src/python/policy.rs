@@ -41,6 +41,9 @@ pub enum BinaryOp {
     Contains,
     StartsWith,
     EndsWith,
+    Before,
+    After,
+    During,
 }
 
 impl From<BinaryOp> for RustBinaryOp {
@@ -61,6 +64,9 @@ impl From<BinaryOp> for RustBinaryOp {
             BinaryOp::Contains => RustBinaryOp::Contains,
             BinaryOp::StartsWith => RustBinaryOp::StartsWith,
             BinaryOp::EndsWith => RustBinaryOp::EndsWith,
+            BinaryOp::Before => RustBinaryOp::Before,
+            BinaryOp::After => RustBinaryOp::After,
+            BinaryOp::During => RustBinaryOp::During,
         }
     }
 }

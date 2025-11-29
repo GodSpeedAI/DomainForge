@@ -7,6 +7,8 @@ pub enum ExprType {
     Numeric,
     String,
     Boolean,
+    Time,
+    Interval,
     Collection(Box<ExprType>),
 }
 
@@ -50,6 +52,10 @@ pub fn check_comparison(left: &ExprType, right: &ExprType) -> Result<(), TypeErr
         (ExprType::Numeric, ExprType::Numeric) => {}
         (ExprType::String, ExprType::String) => {}
         (ExprType::Boolean, ExprType::Boolean) => {}
+        (ExprType::Time, ExprType::Time) => {} // Time before/after Time
+        (ExprType::Time, ExprType::Interval) => {} // Time during Interval
+        (ExprType::Interval, ExprType::Time) => {} // Interval contains Time (reverse)
+        (ExprType::Interval, ExprType::Interval) => {} // Interval comparisons
         (t1, t2) => {
             return Err(TypeError::TypeMismatch {
                 expected: format!("{:?}", t1),

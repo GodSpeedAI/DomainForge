@@ -161,16 +161,19 @@ Policy sla_compliance as:
 
 **Implementation**:
 
-- [ ] **Grammar** (`sea.pest`): Add `time_literal`, `interval_literal`, `temporal_op` rules
-- [ ] **AST** (`ast.rs`): Add `TimeLiteral(DateTime)`, `IntervalLiteral(Duration)`, `TemporalExpression`
-- [ ] **Parser** (`parser.rs`): Parse ISO 8601 timestamps and duration strings
-- [ ] **Semantics** (`validator.rs`): Validate temporal comparisons, ensure type safety
-- [ ] **Projection** (`calm.rs`, `kg.rs`): Map to temporal properties in target formats
+- [x] **Grammar** (`sea.pest`): Add `time_literal`, `interval_literal`, `temporal_op` rules
+- [x] **AST** (`ast.rs`): Add `TimeLiteral(DateTime)`, `IntervalLiteral(Duration)`, `TemporalExpression`
+- [x] **Parser** (`parser.rs`): Parse ISO 8601 timestamps and duration strings
+- [x] **Semantics** (`validator.rs`): Validate temporal comparisons, ensure type safety
+- [x] **Projection** (`calm.rs`, `kg.rs`): Map to temporal properties in target formats
+- [x] **Bindings**: Updated Python and TypeScript bindings for temporal operators
 
 **Testing**:
 
-- Golden test: `tests/temporal_semantics.sea` with various time expressions
-- Validation test: Ensure type errors for invalid temporal operations
+- [x] Golden test: `tests/temporal_semantics_tests.rs` with various time expressions
+- [x] Validation test: Ensure type errors for invalid temporal operations
+- [x] All 9 temporal semantics tests passing
+- [x] Full test suite passing (86 tests)
 
 ### 2. Units & Dimensions (Refinement)
 
@@ -412,7 +415,7 @@ These features improve the developer experience and safety.
 **Problem**: Need structured error reporting.
 **Implementation**:
 
-- [ ] **Runtime**: Define `SyntaxError`, `TypeError`, `UnitError`, etc.
+- [x] **Runtime**: Define `SyntaxError`, `TypeError`, `UnitError`, etc. (Implemented via `ValidationError` and `ErrorCode` in `sea-core/src/validation_error.rs`)
 - [ ] **Tooling**: Enhance CLI to report errors with source spans and hints.
 
 ## Phase 4: Polish (OPTIONAL)
@@ -442,7 +445,7 @@ These cross-cutting concerns must be addressed throughout all phases.
 **Problem**: Aggregations and iterations must be deterministic.
 **Implementation**:
 
-- [ ] **Semantics**: Enforce named collection enumeration order (e.g., lexicographical by ID).
+- [x] **Semantics**: Enforce named collection enumeration order (e.g., lexicographical by ID). (Implemented via `IndexMap` in `sea-core/src/graph/mod.rs` and verified in `tests/phase_14_determinism_tests.rs`)
 - [ ] **Validation**: Forbid side effects in aggregations.
 
 ### 15. Null Semantics & Type Safety
@@ -450,8 +453,8 @@ These cross-cutting concerns must be addressed throughout all phases.
 **Problem**: Underspecified behavior for missing values.
 **Implementation**:
 
-- [ ] **Design**: Decide between banning nulls (recommended) or strict 3-valued logic.
-- [ ] **Type System**: Separate `Quantity` vs `Numeric`. Enforce explicit unit casts.
+- [x] **Design**: Decide between banning nulls (recommended) or strict 3-valued logic. (Implemented strict 3-valued logic in `sea-core/src/policy/three_valued.rs`)
+- [x] **Type System**: Separate `Quantity` vs `Numeric`. Enforce explicit unit casts. (Implemented in `sea-core/src/policy/type_inference.rs` with `ExprType` and `TypeError::MixedQuantityNumeric`)
 
 ### 16. Unicode & Normalization
 

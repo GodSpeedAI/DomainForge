@@ -11,6 +11,13 @@ pub enum Expression {
         unit: String,
     },
 
+    TimeLiteral(String), // ISO 8601 timestamp
+
+    IntervalLiteral {
+        start: String, // Time string (e.g., "09:00")
+        end: String,   // Time string (e.g., "17:00")
+    },
+
     Variable(String),
 
     Binary {
@@ -73,6 +80,11 @@ pub enum BinaryOp {
     Contains,
     StartsWith,
     EndsWith,
+
+    // Temporal operators
+    Before,
+    After,
+    During,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -186,6 +198,10 @@ impl fmt::Display for Expression {
             Expression::QuantityLiteral { value, unit } => {
                 write!(f, "{} {}", value, unit)
             }
+            Expression::TimeLiteral(timestamp) => write!(f, "\"{}\"", timestamp),
+            Expression::IntervalLiteral { start, end } => {
+                write!(f, "interval(\"{}\", \"{}\")", start, end)
+            }
             Expression::Variable(n) => write!(f, "{}", n),
             Expression::Binary { op, left, right } => {
                 write!(f, "({} {} {})", left, op, right)
@@ -263,6 +279,9 @@ impl fmt::Display for BinaryOp {
             BinaryOp::Contains => write!(f, "CONTAINS"),
             BinaryOp::StartsWith => write!(f, "STARTS_WITH"),
             BinaryOp::EndsWith => write!(f, "ENDS_WITH"),
+            BinaryOp::Before => write!(f, "BEFORE"),
+            BinaryOp::After => write!(f, "AFTER"),
+            BinaryOp::During => write!(f, "DURING"),
         }
     }
 }

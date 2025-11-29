@@ -100,7 +100,8 @@ comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)? }
 
 comparison_op = {
     ">=" | "<=" | "!=" | "=" | ">" | "<" |
-    ^"contains" | ^"startswith" | ^"endswith"
+    ^"contains" | ^"startswith" | ^"endswith" |
+    ^"before" | ^"after" | ^"during"
 }
 
 additive_expr = { multiplicative_expr ~ ((add_op ~ multiplicative_expr)*) }
@@ -160,7 +161,15 @@ collection = {
 member_access = { identifier ~ "." ~ identifier }
 
 // Literals
-literal = { multiline_string | string_literal | quantity_literal | number | boolean }
+literal = { time_literal | multiline_string | string_literal | interval_literal | quantity_literal | number | boolean }
+
+// Time literal (ISO 8601 timestamp)
+// Syntax: "2025-12-31T23:59:59Z"
+time_literal = @{ "\"" ~ ASCII_DIGIT{4} ~ "-" ~ ASCII_DIGIT{2} ~ "-" ~ ASCII_DIGIT{2} ~ "T" ~ ASCII_DIGIT{2} ~ ":" ~ ASCII_DIGIT{2} ~ ":" ~ ASCII_DIGIT{2} ~ ("Z" | (("+" | "-") ~ ASCII_DIGIT{2} ~ ":" ~ ASCII_DIGIT{2})) ~ "\"" }
+
+// Interval literal (function call syntax)
+// Syntax: interval("09:00", "17:00")
+interval_literal = { ^"interval" ~ "(" ~ string_literal ~ "," ~ string_literal ~ ")" }
 
 // Quantity literal with unit suffix
 // Syntax: 1_500 "USD"

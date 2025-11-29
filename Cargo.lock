@@ -3096,6 +3096,7 @@ dependencies = [
  "getrandom 0.2.16",
  "serde",
  "sha1_smol",
+ "wasm-bindgen",
 ]
 
 [[package]]

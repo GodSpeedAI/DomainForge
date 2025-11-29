@@ -286,6 +286,16 @@ impl Policy {
                         BinaryOp::EndsWith => l.ends_with(r),
                         _ => unreachable!(),
                     }),
+                BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
+                    // Temporal operators - for now, treat as string comparison
+                    // TODO: Implement proper temporal logic with chrono
+                    self.compare_strings(left, right, graph, |l, r| match op {
+                        BinaryOp::Before => l < r, // Lexicographic comparison as placeholder
+                        BinaryOp::After => l > r,
+                        BinaryOp::During => false, // Placeholder - requires interval logic
+                        _ => unreachable!(),
+                    })
+                }
             },
             Expression::Unary { op, operand } => {
                 let val = self.evaluate_expression_boolean(operand, graph)?;
@@ -318,6 +328,12 @@ impl Policy {
             }
             Expression::QuantityLiteral { .. } => {
                 Err("Cannot evaluate quantity literal in boolean context".to_string())
+            }
+            Expression::TimeLiteral(_) => {
+                Err("Cannot evaluate time literal in boolean context".to_string())
+            }
+            Expression::IntervalLiteral { .. } => {
+                Err("Cannot evaluate interval literal in boolean context".to_string())
             }
         }
     }
@@ -414,6 +430,30 @@ impl Policy {
                         _ => Ok(T::Null),
                     }
                 }
+                BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
+                    // Temporal operators - for now, treat as string comparison
+                    // TODO: Implement proper temporal logic with chrono
+                    let left_v = self.get_runtime_value(left, graph);
+                    let right_v = self.get_runtime_value(right, graph);
+                    match (left_v, right_v) {
+                        (Ok(lv), Ok(rv)) => {
+                            if lv.is_null() || rv.is_null() {
+                                Ok(T::Null)
+                            } else if let (Some(ls), Some(rs)) = (lv.as_str(), rv.as_str()) {
+                                let ok = match op {
+                                    BinaryOp::Before => ls < rs, // Lexicographic comparison as placeholder
+                                    BinaryOp::After => ls > rs,
+                                    BinaryOp::During => false, // Placeholder - requires interval logic
+                                    _ => unreachable!(),
+                                };
+                                Ok(T::from_option_bool(Some(ok)))
+                            } else {
+                                Ok(T::Null)
+                            }
+                        }
+                        _ => Ok(T::Null),
+                    }
+                }
             },
             Expression::Unary { op, operand } => {
                 let v = self.evaluate_expression_three_valued(operand, graph)?;
@@ -469,6 +509,8 @@ impl Policy {
             Expression::Aggregation { .. } => Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string()),
             Expression::AggregationComprehension { .. } => Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string()),
             Expression::QuantityLiteral { .. } => Err("Cannot convert quantity to boolean; compare against a threshold instead".to_string()),
+            Expression::TimeLiteral(_) => Err("Cannot convert time to boolean; use temporal comparison operators".to_string()),
+            Expression::IntervalLiteral { .. } => Err("Cannot convert interval to boolean; use temporal comparison operators".to_string()),
         }
     }
 
@@ -673,6 +715,10 @@ impl Policy {
             }
             Expression::QuantityLiteral { value, unit } => Ok(
                 serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit}),
+            ),
+            Expression::TimeLiteral(timestamp) => Ok(serde_json::json!(timestamp)),
+            Expression::IntervalLiteral { start, end } => Ok(
+                serde_json::json!({"__interval_start": start, "__interval_end": end}),
             ),
             _ => Err(
                 "Expected a runtime-resolvable expression (literal, member access, or aggregation)"

@@ -543,14 +543,18 @@ fn parse_not_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         .next()
         .ok_or_else(|| ParseError::GrammarError("Expected expression in NOT".to_string()))?;
 
-    // Parse the first inner expression
-    let expr = parse_expression(first)?;
-
-    // Always wrap with NOT operation
-    Ok(Expression::Unary {
-        op: UnaryOp::Not,
-        operand: Box::new(expr),
-    })
+    // Check if this is actually a NOT expression or just a comparison_expr
+    if first.as_rule() == Rule::not_expr {
+        // This is a recursive NOT, parse it
+        let expr = parse_expression(first)?;
+        Ok(Expression::Unary {
+            op: UnaryOp::Not,
+            operand: Box::new(expr),
+        })
+    } else {
+        // This is just a comparison_expr, parse it directly
+        parse_expression(first)
+    }
 }
 
 /// Parse comparison expression
@@ -588,6 +592,9 @@ fn parse_comparison_op(pair: Pair<Rule>) -> ParseResult<BinaryOp> {
         _ if op_str.eq_ignore_ascii_case("contains") => Ok(BinaryOp::Contains),
         _ if op_str.eq_ignore_ascii_case("startswith") => Ok(BinaryOp::StartsWith),
         _ if op_str.eq_ignore_ascii_case("endswith") => Ok(BinaryOp::EndsWith),
+        _ if op_str.eq_ignore_ascii_case("before") => Ok(BinaryOp::Before),
+        _ if op_str.eq_ignore_ascii_case("after") => Ok(BinaryOp::After),
+        _ if op_str.eq_ignore_ascii_case("during") => Ok(BinaryOp::During),
         _ => Err(ParseError::InvalidExpression(format!(
             "Unknown comparison operator: {}",
             op_str
@@ -843,6 +850,26 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             let value = parse_decimal(number_part)?;
             let unit = parse_string_literal(unit_part)?;
             Ok(Expression::QuantityLiteral { value, unit })
+        }
+        Rule::time_literal => {
+            // Parse ISO 8601 timestamp (already includes quotes in grammar)
+            let timestamp = inner.as_str();
+            // Remove surrounding quotes
+            let timestamp = timestamp.trim_start_matches('"').trim_end_matches('"');
+            Ok(Expression::TimeLiteral(timestamp.to_string()))
+        }
+        Rule::interval_literal => {
+            // Parse interval("start", "end")
+            let mut parts = inner.into_inner();
+            let start_part = parts.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected start time in interval literal".to_string())
+            })?;
+            let end_part = parts.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected end time in interval literal".to_string())
+            })?;
+            let start = parse_string_literal(start_part)?;
+            let end = parse_string_literal(end_part)?;
+            Ok(Expression::IntervalLiteral { start, end })
         }
         Rule::number => {
             let n = parse_decimal(inner)?;
