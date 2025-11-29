@@ -1,5 +1,5 @@
 language: en-US
-tone_instructions: "Generate concise, actionable, and unambiguous fix instructions. Specify exact file paths and edits; focus on mechanical details required for automated or manual application. Focus on critical issues only."
+tone_instructions: "Focus only on critical issues; Generate concise, actionable, and unambiguous fix instructions. Specify exact file paths and edits; focus on mechanical details required for automated or manual application. Focus on critical issues only."
 reviews:
   profile: assertive
   commit_status: true

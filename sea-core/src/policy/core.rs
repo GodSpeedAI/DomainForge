@@ -287,14 +287,25 @@ impl Policy {
                         _ => unreachable!(),
                     }),
                 BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
-                    // Temporal operators - for now, treat as string comparison
-                    // TODO: Implement proper temporal logic with chrono
-                    self.compare_strings(left, right, graph, |l, r| match op {
-                        BinaryOp::Before => l < r, // Lexicographic comparison as placeholder
-                        BinaryOp::After => l > r,
-                        BinaryOp::During => false, // Placeholder - requires interval logic
+                    // Temporal operators - parse and compare ISO 8601 timestamps
+                    let left_str = self.get_string_value(left, graph)?;
+                    let right_str = self.get_string_value(right, graph)?;
+                    
+                    // Parse timestamps using chrono
+                    let left_dt = chrono::DateTime::parse_from_rfc3339(&left_str)
+                        .map_err(|e| format!("Failed to parse left timestamp '{}': {}", left_str, e))?;
+                    let right_dt = chrono::DateTime::parse_from_rfc3339(&right_str)
+                        .map_err(|e| format!("Failed to parse right timestamp '{}': {}", right_str, e))?;
+                    
+                    let result = match op {
+                        BinaryOp::Before => left_dt < right_dt,
+                        BinaryOp::After => left_dt > right_dt,
+                        BinaryOp::During => {
+                            return Err("'during' operator requires interval semantics which are not yet implemented. Use 'before' and 'after' for timestamp comparisons.".to_string())
+                        }
                         _ => unreachable!(),
-                    })
+                    };
+                    Ok(result)
                 }
             },
             Expression::Unary { op, operand } => {
@@ -431,8 +442,12 @@ impl Policy {
                     }
                 }
                 BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
-                    // Temporal operators - for now, treat as string comparison
-                    // TODO: Implement proper temporal logic with chrono
+                    // Temporal operators
+                    if matches!(op, BinaryOp::During) {
+                        return Err("'during' operator requires interval semantics which are not yet implemented. Use 'before' and 'after' for timestamp comparisons.".to_string());
+                    }
+
+                    // Parse and compare ISO 8601 timestamps
                     let left_v = self.get_runtime_value(left, graph);
                     let right_v = self.get_runtime_value(right, graph);
                     match (left_v, right_v) {
@@ -440,13 +455,22 @@ impl Policy {
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
                             } else if let (Some(ls), Some(rs)) = (lv.as_str(), rv.as_str()) {
-                                let ok = match op {
-                                    BinaryOp::Before => ls < rs, // Lexicographic comparison as placeholder
-                                    BinaryOp::After => ls > rs,
-                                    BinaryOp::During => false, // Placeholder - requires interval logic
+                                // Parse timestamps using chrono
+                                let left_dt = match chrono::DateTime::parse_from_rfc3339(ls) {
+                                    Ok(dt) => dt,
+                                    Err(_) => return Ok(T::Null), // Invalid timestamp -> Null
+                                };
+                                let right_dt = match chrono::DateTime::parse_from_rfc3339(rs) {
+                                    Ok(dt) => dt,
+                                    Err(_) => return Ok(T::Null), // Invalid timestamp -> Null
+                                };
+                                
+                                let result = match op {
+                                    BinaryOp::Before => left_dt < right_dt,
+                                    BinaryOp::After => left_dt > right_dt,
                                     _ => unreachable!(),
                                 };
-                                Ok(T::from_option_bool(Some(ok)))
+                                Ok(T::from_option_bool(Some(result)))
                             } else {
                                 Ok(T::Null)
                             }

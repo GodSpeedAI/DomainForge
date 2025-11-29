@@ -87,8 +87,25 @@ fn test_parse_after_operator() {
     assert!(result.is_ok(), "Failed to parse after operator: {:?}", result.err());
     
     match result.unwrap() {
-        Expression::Binary { op, .. } => {
+        Expression::Binary { op, left, right } => {
             assert_eq!(op, BinaryOp::After);
+            
+            // Verify left side is member access
+            match *left {
+                Expression::MemberAccess { object, member } => {
+                    assert_eq!(object, "f");
+                    assert_eq!(member, "resolved_at");
+                }
+                other => panic!("Expected MemberAccess on left, got {:?}", other),
+            }
+            
+            // Verify right side is time literal
+            match *right {
+                Expression::TimeLiteral(timestamp) => {
+                    assert_eq!(timestamp, "2025-01-01T00:00:00Z");
+                }
+                other => panic!("Expected TimeLiteral on right, got {:?}", other),
+            }
         }
         other => panic!("Expected Binary expression, got {:?}", other),
     }

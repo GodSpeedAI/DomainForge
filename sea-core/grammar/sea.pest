@@ -163,8 +163,9 @@ member_access = { identifier ~ "." ~ identifier }
 // Literals
 literal = { time_literal | multiline_string | string_literal | interval_literal | quantity_literal | number | boolean }
 
-// Time literal (ISO 8601 timestamp)
-// Syntax: "2025-12-31T23:59:59Z"
+// Time literal (ISO 8601 timestamp with required timezone)
+// Syntax: "2025-12-31T23:59:59Z" or "2025-12-31T23:59:59+05:00"
+// Note: Timezone is required to ensure unambiguous temporal comparisons
 time_literal = @{ "\"" ~ ASCII_DIGIT{4} ~ "-" ~ ASCII_DIGIT{2} ~ "-" ~ ASCII_DIGIT{2} ~ "T" ~ ASCII_DIGIT{2} ~ ":" ~ ASCII_DIGIT{2} ~ ":" ~ ASCII_DIGIT{2} ~ ("Z" | (("+" | "-") ~ ASCII_DIGIT{2} ~ ":" ~ ASCII_DIGIT{2})) ~ "\"" }
 
 // Interval literal (function call syntax)

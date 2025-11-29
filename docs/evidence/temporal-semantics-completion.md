@@ -50,9 +50,11 @@ Updated `check_comparison` to validate temporal type combinations.
 
 ### 5. Policy Evaluation (`sea-core/src/policy/core.rs`)
 
-- Added temporal expression evaluation (placeholder implementation using lexicographic comparison)
+- Added temporal expression evaluation using `chrono` for ISO 8601 parsing and comparison
 - Integrated temporal operators into both boolean and three-valued logic evaluation
-- Added proper error messages for invalid temporal operations
+- Implemented proper error handling:
+  - `before`/`after`: Returns `Null` (unsatisfied) for invalid timestamps in 3VL
+  - `during`: Returns explicit error as interval semantics are not yet implemented
 
 ### 6. CALM Export (`sea-core/src/calm/export.rs`)
 
@@ -83,9 +85,24 @@ All 9 tests passing:
 ✓ test_complex_temporal_policy
 ```
 
+### Temporal Evaluation Tests (`tests/temporal_evaluation_tests.rs`)
+
+All 8 tests passing:
+
+```
+✓ test_temporal_before_evaluation_true
+✓ test_temporal_before_evaluation_false
+✓ test_temporal_after_evaluation_true
+✓ test_temporal_after_evaluation_false
+✓ test_temporal_timezone_aware_comparison
+✓ test_temporal_invalid_timestamp_error
+✓ test_temporal_during_not_implemented
+✓ test_temporal_same_timestamp_not_before
+```
+
 ### Full Test Suite
 
-All existing tests continue to pass (86 tests), confirming no regressions.
+All existing tests continue to pass (94 tests total), confirming no regressions.
 
 ## Example Usage
 
@@ -115,12 +132,11 @@ Policy sla_compliance as:
 
 ## Future Enhancements
 
-The current implementation uses lexicographic string comparison as a placeholder. Future work should:
+The current implementation uses `chrono` for robust datetime comparison. Future work should:
 
-1. Integrate `chrono` crate for proper datetime parsing and comparison
-2. Implement interval containment logic for the `during` operator
-3. Add support for relative time expressions (e.g., `24 "hours"`)
-4. Add timezone-aware comparisons
+1. Implement interval containment logic for the `during` operator
+2. Add support for relative time expressions (e.g., `24 "hours"`)
+3. Add support for duration arithmetic
 
 ## Files Modified
 
