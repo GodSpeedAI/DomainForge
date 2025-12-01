@@ -239,6 +239,8 @@ Pattern "ValidAddress" {
 - [ ] **Parser** (`parser.rs`): Parse regex strings, validate regex syntax
 - [ ] **Semantics** (`validator.rs`): Compile regex patterns, cache for performance
 - [ ] **Runtime** (`evaluator.rs`): Implement pattern matching using `regex` crate
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 
@@ -274,6 +276,8 @@ Policy throughput_limit as:
 - [ ] **AST** (`ast.rs`): Extend `AggregationExpression` with `GroupBy { key, aggregation }`
 - [ ] **Semantics** (`evaluator.rs`): Implement grouping with deterministic ordering
 - [ ] **Validation**: Ensure grouped expressions only reference group key or aggregates
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 
@@ -312,6 +316,9 @@ Policy approval_required as:
 - [ ] **AST** (`ast.rs`): Add `RoleDecl`, `RelationDecl { subject, predicate, object, via }`
 - [ ] **KG Projection** (`kg.rs`): Map to RDF triples with typed predicates
 - [ ] **SBVR Projection** (`sbvr.rs`): Generate fact type definitions
+- [ ] **Semantics** (`validator.rs`): Validate role assignments and relation integrity
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 
@@ -344,6 +351,8 @@ ConceptChange "Vendor_v2_migration"
 - [ ] **AST** (`ast.rs`): Add `ConceptChangeDecl`, version metadata to all declaration nodes
 - [ ] **Semantics** (`validator.rs`): Implement version resolution, detect semantic drift
 - [ ] **KGS**: Store version history, enable temporal queries
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 
@@ -352,7 +361,7 @@ ConceptChange "Vendor_v2_migration"
 
 ### 7. Instance Declarations
 
-**Problem**: Cannot define concrete data instances in DSL.
+**Problem**: Cannot define concrete data instances in DSL. (verify the problem is still valid)
 
 **Syntax Example**:
 
@@ -373,6 +382,8 @@ Policy vendor_specific as:
 - [ ] **AST** (`ast.rs`): Add `InstanceDecl { id, entity_type, fields }`
 - [ ] **Semantics** (`validator.rs`): Validate instances against entity schemas
 - [ ] **KGS**: Store instances as nodes with `rdf:type` pointing to entity class
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 
@@ -391,6 +402,8 @@ These features improve the developer experience and safety.
 - [ ] **Grammar**: Add `Metric` declaration.
 - [ ] **AST**: Add `MetricDecl`.
 - [ ] **Semantics**: Bind metrics to external signals or internal aggregations.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 9. Projection Contracts
 
@@ -400,6 +413,8 @@ These features improve the developer experience and safety.
 - [ ] **Grammar**: Add syntax for defining mappings (e.g., `mapping <name> for <target>`).
 - [ ] **AST**: Add `MappingDecl`.
 - [ ] **Semantics**: Implement projection generators based on these contracts.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 10. Module System
 
@@ -409,6 +424,8 @@ These features improve the developer experience and safety.
 - [ ] **Grammar**: Add `import` and `export` keywords.
 - [ ] **AST**: Add `ImportDecl`, `ExportDecl`.
 - [ ] **Semantics**: Implement module resolution and namespacing.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 11. Error Model & Diagnostics
 
@@ -417,6 +434,8 @@ These features improve the developer experience and safety.
 
 - [x] **Runtime**: Define `SyntaxError`, `TypeError`, `UnitError`, etc. (Implemented via `ValidationError` and `ErrorCode` in `sea-core/src/validation_error.rs`)
 - [ ] **Tooling**: Enhance CLI to report errors with source spans and hints.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ## Phase 4: Polish (OPTIONAL)
 
@@ -427,6 +446,8 @@ These features improve the developer experience and safety.
 
 - [ ] **Grammar**: Add `icontains`, `istartswith`, `iendswith`.
 - [ ] **AST**: Add corresponding operators.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 13. Index Semantics
 
@@ -435,6 +456,8 @@ These features improve the developer experience and safety.
 
 - [ ] **Grammar**: Add syntax for querying by tags or metadata.
 - [ ] **Semantics**: Optimize queries based on indices.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ## Phase 5: Semantics & Safety (CRITICAL - Ongoing)
 
@@ -447,6 +470,8 @@ These cross-cutting concerns must be addressed throughout all phases.
 
 - [x] **Semantics**: Enforce named collection enumeration order (e.g., lexicographical by ID). (Implemented via `IndexMap` in `sea-core/src/graph/mod.rs` and verified in `tests/phase_14_determinism_tests.rs`)
 - [ ] **Validation**: Forbid side effects in aggregations.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 15. Null Semantics & Type Safety
 
@@ -455,6 +480,8 @@ These cross-cutting concerns must be addressed throughout all phases.
 
 - [x] **Design**: Decide between banning nulls (recommended) or strict 3-valued logic. (Implemented strict 3-valued logic in `sea-core/src/policy/three_valued.rs`)
 - [x] **Type System**: Separate `Quantity` vs `Numeric`. Enforce explicit unit casts. (Implemented in `sea-core/src/policy/type_inference.rs` with `ExprType` and `TypeError::MixedQuantityNumeric`)
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 16. Unicode & Normalization
 
@@ -463,6 +490,8 @@ These cross-cutting concerns must be addressed throughout all phases.
 
 - [ ] **Parser**: Enforce NFC normalization for identifiers.
 - [ ] **Semantics**: Define quoting rules for punctuation-heavy names.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ## Phase 6: Ecosystem Integration (Temporal DB)
 
@@ -476,6 +505,8 @@ These features enable deep integration with the Temporal DB and VibesPro ecosyst
 - [ ] **Grammar**: Add `@risk("low"|"medium"|"high"|"critical")` annotation.
 - [ ] **Grammar**: Add `@governance_policy` annotation to link to external governance docs.
 - [ ] **AST**: Expose these annotations to the projection engine.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 18. Architecture & Generator Metadata
 
@@ -484,6 +515,8 @@ These features enable deep integration with the Temporal DB and VibesPro ecosyst
 
 - [ ] **Grammar**: Add `@architecture_profile` and `@generator_options` to file headers.
 - [ ] **Semantics**: Propagate these to the `TemporalContextKey` during generation.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ### 19. Simulation Semantics
 
@@ -493,6 +526,8 @@ These features enable deep integration with the Temporal DB and VibesPro ecosyst
 - [ ] **Grammar**: Add `Simulation` block or `@simulated` annotation.
 - [ ] **Semantics**: Allow defining probabilistic flows (e.g., `quantity ~ normal(100, 10)`).
 - [ ] **Runtime**: Support "simulation mode" execution flag.
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 ## Phase 7: Semantic Control Plane (Boolean-Semantic Framework)
 
@@ -524,6 +559,8 @@ Entity "PaymentProcessor"
 - [ ] **AST** (`ast.rs`): Add `SemanticCoordinates { scope: f64, modality: f64 }` to declarations
 - [ ] **Validation**: Ensure 0.0 <= scope, modality <= 1.0
 - [ ] **Projection**: Include in `TemporalContextKey` for generator queries
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 
@@ -557,6 +594,8 @@ Strategy "generate_marketing_copy"
 - [ ] **AST** (`ast.rs`): Add `StrategyDecl { name, steps: Vec<CardinalState> }`
 - [ ] **Runtime** (`generator.rs`): Validate transitions are orthogonal (only one coordinate changes per step)
 - [ ] **GovernedSpeed Integration**: Reject generation plans with diagonal jumps
+- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
+- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
 **Testing**:
 

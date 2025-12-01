@@ -5,9 +5,13 @@ use sea_core::policy::{BinaryOp, Expression};
 fn test_parse_time_literal() {
     let source = r#""2025-12-31T23:59:59Z""#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse time literal: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse time literal: {:?}",
+        result.err()
+    );
+
     match result.unwrap() {
         Expression::TimeLiteral(timestamp) => {
             assert_eq!(timestamp, "2025-12-31T23:59:59Z");
@@ -20,9 +24,13 @@ fn test_parse_time_literal() {
 fn test_parse_time_literal_with_offset() {
     let source = r#""2025-12-31T23:59:59+05:00""#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse time literal with offset: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse time literal with offset: {:?}",
+        result.err()
+    );
+
     match result.unwrap() {
         Expression::TimeLiteral(timestamp) => {
             assert_eq!(timestamp, "2025-12-31T23:59:59+05:00");
@@ -35,9 +43,13 @@ fn test_parse_time_literal_with_offset() {
 fn test_parse_interval_literal() {
     let source = r#"interval("09:00", "17:00")"#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse interval literal: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse interval literal: {:?}",
+        result.err()
+    );
+
     match result.unwrap() {
         Expression::IntervalLiteral { start, end } => {
             assert_eq!(start, "09:00");
@@ -51,13 +63,17 @@ fn test_parse_interval_literal() {
 fn test_parse_before_operator() {
     let source = r#"f.created_at before "2025-12-31T23:59:59Z""#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse before operator: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse before operator: {:?}",
+        result.err()
+    );
+
     match result.unwrap() {
         Expression::Binary { op, left, right } => {
             assert_eq!(op, BinaryOp::Before);
-            
+
             // Verify left side is member access
             match *left {
                 Expression::MemberAccess { object, member } => {
@@ -66,7 +82,7 @@ fn test_parse_before_operator() {
                 }
                 other => panic!("Expected MemberAccess on left, got {:?}", other),
             }
-            
+
             // Verify right side is time literal
             match *right {
                 Expression::TimeLiteral(timestamp) => {
@@ -83,13 +99,17 @@ fn test_parse_before_operator() {
 fn test_parse_after_operator() {
     let source = r#"f.resolved_at after "2025-01-01T00:00:00Z""#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse after operator: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse after operator: {:?}",
+        result.err()
+    );
+
     match result.unwrap() {
         Expression::Binary { op, left, right } => {
             assert_eq!(op, BinaryOp::After);
-            
+
             // Verify left side is member access
             match *left {
                 Expression::MemberAccess { object, member } => {
@@ -98,7 +118,7 @@ fn test_parse_after_operator() {
                 }
                 other => panic!("Expected MemberAccess on left, got {:?}", other),
             }
-            
+
             // Verify right side is time literal
             match *right {
                 Expression::TimeLiteral(timestamp) => {
@@ -115,13 +135,17 @@ fn test_parse_after_operator() {
 fn test_parse_during_operator() {
     let source = r#"f.timestamp during interval("09:00", "17:00")"#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse during operator: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse during operator: {:?}",
+        result.err()
+    );
+
     match result.unwrap() {
         Expression::Binary { op, left, right } => {
             assert_eq!(op, BinaryOp::During);
-            
+
             // Verify left side is member access
             match *left {
                 Expression::MemberAccess { object, member } => {
@@ -130,7 +154,7 @@ fn test_parse_during_operator() {
                 }
                 other => panic!("Expected MemberAccess on left, got {:?}", other),
             }
-            
+
             // Verify right side is interval literal
             match *right {
                 Expression::IntervalLiteral { start, end } => {
@@ -148,12 +172,15 @@ fn test_parse_during_operator() {
 fn test_temporal_expression_display() {
     let time_expr = Expression::TimeLiteral("2025-12-31T23:59:59Z".to_string());
     assert_eq!(format!("{}", time_expr), r#""2025-12-31T23:59:59Z""#);
-    
+
     let interval_expr = Expression::IntervalLiteral {
         start: "09:00".to_string(),
         end: "17:00".to_string(),
     };
-    assert_eq!(format!("{}", interval_expr), r#"interval("09:00", "17:00")"#);
+    assert_eq!(
+        format!("{}", interval_expr),
+        r#"interval("09:00", "17:00")"#
+    );
 }
 
 #[test]
@@ -168,12 +195,18 @@ fn test_complex_temporal_policy() {
     // Test a more complex policy with temporal logic
     let source = r#"(f.created_at before "2025-12-31T23:59:59Z") and (f.timestamp during interval("09:00", "17:00"))"#;
     let result = parse_expression_from_str(source);
-    
-    assert!(result.is_ok(), "Failed to parse complex temporal policy: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse complex temporal policy: {:?}",
+        result.err()
+    );
+
     // Just verify it parses successfully
     match result.unwrap() {
-        Expression::Binary { op: BinaryOp::And, .. } => {
+        Expression::Binary {
+            op: BinaryOp::And, ..
+        } => {
             // Success - we have an AND expression with temporal sub-expressions
         }
         other => panic!("Expected AND expression, got {:?}", other),

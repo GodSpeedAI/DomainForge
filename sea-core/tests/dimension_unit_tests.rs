@@ -2,6 +2,7 @@
 use rust_decimal_macros::dec;
 use sea_core::parser::ast::AstNode;
 use sea_core::parser::parse_source;
+use sea_core::units::{Dimension, UnitRegistry};
 #[test]
 fn test_parse_dimension() {
     let source = r#"
@@ -51,4 +52,15 @@ fn test_parse_unit_with_decimal_factor() {
         }
         _ => panic!("Expected UnitDeclaration"),
     }
+}
+
+#[test]
+fn test_register_from_json_case_insensitive_dimension() {
+    let mut registry = UnitRegistry::new();
+    let json = r#"[{"symbol":"NTEST","name":"Test","dimension":"currency","base_factor":1.0,"base_unit":"USD"}]"#;
+    registry
+        .register_from_json(json)
+        .expect("Failed to register from json");
+    let unit = registry.get_unit("NTEST").expect("Unit not registered");
+    assert_eq!(unit.dimension(), &Dimension::Currency);
 }

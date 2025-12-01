@@ -290,13 +290,16 @@ impl Policy {
                     // Temporal operators - parse and compare ISO 8601 timestamps
                     let left_str = self.get_string_value(left, graph)?;
                     let right_str = self.get_string_value(right, graph)?;
-                    
+
                     // Parse timestamps using chrono
-                    let left_dt = chrono::DateTime::parse_from_rfc3339(&left_str)
-                        .map_err(|e| format!("Failed to parse left timestamp '{}': {}", left_str, e))?;
-                    let right_dt = chrono::DateTime::parse_from_rfc3339(&right_str)
-                        .map_err(|e| format!("Failed to parse right timestamp '{}': {}", right_str, e))?;
-                    
+                    let left_dt = chrono::DateTime::parse_from_rfc3339(&left_str).map_err(|e| {
+                        format!("Failed to parse left timestamp '{}': {}", left_str, e)
+                    })?;
+                    let right_dt =
+                        chrono::DateTime::parse_from_rfc3339(&right_str).map_err(|e| {
+                            format!("Failed to parse right timestamp '{}': {}", right_str, e)
+                        })?;
+
                     let result = match op {
                         BinaryOp::Before => left_dt < right_dt,
                         BinaryOp::After => left_dt > right_dt,
@@ -464,7 +467,7 @@ impl Policy {
                                     Ok(dt) => dt,
                                     Err(_) => return Ok(T::Null), // Invalid timestamp -> Null
                                 };
-                                
+
                                 let result = match op {
                                     BinaryOp::Before => left_dt < right_dt,
                                     BinaryOp::After => left_dt > right_dt,
@@ -741,9 +744,9 @@ impl Policy {
                 serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit}),
             ),
             Expression::TimeLiteral(timestamp) => Ok(serde_json::json!(timestamp)),
-            Expression::IntervalLiteral { start, end } => Ok(
-                serde_json::json!({"__interval_start": start, "__interval_end": end}),
-            ),
+            Expression::IntervalLiteral { start, end } => {
+                Ok(serde_json::json!({"__interval_start": start, "__interval_end": end}))
+            }
             _ => Err(
                 "Expected a runtime-resolvable expression (literal, member access, or aggregation)"
                     .to_string(),

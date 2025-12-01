@@ -16,6 +16,22 @@ pub enum Dimension {
     Custom(String),
 }
 
+impl Dimension {
+    /// Parse a dimension name in a case-insensitive way and map to builtin dimension
+    pub fn parse(name: &str) -> Self {
+        match name.to_ascii_lowercase().as_str() {
+            "mass" => Dimension::Mass,
+            "length" => Dimension::Length,
+            "volume" => Dimension::Volume,
+            "currency" => Dimension::Currency,
+            "time" => Dimension::Time,
+            "temperature" => Dimension::Temperature,
+            "count" => Dimension::Count,
+            other => Dimension::Custom(other.to_string()),
+        }
+    }
+}
+
 impl std::fmt::Display for Dimension {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -387,16 +403,7 @@ impl UnitRegistry {
                 to: e.to_string(),
             })?;
         for cfg in parsed {
-            let dim = match cfg.dimension.as_str() {
-                "Mass" => Dimension::Mass,
-                "Length" => Dimension::Length,
-                "Volume" => Dimension::Volume,
-                "Currency" => Dimension::Currency,
-                "Time" => Dimension::Time,
-                "Temperature" => Dimension::Temperature,
-                "Count" => Dimension::Count,
-                other => Dimension::Custom(other.to_string()),
-            };
+            let dim = Dimension::parse(&cfg.dimension);
             let factor = Decimal::from_f64(cfg.base_factor).ok_or(UnitError::ZeroBaseFactor)?;
             if factor == Decimal::ZERO {
                 return Err(UnitError::ZeroBaseFactor);
