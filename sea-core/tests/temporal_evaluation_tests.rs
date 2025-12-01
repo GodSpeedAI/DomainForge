@@ -1,5 +1,5 @@
 use sea_core::parser::parse_expression_from_str;
-use sea_core::policy::{Expression, Policy};
+use sea_core::policy::Policy;
 use sea_core::Graph;
 
 #[test]
