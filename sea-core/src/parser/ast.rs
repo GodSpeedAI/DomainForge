@@ -720,6 +720,60 @@ fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     let collection_pair = inner.next().ok_or_else(|| {
         ParseError::GrammarError("Expected collection in aggregation expression".to_string())
     })?;
+
+    // Aggregation can be a simple form (e.g., sum(flows), sum(flows.quantity))
+    // or the comprehension form (e.g., sum(f in flows where f.resource = "Money": f.quantity as "USD")).
+    if collection_pair.as_rule() == Rule::aggregation_comprehension {
+        // Parse aggregation comprehension
+        let comp_vec: Vec<_> = collection_pair.into_inner().collect();
+        // Debugging output removed
+
+        let mut comp_inner = comp_vec.into_iter();
+        let variable_pair = comp_inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected variable in aggregation comprehension".to_string())
+        })?;
+        let variable = parse_identifier(variable_pair)?;
+        // Next token should be collection
+        let collection_token = comp_inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected collection in aggregation comprehension".to_string())
+        })?;
+        let collection_name = parse_collection(collection_token)?;
+        // Next token should be predicate expression
+        // skip 'where' token and parse predicate
+        let predicate_pair = comp_inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected predicate expression in aggregation comprehension".to_string())
+        })?;
+        let predicate = parse_expression(predicate_pair)?;
+        // Next token should be projection expression
+        let projection_pair = comp_inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected projection expression in aggregation comprehension".to_string())
+        })?;
+        let projection = parse_expression(projection_pair)?;
+        // Optional 'as' unit
+        let mut target_unit: Option<String> = None;
+        if let Some(as_pair) = comp_inner.next() {
+            // The 'as' token may be present and followed by a string literal; or it may directly be the string literal
+            if as_pair.as_rule() == Rule::string_literal {
+                target_unit = Some(parse_string_literal(as_pair)?);
+            } else if as_pair.as_rule() == Rule::identifier && as_pair.as_str().eq_ignore_ascii_case("as") {
+                if let Some(unit_pair) = comp_inner.next() {
+                    if unit_pair.as_rule() == Rule::string_literal {
+                        target_unit = Some(parse_string_literal(unit_pair)?);
+                    }
+                }
+            }
+        }
+
+        return Ok(Expression::AggregationComprehension {
+            function,
+            variable,
+            collection: Box::new(Expression::Variable(collection_name)),
+            predicate: Box::new(predicate),
+            projection: Box::new(projection),
+            target_unit,
+        });
+    }
+
     let collection = parse_collection(collection_pair)?;
 
     let mut field: Option<String> = None;

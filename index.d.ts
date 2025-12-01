@@ -25,7 +25,10 @@ export const enum BinaryOp {
   Divide = 11,
   Contains = 12,
   StartsWith = 13,
-  EndsWith = 14
+  EndsWith = 14,
+  Before = 15,
+  After = 16,
+  During = 17
 }
 /** Severity level for policy violations */
 export const enum Severity {
@@ -154,4 +157,16 @@ export declare class NamespaceRegistry {
   namespaceFor(path: string, failOnAmbiguity?: boolean | undefined | null): string
   get root(): string
   get defaultNamespace(): string
+}
+export declare class Dimension {
+  static parse(name: string): Dimension
+  get name(): string
+}
+export declare class Unit {
+  constructor(symbol: string, name: string, dimension: string, baseFactor: number, baseUnit: string)
+  get symbol(): string
+  get name(): string
+  get dimension(): string
+  get baseFactor(): number
+  get baseUnit(): string
 }

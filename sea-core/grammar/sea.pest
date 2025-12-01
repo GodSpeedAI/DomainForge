@@ -33,7 +33,7 @@ entity_decl = {
 // Syntax: Resource "Name" in domain
 // Syntax: Resource "Name" units
 // Syntax: Resource "Name"
-in_keyword = { ^"in" }
+in_keyword = { "in" }
 
 resource_decl = {
     ^"resource" ~ name ~ (
@@ -133,11 +133,11 @@ aggregation_expr = {
 }
 
 aggregation_comprehension = {
-    identifier ~ ^"in" ~ collection ~ ^"where" ~ expression ~ ":" ~ expression ~ (^"as" ~ string_literal)?
+    identifier ~ "in" ~ collection ~ "where" ~ expression ~ ":" ~ expression ~ ("as" ~ string_literal)?
 }
 
 aggregation_simple = {
-    collection ~ ("." ~ identifier)? ~ (^"where" ~ expression)?
+    collection ~ ("." ~ identifier)? ~ ("where" ~ expression)?
 }
 
 aggregate_fn = {
@@ -148,7 +148,7 @@ aggregate_fn = {
 // Syntax: forall x in Collection: (condition)
 // Syntax: exists x in Collection: (condition)
 quantified_expr = {
-    quantifier ~ identifier ~ ^"in" ~ collection ~ ":" ~ "(" ~ expression ~ ")"
+    quantifier ~ identifier ~ "in" ~ collection ~ ":" ~ "(" ~ expression ~ ")"
 }
 
 quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }

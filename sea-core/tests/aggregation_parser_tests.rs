@@ -86,6 +86,7 @@ fn test_parse_aggregation_comprehension_with_unit() {
         Policy coerced as: sum(f in flows where f.resource = "Money": f.quantity as "USD") > 1000 "USD"
     "#;
 
+    // parser debug removed
     let ast = parse(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
 }
