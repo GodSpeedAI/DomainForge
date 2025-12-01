@@ -204,6 +204,51 @@ model.policy(
 
 </details>
 
+### 🏛️ **Bindings & Usage (Python, TypeScript, WASM)**
+
+There are language bindings for Python (PyO3), TypeScript (NAPI), and WASM (wasm-bindgen). Below are small usage snippets showing the `Dimension.parse` and `Unit` constructors.
+
+Python (PyO3):
+
+```python
+import sea_dsl
+
+# Parse a Dimension (case-insensitive)
+d = sea_dsl.Dimension.parse("currency")
+print(str(d))  # 'Currency'
+
+# Create a Unit in Python using the Rust-backed Unit constructor
+u = sea_dsl.Unit("USD", "US Dollar", "Currency", 1.0, "USD")
+print(u.symbol, u.base_unit)  # USD USD
+```
+
+TypeScript (napi-rs):
+
+```typescript
+import { Dimension, Unit } from '@domainforge/sea'
+
+const d1 = Dimension.parse('currency')
+console.log(d1.name) // 'Currency'
+
+const u = new Unit('USD', 'US Dollar', 'Currency', 1.0, 'USD')
+console.log(u.symbol, u.baseUnit)
+```
+
+WASM (wasm-bindgen in web context):
+
+```js
+import init, { Dimension, Unit } from './sea_core.js'
+await init()
+
+const d = new Dimension('currency')
+console.log(d.toString()) // 'Currency'
+
+const u = new Unit('USD', 'US Dollar', 'Currency', 1.0, 'USD')
+console.log(u.symbol())
+```
+
+These examples demonstrate the cross-language parity for `Dimension` and `Unit` constructs backed by the Rust core.
+
 ---
 
 <details>
