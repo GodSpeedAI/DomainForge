@@ -64,3 +64,17 @@ fn test_register_from_json_case_insensitive_dimension() {
     let unit = registry.get_unit("NTEST").expect("Unit not registered");
     assert_eq!(unit.dimension(), &Dimension::Currency);
 }
+
+#[test]
+fn test_dimension_from_str_is_case_insensitive() {
+    use std::str::FromStr;
+    let d1 = Dimension::from_str("currency").unwrap();
+    let d2 = Dimension::from_str("Currency").unwrap();
+    let d3 = Dimension::from_str("CURRENCY").unwrap();
+    assert_eq!(d1, Dimension::Currency);
+    assert_eq!(d2, Dimension::Currency);
+    assert_eq!(d3, Dimension::Currency);
+    // Custom dims parse to lowercased custom name
+    let c = Dimension::from_str("MyDim").unwrap();
+    assert_eq!(c, Dimension::Custom("mydim".to_string()));
+}

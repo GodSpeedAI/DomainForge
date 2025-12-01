@@ -32,6 +32,14 @@ impl Dimension {
     }
 }
 
+impl std::str::FromStr for Dimension {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Dimension::parse(s))
+    }
+}
+
 impl std::fmt::Display for Dimension {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
