@@ -1014,7 +1014,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         match node {
             AstNode::Dimension { name } => {
                 use crate::units::{Dimension, UnitRegistry};
-                let dim = Dimension::Custom(name.clone());
+                let dim = Dimension::parse(name);
                 UnitRegistry::global().register_dimension(dim);
             }
             AstNode::UnitDeclaration {
@@ -1024,7 +1024,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 base_unit,
             } => {
                 use crate::units::{Dimension, Unit, UnitRegistry};
-                let dim = Dimension::Custom(dimension.clone());
+                let dim = Dimension::parse(dimension);
                 let unit = Unit::new(
                     symbol.clone(),
                     symbol.clone(),

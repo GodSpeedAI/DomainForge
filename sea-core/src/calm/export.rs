@@ -164,7 +164,9 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
         Expression::Literal(v) => v.to_string(),
         Expression::QuantityLiteral { value, unit } => format!("{} \"{}\"", value, unit),
         Expression::TimeLiteral(timestamp) => format!("\"{}\"", timestamp),
-        Expression::IntervalLiteral { start, end } => format!("interval(\"{}\", \"{}\")", start, end),
+        Expression::IntervalLiteral { start, end } => {
+            format!("interval(\"{}\", \"{}\")", start, end)
+        }
         Expression::Variable(s) => s.to_string(),
         Expression::Binary { op, left, right } => {
             let op_str = match op {
