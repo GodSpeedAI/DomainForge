@@ -56,6 +56,55 @@ impl Expression {
                     }
                 }
             }
+            Expression::GroupBy {
+                variable,
+                collection,
+                filter,
+                key,
+                condition,
+            } => {
+                let items = Self::get_collection(collection, graph)?;
+
+                // Filter items if filter is present
+                let filtered_items = if let Some(filter_expr) = filter {
+                    let mut filtered = Vec::new();
+                    for item in items {
+                        let substituted = filter_expr.substitute(variable, &item)?;
+                        let expanded = substituted.expand(graph)?;
+                        if Self::is_true_literal(&expanded) {
+                            filtered.push(item);
+                        }
+                    }
+                    filtered
+                } else {
+                    items
+                };
+
+                // Group items
+                let mut groups: std::collections::HashMap<String, Vec<serde_json::Value>> =
+                    std::collections::HashMap::new();
+                for item in filtered_items {
+                    let substituted_key = key.substitute(variable, &item)?;
+                    let expanded_key = substituted_key.expand(graph)?;
+                    let key_str = match expanded_key {
+                        Expression::Literal(v) => v.to_string(),
+                        _ => return Err("Group key must evaluate to a literal".to_string()),
+                    };
+                    groups.entry(key_str).or_default().push(item);
+                }
+
+                // Evaluate condition for each group
+                for (_group_key, group_items) in groups {
+                    // Substitute the variable with the group collection (as a Literal Array)
+                    // This allows aggregations inside the condition to use the group items
+                    let substituted_condition = condition.substitute(variable, &serde_json::Value::Array(group_items))?;
+                    let expanded = substituted_condition.expand(graph)?;
+                    if !Self::is_true_literal(&expanded) {
+                        return Ok(Expression::literal(false));
+                    }
+                }
+                Ok(Expression::literal(true))
+            }
             Expression::Binary { op, left, right } => {
                 let left_expanded = left.expand(graph)?;
                 let right_expanded = right.expand(graph)?;
@@ -84,6 +133,7 @@ impl Expression {
                 function,
                 variable,
                 collection,
+                window,
                 predicate,
                 projection,
                 target_unit,
@@ -92,6 +142,7 @@ impl Expression {
                     function,
                     variable,
                     collection,
+                    window,
                     predicate,
                     projection,
                     target_unit.as_deref(),
@@ -186,6 +237,7 @@ impl Expression {
                 function,
                 variable,
                 collection,
+                window,
                 predicate,
                 projection,
                 target_unit,
@@ -193,10 +245,41 @@ impl Expression {
                 function: function.clone(),
                 variable: variable.clone(),
                 collection: Box::new(collection.substitute(var, value)?),
+                window: window.clone(),
                 predicate: Box::new(predicate.substitute(var, value)?),
                 projection: Box::new(projection.substitute(var, value)?),
                 target_unit: target_unit.clone(),
             }),
+            Expression::GroupBy {
+                variable,
+                collection,
+                filter,
+                key,
+                condition,
+            } => {
+                // Similar to Quantifier, check if variable matches
+                if var == variable {
+                    Ok(Expression::GroupBy {
+                        variable: variable.clone(),
+                        collection: Box::new(collection.substitute(var, value)?),
+                        filter: filter.clone(),
+                        key: key.clone(),
+                        condition: condition.clone(),
+                    })
+                } else {
+                    Ok(Expression::GroupBy {
+                        variable: variable.clone(),
+                        collection: Box::new(collection.substitute(var, value)?),
+                        filter: filter
+                            .as_ref()
+                            .map(|f| f.substitute(var, value))
+                            .transpose()?
+                            .map(Box::new),
+                        key: Box::new(key.substitute(var, value)?),
+                        condition: Box::new(condition.substitute(var, value)?),
+                    })
+                }
+            }
             _ => Ok(self.clone()),
         }
     }
@@ -324,7 +407,8 @@ impl Expression {
                 }
                 _ => Err(format!("Unknown collection: {}", name)),
             },
-            _ => Err("Collection expression must be a variable".to_string()),
+            Expression::Literal(serde_json::Value::Array(arr)) => Ok(arr.clone()),
+            _ => Err("Collection expression must be a variable or array literal".to_string()),
         }
     }
 
@@ -502,12 +586,46 @@ impl Expression {
         function: &AggregateFunction,
         variable: &str,
         collection: &Expression,
+        window: &Option<crate::policy::WindowSpec>,
         predicate: &Expression,
         projection: &Expression,
         target_unit: Option<&str>,
         graph: &Graph,
     ) -> Result<serde_json::Value, String> {
         let items = Self::get_collection(collection, graph)?;
+
+        // Apply window filtering if present
+        let items = if let Some(w) = window {
+            let now = chrono::Utc::now();
+            let duration = match w.unit.as_str() {
+                "hour" | "hours" => chrono::Duration::hours(w.duration),
+                "minute" | "minutes" => chrono::Duration::minutes(w.duration),
+                "day" | "days" => chrono::Duration::days(w.duration),
+                "second" | "seconds" => chrono::Duration::seconds(w.duration),
+                _ => chrono::Duration::seconds(w.duration),
+            };
+
+            items
+                .into_iter()
+                .filter(|item| {
+                    let ts_str = item
+                        .get("timestamp")
+                        .or_else(|| item.get("created_at"))
+                        .and_then(|v| v.as_str());
+                    if let Some(s) = ts_str {
+                        if let Ok(ts) = chrono::DateTime::parse_from_rfc3339(s) {
+                            let ts_utc: chrono::DateTime<chrono::Utc> = ts.into();
+                            return ts_utc >= now - duration;
+                        }
+                    }
+                    // If no timestamp, we can't filter, so maybe exclude? Or include?
+                    // Safer to exclude if windowing is requested but data is missing.
+                    false
+                })
+                .collect()
+        } else {
+            items
+        };
 
         let mut projected_values = Vec::new();
         for item in items {

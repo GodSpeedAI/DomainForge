@@ -292,6 +292,7 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
             function,
             variable,
             collection,
+            window,
             predicate,
             projection,
             target_unit,
@@ -303,26 +304,54 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 AggregateFunction::Max => "max",
                 AggregateFunction::Avg => "avg",
             };
+            let window_str = if let Some(w) = window {
+                format!(" over last {} \"{}\"", w.duration, w.unit)
+            } else {
+                "".to_string()
+            };
             if let Some(unit) = target_unit {
                 format!(
-                    "{}({} in {} WHERE {}: {} as \"{}\")",
+                    "{}({} in {}{} WHERE {}: {} as \"{}\")",
                     fn_str,
                     variable,
                     serialize_expression_for_export(collection),
+                    window_str,
                     serialize_expression_for_export(predicate),
                     serialize_expression_for_export(projection),
                     unit
                 )
             } else {
                 format!(
-                    "{}({} in {} WHERE {}: {})",
+                    "{}({} in {}{} WHERE {}: {})",
                     fn_str,
                     variable,
                     serialize_expression_for_export(collection),
+                    window_str,
                     serialize_expression_for_export(predicate),
                     serialize_expression_for_export(projection)
                 )
             }
+        }
+        Expression::GroupBy {
+            variable,
+            collection,
+            filter,
+            key,
+            condition,
+        } => {
+            let filter_str = if let Some(f) = filter {
+                format!(" where {}", serialize_expression_for_export(f))
+            } else {
+                "".to_string()
+            };
+            format!(
+                "group_by({} in {}{}: {}) {{ {} }}",
+                variable,
+                serialize_expression_for_export(collection),
+                filter_str,
+                serialize_expression_for_export(key),
+                serialize_expression_for_export(condition)
+            )
         }
     }
 }

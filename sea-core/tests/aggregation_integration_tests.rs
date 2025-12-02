@@ -102,6 +102,7 @@ fn test_sum_aggregation_comprehension_filters() {
         function: AggregateFunction::Sum,
         variable: "f".to_string(),
         collection: Box::new(Expression::variable("flows")),
+        window: None,
         predicate: Box::new(predicate),
         projection: Box::new(projection),
         target_unit: None,

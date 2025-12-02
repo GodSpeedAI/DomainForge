@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WindowSpec {
+    pub duration: i64,
+    pub unit: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Expression {
     Literal(serde_json::Value),
 
@@ -19,6 +25,14 @@ pub enum Expression {
     },
 
     Variable(String),
+
+    GroupBy {
+        variable: String,
+        collection: Box<Expression>,
+        filter: Option<Box<Expression>>,
+        key: Box<Expression>,
+        condition: Box<Expression>,
+    },
 
     Binary {
         op: BinaryOp,
@@ -54,6 +68,7 @@ pub enum Expression {
         function: AggregateFunction,
         variable: String,
         collection: Box<Expression>,
+        window: Option<WindowSpec>,
         predicate: Box<Expression>,
         projection: Box<Expression>,
         target_unit: Option<String>,
@@ -204,6 +219,19 @@ impl fmt::Display for Expression {
                 write!(f, "interval(\"{}\", \"{}\")", start, end)
             }
             Expression::Variable(n) => write!(f, "{}", n),
+            Expression::GroupBy {
+                variable,
+                collection,
+                filter,
+                key,
+                condition,
+            } => {
+                write!(f, "group_by({} in {}", variable, collection)?;
+                if let Some(flt) = filter {
+                    write!(f, " WHERE {}", flt)?;
+                }
+                write!(f, ": {}) {{ {} }}", key, condition)
+            }
             Expression::Binary { op, left, right } => {
                 write!(f, "({} {} {})", left, op, right)
             }
@@ -244,15 +272,20 @@ impl fmt::Display for Expression {
                 function,
                 variable,
                 collection,
+                window,
                 predicate,
                 projection,
                 target_unit,
             } => {
                 write!(
                     f,
-                    "{}({} in {} WHERE {}: {}",
-                    function, variable, collection, predicate, projection
+                    "{}({} in {}",
+                    function, variable, collection
                 )?;
+                if let Some(w) = window {
+                    write!(f, " OVER LAST {} \"{}\"", w.duration, w.unit)?;
+                }
+                write!(f, " WHERE {}: {}", predicate, projection)?;
                 if let Some(unit) = target_unit {
                     write!(f, " AS \"{}\"", unit)?;
                 }

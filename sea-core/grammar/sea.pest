@@ -122,11 +122,18 @@ unary_expr = { ("-" ~ unary_expr) | primary_expr }
 
 primary_expr = {
     "(" ~ expression ~ ")" |
+    group_by_expr |
     aggregation_expr |
     quantified_expr |
     member_access |
     literal |
     identifier
+}
+
+// Group By Expression
+// Syntax: group_by(f in flows: f.to.name) { sum(f.quantity) > 10 }
+group_by_expr = {
+    ^"group_by" ~ "(" ~ identifier ~ "in" ~ collection ~ (^"where" ~ expression)? ~ ":" ~ expression ~ ")" ~ "{" ~ expression ~ "}"
 }
 
 // Aggregation expressions
@@ -139,11 +146,15 @@ aggregation_expr = {
 }
 
 aggregation_comprehension = {
-    identifier ~ "in" ~ collection ~ "where" ~ expression ~ ":" ~ expression ~ ("as" ~ string_literal)?
+    identifier ~ "in" ~ collection ~ window_clause? ~ "where" ~ expression ~ ":" ~ expression ~ ("as" ~ string_literal)?
+}
+
+window_clause = {
+    ^"over" ~ ^"last" ~ number ~ string_literal
 }
 
 aggregation_simple = {
-    collection ~ ("." ~ identifier)? ~ ("where" ~ expression)?
+    (collection | identifier) ~ ("." ~ identifier)? ~ ("where" ~ expression)?
 }
 
 aggregate_fn = {

@@ -4,7 +4,7 @@ use crate::parser::{ParseOptions, Rule, SeaParser};
 use crate::patterns::Pattern;
 use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
-    PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp,
+    PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp, WindowSpec,
 };
 use crate::primitives::{Entity, Flow, Resource};
 use crate::units::unit_from_string;
@@ -716,6 +716,7 @@ fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 
     match inner.as_rule() {
         Rule::expression => parse_expression(inner),
+        Rule::group_by_expr => parse_group_by_expr(inner),
         Rule::aggregation_expr => parse_aggregation_expr(inner),
         Rule::quantified_expr => parse_quantified_expr(inner),
         Rule::member_access => parse_member_access(inner),
@@ -763,14 +764,25 @@ fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             ParseError::GrammarError("Expected collection in aggregation comprehension".to_string())
         })?;
         let collection_name = parse_collection(collection_token)?;
-        // Next token should be predicate expression
-        // skip 'where' token and parse predicate
-        let predicate_pair = comp_inner.next().ok_or_else(|| {
+        let collection = Box::new(Expression::Variable(collection_name));
+
+        let mut next_pair = comp_inner.next().ok_or_else(|| {
             ParseError::GrammarError(
-                "Expected predicate expression in aggregation comprehension".to_string(),
+                "Expected predicate expression or window in aggregation comprehension".to_string(),
             )
         })?;
-        let predicate = parse_expression(predicate_pair)?;
+
+        let mut window = None;
+        if next_pair.as_rule() == Rule::window_clause {
+            window = Some(parse_window_clause(next_pair)?);
+            next_pair = comp_inner.next().ok_or_else(|| {
+                ParseError::GrammarError(
+                    "Expected predicate expression in aggregation comprehension".to_string(),
+                )
+            })?;
+        }
+
+        let predicate = parse_expression(next_pair)?;
         // Next token should be projection expression
         let projection_pair = comp_inner.next().ok_or_else(|| {
             ParseError::GrammarError(
@@ -798,20 +810,36 @@ fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         return Ok(Expression::AggregationComprehension {
             function,
             variable,
-            collection: Box::new(Expression::Variable(collection_name)),
+            collection,
+            window,
             predicate: Box::new(predicate),
             projection: Box::new(projection),
             target_unit,
         });
     }
 
-    let collection = parse_collection(collection_pair)?;
+    // Parse aggregation_simple
+    let mut simple_inner = collection_pair.into_inner();
+    
+    // First item is either collection or identifier
+    let first_pair = simple_inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected collection or identifier in aggregation_simple".to_string())
+    })?;
+    
+    let collection = match first_pair.as_rule() {
+        Rule::collection => parse_collection(first_pair)?,
+        Rule::identifier => parse_identifier(first_pair)?,
+        _ => return Err(ParseError::GrammarError(format!(
+            "Expected collection or identifier, got {:?}",
+            first_pair.as_rule()
+        ))),
+    };
 
     let mut field: Option<String> = None;
     let mut filter: Option<Expression> = None;
 
     // Parse optional field and filter
-    for item in inner {
+    for item in simple_inner {
         match item.as_rule() {
             Rule::identifier => {
                 field = Some(parse_identifier(item)?);
@@ -1075,6 +1103,68 @@ fn parse_decimal(pair: Pair<Rule>) -> ParseResult<Decimal> {
     pair.as_str()
         .parse()
         .map_err(|_| ParseError::InvalidQuantity(format!("Invalid decimal: {}", pair.as_str())))
+}
+
+/// Parse group_by expression
+fn parse_group_by_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let mut inner = pair.into_inner();
+
+    let variable_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected variable in group_by".to_string())
+    })?;
+    let variable = parse_identifier(variable_pair)?;
+
+    let collection_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected collection in group_by".to_string())
+    })?;
+    let collection_name = parse_collection(collection_pair)?;
+    let collection = Box::new(Expression::Variable(collection_name));
+
+    let next_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected key or where clause in group_by".to_string())
+    })?;
+
+    // Collect remaining pairs to determine structure
+    let mut remaining: Vec<Pair<Rule>> = vec![next_pair];
+    remaining.extend(inner);
+    
+    let (filter_expr, key_expr, condition_expr) = if remaining.len() == 3 {
+        // filter, key, condition
+        (Some(parse_expression(remaining[0].clone())?), parse_expression(remaining[1].clone())?, parse_expression(remaining[2].clone())?)
+    } else if remaining.len() == 2 {
+        // key, condition
+        (None, parse_expression(remaining[0].clone())?, parse_expression(remaining[1].clone())?)
+    } else {
+        return Err(ParseError::GrammarError(format!("Unexpected number of expressions in group_by: {}", remaining.len())));
+    };
+
+    Ok(Expression::GroupBy {
+        variable,
+        collection,
+        filter: filter_expr.map(Box::new),
+        key: Box::new(key_expr),
+        condition: Box::new(condition_expr),
+    })
+}
+
+/// Parse window clause
+fn parse_window_clause(pair: Pair<Rule>) -> ParseResult<WindowSpec> {
+    let mut inner = pair.into_inner();
+    
+    let duration_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected duration in window clause".to_string())
+    })?;
+    let duration = parse_number(duration_pair)? as i64;
+    
+    let unit_pair = inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected unit in window clause".to_string())
+    })?;
+    let unit = parse_string_literal(unit_pair)?;
+    
+    Ok(WindowSpec {
+        duration,
+        unit,
+    })
 }
 
 /// Convert AST to Graph

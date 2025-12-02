@@ -230,6 +230,20 @@ impl Policy {
                 Self::validate_aggregation_usage(collection, false)?;
                 Self::validate_aggregation_usage(condition, true)
             }
+            Expression::GroupBy {
+                collection,
+                filter,
+                key,
+                condition,
+                ..
+            } => {
+                Self::validate_aggregation_usage(collection, false)?;
+                if let Some(f) = filter {
+                    Self::validate_aggregation_usage(f, true)?;
+                }
+                Self::validate_aggregation_usage(key, false)?;
+                Self::validate_aggregation_usage(condition, true)
+            }
             _ => Ok(()),
         }
     }
@@ -349,6 +363,9 @@ impl Policy {
             }
             Expression::IntervalLiteral { .. } => {
                 Err("Cannot evaluate interval literal in boolean context".to_string())
+            }
+            Expression::GroupBy { .. } => {
+                Err("Cannot evaluate non-expanded group_by".to_string())
             }
         }
     }
@@ -572,6 +589,7 @@ impl Policy {
             Expression::QuantityLiteral { .. } => Err("Cannot convert quantity to boolean; compare against a threshold instead".to_string()),
             Expression::TimeLiteral(_) => Err("Cannot convert time to boolean; use temporal comparison operators".to_string()),
             Expression::IntervalLiteral { .. } => Err("Cannot convert interval to boolean; use temporal comparison operators".to_string()),
+            Expression::GroupBy { .. } => Err("Cannot evaluate non-expanded group_by".to_string()),
         }
     }
 
@@ -782,6 +800,7 @@ impl Policy {
                 function,
                 variable,
                 collection,
+                window,
                 predicate,
                 projection,
                 target_unit,
@@ -790,6 +809,7 @@ impl Policy {
                     function,
                     variable,
                     collection,
+                    window,
                     predicate,
                     projection,
                     target_unit.as_deref(),
