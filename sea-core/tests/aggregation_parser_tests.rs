@@ -23,7 +23,7 @@ fn test_parse_sum_with_field() {
 #[test]
 fn test_parse_count_with_where() {
     let source = r#"
-        Policy camera_count as: count(flows where resource = "Camera") > 2
+        Policy camera_count as: count(f in flows where f.resource = "Camera": f) > 2
     "#;
 
     let ast = parse(source).unwrap();

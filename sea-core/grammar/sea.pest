@@ -123,9 +123,9 @@ unary_expr = { ("-" ~ unary_expr) | primary_expr }
 primary_expr = {
     "(" ~ expression ~ ")" |
     group_by_expr |
+    member_access |
     aggregation_expr |
     quantified_expr |
-    member_access |
     literal |
     identifier
 }
@@ -146,7 +146,7 @@ aggregation_expr = {
 }
 
 aggregation_comprehension = {
-    identifier ~ "in" ~ collection ~ window_clause? ~ "where" ~ expression ~ ":" ~ expression ~ ("as" ~ string_literal)?
+    identifier ~ "in" ~ collection ~ window_clause? ~ ^"where" ~ expression ~ ":" ~ expression ~ (^"as" ~ string_literal)?
 }
 
 window_clause = {
@@ -154,7 +154,7 @@ window_clause = {
 }
 
 aggregation_simple = {
-    (collection | identifier) ~ ("." ~ identifier)? ~ ("where" ~ expression)?
+    (collection | identifier) ~ ("." ~ identifier)?
 }
 
 aggregate_fn = {

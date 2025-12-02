@@ -255,6 +255,8 @@ These features significantly expand the modeling capabilities.
 
 ### 4. Enhanced Aggregations
 
+**Status**: [x] Completed
+
 **Problem**: `group_by` and window functions are missing.
 
 **Syntax Example**:

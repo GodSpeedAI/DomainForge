@@ -100,10 +100,38 @@ fn test_group_by_entity_fail() {
 }
 
 #[test]
+fn test_group_by_count() {
+    let graph = build_test_graph();
+
+    // group_by(f in flows: f.to_entity) { count(f) >= 1 }
+    // Factory: 2 flows
+    // Shop: 1 flow
+    // Result: True (all groups have at least 1 flow)
+    
+    let source = r#"
+    Policy group_by_count as:
+        group_by(f in flows: f.to_entity) {
+            count(f) >= 1
+        }
+    "#;
+    
+    let ast = parse_source(source).unwrap();
+    let policy_decl = &ast.declarations[0];
+    
+    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = policy_decl {
+        let policy = Policy::new("group_by_count", expression.clone());
+        let result = policy.evaluate(&graph).unwrap();
+        assert!(result.is_satisfied);
+    } else {
+        panic!("Expected policy");
+    }
+}
+
+#[test]
 fn test_group_by_with_filter() {
     let graph = build_test_graph();
 
-    // group_by(f in flows where f.quantity > 150: f.to_entity) { count(f) == 1 }
+    // group_by(f in flows where f.quantity > 150: f.to_entity) { count(f) = 1 }
     // Filter: 
     // - Flow 1 (100) -> Excluded
     // - Flow 2 (200) -> Included (Factory)
@@ -111,13 +139,13 @@ fn test_group_by_with_filter() {
     // Groups:
     // - Factory: 1 flow
     // - Shop: 1 flow
-    // Condition: count == 1
+    // Condition: count = 1
     // Result: True
     
     let source = r#"
     Policy group_by_filter as:
         group_by(f in flows where f.quantity > 150: f.to_entity) {
-            count(f) == 1
+            count(f) = 1
         }
     "#;
     

@@ -54,6 +54,7 @@ fn test_validation_catches_unit_mismatch_in_policy() {
         function: AggregateFunction::Sum,
         variable: "f".to_string(),
         collection: Box::new(Expression::Variable("flows".to_string())),
+        window: None,
         predicate: Box::new(predicate),
         projection: Box::new(Expression::member_access("f", "quantity")),
         target_unit: Some("USD".to_string()),

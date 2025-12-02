@@ -758,9 +758,30 @@ impl Expression {
                     return Ok(Expression::Literal(serde_json::Value::Null));
                 }
 
+                let numeric_cmp = left_value.is_number() && right_value.is_number();
                 let reduced = match op {
-                    BinaryOp::Equal => serde_json::json!(left_value == right_value),
-                    BinaryOp::NotEqual => serde_json::json!(left_value != right_value),
+                    BinaryOp::Equal => {
+                        if numeric_cmp {
+                            let left_num = Self::value_to_f64(left_value)
+                                .ok_or_else(|| "Left operand is not numeric".to_string())?;
+                            let right_num = Self::value_to_f64(right_value)
+                                .ok_or_else(|| "Right operand is not numeric".to_string())?;
+                            serde_json::json!(left_num == right_num)
+                        } else {
+                            serde_json::json!(left_value == right_value)
+                        }
+                    }
+                    BinaryOp::NotEqual => {
+                        if numeric_cmp {
+                            let left_num = Self::value_to_f64(left_value)
+                                .ok_or_else(|| "Left operand is not numeric".to_string())?;
+                            let right_num = Self::value_to_f64(right_value)
+                                .ok_or_else(|| "Right operand is not numeric".to_string())?;
+                            serde_json::json!(left_num != right_num)
+                        } else {
+                            serde_json::json!(left_value != right_value)
+                        }
+                    }
                     BinaryOp::GreaterThan
                     | BinaryOp::LessThan
                     | BinaryOp::GreaterThanOrEqual
