@@ -234,19 +234,20 @@ Pattern "ValidAddress" {
 
 **Implementation**:
 
-- [ ] **Grammar** (`sea.pest`): Add `pattern_decl`, `matches` operator
-- [ ] **AST** (`ast.rs`): Add `PatternDecl { name, regex }`, `MatchExpression`
-- [ ] **Parser** (`parser.rs`): Parse regex strings, validate regex syntax
-- [ ] **Semantics** (`validator.rs`): Compile regex patterns, cache for performance
-- [ ] **Runtime** (`evaluator.rs`): Implement pattern matching using `regex` crate
-- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
-- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
+- [x] **Grammar** (`sea.pest`): Add `pattern_decl`, `matches` operator
+- [x] **AST** (`ast.rs`): Add `PatternDecl { name, regex }`, `MatchExpression`
+- [x] **Parser** (`parser.rs`): Parse regex strings, validate regex syntax
+- [x] **Semantics** (`validator.rs`): Compile regex patterns, cache for performance
+- [x] **Runtime** (`evaluator.rs`): Implement pattern matching using `regex` crate
+- [x] **Projections**: Patterns exported to CALM, KG (RDF/Turtle), and SBVR
+- [x] **Bindings**: Pattern counts exposed through Python, TypeScript, and WASM APIs
 
 **Testing**:
 
-- Test: Valid/invalid email addresses against pattern
-- Test: Pattern reuse across multiple policies
-- Test: Error on invalid regex syntax
+- [x] Test: Valid/invalid email addresses against pattern
+- [x] Test: Pattern reuse across multiple policies
+- [x] Test: Error on invalid regex syntax
+- [x] All tests passing (87 Rust tests, 43 Python tests, 57 TypeScript tests)
 
 ## Phase 2: Core Features (HIGH)
 
