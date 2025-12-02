@@ -111,6 +111,19 @@ impl SbvrModel {
             });
         }
 
+        for pattern in graph.all_patterns() {
+            model.vocabulary.push(SbvrTerm {
+                id: pattern.id().to_string(),
+                name: pattern.name().to_string(),
+                term_type: TermType::IndividualConcept,
+                definition: Some(format!(
+                    "Pattern '{}' matches {}",
+                    pattern.name(),
+                    pattern.regex()
+                )),
+            });
+        }
+
         model.vocabulary.push(SbvrTerm {
             id: "verb:transfers".to_string(),
             name: "transfers".to_string(),

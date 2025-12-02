@@ -286,6 +286,7 @@ impl Policy {
                         BinaryOp::EndsWith => l.ends_with(r),
                         _ => unreachable!(),
                     }),
+                BinaryOp::Matches => self.evaluate_pattern_match(left, right, graph),
                 BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
                     // Temporal operators - parse and compare ISO 8601 timestamps
                     let left_str = self.get_string_value(left, graph)?;
@@ -444,6 +445,39 @@ impl Policy {
                         _ => Ok(T::Null),
                     }
                 }
+                BinaryOp::Matches => {
+                    let left_v = self.get_runtime_value(left, graph);
+                    let right_v = self.get_runtime_value(right, graph);
+
+                    match (left_v, right_v) {
+                        (Ok(lv), Ok(rv)) => {
+                            if lv.is_null() || rv.is_null() {
+                                return Ok(T::Null);
+                            }
+
+                            if let (Some(candidate), Some(pattern_name)) = (lv.as_str(), rv.as_str()) {
+                                let pattern = graph
+                                    .find_pattern(pattern_name, Some(&self.namespace))
+                                    .ok_or_else(|| {
+                                        format!(
+                                            "Pattern '{}' not found in namespace '{}'",
+                                            pattern_name, self.namespace
+                                        )
+                                    })?;
+                                let is_match = pattern.is_match(candidate).map_err(|e| {
+                                    format!(
+                                        "Pattern '{}' failed to evaluate: {}",
+                                        pattern_name, e
+                                    )
+                                })?;
+                                Ok(T::from_option_bool(Some(is_match)))
+                            } else {
+                                Ok(T::Null)
+                            }
+                        }
+                        _ => Ok(T::Null),
+                    }
+                }
                 BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
                     // Temporal operators
                     if matches!(op, BinaryOp::During) {
@@ -588,6 +622,29 @@ impl Policy {
         let left_val = self.get_string_value(left, graph)?;
         let right_val = self.get_string_value(right, graph)?;
         Ok(op(&left_val, &right_val))
+    }
+
+    fn evaluate_pattern_match(
+        &self,
+        left: &Expression,
+        right: &Expression,
+        graph: &Graph,
+    ) -> Result<bool, String> {
+        let candidate = self.get_string_value(left, graph)?;
+        let pattern_name = self.get_string_value(right, graph)?;
+
+        let pattern = graph
+            .find_pattern(&pattern_name, Some(&self.namespace))
+            .ok_or_else(|| {
+                format!(
+                    "Pattern '{}' not found in namespace '{}'",
+                    pattern_name, self.namespace
+                )
+            })?;
+
+        pattern
+            .is_match(&candidate)
+            .map_err(|e| format!("Pattern '{}' failed to evaluate: {}", pattern_name, e))
     }
 
     fn get_literal_value(&self, expr: &Expression) -> Result<serde_json::Value, String> {
