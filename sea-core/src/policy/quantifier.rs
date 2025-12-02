@@ -2,6 +2,7 @@ use super::expression::{AggregateFunction, BinaryOp, Expression, Quantifier};
 use crate::graph::Graph;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use std::convert::TryFrom;
 use std::str::FromStr;
 
 impl Expression {
@@ -87,8 +88,19 @@ impl Expression {
                     let substituted_key = key.substitute(variable, &item)?;
                     let expanded_key = substituted_key.expand(graph)?;
                     let key_str = match expanded_key {
-                        Expression::Literal(v) => v.to_string(),
-                        _ => return Err("Group key must evaluate to a literal".to_string()),
+                        Expression::Literal(v) => match v {
+                            serde_json::Value::String(s) => s,
+                            serde_json::Value::Number(n) => n.to_string(),
+                            serde_json::Value::Bool(b) => b.to_string(),
+                            serde_json::Value::Null => "null".to_string(),
+                            other => return Err(format!(
+                                "Group key must be a string, number, bool, or null literal, got {}",
+                                other
+                            )),
+                        },
+                        _ => {
+                            return Err("Group key must evaluate to a literal".to_string());
+                        }
                     };
                     groups.entry(key_str).or_default().push(item);
                 }
@@ -97,7 +109,8 @@ impl Expression {
                 for (_group_key, group_items) in groups {
                     // Substitute the variable with the group collection (as a Literal Array)
                     // This allows aggregations inside the condition to use the group items
-                    let substituted_condition = condition.substitute(variable, &serde_json::Value::Array(group_items))?;
+                    let substituted_condition =
+                        condition.substitute(variable, &serde_json::Value::Array(group_items))?;
                     let expanded = substituted_condition.expand(graph)?;
                     if !Self::is_true_literal(&expanded) {
                         return Ok(Expression::literal(false));
@@ -597,12 +610,20 @@ impl Expression {
         // Apply window filtering if present
         let items = if let Some(w) = window {
             let now = chrono::Utc::now();
-            let duration = match w.unit.as_str() {
-                "hour" | "hours" => chrono::Duration::hours(w.duration),
-                "minute" | "minutes" => chrono::Duration::minutes(w.duration),
-                "day" | "days" => chrono::Duration::days(w.duration),
-                "second" | "seconds" => chrono::Duration::seconds(w.duration),
-                _ => chrono::Duration::seconds(w.duration),
+            let duration_span = i64::try_from(w.duration)
+                .map_err(|_| format!("Window duration {} exceeds supported range", w.duration))?;
+            let unit_lower = w.unit.to_lowercase();
+            let duration = match unit_lower.as_str() {
+                "hour" | "hours" => chrono::Duration::hours(duration_span),
+                "minute" | "minutes" => chrono::Duration::minutes(duration_span),
+                "day" | "days" => chrono::Duration::days(duration_span),
+                "second" | "seconds" => chrono::Duration::seconds(duration_span),
+                _ => {
+                    return Err(format!(
+                        "Invalid window unit '{}' in aggregation window",
+                        w.unit
+                    ))
+                }
             };
 
             items

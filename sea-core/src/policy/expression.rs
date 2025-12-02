@@ -4,7 +4,7 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WindowSpec {
-    pub duration: i64,
+    pub duration: u64,
     pub unit: String,
 }
 
@@ -277,15 +277,18 @@ impl fmt::Display for Expression {
                 projection,
                 target_unit,
             } => {
-                write!(
-                    f,
-                    "{}({} in {}",
-                    function, variable, collection
-                )?;
+                write!(f, "{}({} in {}", function, variable, collection)?;
                 if let Some(w) = window {
                     write!(f, " OVER LAST {} \"{}\"", w.duration, w.unit)?;
                 }
-                write!(f, " WHERE {}: {}", predicate, projection)?;
+                match predicate.as_ref() {
+                    Expression::Literal(serde_json::Value::Bool(true)) => {
+                        write!(f, ": {}", projection)?;
+                    }
+                    _ => {
+                        write!(f, " WHERE {}: {}", predicate, projection)?;
+                    }
+                }
                 if let Some(unit) = target_unit {
                     write!(f, " AS \"{}\"", unit)?;
                 }

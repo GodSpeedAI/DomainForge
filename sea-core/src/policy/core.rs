@@ -364,9 +364,7 @@ impl Policy {
             Expression::IntervalLiteral { .. } => {
                 Err("Cannot evaluate interval literal in boolean context".to_string())
             }
-            Expression::GroupBy { .. } => {
-                Err("Cannot evaluate non-expanded group_by".to_string())
-            }
+            Expression::GroupBy { .. } => Err("Cannot evaluate non-expanded group_by".to_string()),
         }
     }
 

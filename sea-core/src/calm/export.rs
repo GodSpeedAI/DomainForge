@@ -309,26 +309,29 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
             } else {
                 "".to_string()
             };
+            let predicate_str = serialize_expression_for_export(predicate);
+            let where_clause = if matches!(**predicate, Expression::Literal(Value::Bool(true))) {
+                "".to_string()
+            } else {
+                format!(" WHERE {}", predicate_str)
+            };
+            let projection_str = serialize_expression_for_export(projection);
+            let collection_str = serialize_expression_for_export(collection);
             if let Some(unit) = target_unit {
                 format!(
-                    "{}({} in {}{} WHERE {}: {} as \"{}\")",
+                    "{}({} in {}{}{}: {} as \"{}\")",
                     fn_str,
                     variable,
-                    serialize_expression_for_export(collection),
+                    collection_str,
                     window_str,
-                    serialize_expression_for_export(predicate),
-                    serialize_expression_for_export(projection),
+                    where_clause,
+                    projection_str,
                     unit
                 )
             } else {
                 format!(
-                    "{}({} in {}{} WHERE {}: {})",
-                    fn_str,
-                    variable,
-                    serialize_expression_for_export(collection),
-                    window_str,
-                    serialize_expression_for_export(predicate),
-                    serialize_expression_for_export(projection)
+                    "{}({} in {}{}{}: {})",
+                    fn_str, variable, collection_str, window_str, where_clause, projection_str
                 )
             }
         }

@@ -6,61 +6,82 @@ Analyzing
 Reviewing
 
 ============================================================================
-File: docs/plans/units-dimensions-implementation.md
-Line: 28
+File: docs/plans/enhanced-aggregations-implementation.md
+Line: 14
 Type: potential_issue
 
-Prompt for AI Agent:
-In docs/plans/units-dimensions-implementation.md around line 28, the division rule for Quantity/Quantity lacks behavior for differing dimensions; update the document by adding a clear sentence stating that when dimensions are incompatible the evaluator must raise a dimension mismatch error (i.e., do not auto-convert or produce a compound unit), and place this sentence immediately after the "Quantity / Quantity -> Scalar (if same dimension)" line to unambiguously specify error handling.
+[x] Task:
+In docs/plans/enhanced-aggregations-implementation.md around lines 14 and 25, the callout lines contain a duplicated '>' character (e.g. "> [!IMPORTANT] > ..."); remove the extra '>' that appears immediately after the callout tag so the lines read with a single '>' before the callout or just the callout tag followed by the content (e.g. "> [!IMPORTANT] Syntax Decision:"), ensuring consistent callout block syntax.
 
 
 
 ============================================================================
-File: docs/plans/units-dimensions-implementation.md
-Line: 24
+File: docs/plans/enhanced-aggregations-implementation.md
+Line: 42
 Type: potential_issue
 
-Prompt for AI Agent:
-In docs/plans/units-dimensions-implementation.md around line 24, the instruction for Plus/Minus conversions is ambiguous about whether to always convert to the left operand's unit or only when appropriate; update the sentence to explicitly state the chosen conversion strategy (e.g., "Convert the right operand to the left operand's unit before performing addition/subtraction") or provide a deterministic tiebreaker rule (for example: "Prefer non-derived units; if both are derived or incompatible, convert both to the common base unit"), ensuring the rule is unambiguous and gives a single clear action to follow.
-
+[x] Task:
+In docs/plans/enhanced-aggregations-implementation.md around lines 42 and 48, the grammar and examples disagree about whether the "where" clause is mandatory; update the grammar rules to make "where" optional (use ("where" ~ expression)? in both the group_by_expr and aggregation_comprehension rules) and/or update the examples to include an explicit where clause so they match the grammar—ensure both rule definitions and all usage examples consistently either include the optional "where" or demonstrate omission.
 
 
 
 ============================================================================
-File: docs/plans/units-dimensions-implementation.md
-Line: 35 to 38
-Type: potential_issue
+File: sea-core/grammar/sea.pest
+Line: 148 to 154
+Type: nitpick
 
-Prompt for AI Agent:
-In docs/plans/units-dimensions-implementation.md around lines 35 to 38, the check_arithmetic description is ambiguous versus the arithmetic rules on lines 26–28; update the text to explicitly allow the cases listed in lines 26–28 (Quantity  Scalar, Quantity / Scalar, Quantity / Quantity) and to disallow scalarscalar and Quantity*Quantity (for Multiply) except where dimensions match for Plus/Minus; clarify that validation must check dimensional compatibility for Plus/Minus, allow mixing only when one operand is a unitless scalar for Multiply/Divide (and allow Quantity/Quantity with resulting dimensionless or as defined by rules), and add guidance to return TypeError messages that reference the specific operand types and the expected allowed patterns (e.g., "Cannot add Money and Mass" or "Multiply requires one operand to be a scalar or dimensions to match").
-
-
-
-============================================================================
-File: docs/plans/units-dimensions-implementation.md
-Line: 69
-Type: potential_issue
-
-Prompt for AI Agent:
-In docs/plans/units-dimensions-implementation.md around line 69, the doc references new UnitError types but never defines them; add a new subsection under "Proposed Changes" that enumerates and briefly describes the required error variants (suggested names: DimensionMismatch, UnitNotFound, ConversionUndefined), specifying their purpose and when each should be emitted so the CLI validation command can report them correctly.
+[x] Task:
+In sea-core/grammar/sea.pest around lines 148 to 154, the aggregation_comprehension rule uses a case-sensitive "in" token on line 149 which is inconsistent with other case-insensitive tokens; change that literal to a case-insensitive token (use ^"in") so the grammar treats "in" the same way as other keywords, keeping spacing and surrounding sequence intact.
 
 
 
 ============================================================================
-File: docs/plans/dsl-completeness-roadmap.md
-Line: 364
-Type: potential_issue
+File: sea-core/grammar/sea.pest
+Line: 135 to 137
+Type: nitpick
 
-Prompt for AI Agent:
-In docs/plans/dsl-completeness-roadmap.md around line 364, the note "(verify the problem is still valid)" is ambiguous; replace it with actionable status text: if you've confirmed the issue is valid remove the verification note and leave "Problem: Cannot define concrete data instances in DSL." (proceed to implementation), otherwise change it to "Problem: Cannot define concrete data instances in DSL. (Status: validation pending—confirm use cases in Q1)" so the roadmap clearly indicates whether validation is required or implementation can proceed.
+[x] Task:
+In sea-core/grammar/sea.pest around lines 135 to 137, the group_by_expr rule uses a case-sensitive "in" while entity_decl uses ^"in"; update the group_by_expr rule to use ^"in" instead of "in" so the keyword matching is consistent (accepting the same case variants) with the rest of the grammar, and run the parser tests to confirm no regressions.
 
 
 
 ============================================================================
-File: docs/plans/dsl-completeness-roadmap.md
-Line: 242 to 243
+File: sea-core/src/policy/expression.rs
+Line: 5 to 9
 Type: potential_issue
 
+[x] Task:
+In sea-core/src/policy/expression.rs around lines 5-9, the WindowSpec.duration field is currently i64 which allows negative values; change its type to an unsigned integer (e.g., u64) to represent non-negative durations, update any code that constructs or uses WindowSpec to accept/produce u64, and ensure serde derives still work (adjust any deserialization sites and tests); if changing the type is infeasible, add explicit validation in constructors/deserializers to reject negative durations and return a clear error instead.
+
+
+
+============================================================================
+File: sea-core/src/parser/ast.rs
+Line: 1127 to 1139
+Type: nitpick
+
+[x] Task:
+In sea-core/src/parser/ast.rs around lines 1127 to 1139, the code currently clones Pair values when calling parse_expression; change this to consume the vector so you don't clone Pairs. Collect remaining pairs as Vec> then match on remaining.as_slice() (or destructure via let [a,b,c] = &remaining[..] for refs then std::mem::take/remove to own them) or better: build the vec via into_iter().collect::>() and pattern-match using remaining.into_iter() to extract ownership of each Pair and pass them directly to parse_expression without .clone(); update the branches to destructure into owned variables and call parse_expression(owned_pair)?, and keep the same error branch for unexpected lengths.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 600 to 606
+Type: potential_issue
+
+[x] Task:
+In sea-core/src/policy/quantifier.rs around lines 600 to 606, the match currently falls back to seconds for unknown window units; change this so unknown units produce an explicit error instead of silently using seconds. Replace the default arm with an error return (e.g., return Err(...) or anyhow::bail!) that includes the invalid unit string and context, and if the containing function does not already return a Result, update its signature to propagate the error and adjust callers accordingly so invalid units fail fast with a clear message.
+
+
+
+============================================================================
+File: sea-core/src/policy/quantifier.rs
+Line: 89 to 93
+Type: nitpick
+
+[x] Task:
+In sea-core/src/policy/quantifier.rs around lines 89–93, the code uses v.to_string() on a serde_json::Value which produces JSON-encoded output (e.g., string "foo" becomes "\"foo\""); replace this with explicit matching on Value variants and produce a cleaner key string: if Value::String(s) use s.clone(), if Number use its string form, if Bool use "true"/"false", and handle/null or other variants consistently (e.g., "null" or return an error) so group keys are human-readable and comparable outside JSON formatting.
 
 
 

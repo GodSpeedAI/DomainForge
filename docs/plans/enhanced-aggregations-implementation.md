@@ -11,7 +11,7 @@ The goal is to enable more sophisticated data analysis within policies by allowi
 
 ## User Review Required
 
-> [!IMPORTANT] > **Syntax Decision**:
+> [!IMPORTANT] **Syntax Decision**:
 > The `group_by` syntax introduces a block structure that is new to expressions.
 >
 > ```sea
@@ -22,7 +22,7 @@ The goal is to enable more sophisticated data analysis within policies by allowi
 >
 > This implies that the expression inside the block is evaluated _for each group_. If _any_ group violates the condition, the policy is violated.
 
-> [!NOTE] > **Window Semantics**:
+> [!NOTE] **Window Semantics**:
 > Window functions like `over last 1 "hour"` require access to temporal data. This assumes that the underlying data source provides timestamps. For the purpose of this implementation, we will assume `flows` have a `timestamp` or `created_at` field, or we will use a generic `timestamp` field.
 
 ## Proposed Changes
@@ -39,13 +39,13 @@ The goal is to enable more sophisticated data analysis within policies by allowi
 // New Group By Expression
 // Syntax: group_by(f in flows: f.to.name) { sum(f.quantity) > 10 }
 group_by_expr = {
-    ^"group_by" ~ "(" ~ identifier ~ "in" ~ collection ~ ("where" ~ expression)? ~ ":" ~ expression ~ ")" ~ "{" ~ expression ~ "}"
+    ^"group_by" ~ "(" ~ identifier ~ ^"in" ~ collection ~ (^"where" ~ expression)? ~ ":" ~ expression ~ ")" ~ "{" ~ expression ~ "}"
 }
 
 // Update Aggregation Comprehension to support Windowing
 // Syntax: avg(f in flows over last 1 "hour": f.quantity)
 aggregation_comprehension = {
-    identifier ~ "in" ~ collection ~ window_clause? ~ "where" ~ expression ~ ":" ~ expression ~ ("as" ~ string_literal)?
+    identifier ~ ^"in" ~ collection ~ window_clause? ~ (^"where" ~ expression)? ~ ":" ~ expression ~ (^"as" ~ string_literal)?
 }
 
 window_clause = {
@@ -91,7 +91,7 @@ pub enum Expression {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WindowSpec {
-    pub duration: i64, // Value
+    pub duration: u64, // Non-negative duration
     pub unit: String,  // Unit (e.g., "hour")
 }
 ```

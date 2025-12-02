@@ -133,7 +133,7 @@ primary_expr = {
 // Group By Expression
 // Syntax: group_by(f in flows: f.to.name) { sum(f.quantity) > 10 }
 group_by_expr = {
-    ^"group_by" ~ "(" ~ identifier ~ "in" ~ collection ~ (^"where" ~ expression)? ~ ":" ~ expression ~ ")" ~ "{" ~ expression ~ "}"
+    ^"group_by" ~ "(" ~ identifier ~ ^"in" ~ collection ~ (^"where" ~ expression)? ~ ":" ~ expression ~ ")" ~ "{" ~ expression ~ "}"
 }
 
 // Aggregation expressions
@@ -146,7 +146,7 @@ aggregation_expr = {
 }
 
 aggregation_comprehension = {
-    identifier ~ "in" ~ collection ~ window_clause? ~ ^"where" ~ expression ~ ":" ~ expression ~ (^"as" ~ string_literal)?
+    identifier ~ ^"in" ~ collection ~ window_clause? ~ (^"where" ~ expression)? ~ ":" ~ expression ~ (^"as" ~ string_literal)?
 }
 
 window_clause = {
