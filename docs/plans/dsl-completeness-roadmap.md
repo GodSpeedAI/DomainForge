@@ -275,17 +275,18 @@ Policy throughput_limit as:
 
 **Implementation**:
 
-- [ ] **Grammar** (`sea.pest`): Add `group_by` clause, `over` window syntax
-- [ ] **AST** (`ast.rs`): Extend `AggregationExpression` with `GroupBy { key, aggregation }`
-- [ ] **Semantics** (`evaluator.rs`): Implement grouping with deterministic ordering
-- [ ] **Validation**: Ensure grouped expressions only reference group key or aggregates
-- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
-- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
+- [x] **Grammar** (`sea.pest`): `group_by` clause and `over` window syntax (case-insensitive keywords, optional `where`)
+- [x] **AST** (`ast.rs`): `AggregationComprehension` window support and `GroupBy` parsing
+- [x] **Semantics** (`evaluator.rs`/quantifier): Grouping with deterministic key rendering, window filtering, and validation of window units
+- [x] **Validation**: Group keys must be literals; window durations non-negative; invalid units error
+- [x] **Projections**: CALM export includes grouping/window syntax and omits no-op predicates
+- [x] **Bindings**: Python/TypeScript parity via shared core semantics
 
 **Testing**:
 
-- Test: Group flows by entity, verify sum per group
-- Test: Window aggregation over time-series data
+- [x] Test: Group flows by entity, verify sum per group
+- [x] Test: Window aggregation over time-series data
+- [x] Cross-lang suites: Rust/Python/TypeScript `just all-tests`
 
 ### 5. Roles & Relations (Fact Types)
 
