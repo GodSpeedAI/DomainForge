@@ -1,6 +1,6 @@
 use crate::units::{Dimension as RustDimension, Unit as RustUnit};
 use napi_derive::napi;
-use rust_decimal::prelude::{ToPrimitive, FromPrimitive};
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 
 #[napi]
 pub struct Dimension {
@@ -11,7 +11,9 @@ pub struct Dimension {
 impl Dimension {
     #[napi(factory)]
     pub fn parse(name: String) -> Self {
-        Self { inner: RustDimension::parse(&name) }
+        Self {
+            inner: RustDimension::parse(&name),
+        }
     }
 
     #[napi(getter)]
@@ -28,8 +30,15 @@ pub struct Unit {
 #[napi]
 impl Unit {
     #[napi(constructor)]
-    pub fn new(symbol: String, name: String, dimension: String, base_factor: f64, base_unit: String) -> Self {
-        let dec = rust_decimal::Decimal::from_f64(base_factor).unwrap_or(rust_decimal::Decimal::ONE);
+    pub fn new(
+        symbol: String,
+        name: String,
+        dimension: String,
+        base_factor: f64,
+        base_unit: String,
+    ) -> Self {
+        let dec =
+            rust_decimal::Decimal::from_f64(base_factor).unwrap_or(rust_decimal::Decimal::ONE);
         let dim = crate::units::Dimension::parse(&dimension);
         let inner = RustUnit::new(symbol, name, dim, dec, base_unit);
         Self { inner }

@@ -1,6 +1,6 @@
 use crate::units::{Dimension as RustDimension, Unit as RustUnit};
-use wasm_bindgen::prelude::*;
 use rust_decimal::prelude::ToPrimitive;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct Dimension {
@@ -11,7 +11,9 @@ pub struct Dimension {
 impl Dimension {
     #[wasm_bindgen(constructor)]
     pub fn new(name: String) -> Self {
-        Self { inner: RustDimension::parse(&name) }
+        Self {
+            inner: RustDimension::parse(&name),
+        }
     }
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string(&self) -> String {
@@ -27,8 +29,15 @@ pub struct Unit {
 #[wasm_bindgen]
 impl Unit {
     #[wasm_bindgen(constructor)]
-    pub fn new(symbol: String, name: String, dimension: String, base_factor: f64, base_unit: String) -> Self {
-        let dec = rust_decimal::Decimal::from_f64(base_factor).unwrap_or(rust_decimal::Decimal::ONE);
+    pub fn new(
+        symbol: String,
+        name: String,
+        dimension: String,
+        base_factor: f64,
+        base_unit: String,
+    ) -> Self {
+        let dec =
+            rust_decimal::Decimal::from_f64(base_factor).unwrap_or(rust_decimal::Decimal::ONE);
         let dim = crate::units::Dimension::parse(&dimension);
         let inner = RustUnit::new(symbol, name, dim, dec, base_unit);
         Self { inner }

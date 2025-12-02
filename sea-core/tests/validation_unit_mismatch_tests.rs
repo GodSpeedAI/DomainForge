@@ -1,7 +1,7 @@
 //! Tests for unit mismatch validation during graph validation
 use rust_decimal::Decimal;
-use sea_core::policy::{Expression, AggregateFunction, BinaryOp};
 use sea_core::policy::Policy;
+use sea_core::policy::{AggregateFunction, BinaryOp, Expression};
 use sea_core::primitives::{Entity, Flow, Resource};
 use sea_core::units::unit_from_string;
 use sea_core::Graph;
@@ -69,7 +69,14 @@ fn test_validation_catches_unit_mismatch_in_policy() {
 
     let result = graph.validate();
     // Ensure at least one violation is present and the message refers to unit mismatch
-    assert!(result.violations.len() > 0, "Expected a violation for unit mismatch");
+    assert!(
+        result.violations.len() > 0,
+        "Expected a violation for unit mismatch"
+    );
     let msg = result.violations[0].message.to_lowercase();
-    assert!(msg.contains("unit") || msg.contains("mismatch"), "Expected unit mismatch message, got: {}", result.violations[0].message);
+    assert!(
+        msg.contains("unit") || msg.contains("mismatch"),
+        "Expected unit mismatch message, got: {}",
+        result.violations[0].message
+    );
 }
