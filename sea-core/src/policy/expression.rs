@@ -80,6 +80,7 @@ pub enum BinaryOp {
     Contains,
     StartsWith,
     EndsWith,
+    Matches,
 
     // Temporal operators
     Before,
@@ -279,6 +280,7 @@ impl fmt::Display for BinaryOp {
             BinaryOp::Contains => write!(f, "CONTAINS"),
             BinaryOp::StartsWith => write!(f, "STARTS_WITH"),
             BinaryOp::EndsWith => write!(f, "ENDS_WITH"),
+            BinaryOp::Matches => write!(f, "MATCHES"),
             BinaryOp::Before => write!(f, "BEFORE"),
             BinaryOp::After => write!(f, "AFTER"),
             BinaryOp::During => write!(f, "DURING"),

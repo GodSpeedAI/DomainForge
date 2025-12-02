@@ -1,6 +1,7 @@
 use crate::graph::Graph;
 use crate::parser::error::{ParseError, ParseResult};
 use crate::parser::{ParseOptions, Rule, SeaParser};
+use crate::patterns::Pattern;
 use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp,
@@ -71,6 +72,10 @@ pub enum AstNode {
         from_entity: String,
         to_entity: String,
         quantity: Option<i32>,
+    },
+    Pattern {
+        name: String,
+        regex: String,
     },
     Dimension {
         name: String,
@@ -172,6 +177,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
         Rule::entity_decl => parse_entity(pair),
         Rule::resource_decl => parse_resource(pair),
         Rule::flow_decl => parse_flow(pair),
+        Rule::pattern_decl => parse_pattern(pair),
         Rule::policy_decl => parse_policy(pair),
         _ => Err(ParseError::GrammarError(format!(
             "Unexpected rule: {:?}",
@@ -338,6 +344,24 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
         to_entity,
         quantity,
     })
+}
+
+/// Parse pattern declaration
+fn parse_pattern(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected pattern name".to_string()))?,
+    )?;
+
+    let regex_literal = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected regex for pattern".to_string()))?;
+    let regex = parse_string_literal(regex_literal)?;
+
+    Ok(AstNode::Pattern { name, regex })
 }
 
 /// Parse policy declaration
@@ -592,6 +616,7 @@ fn parse_comparison_op(pair: Pair<Rule>) -> ParseResult<BinaryOp> {
         _ if op_str.eq_ignore_ascii_case("contains") => Ok(BinaryOp::Contains),
         _ if op_str.eq_ignore_ascii_case("startswith") => Ok(BinaryOp::StartsWith),
         _ if op_str.eq_ignore_ascii_case("endswith") => Ok(BinaryOp::EndsWith),
+        _ if op_str.eq_ignore_ascii_case("matches") => Ok(BinaryOp::Matches),
         _ if op_str.eq_ignore_ascii_case("before") => Ok(BinaryOp::Before),
         _ if op_str.eq_ignore_ascii_case("after") => Ok(BinaryOp::After),
         _ if op_str.eq_ignore_ascii_case("during") => Ok(BinaryOp::During),
@@ -741,12 +766,16 @@ fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         // Next token should be predicate expression
         // skip 'where' token and parse predicate
         let predicate_pair = comp_inner.next().ok_or_else(|| {
-            ParseError::GrammarError("Expected predicate expression in aggregation comprehension".to_string())
+            ParseError::GrammarError(
+                "Expected predicate expression in aggregation comprehension".to_string(),
+            )
         })?;
         let predicate = parse_expression(predicate_pair)?;
         // Next token should be projection expression
         let projection_pair = comp_inner.next().ok_or_else(|| {
-            ParseError::GrammarError("Expected projection expression in aggregation comprehension".to_string())
+            ParseError::GrammarError(
+                "Expected projection expression in aggregation comprehension".to_string(),
+            )
         })?;
         let projection = parse_expression(projection_pair)?;
         // Optional 'as' unit
@@ -755,7 +784,9 @@ fn parse_aggregation_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             // The 'as' token may be present and followed by a string literal; or it may directly be the string literal
             if as_pair.as_rule() == Rule::string_literal {
                 target_unit = Some(parse_string_literal(as_pair)?);
-            } else if as_pair.as_rule() == Rule::identifier && as_pair.as_str().eq_ignore_ascii_case("as") {
+            } else if as_pair.as_rule() == Rule::identifier
+                && as_pair.as_str().eq_ignore_ascii_case("as")
+            {
                 if let Some(unit_pair) = comp_inner.next() {
                     if unit_pair.as_rule() == Rule::string_literal {
                         target_unit = Some(parse_string_literal(unit_pair)?);
@@ -1091,6 +1122,19 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 })?;
             }
             _ => {}
+        }
+    }
+
+    // Register patterns with eager regex validation
+    for node in &ast.declarations {
+        if let AstNode::Pattern { name, regex } = node {
+            let namespace = default_namespace.clone();
+            let pattern = Pattern::new(name.clone(), namespace, regex.clone())
+                .map_err(ParseError::GrammarError)?;
+
+            graph
+                .add_pattern(pattern)
+                .map_err(ParseError::GrammarError)?;
         }
     }
 

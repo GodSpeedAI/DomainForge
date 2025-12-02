@@ -284,6 +284,10 @@ impl Graph {
         self.inner.instance_count()
     }
 
+    pub fn pattern_count(&self) -> usize {
+        self.inner.pattern_count()
+    }
+
     #[wasm_bindgen(js_name = allInstances)]
     pub fn all_instances(&self) -> Result<JsValue, JsValue> {
         let instances: Vec<Instance> = self

@@ -252,11 +252,21 @@ impl Expression {
                         .all_entities()
                         .iter()
                         .map(|e| {
-                            serde_json::json!({
-                                "id": e.id().to_string(),
-                                "name": e.name(),
-                                "namespace": e.namespace(),
-                            })
+                            let mut map = serde_json::Map::new();
+                            map.insert("id".to_string(), serde_json::json!(e.id().to_string()));
+                            map.insert("name".to_string(), serde_json::json!(e.name()));
+                            map.insert("namespace".to_string(), serde_json::json!(e.namespace()));
+
+                            for (k, v) in e.attributes().iter() {
+                                if matches!(k.as_str(), "id" | "name" | "namespace")
+                                    || map.contains_key(k)
+                                {
+                                    continue;
+                                }
+                                map.insert(k.clone(), v.clone());
+                            }
+
+                            serde_json::Value::Object(map)
                         })
                         .collect();
                     Ok(entities)

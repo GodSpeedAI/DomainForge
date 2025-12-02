@@ -72,6 +72,10 @@ impl Graph {
         self.inner.flow_count()
     }
 
+    fn pattern_count(&self) -> usize {
+        self.inner.pattern_count()
+    }
+
     fn has_entity(&self, id: String) -> PyResult<bool> {
         let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_entity(&cid))

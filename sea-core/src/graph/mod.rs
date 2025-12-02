@@ -1,3 +1,4 @@
+use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{Entity, Flow, Instance, Resource};
 use crate::validation_result::ValidationResult;
@@ -30,6 +31,8 @@ pub struct Graph {
     instances: IndexMap<ConceptId, Instance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
+    patterns: IndexMap<ConceptId, Pattern>,
+    #[serde(default)]
     config: GraphConfig,
 }
 
@@ -44,6 +47,7 @@ impl Graph {
             && self.flows.is_empty()
             && self.instances.is_empty()
             && self.policies.is_empty()
+            && self.patterns.is_empty()
     }
 
     /// Set the evaluation mode for policy evaluation.
@@ -191,6 +195,10 @@ impl Graph {
         self.flows.len()
     }
 
+    pub fn pattern_count(&self) -> usize {
+        self.patterns.len()
+    }
+
     pub fn add_flow(&mut self, flow: Flow) -> Result<(), String> {
         let id = flow.id().clone();
         if self.flows.contains_key(&id) {
@@ -206,6 +214,26 @@ impl Graph {
             return Err("Resource not found".to_string());
         }
         self.flows.insert(id, flow);
+        Ok(())
+    }
+
+    pub fn add_pattern(&mut self, pattern: Pattern) -> Result<(), String> {
+        let id = pattern.id().clone();
+        if self.patterns.contains_key(&id) {
+            return Err(format!("Pattern with ID {} already exists", id));
+        }
+
+        if self.patterns.values().any(|existing| {
+            existing.name() == pattern.name() && existing.namespace() == pattern.namespace()
+        }) {
+            return Err(format!(
+                "Pattern '{}' already declared in namespace '{}'",
+                pattern.name(),
+                pattern.namespace()
+            ));
+        }
+
+        self.patterns.insert(id, pattern);
         Ok(())
     }
 
@@ -339,6 +367,23 @@ impl Graph {
             .map(|(id, _)| id.clone())
     }
 
+    pub fn find_pattern(&self, name: &str, namespace: Option<&str>) -> Option<&Pattern> {
+        if let Some(ns) = namespace {
+            if let Some((_, pattern)) = self
+                .patterns
+                .iter()
+                .find(|(_, pattern)| pattern.name() == name && pattern.namespace() == ns)
+            {
+                return Some(pattern);
+            }
+        }
+
+        self.patterns
+            .iter()
+            .find(|(_, pattern)| pattern.name() == name)
+            .map(|(_, pattern)| pattern)
+    }
+
     pub fn all_entities(&self) -> Vec<&Entity> {
         self.entities.values().collect()
     }
@@ -353,6 +398,10 @@ impl Graph {
 
     pub fn all_instances(&self) -> Vec<&Instance> {
         self.instances.values().collect()
+    }
+
+    pub fn all_patterns(&self) -> Vec<&Pattern> {
+        self.patterns.values().collect()
     }
 
     pub fn policy_count(&self) -> usize {
@@ -403,6 +452,7 @@ impl Graph {
             flows,
             instances,
             policies,
+            patterns,
             config: _,
         } = other;
 
@@ -420,6 +470,10 @@ impl Graph {
 
         for flow in flows.into_values() {
             self.add_flow(flow)?;
+        }
+
+        for pattern in patterns.into_values() {
+            self.add_pattern(pattern)?;
         }
 
         for policy in policies.into_values() {

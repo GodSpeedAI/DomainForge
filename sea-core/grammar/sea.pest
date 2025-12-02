@@ -19,7 +19,7 @@ annotation_name = {
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | policy_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | policy_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -48,6 +48,12 @@ resource_decl = {
 // Syntax: Flow "ResourceName" from "EntityA" to "EntityB"
 flow_decl = {
     ^"flow" ~ string_literal ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number)?
+}
+
+// Pattern Declaration
+// Syntax: Pattern "Email" matches "^[a-z]+$"
+pattern_decl = {
+    ^"pattern" ~ name ~ ^"matches" ~ string_literal
 }
 
 // Dimension Declaration
@@ -100,7 +106,7 @@ comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)? }
 
 comparison_op = {
     ">=" | "<=" | "!=" | "=" | ">" | "<" |
-    ^"contains" | ^"startswith" | ^"endswith" |
+    ^"contains" | ^"startswith" | ^"endswith" | ^"matches" |
     ^"before" | ^"after" | ^"during"
 }
 

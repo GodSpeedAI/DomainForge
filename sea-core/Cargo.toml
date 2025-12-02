@@ -26,6 +26,8 @@ log = "0.4.21"
 globset = "0.4"
 globwalk = "0.9"
 toml = { version = "0.8", features = ["parse"] }
+regex = "1.11"
+once_cell = "1.19"
 pyo3 = { version = "0.24.1", features = ["extension-module"], optional = true }
 pythonize = { version = "0.24", optional = true }
 napi = { version = "2.16", features = ["async"], optional = true }

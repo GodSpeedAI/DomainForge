@@ -79,6 +79,11 @@ impl Graph {
     }
 
     #[napi]
+    pub fn pattern_count(&self) -> u32 {
+        self.inner.pattern_count() as u32
+    }
+
+    #[napi]
     pub fn has_entity(&self, id: String) -> Result<bool> {
         let cid = parse_concept_id(&id)?;
         Ok(self.inner.has_entity(&cid))

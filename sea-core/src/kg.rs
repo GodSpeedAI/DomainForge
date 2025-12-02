@@ -186,6 +186,34 @@ impl KnowledgeGraph {
             });
         }
 
+        for pattern in graph.all_patterns() {
+            let subject = format!("sea:pattern_{}", Self::uri_encode(pattern.name()));
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "rdf:type".to_string(),
+                object: "sea:Pattern".to_string(),
+            });
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "rdfs:label".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(pattern.name())),
+            });
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "sea:namespace".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(pattern.namespace())),
+            });
+
+            kg.triples.push(Triple {
+                subject,
+                predicate: "sea:regex".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(pattern.regex())),
+            });
+        }
+
         for flow in graph.all_flows() {
             let flow_id = format!("sea:flow_{}", Self::uri_encode(&flow.id().to_string()));
 

@@ -58,6 +58,9 @@ impl PrettyPrinter {
                         resource_name, from_entity, to_entity, qty
                     );
                 }
+                crate::parser::ast::AstNode::Pattern { name, regex } => {
+                    let _ = writeln!(output, "Pattern \"{}\" matches \"{}\"", name, regex);
+                }
                 crate::parser::ast::AstNode::Policy {
                     name,
                     metadata: _,

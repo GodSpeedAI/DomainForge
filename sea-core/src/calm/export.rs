@@ -1,6 +1,7 @@
 use super::models::{
     CalmModel, CalmNode, CalmRelationship, FlowDetails, NodeType, Parties, RelationshipType,
 };
+use crate::patterns::Pattern;
 use crate::policy::Policy;
 use crate::policy::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
 use crate::primitives::{Entity, Flow, Instance, Resource};
@@ -69,6 +70,20 @@ fn export_instance(instance: &Instance) -> CalmNode {
     }
 }
 
+fn export_pattern(pattern: &Pattern) -> CalmNode {
+    let mut metadata = HashMap::new();
+    metadata.insert("sea:primitive".to_string(), json!("Pattern"));
+    metadata.insert("sea:regex".to_string(), json!(pattern.regex()));
+
+    CalmNode {
+        unique_id: pattern.id().to_string(),
+        node_type: NodeType::Constraint,
+        name: pattern.name().to_string(),
+        namespace: Some(pattern.namespace().to_string()),
+        metadata,
+    }
+}
+
 fn export_flow(flow: &Flow) -> CalmRelationship {
     CalmRelationship {
         unique_id: flow.id().to_string(),
@@ -100,6 +115,10 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
 
     for instance in graph.all_instances() {
         calm_model.nodes.push(export_instance(instance));
+    }
+
+    for pattern in graph.all_patterns() {
+        calm_model.nodes.push(export_pattern(pattern));
     }
 
     for flow in graph.all_flows() {
@@ -185,6 +204,7 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 BinaryOp::Contains => "contains",
                 BinaryOp::StartsWith => "startswith",
                 BinaryOp::EndsWith => "endswith",
+                BinaryOp::Matches => "matches",
                 BinaryOp::Before => "before",
                 BinaryOp::After => "after",
                 BinaryOp::During => "during",
