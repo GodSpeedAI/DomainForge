@@ -1,7 +1,8 @@
 #![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, ResourceInstance as RustResourceInstance,
+    Resource as RustResource,
 };
 use crate::units::unit_from_string;
 use pyo3::exceptions::{PyKeyError, PyValueError};
@@ -291,12 +292,12 @@ impl Flow {
 
 #[pyclass]
 #[derive(Clone)]
-pub struct Instance {
-    inner: RustInstance,
+pub struct ResourceInstance {
+    inner: RustResourceInstance,
 }
 
 #[pymethods]
-impl Instance {
+impl ResourceInstance {
     #[new]
     #[pyo3(signature = (resource_id, entity_id, namespace=None))]
     fn new(resource_id: String, entity_id: String, namespace: Option<String>) -> PyResult<Self> {
@@ -304,15 +305,15 @@ impl Instance {
             .map_err(|e| PyValueError::new_err(format!("Invalid resource_id UUID: {}", e)))?;
         let entity_uuid = Uuid::from_str(&entity_id)
             .map_err(|e| PyValueError::new_err(format!("Invalid entity_id UUID: {}", e)))?;
-        // Convert Uuid to ConceptId for Instance constructor
+        // Convert Uuid to ConceptId for ResourceInstance constructor
         let inner = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(
+            Some(ns) => RustResourceInstance::new_with_namespace(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
                 ns,
             ),
             // Use explicit default namespace to match Entity/Resource behavior
-            None => RustInstance::new_with_namespace(
+            None => RustResourceInstance::new_with_namespace(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
                 "default".to_string(),
@@ -367,7 +368,7 @@ impl Instance {
 
     fn __repr__(&self) -> String {
         format!(
-            "Instance(id='{}', resource_id='{}', entity_id='{}', namespace={:?})",
+            "ResourceInstance(id='{}', resource_id='{}', entity_id='{}', namespace={:?})",
             self.inner.id(),
             self.inner.resource_id(),
             self.inner.entity_id(),
@@ -376,12 +377,12 @@ impl Instance {
     }
 }
 
-impl Instance {
-    pub fn from_rust(inner: RustInstance) -> Self {
+impl ResourceInstance {
+    pub fn from_rust(inner: RustResourceInstance) -> Self {
         Self { inner }
     }
 
-    pub fn into_inner(self) -> RustInstance {
+    pub fn into_inner(self) -> RustResourceInstance {
         self.inner
     }
 }

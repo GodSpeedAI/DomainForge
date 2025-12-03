@@ -1,5 +1,6 @@
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, ResourceInstance as RustResourceInstance,
+    Resource as RustResource,
 };
 
 use crate::units::unit_from_string;
@@ -292,13 +293,13 @@ impl Flow {
 }
 
 #[napi]
-pub struct Instance {
-    inner: RustInstance,
+pub struct ResourceInstance {
+    inner: RustResourceInstance,
 }
 
 #[napi]
 #[allow(clippy::inherent_to_string)]
-impl Instance {
+impl ResourceInstance {
     #[napi(constructor)]
     pub fn new(resource_id: String, entity_id: String, namespace: Option<String>) -> Result<Self> {
         let resource_uuid = Uuid::from_str(&resource_id)
@@ -307,12 +308,12 @@ impl Instance {
             .map_err(|e| Error::from_reason(format!("Invalid entity_id UUID: {}", e)))?;
 
         let inner = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(
+            Some(ns) => RustResourceInstance::new_with_namespace(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
                 ns,
             ),
-            None => RustInstance::new(
+            None => RustResourceInstance::new(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
             ),
@@ -363,7 +364,7 @@ impl Instance {
     #[napi]
     pub fn to_string(&self) -> String {
         format!(
-            "Instance(id='{}', resource_id='{}', entity_id='{}', namespace={:?})",
+            "ResourceInstance(id='{}', resource_id='{}', entity_id='{}', namespace={:?})",
             self.inner.id(),
             self.inner.resource_id(),
             self.inner.entity_id(),
@@ -372,16 +373,16 @@ impl Instance {
     }
 }
 
-impl Instance {
-    pub fn from_rust(inner: RustInstance) -> Self {
+impl ResourceInstance {
+    pub fn from_rust(inner: RustResourceInstance) -> Self {
         Self { inner }
     }
 
-    pub fn into_inner(self) -> RustInstance {
+    pub fn into_inner(self) -> RustResourceInstance {
         self.inner
     }
 
-    pub fn inner_ref(&self) -> &RustInstance {
+    pub fn inner_ref(&self) -> &RustResourceInstance {
         &self.inner
     }
 }

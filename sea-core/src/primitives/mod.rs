@@ -5,6 +5,7 @@ pub mod instance;
 pub mod quantity;
 pub mod relation;
 pub mod resource;
+pub mod resource_instance;
 pub mod role;
 
 pub use concept_change::ConceptChange;
@@ -14,4 +15,5 @@ pub use instance::Instance;
 pub use quantity::Quantity;
 pub use relation::RelationType;
 pub use resource::Resource;
+pub use resource_instance::ResourceInstance;
 pub use role::Role;

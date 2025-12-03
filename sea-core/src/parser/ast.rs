@@ -14,6 +14,7 @@ use pest::Parser;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde_json::Value as JsonValue;
+use serde_json::json;
 use std::collections::HashMap;
 
 /// File-level metadata from header annotations
@@ -104,6 +105,11 @@ pub enum AstNode {
         version: Option<String>,
         metadata: PolicyMetadata,
         expression: Expression,
+    },
+    Instance {
+        name: String,
+        entity_type: String,
+        fields: HashMap<String, Expression>,
     },
     ConceptChange {
         name: String,
@@ -200,6 +206,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
         Rule::pattern_decl => parse_pattern(pair),
         Rule::role_decl => parse_role(pair),
         Rule::relation_decl => parse_relation(pair),
+        Rule::instance_decl => parse_instance(pair),
         Rule::policy_decl => parse_policy(pair),
         Rule::concept_change_decl => parse_concept_change(pair),
         _ => Err(ParseError::GrammarError(format!(
@@ -578,6 +585,56 @@ fn parse_relation(pair: Pair<Rule>) -> ParseResult<AstNode> {
         predicate,
         object_role,
         via_flow,
+    })
+}
+
+/// Parse instance declaration
+fn parse_instance(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_identifier(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected instance name".to_string()))?,
+    )?;
+
+    let entity_type = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected entity type".to_string()))?,
+    )?;
+
+    let mut fields = HashMap::new();
+
+    // Parse optional instance body
+    if let Some(body_pair) = inner.next() {
+        if body_pair.as_rule() == Rule::instance_body {
+            for field_pair in body_pair.into_inner() {
+                if field_pair.as_rule() == Rule::instance_field {
+                    let mut field_inner = field_pair.into_inner();
+                    
+                    let field_name = parse_identifier(
+                        field_inner
+                            .next()
+                            .ok_or_else(|| ParseError::GrammarError("Expected field name".to_string()))?,
+                    )?;
+                    
+                    let field_value = parse_expression(
+                        field_inner
+                            .next()
+                            .ok_or_else(|| ParseError::GrammarError("Expected field value".to_string()))?,
+                    )?;
+                    
+                    fields.insert(field_name, field_value);
+                }
+            }
+        }
+    }
+
+    Ok(AstNode::Instance {
+        name,
+        entity_type,
+        fields,
     })
 }
 
@@ -1448,6 +1505,25 @@ fn parse_window_clause(pair: Pair<Rule>) -> ParseResult<WindowSpec> {
     Ok(WindowSpec { duration, unit })
 }
 
+/// Convert an Expression to a JSON Value for instance fields
+fn expression_to_json(expr: &Expression) -> ParseResult<JsonValue> {
+    match expr {
+        Expression::Literal(v) => Ok(v.clone()),
+        Expression::Variable(name) => Ok(JsonValue::String(name.clone())),
+        Expression::QuantityLiteral { value, unit } => {
+            Ok(json!({
+                "value": value.to_string(),
+                "unit": unit
+            }))
+        }
+        Expression::TimeLiteral(timestamp) => Ok(JsonValue::String(timestamp.clone())),
+        _ => {
+            // For complex expressions, convert to string representation
+            Ok(JsonValue::String(format!("{:?}", expr)))
+        }
+    }
+}
+
 /// Convert AST to Graph
 pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     ast_to_graph_with_options(ast, &ParseOptions::default())
@@ -1706,6 +1782,35 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 ParseError::GrammarError(format!("Failed to add relation '{}': {}", name, e))
             })?;
             relation_map.insert(name.clone(), relation_id);
+        }
+    }
+
+    // Instance pass: Add instances (after entities are created)
+    for node in &ast.declarations {
+        if let AstNode::Instance {
+            name,
+            entity_type,
+            fields,
+        } = node
+        {
+            let namespace = default_namespace.clone();
+            let mut instance = crate::primitives::Instance::new_with_namespace(
+                name.clone(),
+                entity_type.clone(),
+                namespace,
+            );
+
+            // Evaluate and set fields
+            for (field_name, field_expr) in fields {
+                // For now, we'll convert expressions to JSON values
+                // In a full implementation, you'd want to evaluate the expression
+                let value = expression_to_json(field_expr)?;
+                instance.set_field(field_name.clone(), value);
+            }
+
+            // Note: We're not adding instances to the graph yet since Graph doesn't have
+            // an add_instance method for the new Instance type. This will be added in the next step.
+            // For now, instances are parsed but not stored in the graph.
         }
     }
 

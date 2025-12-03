@@ -1,6 +1,6 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
-use crate::primitives::{ConceptChange, Entity, Flow, Instance, RelationType, Resource, Role};
+use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, ResourceInstance, Role};
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -30,7 +30,7 @@ pub struct Graph {
     resources: IndexMap<ConceptId, Resource>,
     flows: IndexMap<ConceptId, Flow>,
     relations: IndexMap<ConceptId, RelationType>,
-    instances: IndexMap<ConceptId, Instance>,
+    instances: IndexMap<ConceptId, ResourceInstance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
     patterns: IndexMap<ConceptId, Pattern>,
@@ -352,7 +352,7 @@ impl Graph {
         self.instances.len()
     }
 
-    pub fn add_instance(&mut self, instance: Instance) -> Result<(), String> {
+    pub fn add_instance(&mut self, instance: ResourceInstance) -> Result<(), String> {
         let id = instance.id().clone();
         if self.instances.contains_key(&id) {
             return Err(format!("Instance with ID {} already exists", id));
@@ -412,11 +412,11 @@ impl Graph {
         self.instances.contains_key(id)
     }
 
-    pub fn get_instance(&self, id: &ConceptId) -> Option<&Instance> {
+    pub fn get_instance(&self, id: &ConceptId) -> Option<&ResourceInstance> {
         self.instances.get(id)
     }
 
-    pub fn remove_instance(&mut self, id: &ConceptId) -> Result<Instance, String> {
+    pub fn remove_instance(&mut self, id: &ConceptId) -> Result<ResourceInstance, String> {
         self.instances
             .shift_remove(id)
             .ok_or_else(|| format!("Instance with ID {} not found", id))
@@ -504,7 +504,7 @@ impl Graph {
         self.flows.values().collect()
     }
 
-    pub fn all_instances(&self) -> Vec<&Instance> {
+    pub fn all_instances(&self) -> Vec<&ResourceInstance> {
         self.instances.values().collect()
     }
 
