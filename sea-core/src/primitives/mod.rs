@@ -1,3 +1,4 @@
+pub mod concept_change;
 pub mod entity;
 pub mod flow;
 pub mod instance;
@@ -6,6 +7,7 @@ pub mod relation;
 pub mod resource;
 pub mod role;
 
+pub use concept_change::ConceptChange;
 pub use entity::Entity;
 pub use flow::Flow;
 pub use instance::Instance;

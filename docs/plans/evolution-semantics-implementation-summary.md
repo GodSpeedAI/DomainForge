@@ -82,8 +82,8 @@ Entity "VendorV2_1" v2.1.0
 
 // Migration tracking
 ConceptChange "Vendor_v2_1_migration"
-  @from_version "2.0.0"
-  @to_version "2.1.0"
+  @from_version v2.0.0
+  @to_version v2.1.0
   @migration_policy mandatory
   @breaking_change true
 ```

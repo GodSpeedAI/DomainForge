@@ -71,7 +71,7 @@ fn test_validation_catches_unit_mismatch_in_policy() {
     let result = graph.validate();
     // Ensure at least one violation is present and the message refers to unit mismatch
     assert!(
-        result.violations.len() > 0,
+        !result.violations.is_empty(),
         "Expected a violation for unit mismatch"
     );
     let msg = result.violations[0].message.to_lowercase();

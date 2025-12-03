@@ -1,5 +1,5 @@
 use crate::units::{Dimension as RustDimension, Unit as RustUnit};
-use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -15,6 +15,7 @@ impl Dimension {
             inner: RustDimension::parse(&name),
         }
     }
+    #[allow(clippy::inherent_to_string)]
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string(&self) -> String {
         format!("{}", self.inner)

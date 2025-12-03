@@ -6,7 +6,7 @@ use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp, WindowSpec,
 };
-use crate::primitives::{Entity, Flow, RelationType, Resource, Role};
+use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, Role};
 use crate::units::unit_from_string;
 use crate::SemanticVersion;
 use pest::iterators::{Pair, Pairs};
@@ -60,6 +60,8 @@ pub struct Ast {
 pub enum AstNode {
     Entity {
         name: String,
+        version: Option<String>,
+        annotations: HashMap<String, JsonValue>,
         domain: Option<String>,
     },
     Resource {
@@ -102,6 +104,13 @@ pub enum AstNode {
         version: Option<String>,
         metadata: PolicyMetadata,
         expression: Expression,
+    },
+    ConceptChange {
+        name: String,
+        from_version: String,
+        to_version: String,
+        migration_policy: String,
+        breaking_change: bool,
     },
 }
 
@@ -192,6 +201,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
         Rule::role_decl => parse_role(pair),
         Rule::relation_decl => parse_relation(pair),
         Rule::policy_decl => parse_policy(pair),
+        Rule::concept_change_decl => parse_concept_change(pair),
         _ => Err(ParseError::GrammarError(format!(
             "Unexpected rule: {:?}",
             pair.as_rule()
@@ -256,13 +266,139 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected entity name".to_string()))?,
     )?;
 
-    let domain = if let Some(domain_pair) = inner.next() {
-        Some(parse_identifier(domain_pair)?)
-    } else {
-        None
-    };
+    let mut version = None;
+    let mut annotations = HashMap::new();
+    let mut domain = None;
 
-    Ok(AstNode::Entity { name, domain })
+    for part in inner {
+        match part.as_rule() {
+            Rule::version => {
+                version = Some(part.as_str().to_string());
+            }
+            Rule::entity_annotation => {
+                let mut annotation_inner = part.into_inner();
+                let key_pair = annotation_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Empty annotation".to_string()))?;
+
+                match key_pair.as_rule() {
+                    Rule::ea_replaces => {
+                        let target_name =
+                            parse_name(annotation_inner.next().ok_or_else(|| {
+                                ParseError::GrammarError("Expected name in replaces".to_string())
+                            })?)?;
+                        // Check for optional version
+                        let mut target_version = None;
+                        if let Some(next) = annotation_inner.next() {
+                            if next.as_rule() == Rule::version {
+                                target_version = Some(next.as_str().to_string());
+                            }
+                        }
+
+                        let value = if let Some(v) = target_version {
+                            format!("{} v{}", target_name, v)
+                        } else {
+                            target_name
+                        };
+                        annotations.insert("replaces".to_string(), JsonValue::String(value));
+                    }
+                    Rule::ea_changes => {
+                        let array_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected string array in changes".to_string())
+                        })?;
+                        let mut changes = Vec::new();
+                        for item in array_pair.into_inner() {
+                            changes.push(parse_string_literal(item)?);
+                        }
+                        annotations.insert(
+                            "changes".to_string(),
+                            JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            Rule::in_keyword => {
+                // Skip "in"
+            }
+            Rule::identifier => {
+                // This must be the domain
+                domain = Some(parse_identifier(part)?);
+            }
+            _ => {}
+        }
+    }
+
+    Ok(AstNode::Entity {
+        name,
+        version,
+        annotations,
+        domain,
+    })
+}
+
+/// Parse concept change declaration
+fn parse_concept_change(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name =
+        parse_name(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected concept change name".to_string())
+        })?)?;
+
+    let mut from_version = String::new();
+    let mut to_version = String::new();
+    let mut migration_policy = String::new();
+    let mut breaking_change = false;
+
+    for part in inner {
+        if part.as_rule() == Rule::concept_change_annotation {
+            let mut annotation_inner = part.into_inner();
+
+            let key_pair = annotation_inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation key".to_string()))?;
+            let value_pair = annotation_inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
+
+            match key_pair.as_rule() {
+                Rule::cc_from_version => from_version = parse_version(value_pair)?,
+                Rule::cc_to_version => to_version = parse_version(value_pair)?,
+                Rule::cc_migration_policy => migration_policy = parse_identifier(value_pair)?,
+                Rule::cc_breaking_change => {
+                    breaking_change = value_pair.as_str() == "true";
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if from_version.is_empty() {
+        return Err(ParseError::GrammarError(
+            "Missing cc_from_version annotation".to_string(),
+        ));
+    }
+
+    if to_version.is_empty() {
+        return Err(ParseError::GrammarError(
+            "Missing cc_to_version annotation".to_string(),
+        ));
+    }
+
+    if migration_policy.is_empty() {
+        return Err(ParseError::GrammarError(
+            "Missing cc_migration_policy annotation".to_string(),
+        ));
+    }
+
+    Ok(AstNode::ConceptChange {
+        name,
+        from_version,
+        to_version,
+        migration_policy,
+        breaking_change,
+    })
 }
 
 /// Parse resource declaration
@@ -1207,6 +1343,11 @@ fn parse_identifier(pair: Pair<Rule>) -> ParseResult<String> {
     Ok(pair.as_str().to_string())
 }
 
+/// Parse semantic version (validated by grammar)
+fn parse_version(pair: Pair<Rule>) -> ParseResult<String> {
+    Ok(pair.as_str().to_string())
+}
+
 /// Parse number as i32
 fn parse_number(pair: Pair<Rule>) -> ParseResult<i32> {
     pair.as_str()
@@ -1370,6 +1511,29 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         }
     }
 
+    // Register concept changes
+    for node in &ast.declarations {
+        if let AstNode::ConceptChange {
+            name,
+            from_version,
+            to_version,
+            migration_policy,
+            breaking_change,
+        } = node
+        {
+            let change = ConceptChange::new(
+                name.clone(),
+                from_version.clone(),
+                to_version.clone(),
+                migration_policy.clone(),
+                *breaking_change,
+            );
+            graph.add_concept_change(change).map_err(|e| {
+                ParseError::GrammarError(format!("Failed to add concept change: {}", e))
+            })?;
+        }
+    }
+
     // Second pass: Add roles, entities, and resources
     for node in &ast.declarations {
         match node {
@@ -1389,7 +1553,12 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                     .map_err(|e| ParseError::GrammarError(format!("Failed to add role: {}", e)))?;
                 role_map.insert(name.clone(), role_id);
             }
-            AstNode::Entity { name, domain } => {
+            AstNode::Entity {
+                name,
+                domain,
+                version,
+                annotations,
+            } => {
                 if entity_map.contains_key(name) {
                     return Err(ParseError::duplicate_declaration(format!(
                         "Entity '{}' already declared",
@@ -1398,7 +1567,34 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 }
 
                 let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
-                let entity = Entity::new_with_namespace(name.clone(), namespace);
+                let mut entity = Entity::new_with_namespace(name.clone(), namespace);
+
+                if let Some(v_str) = version {
+                    let sem_ver = SemanticVersion::parse(v_str).map_err(|e| {
+                        ParseError::GrammarError(format!(
+                            "Invalid entity version '{}': {}",
+                            v_str, e
+                        ))
+                    })?;
+                    entity = entity.with_version(sem_ver);
+                }
+
+                if let Some(replaces_val) = annotations.get("replaces") {
+                    if let Some(replaces_str) = replaces_val.as_str() {
+                        entity = entity.with_replaces(replaces_str.to_string());
+                    }
+                }
+
+                if let Some(changes_val) = annotations.get("changes") {
+                    if let Some(changes_arr) = changes_val.as_array() {
+                        let changes: Vec<String> = changes_arr
+                            .iter()
+                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                            .collect();
+                        entity = entity.with_changes(changes);
+                    }
+                }
+
                 let entity_id = entity.id().clone();
                 graph.add_entity(entity).map_err(|e| {
                     ParseError::GrammarError(format!("Failed to add entity: {}", e))

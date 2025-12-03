@@ -32,8 +32,8 @@ fn test_parse_entity_with_version_and_annotations() {
 fn test_parse_concept_change() {
     let source = r#"
         ConceptChange "Vendor_v2_migration"
-          @from_version "2.0.0"
-          @to_version "2.1.0"
+          @from_version v2.0.0
+          @to_version v2.1.0
           @migration_policy mandatory
           @breaking_change true
     "#;
@@ -84,8 +84,8 @@ fn test_entity_version_in_graph() {
 fn test_concept_change_in_graph() {
     let source = r#"
         ConceptChange "Vendor_v2_migration"
-          @from_version "2.0.0"
-          @to_version "2.1.0"
+          @from_version v2.0.0
+          @to_version v2.1.0
           @migration_policy mandatory
           @breaking_change true
     "#;
@@ -143,8 +143,8 @@ fn test_invalid_version_format() {
 fn test_concept_change_non_breaking() {
     let source = r#"
         ConceptChange "Vendor_v2_1_migration"
-          @from_version "2.1.0"
-          @to_version "2.1.1"
+          @from_version v2.1.0
+          @to_version v2.1.1
           @migration_policy optional
           @breaking_change false
     "#;

@@ -19,14 +19,24 @@ annotation_name = {
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | policy_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | policy_decl | concept_change_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
 // Syntax: Entity "Name"
 entity_decl = {
-    ^"entity" ~ name ~ (^"in" ~ identifier)?
+    ^"entity" ~ name ~ (^"v" ~ version)? ~ entity_annotation* ~ (^"in" ~ identifier)?
 }
+
+entity_annotation = {
+    "@" ~ (
+        (ea_replaces ~ name ~ (^"v" ~ version)?) |
+        (ea_changes ~ string_array)
+    )
+}
+
+ea_replaces = { ^"replaces" }
+ea_changes = { ^"changes" }
 
 // Resource Declaration
 // Syntax: Resource "Name" units in domain
@@ -77,6 +87,31 @@ relation_decl = {
     ^"object" ~ ":" ~ string_literal ~
     (^"via" ~ ":" ~ ^"flow" ~ string_literal)?
 }
+
+// Concept Change Declaration
+// Syntax:
+// ConceptChange "Vendor_v2_migration"
+//   @from_version v2.0.0
+//   @to_version v2.1.0
+//   @migration_policy mandatory
+//   @breaking_change true
+concept_change_decl = {
+    ^"ConceptChange" ~ name ~ concept_change_annotation*
+}
+
+concept_change_annotation = {
+    "@" ~ (
+        (cc_from_version ~ ^"v" ~ version) |
+        (cc_to_version ~ ^"v" ~ version) |
+        (cc_migration_policy ~ identifier) |
+        (cc_breaking_change ~ boolean)
+    )
+}
+
+cc_from_version = { ^"from_version" }
+cc_to_version = { ^"to_version" }
+cc_migration_policy = { ^"migration_policy" }
+cc_breaking_change = { ^"breaking_change" }
 
 // Dimension Declaration
 // Syntax: Dimension "Currency"

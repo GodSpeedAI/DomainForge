@@ -1,6 +1,6 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
-use crate::primitives::{Entity, Flow, Instance, RelationType, Resource, Role};
+use crate::primitives::{ConceptChange, Entity, Flow, Instance, RelationType, Resource, Role};
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -35,6 +35,8 @@ pub struct Graph {
     #[serde(default)]
     patterns: IndexMap<ConceptId, Pattern>,
     #[serde(default)]
+    concept_changes: IndexMap<ConceptId, ConceptChange>,
+    #[serde(default)]
     entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
     #[serde(default)]
     config: GraphConfig,
@@ -54,6 +56,7 @@ impl Graph {
             && self.instances.is_empty()
             && self.policies.is_empty()
             && self.patterns.is_empty()
+            && self.concept_changes.is_empty()
     }
 
     /// Set the evaluation mode for policy evaluation.
@@ -314,6 +317,23 @@ impl Graph {
         Ok(())
     }
 
+    pub fn add_concept_change(&mut self, change: ConceptChange) -> Result<(), String> {
+        let id = change.id().clone();
+        if self.concept_changes.contains_key(&id) {
+            return Err(format!("ConceptChange with ID {} already exists", id));
+        }
+        self.concept_changes.insert(id, change);
+        Ok(())
+    }
+
+    pub fn get_concept_change(&self, id: &ConceptId) -> Option<&ConceptChange> {
+        self.concept_changes.get(id)
+    }
+
+    pub fn all_concept_changes(&self) -> Vec<&ConceptChange> {
+        self.concept_changes.values().collect()
+    }
+
     pub fn has_flow(&self, id: &ConceptId) -> bool {
         self.flows.contains_key(id)
     }
@@ -543,6 +563,7 @@ impl Graph {
             instances,
             policies,
             patterns,
+            concept_changes,
             entity_roles,
             config: _,
         } = other;
@@ -583,6 +604,10 @@ impl Graph {
 
         for policy in policies.into_values() {
             self.add_policy(policy)?;
+        }
+
+        for change in concept_changes.into_values() {
+            self.add_concept_change(change)?;
         }
 
         Ok(())
