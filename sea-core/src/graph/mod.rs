@@ -31,6 +31,7 @@ pub struct Graph {
     flows: IndexMap<ConceptId, Flow>,
     relations: IndexMap<ConceptId, RelationType>,
     instances: IndexMap<ConceptId, ResourceInstance>,
+    entity_instances: IndexMap<String, crate::primitives::Instance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
     patterns: IndexMap<ConceptId, Pattern>,
@@ -54,6 +55,7 @@ impl Graph {
             && self.flows.is_empty()
             && self.relations.is_empty()
             && self.instances.is_empty()
+            && self.entity_instances.is_empty()
             && self.policies.is_empty()
             && self.patterns.is_empty()
             && self.concept_changes.is_empty()
@@ -422,6 +424,38 @@ impl Graph {
             .ok_or_else(|| format!("Instance with ID {} not found", id))
     }
 
+    // Entity Instance methods
+    pub fn entity_instance_count(&self) -> usize {
+        self.entity_instances.len()
+    }
+
+    pub fn add_entity_instance(&mut self, instance: crate::primitives::Instance) -> Result<(), String> {
+        let name = instance.name().to_string();
+        if self.entity_instances.contains_key(&name) {
+            return Err(format!("Entity instance '{}' already exists", name));
+        }
+        self.entity_instances.insert(name, instance);
+        Ok(())
+    }
+
+    pub fn get_entity_instance(&self, name: &str) -> Option<&crate::primitives::Instance> {
+        self.entity_instances.get(name)
+    }
+
+    pub fn get_entity_instance_mut(&mut self, name: &str) -> Option<&mut crate::primitives::Instance> {
+        self.entity_instances.get_mut(name)
+    }
+
+    pub fn all_entity_instances(&self) -> Vec<&crate::primitives::Instance> {
+        self.entity_instances.values().collect()
+    }
+
+    pub fn remove_entity_instance(&mut self, name: &str) -> Result<crate::primitives::Instance, String> {
+        self.entity_instances
+            .shift_remove(name)
+            .ok_or_else(|| format!("Entity instance '{}' not found", name))
+    }
+
     pub fn flows_from(&self, entity_id: &ConceptId) -> Vec<&Flow> {
         self.flows
             .values()
@@ -561,6 +595,7 @@ impl Graph {
             flows,
             relations,
             instances,
+            entity_instances,
             policies,
             patterns,
             concept_changes,
@@ -582,6 +617,10 @@ impl Graph {
 
         for instance in instances.into_values() {
             self.add_instance(instance)?;
+        }
+
+        for entity_instance in entity_instances.into_values() {
+            self.add_entity_instance(entity_instance)?;
         }
 
         for flow in flows.into_values() {

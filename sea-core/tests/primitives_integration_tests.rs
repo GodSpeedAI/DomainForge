@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::primitives::{Entity, Flow, Resource, ResourceInstance};
 use sea_core::units::unit_from_string;
 
 #[test]
@@ -19,7 +19,7 @@ fn test_complete_supply_chain_model() {
         Decimal::from(5000),
     );
 
-    let camera_instance = Instance::new(camera.id().clone(), warehouse.id().clone());
+    let camera_instance = ResourceInstance::new(camera.id().clone(), warehouse.id().clone());
 
     assert!(steel_shipment.quantity() > Decimal::ZERO);
     assert_eq!(camera_instance.entity_id(), warehouse.id());
@@ -81,9 +81,9 @@ fn test_instance_tracking_across_entities() {
         "default".to_string(),
     );
 
-    let instance1 = Instance::new(camera.id().clone(), warehouse_a.id().clone());
+    let instance1 = ResourceInstance::new(camera.id().clone(), warehouse_a.id().clone());
 
-    let instance2 = Instance::new(camera.id().clone(), warehouse_b.id().clone());
+    let instance2 = ResourceInstance::new(camera.id().clone(), warehouse_b.id().clone());
 
     assert_eq!(instance1.resource_id(), camera.id());
     assert_eq!(instance2.resource_id(), camera.id());
@@ -108,9 +108,9 @@ fn test_resource_flow_with_instances() {
         Decimal::from(50),
     );
 
-    let instance_at_origin = Instance::new(product.id().clone(), origin.id().clone());
+    let instance_at_origin = ResourceInstance::new(product.id().clone(), origin.id().clone());
 
-    let instance_at_destination = Instance::new(product.id().clone(), destination.id().clone());
+    let instance_at_destination = ResourceInstance::new(product.id().clone(), destination.id().clone());
 
     assert_eq!(transfer.resource_id(), product.id());
     assert_eq!(transfer.from_id(), instance_at_origin.entity_id());
@@ -131,7 +131,7 @@ fn test_all_primitives_serialization() {
         entity.id().clone(),
         Decimal::from(10),
     );
-    let instance = Instance::new(resource.id().clone(), entity.id().clone());
+    let instance = ResourceInstance::new(resource.id().clone(), entity.id().clone());
 
     let entity_json = serde_json::to_string(&entity).unwrap();
     let resource_json = serde_json::to_string(&resource).unwrap();
@@ -141,7 +141,7 @@ fn test_all_primitives_serialization() {
     let entity_deserialized: Entity = serde_json::from_str(&entity_json).unwrap();
     let resource_deserialized: Resource = serde_json::from_str(&resource_json).unwrap();
     let flow_deserialized: Flow = serde_json::from_str(&flow_json).unwrap();
-    let instance_deserialized: Instance = serde_json::from_str(&instance_json).unwrap();
+    let instance_deserialized: ResourceInstance = serde_json::from_str(&instance_json).unwrap();
 
     assert_eq!(entity, entity_deserialized);
     assert_eq!(resource, resource_deserialized);

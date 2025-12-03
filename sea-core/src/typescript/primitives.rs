@@ -386,3 +386,86 @@ impl ResourceInstance {
         &self.inner
     }
 }
+
+#[napi]
+pub struct Instance {
+    inner: crate::primitives::Instance,
+}
+
+#[napi]
+#[allow(clippy::inherent_to_string)]
+impl Instance {
+    #[napi(constructor)]
+    pub fn new(name: String, entity_type: String, namespace: Option<String>) -> Self {
+        let inner = match namespace {
+            Some(ns) => crate::primitives::Instance::new_with_namespace(name, entity_type, ns),
+            None => crate::primitives::Instance::new_with_namespace(name, entity_type, "default".to_string()),
+        };
+        Self { inner }
+    }
+
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn entity_type(&self) -> String {
+        self.inner.entity_type().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
+    }
+
+    #[napi]
+    pub fn set_field(&mut self, key: String, value_json: String) -> Result<()> {
+        let json_value: serde_json::Value = serde_json::from_str(&value_json)
+            .map_err(|e| Error::from_reason(format!("Failed to parse JSON: {}", e)))?;
+        self.inner.set_field(key, json_value);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn get_field(&self, key: String) -> Option<String> {
+        self.inner
+            .get_field(&key)
+            .and_then(|v| serde_json::to_string(v).ok())
+    }
+
+    #[napi]
+    pub fn to_string(&self) -> String {
+        format!(
+            "Instance(id='{}', name='{}', entity_type='{}', namespace={:?})",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.entity_type(),
+            self.inner.namespace()
+        )
+    }
+}
+
+impl Instance {
+    pub fn from_rust(inner: crate::primitives::Instance) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> crate::primitives::Instance {
+        self.inner
+    }
+
+    pub fn inner_ref(&self) -> &crate::primitives::Instance {
+        &self.inner
+    }
+}

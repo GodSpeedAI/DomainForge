@@ -386,3 +386,86 @@ impl ResourceInstance {
         self.inner
     }
 }
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Instance {
+    inner: crate::primitives::Instance,
+}
+
+#[pymethods]
+impl Instance {
+    #[new]
+    #[pyo3(signature = (name, entity_type, namespace=None))]
+    fn new(name: String, entity_type: String, namespace: Option<String>) -> Self {
+        let inner = match namespace {
+            Some(ns) => crate::primitives::Instance::new_with_namespace(name, entity_type, ns),
+            None => crate::primitives::Instance::new_with_namespace(name, entity_type, "default".to_string()),
+        };
+        Self { inner }
+    }
+
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn entity_type(&self) -> String {
+        self.inner.entity_type().to_string()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
+    }
+
+    fn set_field(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
+        let json_value = pythonize::depythonize(&value)?;
+        self.inner.set_field(key, json_value);
+        Ok(())
+    }
+
+    fn get_field(&self, key: String, py: Python) -> PyResult<PyObject> {
+        match self.inner.get_field(&key) {
+            Some(value) => {
+                let py_value = pythonize::pythonize(py, &value)?;
+                Ok(py_value.into())
+            }
+            None => Err(PyKeyError::new_err(format!(
+                "Field '{}' not found",
+                key
+            ))),
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Instance(id='{}', name='{}', entity_type='{}', namespace={:?})",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.entity_type(),
+            self.inner.namespace()
+        )
+    }
+}
+
+impl Instance {
+    pub fn from_rust(inner: crate::primitives::Instance) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> crate::primitives::Instance {
+        self.inner
+    }
+}

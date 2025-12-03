@@ -1802,15 +1802,13 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
             // Evaluate and set fields
             for (field_name, field_expr) in fields {
-                // For now, we'll convert expressions to JSON values
-                // In a full implementation, you'd want to evaluate the expression
                 let value = expression_to_json(field_expr)?;
                 instance.set_field(field_name.clone(), value);
             }
 
-            // Note: We're not adding instances to the graph yet since Graph doesn't have
-            // an add_instance method for the new Instance type. This will be added in the next step.
-            // For now, instances are parsed but not stored in the graph.
+            graph.add_entity_instance(instance).map_err(|e| {
+                ParseError::GrammarError(format!("Failed to add entity instance '{}': {}", name, e))
+            })?;
         }
     }
 
