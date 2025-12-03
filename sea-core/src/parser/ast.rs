@@ -363,8 +363,8 @@ fn parse_concept_change(pair: Pair<Rule>) -> ParseResult<AstNode> {
                 .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
 
             match key_pair.as_rule() {
-                Rule::cc_from_version => from_version = parse_string_literal(value_pair)?,
-                Rule::cc_to_version => to_version = parse_string_literal(value_pair)?,
+                Rule::cc_from_version => from_version = parse_version(value_pair)?,
+                Rule::cc_to_version => to_version = parse_version(value_pair)?,
                 Rule::cc_migration_policy => migration_policy = parse_identifier(value_pair)?,
                 Rule::cc_breaking_change => {
                     breaking_change = value_pair.as_str() == "true";
@@ -372,6 +372,24 @@ fn parse_concept_change(pair: Pair<Rule>) -> ParseResult<AstNode> {
                 _ => {}
             }
         }
+    }
+
+    if from_version.is_empty() {
+        return Err(ParseError::GrammarError(
+            "Missing cc_from_version annotation".to_string(),
+        ));
+    }
+
+    if to_version.is_empty() {
+        return Err(ParseError::GrammarError(
+            "Missing cc_to_version annotation".to_string(),
+        ));
+    }
+
+    if migration_policy.is_empty() {
+        return Err(ParseError::GrammarError(
+            "Missing cc_migration_policy annotation".to_string(),
+        ));
     }
 
     Ok(AstNode::ConceptChange {
@@ -1322,6 +1340,11 @@ fn parse_multiline_string(pair: Pair<Rule>) -> ParseResult<String> {
 
 /// Parse identifier
 fn parse_identifier(pair: Pair<Rule>) -> ParseResult<String> {
+    Ok(pair.as_str().to_string())
+}
+
+/// Parse semantic version (validated by grammar)
+fn parse_version(pair: Pair<Rule>) -> ParseResult<String> {
     Ok(pair.as_str().to_string())
 }
 
