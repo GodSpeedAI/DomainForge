@@ -1,0 +1,31 @@
+// Evolution Semantics Example
+// This file demonstrates versioning and migration tracking in the DSL
+
+// Version 1.0.0 - Original Vendor entity
+Entity "Vendor" v1.0.0 in procurement
+
+// Version 2.0.0 - Added credit tracking
+Entity "VendorV2" v2.0.0
+  @replaces "Vendor" v1.0.0
+  @changes ["added credit_limit field", "added payment_terms field"]
+  in procurement
+
+// Version 2.1.0 - Removed legacy fields
+Entity "VendorV2_1" v2.1.0
+  @replaces "VendorV2" v2.0.0
+  @changes ["removed legacy_id field", "added vendor_rating field"]
+  in procurement
+
+// Migration from v2.0.0 to v2.1.0
+ConceptChange "Vendor_v2_1_migration"
+  @from_version "2.0.0"
+  @to_version "2.1.0"
+  @migration_policy mandatory
+  @breaking_change true
+
+// Migration from v2.1.0 to v2.1.1 (patch)
+ConceptChange "Vendor_v2_1_1_migration"
+  @from_version "2.1.0"
+  @to_version "2.1.1"
+  @migration_policy optional
+  @breaking_change false
