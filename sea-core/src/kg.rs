@@ -282,7 +282,7 @@ impl KnowledgeGraph {
                     kg.triples.push(Triple {
                         subject: relation_subject.clone(),
                         predicate: "sea:via".to_string(),
-                        object: format!("\"{}\"", flow_id.to_string()),
+                        object: format!("\"{}\"", flow_id),
                     });
                 }
             }

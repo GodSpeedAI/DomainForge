@@ -643,6 +643,7 @@ impl Expression {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn evaluate_aggregation_comprehension(
         function: &AggregateFunction,
         variable: &str,
