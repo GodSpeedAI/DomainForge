@@ -371,7 +371,7 @@ ConceptChange "Vendor_v2_migration"
 
 ### 7. Instance Declarations
 
-**Problem**: Cannot define concrete data instances in DSL. (verify the problem is still valid)
+**Problem**: Cannot define concrete data instances in DSL. (first verify the problem is still valid)
 
 **Syntax Example**:
 
@@ -404,7 +404,7 @@ Policy vendor_specific as:
 
 These features improve the developer experience and safety.
 
-### 8. Observability Semantics
+### 8. Observability Semantics (first verify the problem is still valid)
 
 **Problem**: Cannot express metrics or monitoring constraints.
 **Implementation**:
@@ -415,7 +415,7 @@ These features improve the developer experience and safety.
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 9. Projection Contracts
+### 9. Projection Contracts (first verify the problem is still valid)
 
 **Problem**: No formal mapping specifications.
 **Implementation**:
@@ -437,7 +437,7 @@ These features improve the developer experience and safety.
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 11. Error Model & Diagnostics
+### 11. Error Model & Diagnostics (first verify the problem is still valid)
 
 **Problem**: Need structured error reporting.
 **Implementation**:
@@ -449,7 +449,7 @@ These features improve the developer experience and safety.
 
 ## Phase 4: Polish (OPTIONAL)
 
-### 12. String Semantics
+### 12. String Semantics (first verify the problem is still valid)
 
 **Problem**: Missing case-insensitive operations.
 **Implementation**:
@@ -459,7 +459,7 @@ These features improve the developer experience and safety.
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 13. Index Semantics
+### 13. Index Semantics (first verify the problem is still valid)
 
 **Problem**: No explicit index queries.
 **Implementation**:
@@ -473,7 +473,7 @@ These features improve the developer experience and safety.
 
 These cross-cutting concerns must be addressed throughout all phases.
 
-### 14. Determinism & Iteration Order
+### 14. Determinism & Iteration Order (first verify the problem is still valid)
 
 **Problem**: Aggregations and iterations must be deterministic.
 **Implementation**:
@@ -483,7 +483,7 @@ These cross-cutting concerns must be addressed throughout all phases.
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 15. Null Semantics & Type Safety
+### 15. Null Semantics & Type Safety (first verify the problem is still valid)
 
 **Problem**: Underspecified behavior for missing values.
 **Implementation**:
@@ -493,7 +493,7 @@ These cross-cutting concerns must be addressed throughout all phases.
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 16. Unicode & Normalization
+### 16. Unicode & Normalization (first verify the problem is still valid)
 
 **Problem**: Identifier consistency across languages.
 **Implementation**:
@@ -507,7 +507,7 @@ These cross-cutting concerns must be addressed throughout all phases.
 
 These features enable deep integration with the Temporal DB and VibesPro ecosystem.
 
-### 17. Governance & Risk Annotations
+### 17. Governance & Risk Annotations (first verify the problem is still valid)
 
 **Problem**: No way to express risk levels or governance requirements directly in policy.
 **Implementation**:
@@ -518,7 +518,7 @@ These features enable deep integration with the Temporal DB and VibesPro ecosyst
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 18. Architecture & Generator Metadata
+### 18. Architecture & Generator Metadata (first verify the problem is still valid)
 
 **Problem**: Missing context for generator selection (e.g., "hexagonal" vs "script").
 **Implementation**:
@@ -528,7 +528,7 @@ These features enable deep integration with the Temporal DB and VibesPro ecosyst
 - [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
 - [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
 
-### 19. Simulation Semantics
+### 19. Simulation Semantics (first verify the problem is still valid)
 
 **Problem**: Cannot distinguish between "real" and "simulated" logic or define mock data rules.
 **Implementation**:
@@ -543,7 +543,7 @@ These features enable deep integration with the Temporal DB and VibesPro ecosyst
 
 These features implement the "Calculus of Semantic Resolution" to control generator behavior and minimize hallucination.
 
-### 20. Semantic Coordinate Annotations
+### 20. Semantic Coordinate Annotations (first verify the problem is still valid)
 
 **Problem**: No way to define the "Cognitive State" (Scope/Modality) of a component or prompt.
 
