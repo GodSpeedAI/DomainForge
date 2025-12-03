@@ -120,7 +120,7 @@ cc_breaking_change = { ^"breaking_change" }
 //   credit_limit: 50_000 "USD"
 // }
 instance_decl = {
-    ^"Instance" ~ identifier ~ ^"of" ~ string_literal ~ instance_body?
+    ^"instance" ~ identifier ~ ^"of" ~ string_literal ~ instance_body?
 }
 
 instance_body = {

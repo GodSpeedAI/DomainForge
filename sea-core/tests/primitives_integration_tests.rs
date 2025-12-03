@@ -110,7 +110,8 @@ fn test_resource_flow_with_instances() {
 
     let instance_at_origin = ResourceInstance::new(product.id().clone(), origin.id().clone());
 
-    let instance_at_destination = ResourceInstance::new(product.id().clone(), destination.id().clone());
+    let instance_at_destination =
+        ResourceInstance::new(product.id().clone(), destination.id().clone());
 
     assert_eq!(transfer.resource_id(), product.id());
     assert_eq!(transfer.from_id(), instance_at_origin.entity_id());

@@ -13,8 +13,8 @@ use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
-use serde_json::Value as JsonValue;
 use serde_json::json;
+use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
 /// File-level metadata from header annotations
@@ -611,20 +611,25 @@ fn parse_instance(pair: Pair<Rule>) -> ParseResult<AstNode> {
         if body_pair.as_rule() == Rule::instance_body {
             for field_pair in body_pair.into_inner() {
                 if field_pair.as_rule() == Rule::instance_field {
+                    let span = field_pair.as_span();
                     let mut field_inner = field_pair.into_inner();
-                    
-                    let field_name = parse_identifier(
-                        field_inner
-                            .next()
-                            .ok_or_else(|| ParseError::GrammarError("Expected field name".to_string()))?,
-                    )?;
-                    
-                    let field_value = parse_expression(
-                        field_inner
-                            .next()
-                            .ok_or_else(|| ParseError::GrammarError("Expected field value".to_string()))?,
-                    )?;
-                    
+
+                    let field_name = parse_identifier(field_inner.next().ok_or_else(|| {
+                        ParseError::GrammarError("Expected field name".to_string())
+                    })?)?;
+
+                    if fields.contains_key(&field_name) {
+                        let (line, column) = span.start_pos().line_col();
+                        return Err(ParseError::GrammarError(format!(
+                            "Duplicate field name '{}' at line {}, column {}",
+                            field_name, line, column
+                        )));
+                    }
+
+                    let field_value = parse_expression(field_inner.next().ok_or_else(|| {
+                        ParseError::GrammarError("Expected field value".to_string())
+                    })?)?;
+
                     fields.insert(field_name, field_value);
                 }
             }
@@ -1505,22 +1510,37 @@ fn parse_window_clause(pair: Pair<Rule>) -> ParseResult<WindowSpec> {
     Ok(WindowSpec { duration, unit })
 }
 
+fn expression_kind(expr: &Expression) -> &'static str {
+    match expr {
+        Expression::Literal(_) => "literal",
+        Expression::QuantityLiteral { .. } => "quantity_literal",
+        Expression::TimeLiteral(_) => "time_literal",
+        Expression::IntervalLiteral { .. } => "interval_literal",
+        Expression::Variable(_) => "variable",
+        Expression::GroupBy { .. } => "group_by",
+        Expression::Binary { .. } => "binary",
+        Expression::Unary { .. } => "unary",
+        Expression::Quantifier { .. } => "quantifier",
+        Expression::MemberAccess { .. } => "member_access",
+        Expression::Aggregation { .. } => "aggregation",
+        Expression::AggregationComprehension { .. } => "aggregation_comprehension",
+    }
+}
+
 /// Convert an Expression to a JSON Value for instance fields
 fn expression_to_json(expr: &Expression) -> ParseResult<JsonValue> {
     match expr {
         Expression::Literal(v) => Ok(v.clone()),
         Expression::Variable(name) => Ok(JsonValue::String(name.clone())),
-        Expression::QuantityLiteral { value, unit } => {
-            Ok(json!({
-                "value": value.to_string(),
-                "unit": unit
-            }))
-        }
+        Expression::QuantityLiteral { value, unit } => Ok(json!({
+            "value": value.to_string(),
+            "unit": unit
+        })),
         Expression::TimeLiteral(timestamp) => Ok(JsonValue::String(timestamp.clone())),
-        _ => {
-            // For complex expressions, convert to string representation
-            Ok(JsonValue::String(format!("{:?}", expr)))
-        }
+        _ => Err(ParseError::UnsupportedExpression {
+            kind: expression_kind(expr).to_string(),
+            span: None,
+        }),
     }
 }
 

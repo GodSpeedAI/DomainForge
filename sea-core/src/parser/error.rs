@@ -11,6 +11,10 @@ pub enum ParseError {
         line: usize,
         column: usize,
     },
+    UnsupportedExpression {
+        kind: String,
+        span: Option<String>,
+    },
     GrammarError(String),
     UndefinedEntity(String),
     UndefinedResource(String),
@@ -79,6 +83,13 @@ impl fmt::Display for ParseError {
                 column,
             } => {
                 write!(f, "Syntax error at {}:{}: {}", line, column, message)
+            }
+            ParseError::UnsupportedExpression { kind, span } => {
+                if let Some(span) = span {
+                    write!(f, "Unsupported expression '{}' at {}", kind, span)
+                } else {
+                    write!(f, "Unsupported expression '{}'", kind)
+                }
             }
             ParseError::GrammarError(msg) => write!(f, "Grammar error: {}", msg),
             ParseError::UndefinedEntity(name) => {

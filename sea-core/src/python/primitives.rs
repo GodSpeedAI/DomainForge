@@ -1,8 +1,8 @@
 #![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, ResourceInstance as RustResourceInstance,
-    Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, Resource as RustResource,
+    ResourceInstance as RustResourceInstance,
 };
 use crate::units::unit_from_string;
 use pyo3::exceptions::{PyKeyError, PyValueError};
@@ -400,7 +400,11 @@ impl Instance {
     fn new(name: String, entity_type: String, namespace: Option<String>) -> Self {
         let inner = match namespace {
             Some(ns) => crate::primitives::Instance::new_with_namespace(name, entity_type, ns),
-            None => crate::primitives::Instance::new_with_namespace(name, entity_type, "default".to_string()),
+            None => crate::primitives::Instance::new_with_namespace(
+                name,
+                entity_type,
+                "default".to_string(),
+            ),
         };
         Self { inner }
     }
@@ -442,10 +446,7 @@ impl Instance {
                 let py_value = pythonize::pythonize(py, &value)?;
                 Ok(py_value.into())
             }
-            None => Err(PyKeyError::new_err(format!(
-                "Field '{}' not found",
-                key
-            ))),
+            None => Err(PyKeyError::new_err(format!("Field '{}' not found", key))),
         }
     }
 

@@ -2,7 +2,7 @@ use crate::ConceptId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use uuid;
+use uuid::Uuid;
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -49,7 +49,7 @@ impl ResourceInstance {
     ) -> Self {
         let namespace = namespace.into();
         // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
-        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
+        let id = ConceptId::from_uuid(Uuid::new_v4());
 
         Self {
             id,

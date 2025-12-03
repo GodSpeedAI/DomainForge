@@ -1,6 +1,6 @@
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, ResourceInstance as RustResourceInstance,
-    Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, Resource as RustResource,
+    ResourceInstance as RustResourceInstance,
 };
 
 use crate::units::unit_from_string;
@@ -399,7 +399,11 @@ impl Instance {
     pub fn new(name: String, entity_type: String, namespace: Option<String>) -> Self {
         let inner = match namespace {
             Some(ns) => crate::primitives::Instance::new_with_namespace(name, entity_type, ns),
-            None => crate::primitives::Instance::new_with_namespace(name, entity_type, "default".to_string()),
+            None => crate::primitives::Instance::new_with_namespace(
+                name,
+                entity_type,
+                "default".to_string(),
+            ),
         };
         Self { inner }
     }
@@ -438,10 +442,13 @@ impl Instance {
     }
 
     #[napi]
-    pub fn get_field(&self, key: String) -> Option<String> {
-        self.inner
-            .get_field(&key)
-            .and_then(|v| serde_json::to_string(v).ok())
+    pub fn get_field(&self, key: String) -> Result<Option<String>> {
+        match self.inner.get_field(&key) {
+            Some(value) => serde_json::to_string(value).map(Some).map_err(|e| {
+                Error::from_reason(format!("Failed to serialize field '{}': {}", key, e))
+            }),
+            None => Ok(None),
+        }
     }
 
     #[napi]

@@ -1,6 +1,8 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
-use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, ResourceInstance, Role};
+use crate::primitives::{
+    ConceptChange, Entity, Flow, Instance, RelationType, Resource, ResourceInstance, Role,
+};
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -31,7 +33,8 @@ pub struct Graph {
     flows: IndexMap<ConceptId, Flow>,
     relations: IndexMap<ConceptId, RelationType>,
     instances: IndexMap<ConceptId, ResourceInstance>,
-    entity_instances: IndexMap<String, crate::primitives::Instance>,
+    /// Entity instances keyed by ConceptId for consistency with other graph collections.
+    entity_instances: IndexMap<ConceptId, Instance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
     patterns: IndexMap<ConceptId, Pattern>,
@@ -429,30 +432,57 @@ impl Graph {
         self.entity_instances.len()
     }
 
-    pub fn add_entity_instance(&mut self, instance: crate::primitives::Instance) -> Result<(), String> {
-        let name = instance.name().to_string();
-        if self.entity_instances.contains_key(&name) {
-            return Err(format!("Entity instance '{}' already exists", name));
+    pub fn add_entity_instance(&mut self, instance: Instance) -> Result<(), String> {
+        let id = instance.id().clone();
+        if self.entity_instances.contains_key(&id) {
+            return Err(format!(
+                "Entity instance '{}' already exists",
+                instance.name()
+            ));
         }
-        self.entity_instances.insert(name, instance);
+        if self.find_entity_instance_by_name(instance.name()).is_some() {
+            return Err(format!(
+                "Entity instance '{}' already exists",
+                instance.name()
+            ));
+        }
+
+        let namespace = instance.namespace();
+        let entity_type = instance.entity_type();
+
+        self.find_entity_by_name_and_namespace(entity_type, namespace)
+            .ok_or_else(|| {
+                format!(
+                    "Entity '{}' not found in namespace '{}'",
+                    entity_type, namespace
+                )
+            })?;
+
+        self.entity_instances.insert(id, instance);
         Ok(())
     }
 
-    pub fn get_entity_instance(&self, name: &str) -> Option<&crate::primitives::Instance> {
-        self.entity_instances.get(name)
+    pub fn get_entity_instance(&self, name: &str) -> Option<&Instance> {
+        self.find_entity_instance_by_name(name)
+            .and_then(|id| self.entity_instances.get(&id))
     }
 
-    pub fn get_entity_instance_mut(&mut self, name: &str) -> Option<&mut crate::primitives::Instance> {
-        self.entity_instances.get_mut(name)
+    pub fn get_entity_instance_mut(&mut self, name: &str) -> Option<&mut Instance> {
+        let id = self.find_entity_instance_by_name(name)?;
+        self.entity_instances.get_mut(&id)
     }
 
-    pub fn all_entity_instances(&self) -> Vec<&crate::primitives::Instance> {
+    pub fn all_entity_instances(&self) -> Vec<&Instance> {
         self.entity_instances.values().collect()
     }
 
-    pub fn remove_entity_instance(&mut self, name: &str) -> Result<crate::primitives::Instance, String> {
+    pub fn remove_entity_instance(&mut self, name: &str) -> Result<Instance, String> {
+        let id = self
+            .find_entity_instance_by_name(name)
+            .ok_or_else(|| format!("Entity instance '{}' not found", name))?;
+
         self.entity_instances
-            .shift_remove(name)
+            .shift_remove(&id)
             .ok_or_else(|| format!("Entity instance '{}' not found", name))
     }
 
@@ -484,6 +514,17 @@ impl Graph {
             .collect()
     }
 
+    pub fn find_entity_by_name_and_namespace(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Option<ConceptId> {
+        self.entities
+            .iter()
+            .find(|(_, entity)| entity.name() == name && entity.namespace() == namespace)
+            .map(|(id, _)| id.clone())
+    }
+
     pub fn find_entity_by_name(&self, name: &str) -> Option<ConceptId> {
         self.entities
             .iter()
@@ -502,6 +543,24 @@ impl Graph {
         self.roles
             .iter()
             .find(|(_, role)| role.name() == name)
+            .map(|(id, _)| id.clone())
+    }
+
+    pub fn find_entity_instance_by_name(&self, name: &str) -> Option<ConceptId> {
+        self.entity_instances
+            .iter()
+            .find(|(_, instance)| instance.name() == name)
+            .map(|(id, _)| id.clone())
+    }
+
+    pub fn find_entity_instance_by_name_and_namespace(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Option<ConceptId> {
+        self.entity_instances
+            .iter()
+            .find(|(_, instance)| instance.name() == name && instance.namespace() == namespace)
             .map(|(id, _)| id.clone())
     }
 

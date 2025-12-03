@@ -1,7 +1,7 @@
 use jsonschema::JSONSchema;
 use rust_decimal::Decimal;
 use sea_core::calm::export;
-use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::primitives::{Entity, Flow, Resource, ResourceInstance};
 use sea_core::units::unit_from_string;
 use sea_core::Graph;
 
@@ -123,7 +123,7 @@ fn test_all_node_types_validate() {
     graph.add_flow(flow).unwrap();
 
     // Add one instance
-    let instance = Instance::new(
+    let instance = ResourceInstance::new(
         graph.all_resources()[0].id().clone(),
         graph.all_entities()[0].id().clone(),
     );

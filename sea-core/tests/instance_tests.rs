@@ -1,4 +1,4 @@
-use sea_core::primitives::{Entity, Instance, Resource};
+use sea_core::primitives::{Entity, Resource, ResourceInstance};
 use sea_core::units::unit_from_string;
 use sea_core::ConceptId;
 
@@ -8,7 +8,7 @@ fn test_instance_new_stores_references() {
     let camera =
         Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
 
-    let instance = Instance::new(camera.id().clone(), warehouse.id().clone());
+    let instance = ResourceInstance::new(camera.id().clone(), warehouse.id().clone());
 
     assert_eq!(instance.entity_id(), warehouse.id());
     assert_eq!(instance.resource_id(), camera.id());
@@ -16,7 +16,7 @@ fn test_instance_new_stores_references() {
 
 #[test]
 fn test_instance_references_are_valid_uuids() {
-    let instance = Instance::new(
+    let instance = ResourceInstance::new(
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
     );
@@ -28,7 +28,7 @@ fn test_instance_references_are_valid_uuids() {
 
 #[test]
 fn test_instance_attributes() {
-    let mut instance = Instance::new(
+    let mut instance = ResourceInstance::new(
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
     );
@@ -49,13 +49,13 @@ fn test_instance_attributes() {
 
 #[test]
 fn test_instance_serialization() {
-    let instance = Instance::new(
+    let instance = ResourceInstance::new(
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
         ConceptId::from_uuid(uuid::Uuid::new_v4()),
     );
 
     let json = serde_json::to_string(&instance).unwrap();
-    let deserialized: Instance = serde_json::from_str(&json).unwrap();
+    let deserialized: ResourceInstance = serde_json::from_str(&json).unwrap();
 
     assert_eq!(instance, deserialized);
 }

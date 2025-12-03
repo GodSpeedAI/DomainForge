@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 use sea_core::{
-    primitives::{Entity, Flow, Instance, Resource},
+    primitives::{Entity, Flow, Resource, ResourceInstance},
     units::unit_from_string,
     Graph,
 };
@@ -109,8 +109,8 @@ fn test_graph_with_instances() {
     graph.add_entity(warehouse).unwrap();
     graph.add_resource(cameras).unwrap();
 
-    let instance1 = Instance::new(cameras_id.clone(), warehouse_id.clone());
-    let instance2 = Instance::new(cameras_id.clone(), warehouse_id.clone());
+    let instance1 = ResourceInstance::new(cameras_id.clone(), warehouse_id.clone());
+    let instance2 = ResourceInstance::new(cameras_id.clone(), warehouse_id.clone());
 
     graph.add_instance(instance1).unwrap();
     graph.add_instance(instance2).unwrap();

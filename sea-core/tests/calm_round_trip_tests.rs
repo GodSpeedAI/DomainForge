@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use sea_core::calm::{export, import};
 use sea_core::policy::Expression;
 use sea_core::policy::Policy;
-use sea_core::primitives::{Entity, Flow, Instance, Resource};
+use sea_core::primitives::{Entity, Flow, Resource, ResourceInstance};
 use sea_core::units::unit_from_string;
 use sea_core::Graph;
 use serde_json::Value;
@@ -95,7 +95,7 @@ fn test_round_trip_with_instances() {
     original_graph.add_entity(warehouse).unwrap();
     original_graph.add_resource(cameras).unwrap();
 
-    let instance = Instance::new(cameras_id.clone(), warehouse_id.clone());
+    let instance = ResourceInstance::new(cameras_id.clone(), warehouse_id.clone());
     original_graph.add_instance(instance).unwrap();
 
     let calm_json = export(&original_graph).unwrap();
