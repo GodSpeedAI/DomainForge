@@ -97,6 +97,8 @@ pub enum BinaryOp {
     EndsWith,
     Matches,
 
+    HasRole,
+
     // Temporal operators
     Before,
     After,
@@ -317,6 +319,7 @@ impl fmt::Display for BinaryOp {
             BinaryOp::StartsWith => write!(f, "STARTS_WITH"),
             BinaryOp::EndsWith => write!(f, "ENDS_WITH"),
             BinaryOp::Matches => write!(f, "MATCHES"),
+            BinaryOp::HasRole => write!(f, "HAS_ROLE"),
             BinaryOp::Before => write!(f, "BEFORE"),
             BinaryOp::After => write!(f, "AFTER"),
             BinaryOp::During => write!(f, "DURING"),

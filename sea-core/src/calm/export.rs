@@ -204,6 +204,7 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 BinaryOp::Contains => "contains",
                 BinaryOp::StartsWith => "startswith",
                 BinaryOp::EndsWith => "endswith",
+                BinaryOp::HasRole => "has_role",
                 BinaryOp::Matches => "matches",
                 BinaryOp::Before => "before",
                 BinaryOp::After => "after",

@@ -1,5 +1,6 @@
 use crate::graph::Graph;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub enum SbvrError {
@@ -88,6 +89,7 @@ impl SbvrModel {
 
     pub fn from_graph(graph: &Graph) -> Result<Self, SbvrError> {
         let mut model = Self::new();
+        let mut relation_predicates: HashSet<String> = HashSet::new();
 
         for entity in graph.all_entities() {
             model.vocabulary.push(SbvrTerm {
@@ -95,6 +97,15 @@ impl SbvrModel {
                 name: entity.name().to_string(),
                 term_type: TermType::GeneralConcept,
                 definition: Some(format!("Entity: {}", entity.name())),
+            });
+        }
+
+        for role in graph.all_roles() {
+            model.vocabulary.push(SbvrTerm {
+                id: role.id().to_string(),
+                name: role.name().to_string(),
+                term_type: TermType::GeneralConcept,
+                definition: Some(format!("Role: {}", role.name())),
             });
         }
 
@@ -130,6 +141,40 @@ impl SbvrModel {
             term_type: TermType::VerbConcept,
             definition: Some("Transfer of resource between entities".to_string()),
         });
+
+        for relation in graph.all_relations() {
+            if relation_predicates.insert(relation.predicate().to_string()) {
+                model.vocabulary.push(SbvrTerm {
+                    id: format!("verb:{}", relation.predicate()),
+                    name: relation.predicate().to_string(),
+                    term_type: TermType::VerbConcept,
+                    definition: Some(format!(
+                        "Fact type predicate '{}' connecting declared roles",
+                        relation.predicate()
+                    )),
+                });
+            }
+
+            model.facts.push(SbvrFactType {
+                id: relation.id().to_string(),
+                subject: graph
+                    .get_role(relation.subject_role())
+                    .map(|role| role.name().to_string())
+                    .unwrap_or_else(|| relation.subject_role().to_string()),
+                verb: relation.predicate().to_string(),
+                object: graph
+                    .get_role(relation.object_role())
+                    .map(|role| role.name().to_string())
+                    .unwrap_or_else(|| relation.object_role().to_string()),
+                destination: relation.via_flow().map(|id| {
+                    graph
+                        .get_resource(id)
+                        .map(|resource| resource.name().to_string())
+                        .unwrap_or_else(|| id.to_string())
+                }),
+                schema_version: SbvrFactType::default_schema_version(),
+            });
+        }
 
         for flow in graph.all_flows() {
             model.facts.push(SbvrFactType {

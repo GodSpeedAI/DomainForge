@@ -19,7 +19,7 @@ annotation_name = {
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | policy_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | policy_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -54,6 +54,28 @@ flow_decl = {
 // Syntax: Pattern "Email" matches "^[a-z]+$"
 pattern_decl = {
     ^"pattern" ~ name ~ ^"matches" ~ string_literal
+}
+
+// Role Declaration
+// Syntax: Role "Approver"
+// Syntax: Role "Approver" in governance
+role_decl = {
+    ^"role" ~ name ~ (in_keyword ~ identifier)?
+}
+
+// Relation Declaration
+// Syntax:
+// Relation "Payment"
+//   subject: "Payer"
+//   predicate: "pays"
+//   object: "Payee"
+//   via: flow "Money"
+relation_decl = {
+    ^"relation" ~ name ~
+    ^"subject" ~ ":" ~ string_literal ~
+    ^"predicate" ~ ":" ~ string_literal ~
+    ^"object" ~ ":" ~ string_literal ~
+    (^"via" ~ ":" ~ ^"flow" ~ string_literal)?
 }
 
 // Dimension Declaration
@@ -107,7 +129,7 @@ comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)? }
 comparison_op = {
     ">=" | "<=" | "!=" | "=" | ">" | "<" |
     ^"contains" | ^"startswith" | ^"endswith" | ^"matches" |
-    ^"before" | ^"after" | ^"during"
+    ^"before" | ^"after" | ^"during" | ^"has_role"
 }
 
 additive_expr = { multiplicative_expr ~ ((add_op ~ multiplicative_expr)*) }
@@ -171,7 +193,7 @@ quantified_expr = {
 quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }
 
 collection = {
-    ^"flows" | ^"entities" | ^"resources" | ^"instances"
+    ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
 }
 
 // Member access (e.g., Flow.quantity, Entity.name)

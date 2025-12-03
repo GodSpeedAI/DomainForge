@@ -300,6 +300,7 @@ impl Policy {
                         BinaryOp::EndsWith => l.ends_with(r),
                         _ => unreachable!(),
                     }),
+                BinaryOp::HasRole => self.evaluate_has_role(left, right, graph),
                 BinaryOp::Matches => self.evaluate_pattern_match(left, right, graph),
                 BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
                     // Temporal operators - parse and compare ISO 8601 timestamps
@@ -459,6 +460,10 @@ impl Policy {
                         }
                         _ => Ok(T::Null),
                     }
+                }
+                BinaryOp::HasRole => {
+                    let role_check = self.evaluate_has_role(left, right, graph)?;
+                    Ok(T::from_option_bool(Some(role_check)))
                 }
                 BinaryOp::Matches => {
                     let left_v = self.get_runtime_value(left, graph);
@@ -661,6 +666,60 @@ impl Policy {
         pattern
             .is_match(&candidate)
             .map_err(|e| format!("Pattern '{}' failed to evaluate: {}", pattern_name, e))
+    }
+
+    fn evaluate_has_role(
+        &self,
+        left: &Expression,
+        right: &Expression,
+        graph: &Graph,
+    ) -> Result<bool, String> {
+        let target_role = self.get_string_value(right, graph)?;
+        let roles = self.collect_roles(left, graph)?;
+
+        Ok(roles
+            .iter()
+            .any(|role| role.eq_ignore_ascii_case(&target_role)))
+    }
+
+    fn collect_roles(&self, expr: &Expression, graph: &Graph) -> Result<Vec<String>, String> {
+        let value = self.get_runtime_value(expr, graph)?;
+
+        if let Some(arr) = value.as_array() {
+            return Ok(arr
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect());
+        }
+
+        if let Some(obj) = value.as_object() {
+            if let Some(roles) = obj.get("roles").and_then(|r| r.as_array()) {
+                return Ok(roles
+                    .iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect());
+            }
+
+            if let Some(name) = obj.get("name").and_then(|v| v.as_str()) {
+                if let Some(entity_id) = graph.find_entity_by_name(name) {
+                    return Ok(graph.role_names_for_entity(&entity_id));
+                }
+            }
+        }
+
+        if let Some(name) = value.as_str() {
+            if let Some(entity_id) = graph.find_entity_by_name(name) {
+                return Ok(graph.role_names_for_entity(&entity_id));
+            }
+
+            if let Some(role_id) = graph.find_role_by_name(name) {
+                if let Some(role) = graph.get_role(&role_id) {
+                    return Ok(vec![role.name().to_string()]);
+                }
+            }
+        }
+
+        Ok(Vec::new())
     }
 
     fn get_literal_value(&self, expr: &Expression) -> Result<serde_json::Value, String> {

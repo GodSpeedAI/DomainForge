@@ -1,6 +1,6 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
-use crate::primitives::{Entity, Flow, Instance, Resource};
+use crate::primitives::{Entity, Flow, Instance, RelationType, Resource, Role};
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -26,12 +26,16 @@ impl Default for GraphConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Graph {
     entities: IndexMap<ConceptId, Entity>,
+    roles: IndexMap<ConceptId, Role>,
     resources: IndexMap<ConceptId, Resource>,
     flows: IndexMap<ConceptId, Flow>,
+    relations: IndexMap<ConceptId, RelationType>,
     instances: IndexMap<ConceptId, Instance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
     patterns: IndexMap<ConceptId, Pattern>,
+    #[serde(default)]
+    entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
     #[serde(default)]
     config: GraphConfig,
 }
@@ -43,8 +47,10 @@ impl Graph {
 
     pub fn is_empty(&self) -> bool {
         self.entities.is_empty()
+            && self.roles.is_empty()
             && self.resources.is_empty()
             && self.flows.is_empty()
+            && self.relations.is_empty()
             && self.instances.is_empty()
             && self.policies.is_empty()
             && self.patterns.is_empty()
@@ -134,6 +140,60 @@ impl Graph {
             .ok_or_else(|| format!("Entity with ID {} not found", id))
     }
 
+    pub fn role_count(&self) -> usize {
+        self.roles.len()
+    }
+
+    pub fn add_role(&mut self, role: Role) -> Result<(), String> {
+        let id = role.id().clone();
+        if self.roles.contains_key(&id) {
+            return Err(format!("Role with ID {} already exists", id));
+        }
+        self.roles.insert(id, role);
+        Ok(())
+    }
+
+    pub fn get_role(&self, id: &ConceptId) -> Option<&Role> {
+        self.roles.get(id)
+    }
+
+    pub fn has_role(&self, id: &ConceptId) -> bool {
+        self.roles.contains_key(id)
+    }
+
+    pub fn assign_role_to_entity(
+        &mut self,
+        entity_id: ConceptId,
+        role_id: ConceptId,
+    ) -> Result<(), String> {
+        if !self.entities.contains_key(&entity_id) {
+            return Err(format!("Entity with ID {} not found", entity_id));
+        }
+        if !self.roles.contains_key(&role_id) {
+            return Err(format!("Role with ID {} not found", role_id));
+        }
+
+        let roles = self.entity_roles.entry(entity_id).or_default();
+        if !roles.contains(&role_id) {
+            roles.push(role_id);
+        }
+        Ok(())
+    }
+
+    pub fn roles_for_entity(&self, entity_id: &ConceptId) -> Option<&Vec<ConceptId>> {
+        self.entity_roles.get(entity_id)
+    }
+
+    pub fn role_names_for_entity(&self, entity_id: &ConceptId) -> Vec<String> {
+        self.entity_roles
+            .get(entity_id)
+            .into_iter()
+            .flat_map(|roles| roles.iter())
+            .filter_map(|role_id| self.roles.get(role_id))
+            .map(|role| role.name().to_string())
+            .collect()
+    }
+
     pub fn resource_count(&self) -> usize {
         self.resources.len()
     }
@@ -197,6 +257,23 @@ impl Graph {
 
     pub fn pattern_count(&self) -> usize {
         self.patterns.len()
+    }
+
+    pub fn relation_count(&self) -> usize {
+        self.relations.len()
+    }
+
+    pub fn add_relation_type(&mut self, relation: RelationType) -> Result<(), String> {
+        let id = relation.id().clone();
+        if self.relations.contains_key(&id) {
+            return Err(format!("Relation with ID {} already exists", id));
+        }
+        self.relations.insert(id, relation);
+        Ok(())
+    }
+
+    pub fn all_relations(&self) -> Vec<&RelationType> {
+        self.relations.values().collect()
     }
 
     pub fn add_flow(&mut self, flow: Flow) -> Result<(), String> {
@@ -367,6 +444,13 @@ impl Graph {
             .map(|(id, _)| id.clone())
     }
 
+    pub fn find_role_by_name(&self, name: &str) -> Option<ConceptId> {
+        self.roles
+            .iter()
+            .find(|(_, role)| role.name() == name)
+            .map(|(id, _)| id.clone())
+    }
+
     pub fn find_pattern(&self, name: &str, namespace: Option<&str>) -> Option<&Pattern> {
         if let Some(ns) = namespace {
             if let Some((_, pattern)) = self
@@ -386,6 +470,10 @@ impl Graph {
 
     pub fn all_entities(&self) -> Vec<&Entity> {
         self.entities.values().collect()
+    }
+
+    pub fn all_roles(&self) -> Vec<&Role> {
+        self.roles.values().collect()
     }
 
     pub fn all_resources(&self) -> Vec<&Resource> {
@@ -448,16 +536,23 @@ impl Graph {
     fn extend_from_graph(&mut self, other: Graph) -> Result<(), String> {
         let Graph {
             entities,
+            roles,
             resources,
             flows,
+            relations,
             instances,
             policies,
             patterns,
+            entity_roles,
             config: _,
         } = other;
 
         for entity in entities.into_values() {
             self.add_entity(entity)?;
+        }
+
+        for role in roles.into_values() {
+            self.add_role(role)?;
         }
 
         for resource in resources.into_values() {
@@ -472,8 +567,18 @@ impl Graph {
             self.add_flow(flow)?;
         }
 
+        for relation in relations.into_values() {
+            self.add_relation_type(relation)?;
+        }
+
         for pattern in patterns.into_values() {
             self.add_pattern(pattern)?;
+        }
+
+        for (entity_id, roles_for_entity) in entity_roles.into_iter() {
+            for role_id in roles_for_entity {
+                self.assign_role_to_entity(entity_id.clone(), role_id)?;
+            }
         }
 
         for policy in policies.into_values() {

@@ -2,10 +2,14 @@ pub mod entity;
 pub mod flow;
 pub mod instance;
 pub mod quantity;
+pub mod relation;
 pub mod resource;
+pub mod role;
 
 pub use entity::Entity;
 pub use flow::Flow;
 pub use instance::Instance;
 pub use quantity::Quantity;
+pub use relation::RelationType;
 pub use resource::Resource;
+pub use role::Role;

@@ -163,6 +163,26 @@ impl KnowledgeGraph {
             });
         }
 
+        for role in graph.all_roles() {
+            kg.triples.push(Triple {
+                subject: format!("sea:{}", Self::uri_encode(role.name())),
+                predicate: "rdf:type".to_string(),
+                object: "sea:Role".to_string(),
+            });
+
+            kg.triples.push(Triple {
+                subject: format!("sea:{}", Self::uri_encode(role.name())),
+                predicate: "rdfs:label".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(role.name())),
+            });
+
+            kg.triples.push(Triple {
+                subject: format!("sea:{}", Self::uri_encode(role.name())),
+                predicate: "sea:namespace".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(role.namespace())),
+            });
+        }
+
         for resource in graph.all_resources() {
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(resource.name())),
@@ -212,6 +232,60 @@ impl KnowledgeGraph {
                 predicate: "sea:regex".to_string(),
                 object: format!("\"{}\"", Self::escape_turtle_literal(pattern.regex())),
             });
+        }
+
+        for relation in graph.all_relations() {
+            let relation_subject = format!("sea:{}", Self::uri_encode(relation.name()));
+
+            kg.triples.push(Triple {
+                subject: relation_subject.clone(),
+                predicate: "rdf:type".to_string(),
+                object: "sea:Relation".to_string(),
+            });
+
+            kg.triples.push(Triple {
+                subject: relation_subject.clone(),
+                predicate: "rdfs:label".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(relation.name())),
+            });
+
+            if let Some(subject_role) = graph.get_role(relation.subject_role()) {
+                kg.triples.push(Triple {
+                    subject: relation_subject.clone(),
+                    predicate: "sea:subjectRole".to_string(),
+                    object: format!("sea:{}", Self::uri_encode(subject_role.name())),
+                });
+            }
+
+            if let Some(object_role) = graph.get_role(relation.object_role()) {
+                kg.triples.push(Triple {
+                    subject: relation_subject.clone(),
+                    predicate: "sea:objectRole".to_string(),
+                    object: format!("sea:{}", Self::uri_encode(object_role.name())),
+                });
+            }
+
+            kg.triples.push(Triple {
+                subject: relation_subject.clone(),
+                predicate: "sea:predicate".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(relation.predicate())),
+            });
+
+            if let Some(flow_id) = relation.via_flow() {
+                if let Some(resource) = graph.get_resource(flow_id) {
+                    kg.triples.push(Triple {
+                        subject: relation_subject.clone(),
+                        predicate: "sea:via".to_string(),
+                        object: format!("sea:{}", Self::uri_encode(resource.name())),
+                    });
+                } else {
+                    kg.triples.push(Triple {
+                        subject: relation_subject.clone(),
+                        predicate: "sea:via".to_string(),
+                        object: format!("\"{}\"", flow_id.to_string()),
+                    });
+                }
+            }
         }
 
         for flow in graph.all_flows() {

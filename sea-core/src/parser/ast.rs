@@ -6,7 +6,7 @@ use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp, WindowSpec,
 };
-use crate::primitives::{Entity, Flow, Resource};
+use crate::primitives::{Entity, Flow, RelationType, Resource, Role};
 use crate::units::unit_from_string;
 use crate::SemanticVersion;
 use pest::iterators::{Pair, Pairs};
@@ -76,6 +76,17 @@ pub enum AstNode {
     Pattern {
         name: String,
         regex: String,
+    },
+    Role {
+        name: String,
+        domain: Option<String>,
+    },
+    Relation {
+        name: String,
+        subject_role: String,
+        predicate: String,
+        object_role: String,
+        via_flow: Option<String>,
     },
     Dimension {
         name: String,
@@ -178,6 +189,8 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
         Rule::resource_decl => parse_resource(pair),
         Rule::flow_decl => parse_flow(pair),
         Rule::pattern_decl => parse_pattern(pair),
+        Rule::role_decl => parse_role(pair),
+        Rule::relation_decl => parse_relation(pair),
         Rule::policy_decl => parse_policy(pair),
         _ => Err(ParseError::GrammarError(format!(
             "Unexpected rule: {:?}",
@@ -362,6 +375,74 @@ fn parse_pattern(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let regex = parse_string_literal(regex_literal)?;
 
     Ok(AstNode::Pattern { name, regex })
+}
+
+/// Parse role declaration
+fn parse_role(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected role name".to_string()))?,
+    )?;
+
+    let domain = if let Some(domain_pair) = inner.next() {
+        Some(parse_identifier(domain_pair)?)
+    } else {
+        None
+    };
+
+    Ok(AstNode::Role { name, domain })
+}
+
+/// Parse relation declaration
+fn parse_relation(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected relation name".to_string()))?,
+    )?;
+
+    let subject_literal = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected subject role in relation".to_string()))?;
+    let subject_role = parse_string_literal(subject_literal)?;
+
+    let predicate_literal = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected predicate in relation".to_string()))?;
+    let predicate = parse_string_literal(predicate_literal)?;
+
+    let object_literal = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected object role in relation".to_string()))?;
+    let object_role = parse_string_literal(object_literal)?;
+
+    let via_flow = if let Some(via_pair) = inner.next() {
+        match via_pair.as_rule() {
+            Rule::string_literal => Some(parse_string_literal(via_pair)?),
+            _ => {
+                let mut via_inner = via_pair.into_inner();
+                let flow_literal = via_inner.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected flow name after via".to_string())
+                })?;
+                Some(parse_string_literal(flow_literal)?)
+            }
+        }
+    } else {
+        None
+    };
+
+    Ok(AstNode::Relation {
+        name,
+        subject_role,
+        predicate,
+        object_role,
+        via_flow,
+    })
 }
 
 /// Parse policy declaration
@@ -620,6 +701,7 @@ fn parse_comparison_op(pair: Pair<Rule>) -> ParseResult<BinaryOp> {
         _ if op_str.eq_ignore_ascii_case("before") => Ok(BinaryOp::Before),
         _ if op_str.eq_ignore_ascii_case("after") => Ok(BinaryOp::After),
         _ if op_str.eq_ignore_ascii_case("during") => Ok(BinaryOp::During),
+        _ if op_str.eq_ignore_ascii_case("has_role") => Ok(BinaryOp::HasRole),
         _ => Err(ParseError::InvalidExpression(format!(
             "Unknown comparison operator: {}",
             op_str
@@ -1233,7 +1315,9 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
 pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
     let mut graph = Graph::new();
     let mut entity_map = HashMap::new();
+    let mut role_map = HashMap::new();
     let mut resource_map = HashMap::new();
+    let mut relation_map = HashMap::new();
 
     let default_namespace = ast
         .metadata
@@ -1286,9 +1370,25 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         }
     }
 
-    // Second pass: Add entities and resources
+    // Second pass: Add roles, entities, and resources
     for node in &ast.declarations {
         match node {
+            AstNode::Role { name, domain } => {
+                if role_map.contains_key(name) {
+                    return Err(ParseError::duplicate_declaration(format!(
+                        "Role '{}' already declared",
+                        name
+                    )));
+                }
+
+                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
+                let role = Role::new_with_namespace(name.clone(), namespace);
+                let role_id = role.id().clone();
+                graph
+                    .add_role(role)
+                    .map_err(|e| ParseError::GrammarError(format!("Failed to add role: {}", e)))?;
+                role_map.insert(name.clone(), role_id);
+            }
             AstNode::Entity { name, domain } => {
                 if entity_map.contains_key(name) {
                     return Err(ParseError::duplicate_declaration(format!(
@@ -1330,7 +1430,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         }
     }
 
-    // Second pass: Add flows
+    // Third pass: Add flows
     for node in &ast.declarations {
         if let AstNode::Flow {
             resource_name,
@@ -1360,7 +1460,60 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         }
     }
 
-    // Third pass: Add policies
+    // Fourth pass: Add relations
+    for node in &ast.declarations {
+        if let AstNode::Relation {
+            name,
+            subject_role,
+            predicate,
+            object_role,
+            via_flow,
+        } = node
+        {
+            if relation_map.contains_key(name) {
+                return Err(ParseError::duplicate_declaration(format!(
+                    "Relation '{}' already declared",
+                    name
+                )));
+            }
+
+            let subject_id = role_map.get(subject_role).ok_or_else(|| {
+                ParseError::GrammarError(format!("Undefined subject role '{}'", subject_role))
+            })?;
+
+            let object_id = role_map.get(object_role).ok_or_else(|| {
+                ParseError::GrammarError(format!("Undefined object role '{}'", object_role))
+            })?;
+
+            let via_flow_id = if let Some(flow_name) = via_flow {
+                Some(
+                    resource_map
+                        .get(flow_name)
+                        .cloned()
+                        .ok_or_else(|| ParseError::undefined_resource(flow_name))?,
+                )
+            } else {
+                None
+            };
+
+            let relation = RelationType::new(
+                name.clone(),
+                default_namespace.clone(),
+                subject_id.clone(),
+                predicate.clone(),
+                object_id.clone(),
+                via_flow_id,
+            );
+
+            let relation_id = relation.id().clone();
+            graph.add_relation_type(relation).map_err(|e| {
+                ParseError::GrammarError(format!("Failed to add relation '{}': {}", name, e))
+            })?;
+            relation_map.insert(name.clone(), relation_id);
+        }
+    }
+
+    // Fifth pass: Add policies
     for node in &ast.declarations {
         if let AstNode::Policy {
             name,

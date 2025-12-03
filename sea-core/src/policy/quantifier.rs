@@ -93,10 +93,12 @@ impl Expression {
                             serde_json::Value::Number(n) => n.to_string(),
                             serde_json::Value::Bool(b) => b.to_string(),
                             serde_json::Value::Null => "null".to_string(),
-                            other => return Err(format!(
+                            other => {
+                                return Err(format!(
                                 "Group key must be a string, number, bool, or null literal, got {}",
                                 other
-                            )),
+                            ))
+                            }
                         },
                         _ => {
                             return Err("Group key must evaluate to a literal".to_string());
@@ -353,6 +355,11 @@ impl Expression {
                             map.insert("name".to_string(), serde_json::json!(e.name()));
                             map.insert("namespace".to_string(), serde_json::json!(e.namespace()));
 
+                            let roles = graph.role_names_for_entity(e.id());
+                            if !roles.is_empty() {
+                                map.insert("roles".to_string(), serde_json::json!(roles));
+                            }
+
                             for (k, v) in e.attributes().iter() {
                                 if matches!(k.as_str(), "id" | "name" | "namespace")
                                     || map.contains_key(k)
@@ -366,6 +373,46 @@ impl Expression {
                         })
                         .collect();
                     Ok(entities)
+                }
+                "relations" => {
+                    let relations: Vec<serde_json::Value> = graph
+                        .all_relations()
+                        .iter()
+                        .map(|relation| {
+                            let mut map = serde_json::Map::new();
+                            map.insert(
+                                "id".to_string(),
+                                serde_json::json!(relation.id().to_string()),
+                            );
+                            map.insert("name".to_string(), serde_json::json!(relation.name()));
+                            map.insert(
+                                "predicate".to_string(),
+                                serde_json::json!(relation.predicate()),
+                            );
+
+                            if let Some(subject) = graph.get_role(relation.subject_role()) {
+                                map.insert(
+                                    "subject_role".to_string(),
+                                    serde_json::json!(subject.name()),
+                                );
+                            }
+
+                            if let Some(object) = graph.get_role(relation.object_role()) {
+                                map.insert(
+                                    "object_role".to_string(),
+                                    serde_json::json!(object.name()),
+                                );
+                            }
+
+                            if let Some(flow) = relation.via_flow() {
+                                map.insert("via".to_string(), serde_json::json!(flow.to_string()));
+                            }
+
+                            serde_json::Value::Object(map)
+                        })
+                        .collect();
+
+                    Ok(relations)
                 }
                 "resources" => {
                     let resources: Vec<serde_json::Value> = graph
@@ -448,6 +495,7 @@ impl Expression {
                     "entities" => "entity",
                     "resources" => "resource",
                     "instances" => "instance",
+                    "relations" => "relation",
                     _ => "item",
                 },
                 _ => "item",
