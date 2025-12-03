@@ -1,5 +1,6 @@
 use sea_core::parser::ast::{Ast, AstNode, FileMetadata};
 use sea_core::parser::printer::PrettyPrinter;
+use std::collections::HashMap;
 
 #[test]
 fn test_pretty_print_ast() {
@@ -11,6 +12,8 @@ fn test_pretty_print_ast() {
         declarations: vec![
             AstNode::Entity {
                 name: "Factory".to_string(),
+                version: None,
+                annotations: HashMap::new(),
                 domain: None,
             },
             AstNode::Resource {

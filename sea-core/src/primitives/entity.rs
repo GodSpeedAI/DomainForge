@@ -1,4 +1,5 @@
 use crate::ConceptId;
+use crate::SemanticVersion;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -58,6 +59,9 @@ pub struct Entity {
     id: ConceptId,
     name: String,
     namespace: String,
+    version: Option<SemanticVersion>,
+    replaces: Option<String>,
+    changes: Vec<String>,
     attributes: HashMap<String, Value>,
 }
 
@@ -80,6 +84,9 @@ impl Entity {
             id: ConceptId::from_concept(&namespace, &name),
             name,
             namespace,
+            version: None,
+            replaces: None,
+            changes: Vec::new(),
             attributes: HashMap::new(),
         }
     }
@@ -103,8 +110,44 @@ impl Entity {
             id,
             name,
             namespace,
+            version: None,
+            replaces: None,
+            changes: Vec::new(),
             attributes: HashMap::new(),
         }
+    }
+
+    /// Sets the entity version.
+    pub fn with_version(mut self, version: SemanticVersion) -> Self {
+        self.version = Some(version);
+        self
+    }
+
+    /// Sets the entity that this version replaces.
+    pub fn with_replaces(mut self, replaces: String) -> Self {
+        self.replaces = Some(replaces);
+        self
+    }
+
+    /// Sets the list of changes in this version.
+    pub fn with_changes(mut self, changes: Vec<String>) -> Self {
+        self.changes = changes;
+        self
+    }
+
+    /// Returns the entity version.
+    pub fn version(&self) -> Option<&SemanticVersion> {
+        self.version.as_ref()
+    }
+
+    /// Returns the entity that this version replaces.
+    pub fn replaces(&self) -> Option<&str> {
+        self.replaces.as_deref()
+    }
+
+    /// Returns the list of changes in this version.
+    pub fn changes(&self) -> &[String] {
+        &self.changes
     }
 
     /// Creates an Entity from a legacy UUID for backward compatibility.
@@ -117,6 +160,9 @@ impl Entity {
             id: ConceptId::from_legacy_uuid(uuid),
             name: name.into(),
             namespace: namespace.into(),
+            version: None,
+            replaces: None,
+            changes: Vec::new(),
             attributes: HashMap::new(),
         }
     }

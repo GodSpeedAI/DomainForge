@@ -1,7 +1,7 @@
 use crate::units::{Dimension as RustDimension, Unit as RustUnit};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 
 #[pyclass]
