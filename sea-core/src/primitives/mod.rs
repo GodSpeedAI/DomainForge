@@ -17,3 +17,6 @@ pub use relation::RelationType;
 pub use resource::Resource;
 pub use resource_instance::ResourceInstance;
 pub use role::Role;
+
+pub mod metric;
+pub use metric::{Metric, Severity};

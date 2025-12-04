@@ -1,7 +1,7 @@
 #![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, Metric as RustMetric, Resource as RustResource,
     ResourceInstance as RustResourceInstance,
 };
 use crate::units::unit_from_string;
@@ -468,5 +468,50 @@ impl Instance {
 
     pub fn into_inner(self) -> crate::primitives::Instance {
         self.inner
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Metric {
+    inner: RustMetric,
+}
+
+#[pymethods]
+impl Metric {
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    #[getter]
+    fn namespace(&self) -> String {
+        self.inner.namespace.clone()
+    }
+
+    #[getter]
+    fn threshold(&self) -> Option<f64> {
+        self.inner.threshold.map(|d| d.to_f64().unwrap_or(0.0))
+    }
+
+    #[getter]
+    fn target(&self) -> Option<f64> {
+        self.inner.target.map(|d| d.to_f64().unwrap_or(0.0))
+    }
+
+    #[getter]
+    fn unit(&self) -> Option<String> {
+        self.inner.unit.clone()
+    }
+
+    #[getter]
+    fn severity(&self) -> Option<String> {
+        self.inner.severity.as_ref().map(|s| format!("{:?}", s))
+    }
+}
+
+impl Metric {
+    pub fn from_rust(inner: RustMetric) -> Self {
+        Self { inner }
     }
 }
