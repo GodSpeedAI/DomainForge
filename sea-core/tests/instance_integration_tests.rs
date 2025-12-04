@@ -3,12 +3,12 @@ use sea_core::parser::parse_to_graph;
 #[test]
 fn test_instance_stored_in_graph() {
     let source = r#"
+Entity "Vendor"
+
 Instance vendor_123 of "Vendor" {
     name: "Acme Corp",
     credit_limit: 50000
 }
-
-Entity "Vendor"
 "#;
 
     let result = parse_to_graph(source);
@@ -37,6 +37,8 @@ Entity "Vendor"
 #[test]
 fn test_multiple_instances_in_graph() {
     let source = r#"
+Entity "Vendor"
+
 Instance vendor_1 of "Vendor" {
     name: "Acme Corp"
 }
@@ -44,8 +46,6 @@ Instance vendor_1 of "Vendor" {
 Instance vendor_2 of "Vendor" {
     name: "Beta Inc"
 }
-
-Entity "Vendor"
 "#;
 
     let result = parse_to_graph(source);
@@ -61,6 +61,8 @@ Entity "Vendor"
 #[test]
 fn test_duplicate_instance_error() {
     let source = r#"
+Entity "Vendor"
+
 Instance vendor_1 of "Vendor" {
     name: "Acme Corp"
 }
@@ -68,8 +70,6 @@ Instance vendor_1 of "Vendor" {
 Instance vendor_1 of "Vendor" {
     name: "Beta Inc"
 }
-
-Entity "Vendor"
 "#;
 
     let result = parse_to_graph(source);
@@ -81,9 +81,9 @@ Entity "Vendor"
 #[test]
 fn test_instance_minimal_no_fields() {
     let source = r#"
-Instance vendor_123 of "Vendor"
-
 Entity "Vendor"
+
+Instance vendor_123 of "Vendor"
 "#;
 
     let result = parse_to_graph(source);

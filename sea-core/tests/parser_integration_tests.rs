@@ -1,4 +1,5 @@
 use sea_core::parse_to_graph;
+use sea_core::parser::parse;
 
 #[test]
 fn test_end_to_end_camera_supply_chain() {
@@ -262,4 +263,32 @@ fn test_end_to_end_case_insensitive_keywords() {
     assert_eq!(graph.all_entities().len(), 3);
     assert_eq!(graph.all_resources().len(), 3);
     assert_eq!(graph.all_flows().len(), 3);
+}
+
+#[test]
+fn test_entity_then_instance_parses() {
+    let source = r#"
+Entity "Vendor"
+
+Instance vendor_123 of "Vendor" {
+    name: "Acme Corp",
+    credit_limit: 50000
+}
+"#;
+
+    let ast = parse(source);
+    assert!(ast.is_ok(), "Failed to parse: {:?}", ast.err());
+    let ast = ast.unwrap();
+    assert_eq!(
+        ast.declarations.len(),
+        2,
+        "Expected both declarations parsed"
+    );
+
+    let graph = parse_to_graph(source);
+    assert!(graph.is_ok(), "Failed to parse: {:?}", graph.err());
+
+    let graph = graph.unwrap();
+    assert_eq!(graph.entity_instance_count(), 1);
+    assert!(graph.get_entity_instance("vendor_123").is_some());
 }
