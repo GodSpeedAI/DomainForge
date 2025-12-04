@@ -4,7 +4,7 @@ use super::models::{
 use crate::patterns::Pattern;
 use crate::policy::Policy;
 use crate::policy::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
-use crate::primitives::{Entity, Flow, Instance, Resource};
+use crate::primitives::{Entity, Flow, Resource, ResourceInstance};
 use crate::Graph;
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -45,7 +45,7 @@ fn export_resource(resource: &Resource) -> CalmNode {
     }
 }
 
-fn export_instance(instance: &Instance) -> CalmNode {
+fn export_instance(instance: &ResourceInstance) -> CalmNode {
     let mut metadata = HashMap::new();
     metadata.insert("sea:primitive".to_string(), json!("Instance"));
     metadata.insert(

@@ -1,6 +1,6 @@
 use super::models::{CalmModel, NodeType, Parties, RelationshipType};
 use crate::policy::Policy;
-use crate::primitives::{Entity, Flow, Instance, Resource};
+use crate::primitives::{Entity, Flow, Resource, ResourceInstance};
 use crate::units::unit_from_string;
 use crate::ConceptId;
 use crate::Graph;
@@ -182,7 +182,7 @@ fn import_resource(node: &super::models::CalmNode) -> Result<Resource, String> {
 fn import_instance(
     node: &super::models::CalmNode,
     id_map: &HashMap<String, ConceptId>,
-) -> Result<Instance, String> {
+) -> Result<ResourceInstance, String> {
     let entity_id_str = node
         .metadata
         .get("sea:entity_id")
@@ -204,9 +204,9 @@ fn import_instance(
         .ok_or_else(|| format!("Unknown resource ID: {}", resource_id_str))?;
 
     let instance = if let Some(ns) = &node.namespace {
-        Instance::new_with_namespace(resource_id.clone(), entity_id.clone(), ns.clone())
+        ResourceInstance::new_with_namespace(resource_id.clone(), entity_id.clone(), ns.clone())
     } else {
-        Instance::new_with_namespace(
+        ResourceInstance::new_with_namespace(
             resource_id.clone(),
             entity_id.clone(),
             "default".to_string(),

@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use sea_core::{
     policy::{Expression, Policy},
-    primitives::{Entity, Flow, Instance, Resource},
+    primitives::{Entity, Flow, Resource, ResourceInstance},
     units::unit_from_string,
     Graph,
 };
@@ -249,7 +249,7 @@ fn test_add_instance() {
     graph.add_entity(warehouse).unwrap();
     graph.add_resource(cameras).unwrap();
 
-    let instance = Instance::new(cameras_id.clone(), warehouse_id.clone());
+    let instance = ResourceInstance::new(cameras_id.clone(), warehouse_id.clone());
     let instance_id = instance.id().clone();
 
     graph.add_instance(instance).unwrap();
@@ -267,7 +267,7 @@ fn test_add_instance_without_entity() {
     graph.add_resource(cameras).unwrap();
 
     let entity_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
-    let instance = Instance::new(cameras_id.clone(), entity_id.clone());
+    let instance = ResourceInstance::new(cameras_id.clone(), entity_id.clone());
 
     assert!(graph.add_instance(instance).is_err());
 }
@@ -281,7 +281,7 @@ fn test_add_instance_without_resource() {
     graph.add_entity(warehouse).unwrap();
 
     let resource_id = sea_core::ConceptId::from_uuid(Uuid::new_v4());
-    let instance = Instance::new(resource_id.clone(), warehouse_id.clone());
+    let instance = ResourceInstance::new(resource_id.clone(), warehouse_id.clone());
 
     assert!(graph.add_instance(instance).is_err());
 }
@@ -377,7 +377,7 @@ fn test_remove_instance() {
     graph.add_entity(warehouse).unwrap();
     graph.add_resource(cameras).unwrap();
 
-    let instance = Instance::new(cameras_id.clone(), warehouse_id.clone());
+    let instance = ResourceInstance::new(cameras_id.clone(), warehouse_id.clone());
     let instance_id = instance.id().clone();
 
     graph.add_instance(instance).unwrap();
@@ -571,7 +571,7 @@ fn test_instance_iteration_order_deterministic() {
 
     // Add multiple instances
     for _ in 1..=5 {
-        let instance = Instance::new(resource_id.clone(), entity_id.clone());
+        let instance = ResourceInstance::new(resource_id.clone(), entity_id.clone());
         graph.add_instance(instance).unwrap();
     }
 

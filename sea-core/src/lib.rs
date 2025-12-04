@@ -54,6 +54,7 @@ pub mod typescript;
 #[cfg(feature = "typescript")]
 pub use typescript::primitives::{
     Entity as TsEntity, Flow as TsFlow, Instance as TsInstance, Resource as TsResource,
+    ResourceInstance as TsResourceInstance,
 };
 
 #[cfg(feature = "typescript")]
@@ -104,6 +105,7 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::primitives::Entity>()?;
     m.add_class::<python::primitives::Resource>()?;
     m.add_class::<python::primitives::Flow>()?;
+    m.add_class::<python::primitives::ResourceInstance>()?;
     m.add_class::<python::primitives::Instance>()?;
     m.add_class::<python::graph::Graph>()?;
     m.add_class::<python::registry::NamespaceRegistry>()?;

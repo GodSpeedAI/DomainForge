@@ -1,7 +1,8 @@
 #![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Instance as RustInstance, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, Resource as RustResource,
+    ResourceInstance as RustResourceInstance,
 };
 use crate::units::unit_from_string;
 use pyo3::exceptions::{PyKeyError, PyValueError};
@@ -291,12 +292,12 @@ impl Flow {
 
 #[pyclass]
 #[derive(Clone)]
-pub struct Instance {
-    inner: RustInstance,
+pub struct ResourceInstance {
+    inner: RustResourceInstance,
 }
 
 #[pymethods]
-impl Instance {
+impl ResourceInstance {
     #[new]
     #[pyo3(signature = (resource_id, entity_id, namespace=None))]
     fn new(resource_id: String, entity_id: String, namespace: Option<String>) -> PyResult<Self> {
@@ -304,15 +305,15 @@ impl Instance {
             .map_err(|e| PyValueError::new_err(format!("Invalid resource_id UUID: {}", e)))?;
         let entity_uuid = Uuid::from_str(&entity_id)
             .map_err(|e| PyValueError::new_err(format!("Invalid entity_id UUID: {}", e)))?;
-        // Convert Uuid to ConceptId for Instance constructor
+        // Convert Uuid to ConceptId for ResourceInstance constructor
         let inner = match namespace {
-            Some(ns) => RustInstance::new_with_namespace(
+            Some(ns) => RustResourceInstance::new_with_namespace(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
                 ns,
             ),
             // Use explicit default namespace to match Entity/Resource behavior
-            None => RustInstance::new_with_namespace(
+            None => RustResourceInstance::new_with_namespace(
                 crate::ConceptId::from(resource_uuid),
                 crate::ConceptId::from(entity_uuid),
                 "default".to_string(),
@@ -367,7 +368,7 @@ impl Instance {
 
     fn __repr__(&self) -> String {
         format!(
-            "Instance(id='{}', resource_id='{}', entity_id='{}', namespace={:?})",
+            "ResourceInstance(id='{}', resource_id='{}', entity_id='{}', namespace={:?})",
             self.inner.id(),
             self.inner.resource_id(),
             self.inner.entity_id(),
@@ -376,12 +377,96 @@ impl Instance {
     }
 }
 
-impl Instance {
-    pub fn from_rust(inner: RustInstance) -> Self {
+impl ResourceInstance {
+    pub fn from_rust(inner: RustResourceInstance) -> Self {
         Self { inner }
     }
 
-    pub fn into_inner(self) -> RustInstance {
+    pub fn into_inner(self) -> RustResourceInstance {
+        self.inner
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Instance {
+    inner: crate::primitives::Instance,
+}
+
+#[pymethods]
+impl Instance {
+    #[new]
+    #[pyo3(signature = (name, entity_type, namespace=None))]
+    fn new(name: String, entity_type: String, namespace: Option<String>) -> Self {
+        let inner = match namespace {
+            Some(ns) => crate::primitives::Instance::new_with_namespace(name, entity_type, ns),
+            None => crate::primitives::Instance::new_with_namespace(
+                name,
+                entity_type,
+                "default".to_string(),
+            ),
+        };
+        Self { inner }
+    }
+
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn entity_type(&self) -> String {
+        self.inner.entity_type().to_string()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
+    }
+
+    fn set_field(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
+        let json_value = pythonize::depythonize(&value)?;
+        self.inner.set_field(key, json_value);
+        Ok(())
+    }
+
+    fn get_field(&self, key: String, py: Python) -> PyResult<PyObject> {
+        match self.inner.get_field(&key) {
+            Some(value) => {
+                let py_value = pythonize::pythonize(py, &value)?;
+                Ok(py_value.into())
+            }
+            None => Err(PyKeyError::new_err(format!("Field '{}' not found", key))),
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Instance(id='{}', name='{}', entity_type='{}', namespace={:?})",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.entity_type(),
+            self.inner.namespace()
+        )
+    }
+}
+
+impl Instance {
+    pub fn from_rust(inner: crate::primitives::Instance) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> crate::primitives::Instance {
         self.inner
     }
 }

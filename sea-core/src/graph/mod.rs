@@ -1,6 +1,8 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
-use crate::primitives::{ConceptChange, Entity, Flow, Instance, RelationType, Resource, Role};
+use crate::primitives::{
+    ConceptChange, Entity, Flow, Instance, RelationType, Resource, ResourceInstance, Role,
+};
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
 use indexmap::IndexMap;
@@ -30,7 +32,9 @@ pub struct Graph {
     resources: IndexMap<ConceptId, Resource>,
     flows: IndexMap<ConceptId, Flow>,
     relations: IndexMap<ConceptId, RelationType>,
-    instances: IndexMap<ConceptId, Instance>,
+    instances: IndexMap<ConceptId, ResourceInstance>,
+    /// Entity instances keyed by ConceptId for consistency with other graph collections.
+    entity_instances: IndexMap<ConceptId, Instance>,
     policies: IndexMap<ConceptId, Policy>,
     #[serde(default)]
     patterns: IndexMap<ConceptId, Pattern>,
@@ -54,6 +58,7 @@ impl Graph {
             && self.flows.is_empty()
             && self.relations.is_empty()
             && self.instances.is_empty()
+            && self.entity_instances.is_empty()
             && self.policies.is_empty()
             && self.patterns.is_empty()
             && self.concept_changes.is_empty()
@@ -352,7 +357,7 @@ impl Graph {
         self.instances.len()
     }
 
-    pub fn add_instance(&mut self, instance: Instance) -> Result<(), String> {
+    pub fn add_instance(&mut self, instance: ResourceInstance) -> Result<(), String> {
         let id = instance.id().clone();
         if self.instances.contains_key(&id) {
             return Err(format!("Instance with ID {} already exists", id));
@@ -412,14 +417,73 @@ impl Graph {
         self.instances.contains_key(id)
     }
 
-    pub fn get_instance(&self, id: &ConceptId) -> Option<&Instance> {
+    pub fn get_instance(&self, id: &ConceptId) -> Option<&ResourceInstance> {
         self.instances.get(id)
     }
 
-    pub fn remove_instance(&mut self, id: &ConceptId) -> Result<Instance, String> {
+    pub fn remove_instance(&mut self, id: &ConceptId) -> Result<ResourceInstance, String> {
         self.instances
             .shift_remove(id)
             .ok_or_else(|| format!("Instance with ID {} not found", id))
+    }
+
+    // Entity Instance methods
+    pub fn entity_instance_count(&self) -> usize {
+        self.entity_instances.len()
+    }
+
+    pub fn add_entity_instance(&mut self, instance: Instance) -> Result<(), String> {
+        let id = instance.id().clone();
+        if self.entity_instances.contains_key(&id) {
+            return Err(format!(
+                "Entity instance '{}' already exists",
+                instance.name()
+            ));
+        }
+        if self.find_entity_instance_by_name(instance.name()).is_some() {
+            return Err(format!(
+                "Entity instance '{}' already exists",
+                instance.name()
+            ));
+        }
+
+        let namespace = instance.namespace();
+        let entity_type = instance.entity_type();
+
+        self.find_entity_by_name_and_namespace(entity_type, namespace)
+            .ok_or_else(|| {
+                format!(
+                    "Entity '{}' not found in namespace '{}'",
+                    entity_type, namespace
+                )
+            })?;
+
+        self.entity_instances.insert(id, instance);
+        Ok(())
+    }
+
+    pub fn get_entity_instance(&self, name: &str) -> Option<&Instance> {
+        self.find_entity_instance_by_name(name)
+            .and_then(|id| self.entity_instances.get(&id))
+    }
+
+    pub fn get_entity_instance_mut(&mut self, name: &str) -> Option<&mut Instance> {
+        let id = self.find_entity_instance_by_name(name)?;
+        self.entity_instances.get_mut(&id)
+    }
+
+    pub fn all_entity_instances(&self) -> Vec<&Instance> {
+        self.entity_instances.values().collect()
+    }
+
+    pub fn remove_entity_instance(&mut self, name: &str) -> Result<Instance, String> {
+        let id = self
+            .find_entity_instance_by_name(name)
+            .ok_or_else(|| format!("Entity instance '{}' not found", name))?;
+
+        self.entity_instances
+            .shift_remove(&id)
+            .ok_or_else(|| format!("Entity instance '{}' not found", name))
     }
 
     pub fn flows_from(&self, entity_id: &ConceptId) -> Vec<&Flow> {
@@ -450,6 +514,17 @@ impl Graph {
             .collect()
     }
 
+    pub fn find_entity_by_name_and_namespace(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Option<ConceptId> {
+        self.entities
+            .iter()
+            .find(|(_, entity)| entity.name() == name && entity.namespace() == namespace)
+            .map(|(id, _)| id.clone())
+    }
+
     pub fn find_entity_by_name(&self, name: &str) -> Option<ConceptId> {
         self.entities
             .iter()
@@ -468,6 +543,24 @@ impl Graph {
         self.roles
             .iter()
             .find(|(_, role)| role.name() == name)
+            .map(|(id, _)| id.clone())
+    }
+
+    pub fn find_entity_instance_by_name(&self, name: &str) -> Option<ConceptId> {
+        self.entity_instances
+            .iter()
+            .find(|(_, instance)| instance.name() == name)
+            .map(|(id, _)| id.clone())
+    }
+
+    pub fn find_entity_instance_by_name_and_namespace(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Option<ConceptId> {
+        self.entity_instances
+            .iter()
+            .find(|(_, instance)| instance.name() == name && instance.namespace() == namespace)
             .map(|(id, _)| id.clone())
     }
 
@@ -504,7 +597,7 @@ impl Graph {
         self.flows.values().collect()
     }
 
-    pub fn all_instances(&self) -> Vec<&Instance> {
+    pub fn all_instances(&self) -> Vec<&ResourceInstance> {
         self.instances.values().collect()
     }
 
@@ -561,6 +654,7 @@ impl Graph {
             flows,
             relations,
             instances,
+            entity_instances,
             policies,
             patterns,
             concept_changes,
@@ -582,6 +676,10 @@ impl Graph {
 
         for instance in instances.into_values() {
             self.add_instance(instance)?;
+        }
+
+        for entity_instance in entity_instances.into_values() {
+            self.add_entity_instance(entity_instance)?;
         }
 
         for flow in flows.into_values() {

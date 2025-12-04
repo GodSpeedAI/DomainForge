@@ -3,6 +3,7 @@
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+in_keyword = @{ ^"in" ~ WHITESPACE+ }
 
 // Program is the top-level entry point
 program = { SOI ~ file_header? ~ declaration* ~ EOI }
@@ -19,13 +20,13 @@ annotation_name = {
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | policy_decl | concept_change_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
 // Syntax: Entity "Name"
 entity_decl = {
-    ^"entity" ~ name ~ (^"v" ~ version)? ~ entity_annotation* ~ (^"in" ~ identifier)?
+    ^"entity" ~ name ~ (^"v" ~ version)? ~ entity_annotation* ~ (in_keyword ~ identifier)?
 }
 
 entity_annotation = {
@@ -43,13 +44,11 @@ ea_changes = { ^"changes" }
 // Syntax: Resource "Name" in domain
 // Syntax: Resource "Name" units
 // Syntax: Resource "Name"
-in_keyword = { "in" }
-
 resource_decl = {
     ^"resource" ~ name ~ (
         (identifier ~ in_keyword ~ identifier) |  // "units in domain" - most specific first
-        (in_keyword ~ identifier) |                // "in domain" - next most specific
-        identifier                                 // "units" only - least specific last
+        (in_keyword ~ identifier) |                             // "in domain" - next most specific
+        identifier                              // "units" only - least specific last
     )?
 }
 
@@ -112,6 +111,24 @@ cc_from_version = { ^"from_version" }
 cc_to_version = { ^"to_version" }
 cc_migration_policy = { ^"migration_policy" }
 cc_breaking_change = { ^"breaking_change" }
+
+// Instance Declaration
+// Syntax:
+// Instance vendor_123 of "Vendor" {
+//   name: "Acme Corp",
+//   credit_limit: 50_000 "USD"
+// }
+instance_decl = {
+    ^"instance" ~ identifier ~ ^"of" ~ string_literal ~ instance_body?
+}
+
+instance_body = {
+    "{" ~ (instance_field ~ ","?)* ~ "}"
+}
+
+instance_field = {
+    identifier ~ ":" ~ expression
+}
 
 // Dimension Declaration
 // Syntax: Dimension "Currency"
@@ -183,6 +200,7 @@ primary_expr = {
     member_access |
     aggregation_expr |
     quantified_expr |
+    instance_reference |
     literal |
     identifier
 }
@@ -277,6 +295,9 @@ escape_sequence = @{
 number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 
 boolean = { ^"true" | ^"false" }
+
+// Instance reference (e.g., @vendor_123)
+instance_reference = @{ "@" ~ identifier }
 
 // Identifier (Unicode support - letters, numbers, underscore)
 // Must start with letter (including Unicode) or underscore

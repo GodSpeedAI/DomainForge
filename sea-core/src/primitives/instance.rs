@@ -2,87 +2,92 @@ use crate::ConceptId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use uuid;
 
 const DEFAULT_NAMESPACE: &str = "default";
 
-/// Represents a physical instance of a resource at a specific entity location.
+/// Represents a concrete instance of an Entity with specific field values.
 ///
-/// Instances capture the "WHERE" of resources - they represent specific physical
-/// instances of resources located at particular entities.
+/// Instances allow defining specific data objects in the DSL that can be
+/// referenced in policies and flows.
 ///
 /// # Examples
 ///
 /// ```
-/// use sea_core::primitives::{Entity, Resource, Instance};
-/// use sea_core::units::unit_from_string;
+/// use sea_core::primitives::Instance;
+/// use serde_json::json;
 ///
-/// let warehouse = Entity::new_with_namespace("Warehouse A".to_string(), "default".to_string());
-/// let product = Resource::new_with_namespace("Camera", unit_from_string("units"), "default".to_string());
+/// let mut vendor = Instance::new_with_namespace("vendor_123", "Vendor", "default");
+/// vendor.set_field("name", json!("Acme Corp"));
+/// vendor.set_field("credit_limit", json!(50000));
 ///
-/// let camera_123 = Instance::new(
-///     product.id().clone(),
-///     warehouse.id().clone()
-/// );
-///
-/// assert_eq!(camera_123.entity_id(), warehouse.id());
+/// assert_eq!(vendor.entity_type(), "Vendor");
+/// assert_eq!(vendor.get_field("name"), Some(&json!("Acme Corp")));
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Instance {
     id: ConceptId,
-    resource_id: ConceptId,
-    entity_id: ConceptId,
+    name: String,
+    entity_type: String,
     namespace: String,
-    attributes: HashMap<String, Value>,
+    fields: HashMap<String, Value>,
 }
 
 impl Instance {
     /// Creates a new Instance (default namespace).
-    pub fn new(resource_id: ConceptId, entity_id: ConceptId) -> Self {
-        Self::new_with_namespace(resource_id, entity_id, DEFAULT_NAMESPACE)
+    pub fn new(name: impl Into<String>, entity_type: impl Into<String>) -> Self {
+        Self::new_with_namespace(name, entity_type, DEFAULT_NAMESPACE)
     }
 
     pub fn new_with_namespace(
-        resource_id: ConceptId,
-        entity_id: ConceptId,
+        name: impl Into<String>,
+        entity_type: impl Into<String>,
         namespace: impl Into<String>,
     ) -> Self {
         let namespace = namespace.into();
-        // Use UUID v4 for instances to ensure uniqueness (instances are unique occurrences)
-        let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
+        let name = name.into();
+        let entity_type = entity_type.into();
+        let id = ConceptId::from_concept(&namespace, &format!("{}:{}", entity_type, name));
 
         Self {
             id,
-            resource_id,
-            entity_id,
+            name,
+            entity_type,
             namespace,
-            attributes: HashMap::new(),
+            fields: HashMap::new(),
         }
     }
 
     pub fn id(&self) -> &ConceptId {
         &self.id
     }
-    pub fn resource_id(&self) -> &ConceptId {
-        &self.resource_id
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
-    pub fn entity_id(&self) -> &ConceptId {
-        &self.entity_id
+
+    pub fn entity_type(&self) -> &str {
+        &self.entity_type
     }
+
     pub fn namespace(&self) -> &str {
         &self.namespace
     }
 
-    pub fn set_attribute(&mut self, key: impl Into<String>, value: Value) {
-        self.attributes.insert(key.into(), value);
+    pub fn set_field(&mut self, key: impl Into<String>, value: Value) {
+        self.fields.insert(key.into(), value);
     }
 
-    pub fn get_attribute(&self, key: &str) -> Option<&Value> {
-        self.attributes.get(key)
+    pub fn get_field(&self, key: &str) -> Option<&Value> {
+        self.fields.get(key)
     }
 
-    /// Returns all attributes as a reference.
-    pub fn attributes(&self) -> &HashMap<String, Value> {
-        &self.attributes
+    /// Returns all fields as a reference.
+    pub fn fields(&self) -> &HashMap<String, Value> {
+        &self.fields
+    }
+
+    /// Returns a mutable reference to fields for bulk updates.
+    pub fn fields_mut(&mut self) -> &mut HashMap<String, Value> {
+        &mut self.fields
     }
 }
