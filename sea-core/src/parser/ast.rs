@@ -1929,7 +1929,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
             let mut metric =
                 crate::primitives::Metric::new(name.clone(), namespace, expression.clone());
 
-            if let Some(duration) = metadata.refresh_interval.clone() {
+            if let Some(duration) = metadata.refresh_interval {
                 metric = metric.with_refresh_interval(duration);
             }
 
@@ -1949,7 +1949,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 metric = metric.with_target(target);
             }
 
-            if let Some(duration) = metadata.window.clone() {
+            if let Some(duration) = metadata.window {
                 metric = metric.with_window(duration);
             }
 
