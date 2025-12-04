@@ -9,7 +9,7 @@ Instance vendor_123 of "Vendor"
     let result = parse(source);
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
-    let graph = result.unwrap();
+    let _graph = result.unwrap();
     // For now, just verify it parses without error
     // We'll add graph integration in the next step
 }
@@ -33,7 +33,7 @@ fn test_parse_instance_with_quantity_field() {
     let source = r#"
 Instance vendor_123 of "Vendor" {
     name: "Acme Corp",
-    credit_limit: 50000
+    credit_limit: 50000 "USD"
 }
 "#;
 
