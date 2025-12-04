@@ -200,13 +200,13 @@ merge-to-main-dry branch:
 merge-to-main branch:
     #!/usr/bin/env bash
     set -euo pipefail
-    
+
     echo "🚀 Starting merge workflow for '{{branch}}'"
     echo ""
-    
+
     echo "📥 Step 1/7: Fetching latest changes..."
     git fetch --all --prune
-    
+
     echo "📋 Step 2/7: Validating branch '{{branch}}' exists..."
     if ! git show-ref --verify --quiet refs/heads/{{branch}}; then
         echo "❌ Branch '{{branch}}' not found locally"
@@ -214,29 +214,29 @@ merge-to-main branch:
         git branch | head -20
         exit 1
     fi
-    
+
     echo "🔀 Step 3/7: Checking out and updating feature branch..."
     git checkout {{branch}}
     git merge origin/main --no-edit || { echo "❌ Merge conflict with main. Resolve manually."; exit 1; }
-    
+
     echo "🧪 Step 4/7: Running pre-merge checks on feature branch..."
     cargo fmt --all -- --check || { echo "❌ Format check failed"; exit 1; }
     cargo clippy -p sea-core -- -D warnings || { echo "❌ Clippy check failed"; exit 1; }
     just all-tests || { echo "❌ Tests failed on feature branch"; exit 1; }
-    
+
     echo "🔀 Step 5/7: Merging to main..."
     git checkout main
     git pull --ff-only origin main || { echo "❌ Failed to update main"; exit 1; }
     git merge --no-ff {{branch}} -m "Merge {{branch}} into main" || { echo "❌ Merge failed"; exit 1; }
-    
+
     echo "🧪 Step 6/7: Running post-merge validation on main..."
     just all-tests || { echo "❌ Tests failed after merge. Consider reverting."; exit 1; }
-    
+
     echo "⬆️ Step 7/7: Pushing and cleaning up..."
     git push origin main || { echo "❌ Failed to push main"; exit 1; }
     git branch -d {{branch}} || echo "⚠️ Could not delete local branch"
     git push origin --delete {{branch}} || echo "⚠️ Remote branch already deleted or doesn't exist"
-    
+
     echo ""
     echo "✅ Successfully merged '{{branch}}' into main!"
     echo "   - All checks passed"
