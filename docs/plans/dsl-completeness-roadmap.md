@@ -482,11 +482,13 @@ These features improve the developer experience and safety.
 **Problem**: Cannot express metrics or monitoring constraints.
 **Implementation**:
 
-- [ ] **Grammar**: Add `Metric` declaration.
-- [ ] **AST**: Add `MetricDecl`.
-- [ ] **Semantics**: Bind metrics to external signals or internal aggregations.
-- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
-- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
+- [x] **Grammar**: Add `Metric` declaration (`sea-core/grammar/sea.pest`).
+- [x] **AST**: Add `MetricDecl` (includes annotation parsing and graph insertion).
+- [ ] **Semantics**: Bind metrics to external signals or internal aggregations (evaluation/export still pending).
+- [ ] **Projections**: Ensure metrics are represented in CALM/KG/SBVR.
+- [x] **Bindings**: Expose metrics to Python and TypeScript APIs.
+
+Additional implemented work: metrics are stored on the graph with accessors, and parser/annotation coverage exists in `sea-core/tests/metric_tests.rs`.
 
 ### 9. Projection Contracts (first verify the problem is still valid)
 
