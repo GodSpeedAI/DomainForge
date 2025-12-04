@@ -1,7 +1,7 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{
-    ConceptChange, Entity, Flow, Instance, RelationType, Resource, ResourceInstance, Role,
+    ConceptChange, Entity, Flow, Instance, Metric, RelationType, Resource, ResourceInstance, Role,
 };
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
@@ -41,6 +41,8 @@ pub struct Graph {
     #[serde(default)]
     concept_changes: IndexMap<ConceptId, ConceptChange>,
     #[serde(default)]
+    metrics: IndexMap<ConceptId, Metric>,
+    #[serde(default)]
     entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
     #[serde(default)]
     config: GraphConfig,
@@ -62,6 +64,7 @@ impl Graph {
             && self.policies.is_empty()
             && self.patterns.is_empty()
             && self.concept_changes.is_empty()
+            && self.metrics.is_empty()
     }
 
     /// Set the evaluation mode for policy evaluation.
@@ -636,6 +639,31 @@ impl Graph {
         self.policies.values().collect()
     }
 
+    pub fn metric_count(&self) -> usize {
+        self.metrics.len()
+    }
+
+    pub fn add_metric(&mut self, metric: Metric) -> Result<(), String> {
+        let id = metric.id().clone();
+        if self.metrics.contains_key(&id) {
+            return Err(format!("Metric with ID {} already exists", id));
+        }
+        self.metrics.insert(id, metric);
+        Ok(())
+    }
+
+    pub fn has_metric(&self, id: &ConceptId) -> bool {
+        self.metrics.contains_key(id)
+    }
+
+    pub fn get_metric(&self, id: &ConceptId) -> Option<&Metric> {
+        self.metrics.get(id)
+    }
+
+    pub fn all_metrics(&self) -> Vec<&Metric> {
+        self.metrics.values().collect()
+    }
+
     /// Extend this graph with all nodes and policies from another graph.
     /// The operation is atomic: the existing graph is only modified if the entire
     /// merge succeeds, which prevents partial state when errors occur.
@@ -658,6 +686,7 @@ impl Graph {
             policies,
             patterns,
             concept_changes,
+            metrics,
             entity_roles,
             config: _,
         } = other;
@@ -706,6 +735,10 @@ impl Graph {
 
         for change in concept_changes.into_values() {
             self.add_concept_change(change)?;
+        }
+
+        for metric in metrics.into_values() {
+            self.add_metric(metric)?;
         }
 
         Ok(())

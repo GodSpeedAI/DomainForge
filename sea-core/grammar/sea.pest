@@ -20,7 +20,7 @@ annotation_name = {
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -302,3 +302,27 @@ instance_reference = @{ "@" ~ identifier }
 // Identifier (Unicode support - letters, numbers, underscore)
 // Must start with letter (including Unicode) or underscore
 identifier = @{ (LETTER | "_") ~ (LETTER | NUMBER | "_")* }
+
+// Metric Declaration
+// Syntax: Metric "name" as: expression
+metric_decl = {
+    ^"metric" ~ name ~ ^"as" ~ ":" ~ expression ~ metric_annotation*
+}
+
+metric_annotation = {
+    "@" ~ (
+        (ma_refresh_interval ~ number ~ string_literal) |
+        (ma_unit ~ string_literal) |
+        (ma_threshold ~ number) |
+        (ma_severity ~ string_literal) |
+        (ma_target ~ number) |
+        (ma_window ~ number ~ string_literal)
+    )
+}
+
+ma_refresh_interval = { ^"refresh_interval" }
+ma_unit = { ^"unit" }
+ma_threshold = { ^"threshold" }
+ma_severity = { ^"severity" }
+ma_target = { ^"target" }
+ma_window = { ^"window" }

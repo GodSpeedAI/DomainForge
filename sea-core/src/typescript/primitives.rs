@@ -1,5 +1,5 @@
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, Metric as RustMetric, Resource as RustResource,
     ResourceInstance as RustResourceInstance,
 };
 
@@ -474,5 +474,61 @@ impl Instance {
 
     pub fn inner_ref(&self) -> &crate::primitives::Instance {
         &self.inner
+    }
+}
+
+#[napi]
+pub struct Metric {
+    inner: RustMetric,
+}
+
+#[napi]
+impl Metric {
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        if self.inner.namespace == "default" {
+            None
+        } else {
+            Some(self.inner.namespace.clone())
+        }
+    }
+
+    #[napi(getter)]
+    pub fn threshold(&self) -> Option<f64> {
+        self.inner
+            .threshold
+            .as_ref()
+            .and_then(|d| d.to_f64())
+            .filter(|v| v.is_finite())
+    }
+
+    #[napi(getter)]
+    pub fn target(&self) -> Option<f64> {
+        self.inner
+            .target
+            .as_ref()
+            .and_then(|d| d.to_f64())
+            .filter(|v| v.is_finite())
+    }
+
+    #[napi(getter)]
+    pub fn unit(&self) -> Option<String> {
+        self.inner.unit.clone()
+    }
+
+    #[napi(getter)]
+    pub fn severity(&self) -> Option<String> {
+        self.inner.severity.as_ref().map(|s| format!("{:?}", s))
+    }
+}
+
+impl Metric {
+    pub fn from_rust(inner: RustMetric) -> Self {
+        Self { inner }
     }
 }

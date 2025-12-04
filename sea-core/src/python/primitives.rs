@@ -1,7 +1,7 @@
 #![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, Metric as RustMetric, Resource as RustResource,
     ResourceInstance as RustResourceInstance,
 };
 use crate::units::unit_from_string;
@@ -468,5 +468,72 @@ impl Instance {
 
     pub fn into_inner(self) -> crate::primitives::Instance {
         self.inner
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Metric {
+    inner: RustMetric,
+}
+
+#[pymethods]
+impl Metric {
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        if self.inner.namespace == "default" {
+            None
+        } else {
+            Some(self.inner.namespace.clone())
+        }
+    }
+
+    #[getter]
+    fn threshold(&self) -> Option<f64> {
+        self.inner
+            .threshold
+            .as_ref()
+            .and_then(|d| d.to_f64())
+            .filter(|v| v.is_finite())
+    }
+
+    #[getter]
+    fn target(&self) -> PyResult<Option<f64>> {
+        match self.inner.target.as_ref() {
+            Some(decimal) => {
+                let as_f64 = decimal.to_f64().ok_or_else(|| {
+                    PyValueError::new_err("Metric target cannot be represented as f64")
+                })?;
+                if as_f64.is_finite() {
+                    Ok(Some(as_f64))
+                } else {
+                    Err(PyValueError::new_err(
+                        "Metric target is not a finite f64 value",
+                    ))
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    #[getter]
+    fn unit(&self) -> Option<String> {
+        self.inner.unit.clone()
+    }
+
+    #[getter]
+    fn severity(&self) -> Option<String> {
+        self.inner.severity.as_ref().map(|s| format!("{:?}", s))
+    }
+}
+
+impl Metric {
+    pub fn from_rust(inner: RustMetric) -> Self {
+        Self { inner }
     }
 }
