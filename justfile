@@ -149,3 +149,96 @@ ci-verify-package ARCHIVE_PATH BINARY_NAME="sea":
 ci-check-package-size ARCHIVE_PATH MAX_BYTES="73400320":
     @echo "Checking package size: {{ARCHIVE_PATH}}"
     python3 scripts/ci_tasks.py check-size --file "{{ARCHIVE_PATH}}" --max-bytes {{MAX_BYTES}} --label "Packaged artifact"
+
+# ============================================================================
+# Merge Automation Recipes
+# ============================================================================
+
+# Run CI-equivalent checks (format, lint, tests)
+ci-check:
+    @echo "🔍 Running CI-equivalent checks..."
+    cargo fmt --all -- --check
+    cargo clippy -p sea-core -- -D warnings
+    just all-tests
+    @echo "✅ All CI checks passed"
+
+# Pre-merge validation (run before merging any feature branch)
+pre-merge:
+    @echo "🔍 Running pre-merge checks..."
+    cargo fmt --all -- --check
+    cargo clippy -p sea-core -- -D warnings
+    just all-tests
+    @echo "✅ All pre-merge checks passed"
+
+# Dry run of merge workflow (preview without changes)
+merge-to-main-dry branch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 DRY RUN: Merge workflow for '{{branch}}'"
+    echo ""
+    echo "Would perform the following steps:"
+    echo "  1. git fetch --all --prune"
+    echo "  2. git checkout {{branch}}"
+    echo "  3. git merge origin/main --no-edit"
+    echo "  4. Run: cargo fmt --all -- --check"
+    echo "  5. Run: cargo clippy -p sea-core -- -D warnings"
+    echo "  6. Run: just all-tests"
+    echo "  7. git checkout main"
+    echo "  8. git pull --ff-only origin main"
+    echo "  9. git merge --no-ff {{branch}} -m 'Merge {{branch}} into main'"
+    echo " 10. Run: just all-tests"
+    echo " 11. git push origin main"
+    echo " 12. git branch -d {{branch}}"
+    echo " 13. git push origin --delete {{branch}}"
+    echo ""
+    echo "Current branch status:"
+    git branch -a | grep -E "({{branch}}|main)" || echo "Branch not found locally"
+    echo ""
+    echo "To execute, run: just merge-to-main {{branch}}"
+
+# Full merge workflow: validate, merge to main, cleanup
+merge-to-main branch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    echo "🚀 Starting merge workflow for '{{branch}}'"
+    echo ""
+    
+    echo "📥 Step 1/7: Fetching latest changes..."
+    git fetch --all --prune
+    
+    echo "📋 Step 2/7: Validating branch '{{branch}}' exists..."
+    if ! git show-ref --verify --quiet refs/heads/{{branch}}; then
+        echo "❌ Branch '{{branch}}' not found locally"
+        echo "   Available branches:"
+        git branch | head -20
+        exit 1
+    fi
+    
+    echo "🔀 Step 3/7: Checking out and updating feature branch..."
+    git checkout {{branch}}
+    git merge origin/main --no-edit || { echo "❌ Merge conflict with main. Resolve manually."; exit 1; }
+    
+    echo "🧪 Step 4/7: Running pre-merge checks on feature branch..."
+    cargo fmt --all -- --check || { echo "❌ Format check failed"; exit 1; }
+    cargo clippy -p sea-core -- -D warnings || { echo "❌ Clippy check failed"; exit 1; }
+    just all-tests || { echo "❌ Tests failed on feature branch"; exit 1; }
+    
+    echo "🔀 Step 5/7: Merging to main..."
+    git checkout main
+    git pull --ff-only origin main || { echo "❌ Failed to update main"; exit 1; }
+    git merge --no-ff {{branch}} -m "Merge {{branch}} into main" || { echo "❌ Merge failed"; exit 1; }
+    
+    echo "🧪 Step 6/7: Running post-merge validation on main..."
+    just all-tests || { echo "❌ Tests failed after merge. Consider reverting."; exit 1; }
+    
+    echo "⬆️ Step 7/7: Pushing and cleaning up..."
+    git push origin main || { echo "❌ Failed to push main"; exit 1; }
+    git branch -d {{branch}} || echo "⚠️ Could not delete local branch"
+    git push origin --delete {{branch}} || echo "⚠️ Remote branch already deleted or doesn't exist"
+    
+    echo ""
+    echo "✅ Successfully merged '{{branch}}' into main!"
+    echo "   - All checks passed"
+    echo "   - Branch deleted locally and remotely"
+    echo "   - Main pushed to origin"
