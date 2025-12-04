@@ -485,18 +485,40 @@ impl Metric {
     }
 
     #[getter]
-    fn namespace(&self) -> String {
-        self.inner.namespace.clone()
+    fn namespace(&self) -> Option<String> {
+        if self.inner.namespace == "default" {
+            None
+        } else {
+            Some(self.inner.namespace.clone())
+        }
     }
 
     #[getter]
     fn threshold(&self) -> Option<f64> {
-        self.inner.threshold.map(|d| d.to_f64().unwrap_or(0.0))
+        self.inner
+            .threshold
+            .as_ref()
+            .and_then(|d| d.to_f64())
+            .filter(|v| v.is_finite())
     }
 
     #[getter]
-    fn target(&self) -> Option<f64> {
-        self.inner.target.map(|d| d.to_f64().unwrap_or(0.0))
+    fn target(&self) -> PyResult<Option<f64>> {
+        match self.inner.target.as_ref() {
+            Some(decimal) => {
+                let as_f64 = decimal.to_f64().ok_or_else(|| {
+                    PyValueError::new_err("Metric target cannot be represented as f64")
+                })?;
+                if as_f64.is_finite() {
+                    Ok(Some(as_f64))
+                } else {
+                    Err(PyValueError::new_err(
+                        "Metric target is not a finite f64 value",
+                    ))
+                }
+            }
+            None => Ok(None),
+        }
     }
 
     #[getter]

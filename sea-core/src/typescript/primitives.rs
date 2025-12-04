@@ -490,18 +490,30 @@ impl Metric {
     }
 
     #[napi(getter)]
-    pub fn namespace(&self) -> String {
-        self.inner.namespace.clone()
+    pub fn namespace(&self) -> Option<String> {
+        if self.inner.namespace == "default" {
+            None
+        } else {
+            Some(self.inner.namespace.clone())
+        }
     }
 
     #[napi(getter)]
     pub fn threshold(&self) -> Option<f64> {
-        self.inner.threshold.map(|d| d.to_f64().unwrap_or(0.0))
+        self.inner
+            .threshold
+            .as_ref()
+            .and_then(|d| d.to_f64())
+            .filter(|v| v.is_finite())
     }
 
     #[napi(getter)]
     pub fn target(&self) -> Option<f64> {
-        self.inner.target.map(|d| d.to_f64().unwrap_or(0.0))
+        self.inner
+            .target
+            .as_ref()
+            .and_then(|d| d.to_f64())
+            .filter(|v| v.is_finite())
     }
 
     #[napi(getter)]

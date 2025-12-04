@@ -6,11 +6,12 @@ use crate::policy::{
     AggregateFunction, BinaryOp, Expression, Policy, PolicyKind as CorePolicyKind,
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp, WindowSpec,
 };
-use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, Role};
+use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, Role, Severity};
 use crate::units::unit_from_string;
 use crate::SemanticVersion;
+use chrono::Duration;
 use pest::iterators::{Pair, Pairs};
-use pest::Parser;
+use pest::{Parser, Span};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde_json::json;
@@ -52,12 +53,12 @@ pub enum PolicyModality {
 /// Metric declaration AST node
 #[derive(Debug, Clone, PartialEq)]
 pub struct MetricMetadata {
-    pub refresh_interval: Option<(i64, String)>,  // (value, unit)
+    pub refresh_interval: Option<Duration>,
     pub unit: Option<String>,
     pub threshold: Option<Decimal>,
-    pub severity: Option<String>,
+    pub severity: Option<Severity>,
     pub target: Option<Decimal>,
-    pub window: Option<(i64, String)>,
+    pub window: Option<Duration>,
 }
 
 /// Abstract Syntax Tree for SEA DSL
@@ -1925,16 +1926,10 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 .or_else(|| options.default_namespace.clone())
                 .unwrap_or_else(|| "default".to_string());
 
-            let mut metric = crate::primitives::Metric::new(name.clone(), namespace, expression.clone());
+            let mut metric =
+                crate::primitives::Metric::new(name.clone(), namespace, expression.clone());
 
-            if let Some((value, unit)) = &metadata.refresh_interval {
-                let duration = match unit.as_str() {
-                    "seconds" | "s" => chrono::Duration::seconds(*value),
-                    "minutes" | "m" => chrono::Duration::minutes(*value),
-                    "hours" | "h" => chrono::Duration::hours(*value),
-                    "days" | "d" => chrono::Duration::days(*value),
-                    _ => chrono::Duration::seconds(*value),
-                };
+            if let Some(duration) = metadata.refresh_interval.clone() {
                 metric = metric.with_refresh_interval(duration);
             }
 
@@ -1946,29 +1941,15 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                 metric = metric.with_threshold(threshold);
             }
 
-            if let Some(severity) = &metadata.severity {
-                let sev = match severity.to_lowercase().as_str() {
-                    "info" => crate::primitives::Severity::Info,
-                    "warning" => crate::primitives::Severity::Warning,
-                    "error" => crate::primitives::Severity::Error,
-                    "critical" => crate::primitives::Severity::Critical,
-                    _ => crate::primitives::Severity::Info,
-                };
-                metric = metric.with_severity(sev);
+            if let Some(severity) = metadata.severity.clone() {
+                metric = metric.with_severity(severity);
             }
 
             if let Some(target) = metadata.target {
                 metric = metric.with_target(target);
             }
 
-            if let Some((value, unit)) = &metadata.window {
-                let duration = match unit.as_str() {
-                    "seconds" | "s" => chrono::Duration::seconds(*value),
-                    "minutes" | "m" => chrono::Duration::minutes(*value),
-                    "hours" | "h" => chrono::Duration::hours(*value),
-                    "days" | "d" => chrono::Duration::days(*value),
-                    _ => chrono::Duration::seconds(*value),
-                };
+            if let Some(duration) = metadata.window.clone() {
                 metric = metric.with_window(duration);
             }
 
@@ -2006,42 +1987,71 @@ fn parse_metric(pair: Pair<Rule>) -> ParseResult<AstNode> {
         match part.as_rule() {
             Rule::metric_annotation => {
                 let mut annotation_inner = part.into_inner();
-                let key_pair = annotation_inner
-                    .next()
-                    .ok_or_else(|| ParseError::GrammarError("Expected annotation key".to_string()))?;
-                
+                let key_pair = annotation_inner.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected annotation key".to_string())
+                })?;
+
                 match key_pair.as_rule() {
                     Rule::ma_refresh_interval => {
-                         let value_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected refresh interval value".to_string()))?;
-                         let value = parse_number_i64(value_pair)?;
-                         let unit_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected refresh interval unit".to_string()))?;
-                         let unit = parse_string_literal(unit_pair)?;
-                         metadata.refresh_interval = Some((value, unit));
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected refresh interval value".to_string())
+                        })?;
+                        let value = parse_number_i64(value_pair)?;
+                        let unit_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected refresh interval unit".to_string())
+                        })?;
+                        let unit = parse_string_literal(unit_pair.clone())?;
+                        let duration = parse_duration_with_unit(value, &unit, unit_pair.as_span())?;
+                        metadata.refresh_interval = Some(duration);
                     }
                     Rule::ma_unit => {
-                        let unit_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected unit".to_string()))?;
+                        let unit_pair = annotation_inner
+                            .next()
+                            .ok_or_else(|| ParseError::GrammarError("Expected unit".to_string()))?;
                         metadata.unit = Some(parse_string_literal(unit_pair)?);
                     }
                     Rule::ma_threshold => {
-                        let value_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected threshold value".to_string()))?;
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected threshold value".to_string())
+                        })?;
                         metadata.threshold = Some(parse_decimal(value_pair)?);
                     }
                     Rule::ma_severity => {
-                        let severity_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected severity".to_string()))?;
-                        metadata.severity = Some(parse_string_literal(severity_pair)?);
+                        let severity_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected severity".to_string())
+                        })?;
+                        let severity_str = parse_string_literal(severity_pair.clone())?;
+                        let severity =
+                            parse_severity_value(&severity_str, severity_pair.as_span())?;
+                        metadata.severity = Some(severity);
                     }
                     Rule::ma_target => {
-                        let value_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected target value".to_string()))?;
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected target value".to_string())
+                        })?;
                         metadata.target = Some(parse_decimal(value_pair)?);
                     }
                     Rule::ma_window => {
-                        let value_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected window value".to_string()))?;
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected window value".to_string())
+                        })?;
                         let value = parse_number_i64(value_pair)?;
-                        let unit_pair = annotation_inner.next().ok_or_else(|| ParseError::GrammarError("Expected window unit".to_string()))?;
-                        let unit = parse_string_literal(unit_pair)?;
-                        metadata.window = Some((value, unit));
+                        let unit_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected window unit".to_string())
+                        })?;
+                        let unit = parse_string_literal(unit_pair.clone())?;
+                        let duration = parse_duration_with_unit(value, &unit, unit_pair.as_span())?;
+                        metadata.window = Some(duration);
                     }
-                    _ => {}
+                    _ => {
+                        let (line, column) = key_pair.as_span().start_pos().line_col();
+                        return Err(ParseError::GrammarError(format!(
+                            "Unknown metric annotation '{}' at {}:{}",
+                            key_pair.as_str(),
+                            line,
+                            column
+                        )));
+                    }
                 }
             }
             Rule::expression => {
@@ -2051,9 +2061,10 @@ fn parse_metric(pair: Pair<Rule>) -> ParseResult<AstNode> {
         }
     }
 
-    let expression = parse_expression(expression_pair.ok_or_else(|| {
-        ParseError::GrammarError("Expected metric expression".to_string())
-    })?)?;
+    let expression = parse_expression(
+        expression_pair
+            .ok_or_else(|| ParseError::GrammarError("Expected metric expression".to_string()))?,
+    )?;
 
     Ok(AstNode::Metric {
         name,
@@ -2062,7 +2073,57 @@ fn parse_metric(pair: Pair<Rule>) -> ParseResult<AstNode> {
     })
 }
 
+fn parse_duration_with_unit(value: i64, unit: &str, span: Span<'_>) -> ParseResult<Duration> {
+    let normalized_unit = unit.to_ascii_lowercase();
+    let multiplier = match normalized_unit.as_str() {
+        "second" => Some(1),
+        "seconds" | "s" => Some(1),
+        "minute" => Some(60),
+        "minutes" | "m" => Some(60),
+        "hour" => Some(60 * 60),
+        "hours" | "h" => Some(60 * 60),
+        "day" => Some(60 * 60 * 24),
+        "days" | "d" => Some(60 * 60 * 24),
+        _ => None,
+    }
+    .ok_or_else(|| {
+        let (line, column) = span.start_pos().line_col();
+        ParseError::GrammarError(format!(
+            "Invalid duration unit '{}' at {}:{} (allowed: second(s)/s, minute(s)/m, hour(s)/h, day(s)/d)",
+            unit, line, column
+        ))
+    })?;
+
+    let total_seconds = value.checked_mul(multiplier).ok_or_else(|| {
+        let (line, column) = span.start_pos().line_col();
+        ParseError::GrammarError(format!(
+            "Duration overflow for value {} {} at {}:{}",
+            value, unit, line, column
+        ))
+    })?;
+
+    Ok(Duration::seconds(total_seconds))
+}
+
+fn parse_severity_value(value: &str, span: Span<'_>) -> ParseResult<Severity> {
+    let normalized = value.to_ascii_lowercase();
+    match normalized.as_str() {
+        "info" => Ok(Severity::Info),
+        "warning" => Ok(Severity::Warning),
+        "error" => Ok(Severity::Error),
+        "critical" => Ok(Severity::Critical),
+        _ => {
+            let (line, column) = span.start_pos().line_col();
+            Err(ParseError::GrammarError(format!(
+                "Unknown severity '{}' at {}:{} (expected one of: info, warning, error, critical)",
+                value, line, column
+            )))
+        }
+    }
+}
+
 fn parse_number_i64(pair: Pair<Rule>) -> ParseResult<i64> {
     let s = pair.as_str();
-    s.parse::<i64>().map_err(|_| ParseError::GrammarError(format!("Invalid integer: {}", s)))
+    s.parse::<i64>()
+        .map_err(|_| ParseError::GrammarError(format!("Invalid integer: {}", s)))
 }

@@ -1,8 +1,8 @@
-use crate::ConceptId;
 use crate::policy::Expression;
+use crate::ConceptId;
+use chrono::Duration;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use chrono::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metric {
@@ -18,7 +18,7 @@ pub struct Metric {
     pub window: Option<Duration>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Severity {
     Info,
     Warning,

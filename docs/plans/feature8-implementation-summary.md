@@ -141,3 +141,6 @@ The following features from Phase 3 remain to be implemented:
 - Severity levels: info, warning, error, critical (case-insensitive)
 - Metrics use the same namespace system as other primitives
 - Expression evaluation for metrics is not yet implemented (future work)
+- Parser now rejects unknown annotation keys, invalid duration units, and unrecognized severity
+  levels instead of silently defaulting.
+- Duration annotations validate overflow and must fit within chrono::Duration limits.
