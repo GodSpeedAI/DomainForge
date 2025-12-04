@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-342%20passing-brightgreen.svg)](sea-core/tests/)
+[![Tests](https://img.shields.io/badge/tests-623%20passing-brightgreen.svg)](sea-core/tests/)
 
 ---
 
@@ -353,7 +353,7 @@ Models separate concerns cleanly:
 
    - All bindings wrap Rust core (never duplicate logic)
    - Extensive parity testing ensures equivalence
-   - 342+ tests maintaining cross-language consistency
+   - 623+ tests maintaining cross-language consistency (523 Rust, 43 Python, 57 TypeScript)
 
 5. **📊 Standards Compliance**:
 
@@ -958,11 +958,10 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 
 **Testing & Quality:**
 
-- [x] **342 total tests** - All passing, zero failures (as of Nov 2025)
-  - 52 unit tests (lib tests)
-  - 215+ integration tests
-  - 19 doctests
-  - 11+ CALM integration tests
+- [x] **623+ total tests** - All passing, zero failures
+  - 523 Rust tests (unit + integration + doctests)
+  - 43 Python integration tests
+  - 57 TypeScript/Vitest tests
 - [x] Cross-language parity testing (Python ≡ TypeScript ≡ Rust)
 - [x] Property-based tests (proptest for graph invariants)
 - [x] CALM round-trip validation (SEA → CALM → SEA)
@@ -1001,18 +1000,18 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 <details>
 <summary><h2>📖 Documentation & Resources</h2></summary>
 
-| Resource                                                       | Description                                                    |
-| -------------------------------------------------------------- | -------------------------------------------------------------- |
-| 📘 [**Copilot Instructions**](.github/copilot-instructions.md) | **⭐ Essential guide for AI coding agents** (updated Nov 2025) |
-| 🔗 [**API Specification**](docs/specs/api_specification.md)    | Complete API reference for all languages                       |
-| 📙 [**Product Requirements**](docs/specs/prd.md)               | PRD with success metrics and requirements                      |
-| 📕 [**System Design**](docs/specs/sds.md)                      | Technical specifications and component design                  |
-| 🏛️ [**Architecture Decisions**](docs/specs/adr.md)             | 8 ADRs documenting key architectural choices                   |
-| 📋 [**Implementation Plans**](docs/plans/)                     | Phase-by-phase TDD implementation guides                       |
-| 🗺️ [**CALM Mapping**](docs/specs/calm-mapping.md)              | SEA ↔ CALM conversion specification                            |
-| 🎓 [**Examples**](examples/)                                   | Browser demo and parser examples                               |
-| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)    | Configure `.sea-registry.toml` and workspace glob patterns     |
-| 📖 [**Error Code Catalog**](docs/specs/error_codes.md)         | Complete list of validation error codes and fixes              |
+| Resource                                                                  | Description                                                 |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 📘 [**Copilot Instructions**](.github/copilot-instructions.md)            | **⭐ Essential guide for AI coding agents**                 |
+| 🔗 [**API Specification**](docs/reference/specs/api_specification.md)     | Complete API reference for all languages                    |
+| 📙 [**Product Requirements**](docs/reference/specs/prd.md)                | PRD with success metrics and requirements                   |
+| 📕 [**System Design**](docs/reference/specs/sds.md)                       | Technical specifications and component design               |
+| 🏛️ [**Architecture Decisions**](docs/reference/specs/adr.md)              | 8 ADRs documenting key architectural choices                |
+| 📋 [**Implementation Plans**](docs/plans/)                                | Phase-by-phase TDD implementation guides                    |
+| 🗺️ [**CALM Mapping**](docs/reference/specs/calm-mapping.md)               | SEA ↔ CALM conversion specification                         |
+| 🎓 [**Examples**](sea-core/examples/)                                     | DSL examples and parser demos                               |
+| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)               | Configure `.sea-registry.toml` and workspace glob patterns  |
+| 📖 [**Error Code Catalog**](docs/specs/error_codes.md)                    | Complete list of validation error codes and fixes           |
 
 ### 🆕 Recent API Changes (November 2025)
 
@@ -1054,7 +1053,21 @@ pip install maturin
 maturin develop
 
 # Run your first model
-python examples/camera_factory.py
+python -c "
+import sea_dsl
+
+# Create entities
+warehouse = sea_dsl.Entity('Warehouse A', 'logistics')
+factory = sea_dsl.Entity('Factory B', 'logistics')
+
+# Create a resource
+cameras = sea_dsl.Resource('Cameras', 'units', 'products')
+
+# Create a flow between entities
+flow = sea_dsl.Flow(cameras.id, factory.id, warehouse.id, 1000.0)
+
+print(f'Flow: {flow.quantity} {cameras.name} from {factory.name} to {warehouse.name}')
+"
 ```
 
 ---

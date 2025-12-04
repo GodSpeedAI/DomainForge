@@ -1,124 +1,158 @@
-# DomainForge - SEA DSL Copilot Instructions (Concise)
+# DomainForge - SEA DSL Copilot Instructions
 
-Quick, targeted guidance for AI coding agents working on DomainForge.
+Targeted guidance for AI coding agents working on DomainForge (Semantic Enterprise Architecture DSL).
 
-1. Canonical source
+## Architecture Overview
 
-- The authoritative implementation is `sea-core/` (Rust). All language bindings (Python, TypeScript, WASM) wrap `sea_core` types — do not duplicate business logic in bindings.
+DomainForge is a **Rust-first, multi-language** semantic modeling system:
 
-2. Quick commands (use `just` where available)
+```
+sea-core/                    # Canonical Rust implementation (authoritative)
+├── grammar/sea.pest         # PEG grammar (Pest) - ALL syntax changes start here
+├── src/
+│   ├── primitives/          # Core domain types: Entity, Resource, Flow, Instance, Policy
+│   ├── graph/mod.rs         # Graph store (uses IndexMap for deterministic iteration)
+│   ├── parser/              # AST generation from grammar
+│   ├── policy/              # Expression evaluation, three-valued logic, type inference
+│   ├── calm/                # FINOS CALM export/import (architecture-as-code)
+│   ├── kg.rs, kg_import.rs  # RDF/Turtle Knowledge Graph projections
+│   ├── python/              # PyO3 bindings (wraps core types)
+│   ├── typescript/          # napi-rs bindings (wraps core types)
+│   └── wasm/                # wasm-bindgen bindings
+└── tests/                   # Integration tests (60+ test files)
 
-- Run all tests (recommended): `just all-tests`
-- Rust tests, CLI included: `just rust-test` (executes `cargo test -p sea-core --features cli`)
-- Python tests: `just python-test` (uses `.venv` if present)
-- TypeScript tests: `just ts-test`
-- Prepare debug binary for codelldb: `just prepare-rust-debug`
-- Prepare dev env: `just python-setup` and `npm ci` (or `npm install`)
+tests/                       # Python integration tests
+typescript-tests/            # TypeScript/Vitest integration tests
+```
 
-3. Feature flags & builds
+**Key principle**: Rust core is canonical. Bindings wrap core types — never duplicate business logic.
 
-- Rust features: `--features python`, `--features typescript`, `--features wasm`.
-- Python builds commonly use `maturin develop --features python` (see `just python-setup`).
-- TypeScript builds depend on `npm run build` (calls cargo with typescript features).
+## Developer Commands
 
-4. Editing and change rules (non-negotiable)
+```bash
+# Essential commands (use just task runner)
+just all-tests              # Run Rust + Python + TypeScript tests (recommended)
+just rust-test              # Rust tests with CLI: cargo test -p sea-core --features cli
+just python-test            # Python tests (uses .venv if present)
+just ts-test                # TypeScript tests via Vitest
 
-- Rust core is canonical. When you change core data structures, you MUST update:
-  - the Rust APIs and tests
-  - the PyO3 bindings under `sea-core/src/python/` and Python tests
-  - the napi-rs bindings under `sea-core/src/typescript/` and TypeScript tests
-  - WASM bindings if relevant (`sea-core/src/wasm/`)
+# Setup
+just setup                  # Install TypeScript + Python dependencies
+just python-setup           # Create .venv, install deps, build Python bindings via maturin
 
-5. Parser/grammar changes
+# Debugging
+just prepare-rust-debug     # Symlink test binary for codelldb debugging
 
-- Update `sea-core/grammar/sea.pest`, update `parser` AST in `sea-core/src/parser` and add tests under `tests/` and `sea-core/tests/`. Follow multi-stage tests for new syntax.
+# Pre-PR checks
+cargo clippy -- -D warnings && cargo fmt
+```
 
-6. Conventions & common pitfalls
+## Change Workflow (Non-Negotiable)
 
-- Deterministic iteration via `IndexMap` in `sea-core/src/graph/mod.rs` (do not switch to HashMap for policy-relevant collections).
-- Use `Uuid::new_v4()` for IDs; use `rust_decimal::Decimal` for quantities for precise calculations.
-- `namespace()` returns `&str` (default "default"). Use `Unit::new()` and `sea_core::units::unit_from_string` for unit handling.
-- Use `Flow::new` with `ConceptId` for resource/from/to values (IDs rather than references).
+When modifying **core data structures or primitives**, you MUST update ALL of:
 
-7. Testing policy & integration
+1. Rust core (`sea-core/src/primitives/`, `graph/`, `policy/`) + tests
+2. PyO3 bindings (`sea-core/src/python/`) + Python tests (`tests/test_*.py`)
+3. napi-rs bindings (`sea-core/src/typescript/`) + TypeScript tests (`typescript-tests/`)
+4. WASM bindings if applicable (`sea-core/src/wasm/`)
 
-- Cross-language parity is critical: run Rust, Python, TypeScript tests after core changes. Use `just all-tests`.
-- CALM export/import round-trip tests exist and should pass after changes to the graph or primitives: check `sea-core/tests/*` and `cargo test calm_round_trip`.
+When modifying **parser/grammar**:
 
-8. Debugging & CI
+1. Update `sea-core/grammar/sea.pest` first
+2. Update AST in `sea-core/src/parser/ast.rs`
+3. Add parser tests in `sea-core/tests/parser_*.rs`
+4. Update projections (CALM, KG) if the change affects export format
 
-- Use `just prepare-rust-debug` to create a symlinked test binary for codelldb; attach debugger to that binary when stepping through Rust tests.
-- Run `cargo clippy -- -D warnings` and `cargo fmt` pre-PR.
+## Code Conventions
 
-9. Where to look for more details
+- **Deterministic iteration**: Use `IndexMap` (not `HashMap`) in `graph/mod.rs` for policy-relevant collections
+- **IDs**: `ConceptId` from namespace+name; `Uuid::new_v4()` for unique identifiers
+- **Quantities**: `rust_decimal::Decimal` for precise calculations
+- **Units**: `Unit::new()` constructor; `sea_core::units::unit_from_string()` for parsing
+- **Namespaces**: `namespace()` returns `&str`, defaults to `"default"`
+- **Flows**: `Flow::new()` takes `ConceptId` for resource/from/to (IDs, not references)
 
-- Architecture & phase plans: `docs/plans/` and `docs/specs/`.
-- Parser grammar and examples: `sea-core/grammar/sea.pest` and `examples/`.
-- Key code: primitives -> `sea-core/src/primitives/`, graph -> `sea-core/src/graph/`, policy -> `sea-core/src/policy/`, bindings -> `sea-core/src/python|typescript|wasm/`.
+## Testing Patterns
 
-10. Communication & PR expectations
+- **Cross-language parity**: Changes to core must pass all three test suites
+- **Round-trip tests**: CALM export/import (`cargo test calm_round_trip`) validates serialization
+- **Golden tests**: Check `sea-core/tests/` for expected output patterns
+- **Policy evaluation**: Three-valued logic tests in `three_valued_quantifiers_tests.rs`
 
-- Small, testable changes. Update bindings & tests for language parity. Include ADR updates when making architectural changes. Run the `just` tasks and CI checks locally; provide a brief test summary in PR.
+## Key References
 
+| What                 | Where                                                                 |
+| -------------------- | --------------------------------------------------------------------- |
+| Grammar syntax       | `sea-core/grammar/sea.pest`                                           |
+| Primitives           | `sea-core/src/primitives/` (Entity, Resource, Flow, Instance, Policy) |
+| Graph operations     | `sea-core/src/graph/mod.rs`                                           |
+| Policy expressions   | `sea-core/src/policy/expression.rs`                                   |
+| CALM mapping spec    | `docs/reference/specs/calm-mapping.md`                                |
+| Implementation plans | `docs/plans/` (phase roadmaps, feature plans)                         |
+| DSL examples         | `examples/`, `sea-core/examples/`                                     |
+| Error codes          | `docs/specs/error_codes.md`, `sea-core/src/validation_error.rs`       |
 
-# DomainForge - SEA DSL Copilot Instructions (Concise)
+## Feature Flags
 
-Quick, targeted guidance for AI coding agents working on DomainForge.
+```bash
+cargo build --features python      # Build Python bindings
+cargo build --features typescript  # Build TypeScript bindings
+cargo build --features wasm        # Build WASM bindings
+cargo build --features cli         # Build CLI tools
+```
 
-1. Canonical source
+## Common Mistakes (AI Agent Anti-Patterns)
 
-- The authoritative implementation is `sea-core/` (Rust). All language bindings (Python, TypeScript, WASM) wrap `sea_core` types — do not duplicate business logic in bindings.
+**DO NOT:**
 
-2. Quick commands (use `just` where available)
+```rust
+// ❌ WRONG: HashMap causes non-deterministic policy evaluation
+use std::collections::HashMap;
+let entities: HashMap<String, Entity> = ...;
 
-- Run all tests (recommended): `just all-tests`
-- Rust tests, CLI included: `just rust-test` (executes `cargo test -p sea-core --features cli`)
-- Python tests: `just python-test` (uses `.venv` if present)
-- TypeScript tests: `just ts-test`
-- Prepare debug binary for codelldb: `just prepare-rust-debug`
-- Prepare dev env: `just python-setup` and `npm ci` (or `npm install`)
+// ✅ CORRECT: IndexMap preserves insertion order
+use indexmap::IndexMap;
+let entities: IndexMap<String, Entity> = ...;
+```
 
-3. Feature flags & builds
+```rust
+// ❌ WRONG: Passing entity object to Flow
+Flow::new(resource, from_entity, to_entity)
 
-- Rust features: `--features python`, `--features typescript`, `--features wasm`.
-- Python builds commonly use `maturin develop --features python` (see `just python-setup`).
-- TypeScript builds depend on `npm run build` (calls cargo with typescript features).
+// ✅ CORRECT: Pass ConceptId (IDs, not references)
+Flow::new(resource.concept_id(), from.concept_id(), to.concept_id())
+```
 
-4. Editing and change rules (non-negotiable)
+```rust
+// ❌ WRONG: Modifying parser without grammar
+// Editing src/parser/ast.rs first
 
-- Rust core is canonical. When you change core data structures, you MUST update:
-  - the Rust APIs and tests
-  - the PyO3 bindings under `sea-core/src/python/` and Python tests
-  - the napi-rs bindings under `sea-core/src/typescript/` and TypeScript tests
-  - WASM bindings if relevant (`sea-core/src/wasm/`)
+// ✅ CORRECT: Grammar-first workflow
+// 1. sea-core/grammar/sea.pest
+// 2. src/parser/ast.rs
+// 3. tests/parser_*.rs
+```
 
-5. Parser/grammar changes
+**Cross-binding rule**: If you touch `sea-core/src/primitives/*.rs`, you MUST also update:
 
-- Update `sea-core/grammar/sea.pest`, update `parser` AST in `sea-core/src/parser` and add tests under `tests/` and `sea-core/tests/`. Follow multi-stage tests for new syntax.
+- `sea-core/src/python/primitives.rs`
+- `sea-core/src/typescript/primitives.rs`
+- `sea-core/src/wasm/primitives.rs` (if public API)
 
-6. Conventions & common pitfalls
+Run `just all-tests` to verify all bindings remain in sync.
 
-- Deterministic iteration via `IndexMap` in `sea-core/src/graph/mod.rs` (do not switch to HashMap for policy-relevant collections).
-- Use `Uuid::new_v4()` for IDs; use `rust_decimal::Decimal` for quantities for precise calculations.
-- `namespace()` returns `&str` (default "default"). Use `Unit::new()` and `sea_core::units::unit_from_string` for unit handling.
-- Use `Flow::new` with `ConceptId` for resource/from/to values (IDs rather than references).
+## Maintaining These Instructions
 
-7. Testing policy & integration
+**When you discover a new anti-pattern** (a mistake that causes test failures or unexpected behavior):
 
-- Cross-language parity is critical: run Rust, Python, TypeScript tests after core changes. Use `just all-tests`.
-- CALM export/import round-trip tests exist and should pass after changes to the graph or primitives: check `sea-core/tests/*` and `cargo test calm_round_trip`.
+1. Add it to the "Common Mistakes" section above with ❌/✅ examples
+2. Keep examples minimal (3-5 lines max) — show the wrong way and right way
+3. If the pattern is project-specific (not general Rust), it belongs here
 
-8. Debugging & CI
+**When project structure changes**:
 
-- Use `just prepare-rust-debug` to create a symlinked test binary for codelldb; attach debugger to that binary when stepping through Rust tests.
-- Run `cargo clippy -- -D warnings` and `cargo fmt` pre-PR.
+- Update the Architecture Overview tree if directories are added/moved
+- Update Key References table if key files are renamed
+- Update Developer Commands if `justfile` recipes change
 
-9. Where to look for more details
-
-- Architecture & phase plans: `docs/plans/` and `docs/specs/`.
-- Parser grammar and examples: `sea-core/grammar/sea.pest` and `examples/`.
-- Key code: primitives -> `sea-core/src/primitives/`, graph -> `sea-core/src/graph/`, policy -> `sea-core/src/policy/`, bindings -> `sea-core/src/python|typescript|wasm/`.
-
-10. Communication & PR expectations
-
-- Small, testable changes. Update bindings & tests for language parity. Include ADR updates when making architectural changes. Run the `just` tasks and CI checks locally; provide a brief test summary in PR.
+**Self-check**: Before submitting code, ask: "Did I make a mistake that future AI agents might repeat?" If yes, document it here.
