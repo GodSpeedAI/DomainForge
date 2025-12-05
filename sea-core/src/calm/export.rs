@@ -185,15 +185,26 @@ fn export_flow(
          // Flow "Payment" -> ...
          // In SEA, Flow is defined as `flow "Resource" from ...`
          // So the name is likely the Resource name.
-         let resource_name = graph.get_resource(flow.resource_id()).map(|r| r.name()).unwrap_or("");
-         if let Some(rule) = find_mapping_rule(map, "Flow", resource_name) {
-             if let Some(rt_str) = rule.fields.get("relationship_type").and_then(|v| v.as_str()) {
-                 if rt_str != "flow" {
-                     relationship_type = RelationshipType::Simple(rt_str.to_string());
+         match graph.get_resource(flow.resource_id()) {
+             Some(resource) => {
+                 let resource_name = resource.name();
+                 if let Some(rule) = find_mapping_rule(map, "Flow", resource_name) {
+                     if let Some(rt_str) = rule.fields.get("relationship_type").and_then(|v| v.as_str()) {
+                         if rt_str != "flow" {
+                             relationship_type = RelationshipType::Simple(rt_str.to_string());
+                         }
+                     }
                  }
              }
+             None => {
+                 eprintln!(
+                     "Warning: Resource with ID {} not found for flow {}. Skipping mapping.",
+                     flow.resource_id(),
+                     flow.id()
+                 );
+             }
          }
-    }
+     }
 
     CalmRelationship {
         unique_id: flow.id().to_string(),

@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectionContract {
-    pub id: ConceptId,
-    pub name: String,
-    pub namespace: String,
-    pub target_format: TargetFormat,
-    pub overrides: Vec<ProjectionOverride>,
+    id: ConceptId,
+    name: String,
+    namespace: String,
+    target_format: TargetFormat,
+    overrides: Vec<ProjectionOverride>,
 }
 
 impl ProjectionContract {
@@ -26,5 +26,25 @@ impl ProjectionContract {
             target_format,
             overrides,
         }
+    }
+
+    pub fn id(&self) -> &ConceptId {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    pub fn target_format(&self) -> &TargetFormat {
+        &self.target_format
+    }
+
+    pub fn overrides(&self) -> &[ProjectionOverride] {
+        &self.overrides
     }
 }

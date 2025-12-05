@@ -69,6 +69,17 @@ pub enum TargetFormat {
     Sbvr,
 }
 
+impl std::fmt::Display for TargetFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetFormat::Calm => write!(f, "CALM"),
+            TargetFormat::Kg => write!(f, "KG"),
+            TargetFormat::Sbvr => write!(f, "SBVR"),
+        }
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MappingRule {
     pub primitive_type: String,
@@ -1680,7 +1691,7 @@ fn parse_mapping_rule(pair: Pair<Rule>) -> ParseResult<MappingRule> {
             
             let value = match value_pair.as_rule() {
                 Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
-                Rule::boolean => JsonValue::Bool(value_pair.as_str() == "true"),
+                Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
                 Rule::object_literal => parse_object_literal(value_pair)?,
                 _ => return Err(ParseError::GrammarError("Unexpected mapping field value".to_string())),
             };
@@ -1704,11 +1715,29 @@ fn parse_object_literal(pair: Pair<Rule>) -> ParseResult<JsonValue> {
         let value_pair = inner.next().ok_or_else(|| ParseError::GrammarError("Expected value in object literal".to_string()))?;
         let value = match value_pair.as_rule() {
             Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
-            Rule::boolean => JsonValue::Bool(value_pair.as_str() == "true"),
+            Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
             Rule::number => {
                 let d = parse_decimal(value_pair)?;
-                 let f = d.to_f64().unwrap_or(0.0);
-                 JsonValue::Number(serde_json::Number::from_f64(f).unwrap())
+                // Parse the decimal string as f64 to create a JSON Number
+                let f = d.to_f64().ok_or_else(|| {
+                    ParseError::InvalidQuantity(format!(
+                        "Decimal value {} cannot be represented as f64",
+                        d
+                    ))
+                })?;
+                if !f.is_finite() {
+                    return Err(ParseError::InvalidQuantity(format!(
+                        "Decimal value {} converts to non-finite f64",
+                        d
+                    )));
+                }
+                let num = serde_json::Number::from_f64(f).ok_or_else(|| {
+                    ParseError::InvalidQuantity(format!(
+                        "Cannot create JSON Number from decimal {}",
+                        d
+                    ))
+                })?;
+                JsonValue::Number(num)
             },
             _ => return Err(ParseError::GrammarError("Unexpected object field value".to_string())),
         };

@@ -1,11 +1,14 @@
 //! SEA Core — Rust implementation of DomainForge Domain Specific Language
 //!
-//! This library provides the five core primitives:
-//! 1. Entity
-//! 2. Resource
-//! 3. Flow
-//! 4. Instance
-//! 5. Policy
+//! This library provides the core primitives:
+//! 1. Entity - Domain entities and concepts
+//! 2. Resource - Resources that flow between entities
+//! 3. Flow - Movement of resources between entities
+//! 4. Instance - Instances of entities with field values
+//! 5. ResourceInstance - Instances of resources
+//! 6. Mapping - Data transformation and mapping contracts
+//! 7. Projection - Output format projections
+//! 8. Policy - Validation and constraint rules
 //!
 //! ## Building
 //!

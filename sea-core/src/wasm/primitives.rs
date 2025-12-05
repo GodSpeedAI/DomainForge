@@ -276,6 +276,12 @@ impl Instance {
             .and_then(|v| serde_wasm_bindgen::to_value(v).inspect_err(|_e| {}).ok())
             .unwrap_or(JsValue::NULL)
     }
+
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }
 
 impl Instance {

@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MappingContract {
-    pub id: ConceptId,
-    pub name: String,
-    pub namespace: String,
-    pub target_format: TargetFormat,
-    pub rules: Vec<MappingRule>,
+    id: ConceptId,
+    name: String,
+    namespace: String,
+    target_format: TargetFormat,
+    rules: Vec<MappingRule>,
 }
 
 impl MappingContract {
@@ -26,5 +26,25 @@ impl MappingContract {
             target_format,
             rules,
         }
+    }
+
+    pub fn id(&self) -> &ConceptId {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    pub fn target_format(&self) -> &TargetFormat {
+        &self.target_format
+    }
+
+    pub fn rules(&self) -> &[MappingRule] {
+        &self.rules
     }
 }

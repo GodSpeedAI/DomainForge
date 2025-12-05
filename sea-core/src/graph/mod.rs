@@ -691,7 +691,7 @@ impl Graph {
     }
 
     pub fn add_mapping(&mut self, mapping: MappingContract) -> Result<(), String> {
-        let id = mapping.id.clone();
+        let id = mapping.id().clone();
         if self.mappings.contains_key(&id) {
             return Err(format!("Mapping with ID {} already exists", id));
         }
@@ -716,7 +716,7 @@ impl Graph {
     }
 
     pub fn add_projection(&mut self, projection: ProjectionContract) -> Result<(), String> {
-        let id = projection.id.clone();
+        let id = projection.id().clone();
         if self.projections.contains_key(&id) {
             return Err(format!("Projection with ID {} already exists", id));
         }

@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::primitives::{Entity, Flow, Instance, Resource};
+use super::primitives::{Entity, Flow, Resource, ResourceInstance};
 
 #[pyclass]
 #[derive(Clone)]
@@ -50,7 +50,7 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Add flow error: {}", e)))
     }
 
-    fn add_instance(&mut self, instance: &Instance) -> PyResult<()> {
+    fn add_instance(&mut self, instance: &ResourceInstance) -> PyResult<()> {
         self.inner
             .add_instance(instance.clone().into_inner())
             .map_err(|e| PyValueError::new_err(format!("Add instance error: {}", e)))
@@ -120,12 +120,12 @@ impl Graph {
             .map(|f| Flow::from_rust(f.clone())))
     }
 
-    fn get_instance(&self, id: String) -> PyResult<Option<Instance>> {
+    fn get_instance(&self, id: String) -> PyResult<Option<ResourceInstance>> {
         let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_instance(&cid)
-            .map(|i| Instance::from_rust(i.clone())))
+            .map(|i| ResourceInstance::from_rust(i.clone())))
     }
 
     fn find_entity_by_name(&self, name: String) -> Option<String> {
@@ -184,11 +184,11 @@ impl Graph {
             .collect()
     }
 
-    fn all_instances(&self) -> Vec<Instance> {
+    fn all_instances(&self) -> Vec<ResourceInstance> {
         self.inner
             .all_instances()
             .into_iter()
-            .map(|i| Instance::from_rust(i.clone()))
+            .map(|i| ResourceInstance::from_rust(i.clone()))
             .collect()
     }
 

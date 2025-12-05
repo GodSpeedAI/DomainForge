@@ -549,18 +549,30 @@ pub struct Mapping {
 impl Mapping {
     #[getter]
     fn name(&self) -> String {
-        self.inner.name.clone()
+        self.inner.name().to_string()
     }
     
     #[getter]
     fn target_format(&self) -> String {
-        format!("{:?}", self.inner.target_format)
+        format!("{}", self.inner.target_format())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Mapping(name='{}', target_format='{}')",
+            self.inner.name(),
+            self.inner.target_format()
+        )
     }
 }
 
 impl Mapping {
     pub fn from_rust(inner: RustMapping) -> Self {
         Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustMapping {
+        self.inner
     }
 }
 
@@ -574,17 +586,29 @@ pub struct Projection {
 impl Projection {
     #[getter]
     fn name(&self) -> String {
-        self.inner.name.clone()
+        self.inner.name().to_string()
     }
     
     #[getter]
     fn target_format(&self) -> String {
-        format!("{:?}", self.inner.target_format)
+        format!("{}", self.inner.target_format())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Projection(name='{}', target_format='{}')",
+            self.inner.name(),
+            self.inner.target_format()
+        )
     }
 }
 
 impl Projection {
     pub fn from_rust(inner: RustProjection) -> Self {
         Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustProjection {
+        self.inner
     }
 }

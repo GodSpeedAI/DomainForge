@@ -72,16 +72,15 @@ mod wasm_tests {
 
     #[wasm_bindgen_test]
     fn test_instance_creation() {
-        let entity = Entity::new("Warehouse".to_string(), None);
-        let resource = Resource::new("Product".to_string(), "units".to_string(), None);
+        let instance = Instance::new(
+            "warehouse_1".to_string(),
+            "Warehouse".to_string(),
+            None
+        );
 
-        let instance = Instance::new(resource.id(), entity.id(), None);
-
-        assert!(instance.is_ok());
-        let instance = instance.unwrap();
         assert!(!instance.id().is_empty());
-        assert_eq!(instance.entity_id(), entity.id());
-        assert_eq!(instance.resource_id(), resource.id());
+        assert_eq!(instance.name(), "warehouse_1");
+        assert_eq!(instance.entity_type(), "Warehouse");
     }
 
     #[wasm_bindgen_test]

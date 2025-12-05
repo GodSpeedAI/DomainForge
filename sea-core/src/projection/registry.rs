@@ -15,7 +15,7 @@ impl<'a> ProjectionRegistry<'a> {
         self.graph
             .all_mappings()
             .into_iter()
-            .filter(|m| m.target_format == *target)
+            .filter(|m| m.target_format() == target)
             .collect()
     }
 
@@ -23,7 +23,7 @@ impl<'a> ProjectionRegistry<'a> {
         self.graph
             .all_projections()
             .into_iter()
-            .filter(|p| p.target_format == *target)
+            .filter(|p| p.target_format() == target)
             .collect()
     }
     
@@ -31,13 +31,13 @@ impl<'a> ProjectionRegistry<'a> {
         self.graph
             .all_mappings()
             .into_iter()
-            .find(|m| m.name == name)
+            .find(|m| m.name() == name)
     }
     
     pub fn get_projection_by_name(&self, name: &str) -> Option<&ProjectionContract> {
         self.graph
             .all_projections()
             .into_iter()
-            .find(|p| p.name == name)
+            .find(|p| p.name() == name)
     }
 }

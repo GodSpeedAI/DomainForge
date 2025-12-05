@@ -2,13 +2,14 @@
 // This example demonstrates how to define metrics for monitoring and alerting
 
 @namespace "com.example.payments"
+@namespace "com.example.finance"
 
 // Define entities
-Entity "PaymentProcessor" in payments
-Entity "Customer" in payments
+Entity "PaymentProcessor" in com.example.payments
+Entity "Customer" in com.example.payments
 
 // Define resources
-Resource "Money" USD in finance
+Resource "Money" USD in com.example.finance
 
 // Define flows
 Flow "Money" from "Customer" to "PaymentProcessor" quantity 1000

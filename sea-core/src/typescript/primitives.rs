@@ -543,18 +543,26 @@ pub struct Mapping {
 impl Mapping {
     #[napi(getter)]
     pub fn name(&self) -> String {
-        self.inner.name.clone()
+        self.inner.name().to_string()
     }
     
     #[napi(getter)]
     pub fn target_format(&self) -> String {
-        format!("{:?}", self.inner.target_format)
+        format!("{}", self.inner.target_format())
     }
 }
 
 impl Mapping {
     pub fn from_rust(inner: RustMapping) -> Self {
         Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustMapping {
+        self.inner
+    }
+
+    pub fn inner_ref(&self) -> &RustMapping {
+        &self.inner
     }
 }
 
@@ -567,17 +575,25 @@ pub struct Projection {
 impl Projection {
     #[napi(getter)]
     pub fn name(&self) -> String {
-        self.inner.name.clone()
+        self.inner.name().to_string()
     }
     
     #[napi(getter)]
     pub fn target_format(&self) -> String {
-        format!("{:?}", self.inner.target_format)
+        format!("{}", self.inner.target_format())
     }
 }
 
 impl Projection {
     pub fn from_rust(inner: RustProjection) -> Self {
         Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustProjection {
+        self.inner
+    }
+
+    pub fn inner_ref(&self) -> &RustProjection {
+        &self.inner
     }
 }

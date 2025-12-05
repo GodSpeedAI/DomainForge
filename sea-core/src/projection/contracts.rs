@@ -6,7 +6,7 @@ pub fn find_mapping_rule<'a>(
     primitive_type: &str,
     primitive_name: &str,
 ) -> Option<&'a MappingRule> {
-    contract.rules.iter().find(|r| {
+    contract.rules().iter().find(|r| {
         r.primitive_type.eq_ignore_ascii_case(primitive_type) && r.primitive_name == primitive_name
     })
 }
@@ -16,7 +16,7 @@ pub fn find_projection_override<'a>(
     primitive_type: &str,
     primitive_name: &str,
 ) -> Option<&'a ProjectionOverride> {
-    contract.overrides.iter().find(|r| {
+    contract.overrides().iter().find(|r| {
         r.primitive_type.eq_ignore_ascii_case(primitive_type) && r.primitive_name == primitive_name
     })
 }

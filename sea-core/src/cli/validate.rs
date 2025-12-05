@@ -104,9 +104,14 @@ fn report_validation(
     graph: Graph,
     format: OutputFormat,
     use_color: bool,
-    _show_source: bool,
-    _source: Option<&str>,
+    show_source: bool,
+    source: Option<&str>,
 ) -> Result<()> {
+    // Note: show_source and source are currently unused because validation violations
+    // don't yet include source range information. These parameters are kept for future
+    // implementation when source snippets can be displayed.
+    let _ = (show_source, source); // Acknowledge parameters for future use
+    
     let result = graph.validate();
 
     match format {

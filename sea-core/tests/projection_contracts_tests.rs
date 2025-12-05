@@ -71,7 +71,7 @@ fn test_graph_integration() {
     
     assert_eq!(graph.mapping_count(), 1);
     let mappings = graph.all_mappings();
-    assert_eq!(mappings[0].name, "m1");
+    assert_eq!(mappings[0].name(), "m1");
 }
 
 #[test]
