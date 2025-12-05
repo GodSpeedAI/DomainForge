@@ -2,9 +2,9 @@
 
 ## Snapshot
 - Status: multi-language DSL (Rust core with Python/TypeScript/WASM bindings) in **alpha** (`sea-core` 0.0.1, `sea-dsl`/`@domainforge/sea` 0.1.0).
-- Maturity: strong architectural docs/benchmarks; core build now green and Rust CLI suite passing.
-- Test surface: 60+ Rust parser/graph/CLI tests (all passing via `cargo test -p sea-core --features cli`); Python + TS integration suites present but not re-run in this pass.
-- Distribution: source-build only (README notes PyPI/npm “coming soon”); no publish automation observed.
+- Maturity: strong architectural docs/benchmarks; core build green across Rust, Python, and TypeScript suites.
+- Test surface: Rust (`cargo test -p sea-core --features cli`), Python (`just python-test`), TypeScript (`just ts-test`) all passing; WASM smoke limited to existing doc/demo.
+- Distribution: source-build; CI/release workflows exist (GitHub Actions: ci.yml, release.yml, publish-python.yml) but depend on secrets and versioning policy.
 
 ## What’s Working
 - Canonical Rust core with parser/grammar, primitives, graph, policy evaluation, CALM/KG projections, and CLI (`sea`).
@@ -23,10 +23,9 @@
 - Operational hygiene: Lacks automated CI pipelines, release artifacts, or published packages.
 
 ## Recommended Next Steps (priority order)
-1) Run cross-language test matrix (`just python-test`, `just ts-test`) and regenerate stubs/types if needed; capture logs in `docs/evidence/`.
-2) Stand up CI (fmt, clippy, Rust/Python/TS tests) and release automation for crates.io/PyPI/npm/wasm-pack, with signing/version policy.
-3) Update docs/README with current support matrix and release channels; publish changelog entry for module-resolution/export changes.
-4) Plan packaging timelines (alpha → beta), including binary distribution for CLI and prebuilt bindings.
+1) Operationalize existing CI/release workflows: configure secrets (PYPI_API_TOKEN, npm token, crates.io API key), verify cache keys, and dry-run release tagging to produce artifacts.
+2) Update docs/README with current support matrix, test commands, and release channels; add changelog entry for module-resolution/export changes and cross-language fixes.
+3) Plan packaging timelines (alpha → beta) including CLI binaries and prebuilt bindings; consider wasm-pack outputs and npm packaging of `sea-core/pkg`.
 
 ## Overall Take
 Architecture and semantics are solid; core build is green. Remaining work is primarily release engineering and validating bindings parity before calling the project production-ready.
