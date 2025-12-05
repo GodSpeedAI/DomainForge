@@ -4,7 +4,7 @@ use super::models::{
 use crate::patterns::Pattern;
 use crate::policy::Policy;
 use crate::policy::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
-use crate::primitives::{Entity, Flow, Resource, ResourceInstance};
+use crate::primitives::{Entity, Flow, Metric, Resource, ResourceInstance};
 use crate::Graph;
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -84,6 +84,46 @@ fn export_pattern(pattern: &Pattern) -> CalmNode {
     }
 }
 
+fn export_metric(metric: &Metric) -> CalmNode {
+    let mut metadata = HashMap::new();
+    metadata.insert("sea:primitive".to_string(), json!("Metric"));
+    metadata.insert(
+        "sea:expression".to_string(),
+        json!(serialize_expression_for_export(&metric.expression)),
+    );
+    metadata.insert("sea:metric_type".to_string(), json!("Metric"));
+
+    if let Some(ri) = &metric.refresh_interval {
+        metadata.insert(
+            "sea:refresh_interval".to_string(),
+            json!(ri.num_seconds()),
+        );
+    }
+    if let Some(u) = &metric.unit {
+        metadata.insert("sea:unit".to_string(), json!(u));
+    }
+    if let Some(t) = &metric.threshold {
+        metadata.insert("sea:threshold".to_string(), json!(t.to_string()));
+    }
+    if let Some(s) = &metric.severity {
+        metadata.insert("sea:severity".to_string(), json!(format!("{:?}", s)));
+    }
+    if let Some(t) = &metric.target {
+        metadata.insert("sea:target".to_string(), json!(t.to_string()));
+    }
+    if let Some(w) = &metric.window {
+        metadata.insert("sea:window".to_string(), json!(w.num_seconds()));
+    }
+
+    CalmNode {
+        unique_id: metric.id.to_string(),
+        node_type: NodeType::Constraint,
+        name: metric.name.clone(),
+        namespace: Some(metric.namespace.clone()),
+        metadata,
+    }
+}
+
 fn export_flow(flow: &Flow) -> CalmRelationship {
     CalmRelationship {
         unique_id: flow.id().to_string(),
@@ -119,6 +159,10 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
 
     for pattern in graph.all_patterns() {
         calm_model.nodes.push(export_pattern(pattern));
+    }
+
+    for metric in graph.all_metrics() {
+        calm_model.nodes.push(export_metric(metric));
     }
 
     for flow in graph.all_flows() {

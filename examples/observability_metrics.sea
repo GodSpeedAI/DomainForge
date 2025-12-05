@@ -1,0 +1,37 @@
+// Example: Observability Semantics with Metrics
+// This example demonstrates how to define metrics for monitoring and alerting
+
+@namespace "com.example.payments"
+
+// Define entities
+Entity "PaymentProcessor" in payments
+Entity "Customer" in payments
+
+// Define resources
+Resource "Money" USD in finance
+
+// Define flows
+Flow "Money" from "Customer" to "PaymentProcessor" quantity 1000
+
+// Metric: Total payment volume
+// Tracks the total amount of money flowing through the system
+Metric "total_payment_volume" as:
+  sum(f in flows where f.resource = "Money": f.quantity as "USD")
+  @refresh_interval 60 "seconds"
+  @unit "USD"
+
+// Metric: Payment count
+// Counts all money flows
+Metric "payment_count" as:
+  count(f in flows where f.resource = "Money": f.quantity)
+  @threshold 100
+  @severity "warning"
+  @refresh_interval 300 "seconds"
+
+// Metric: Average payment value
+// Monitors the average value of payments
+Metric "avg_payment_value" as:
+  avg(f in flows where f.resource = "Money": f.quantity as "USD")
+  @unit "USD"
+  @refresh_interval 120 "seconds"
+  @target 5000
