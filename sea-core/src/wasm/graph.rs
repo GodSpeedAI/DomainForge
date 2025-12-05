@@ -215,7 +215,7 @@ impl Graph {
     #[wasm_bindgen(js_name = addInstance)]
     pub fn add_instance(&mut self, instance: &Instance) -> Result<(), JsValue> {
         self.inner
-            .add_instance(instance.inner().clone())
+            .add_entity_instance(instance.inner().clone())
             .map_err(|e| JsValue::from_str(&e))
     }
 
@@ -253,7 +253,7 @@ impl Graph {
         let uuid =
             Uuid::from_str(&id).map_err(|e| JsValue::from_str(&format!("Invalid UUID: {}", e)))?;
         let cid = crate::ConceptId::from(uuid);
-        Ok(self.inner.has_instance(&cid))
+        Ok(self.inner.has_entity_instance_by_id(&cid))
     }
 
     #[wasm_bindgen(js_name = getInstance)]
@@ -263,7 +263,7 @@ impl Graph {
         let cid = crate::ConceptId::from(uuid);
         Ok(self
             .inner
-            .get_instance(&cid)
+            .get_entity_instance_by_id(&cid)
             .map(|i| Instance::from_inner(i.clone())))
     }
 
@@ -274,14 +274,14 @@ impl Graph {
         let cid = crate::ConceptId::from(uuid);
         let instance = self
             .inner
-            .remove_instance(&cid)
+            .remove_entity_instance_by_id(&cid)
             .map_err(|e| JsValue::from_str(&e))?;
         Ok(Instance::from_inner(instance))
     }
 
     #[wasm_bindgen(js_name = instanceCount)]
     pub fn instance_count(&self) -> usize {
-        self.inner.instance_count()
+        self.inner.entity_instance_count()
     }
 
     pub fn pattern_count(&self) -> usize {
@@ -292,7 +292,7 @@ impl Graph {
     pub fn all_instances(&self) -> Result<JsValue, JsValue> {
         let instances: Vec<Instance> = self
             .inner
-            .all_instances()
+            .all_entity_instances()
             .into_iter()
             .map(|i| Instance::from_inner(i.clone()))
             .collect();

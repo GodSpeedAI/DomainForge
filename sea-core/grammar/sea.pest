@@ -20,7 +20,7 @@ annotation_name = {
 }
 
 // Declarations
-declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl }
+declaration = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl }
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -326,3 +326,45 @@ ma_threshold = { ^"threshold" }
 ma_severity = { ^"severity" }
 ma_target = { ^"target" }
 ma_window = { ^"window" }
+
+// Mapping Declaration
+mapping_decl = {
+    ^"Mapping" ~ string_literal ~ ^"for" ~ target_format ~ "{" ~ mapping_rule* ~ "}"
+}
+
+target_format = { ^"calm" | ^"kg" | ^"sbvr" }
+
+mapping_rule = {
+    primitive_type ~ string_literal ~ "->" ~ target_structure
+}
+
+primitive_type = { ^"Entity" | ^"Resource" | ^"Flow" | ^"Policy" | ^"Instance" }
+
+target_structure = {
+    identifier ~ "{" ~ (mapping_field ~ ","?)* ~ "}"
+}
+
+mapping_field = {
+    identifier ~ ":" ~ (string_literal | object_literal | boolean)
+}
+
+object_literal = {
+    "{" ~ (string_literal ~ ":" ~ (string_literal | boolean | number) ~ ","?)* ~ "}"
+}
+
+// Projection Override
+projection_decl = {
+    ^"Projection" ~ string_literal ~ ^"for" ~ target_format ~ "{" ~ projection_rule* ~ "}"
+}
+
+projection_rule = {
+    primitive_type ~ string_literal ~ "{" ~ (projection_field ~ ","?)* ~ "}"
+}
+
+projection_field = {
+    identifier ~ ":" ~ (string_literal | property_mapping)
+}
+
+property_mapping = {
+    "{" ~ (string_literal ~ "->" ~ string_literal ~ ","?)* ~ "}"
+}

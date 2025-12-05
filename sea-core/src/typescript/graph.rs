@@ -7,7 +7,7 @@ use napi_derive::napi;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::primitives::{Entity, Flow, Instance, Resource};
+use super::primitives::{Entity, Flow, Resource, ResourceInstance};
 
 #[napi]
 pub struct Graph {
@@ -52,7 +52,7 @@ impl Graph {
     }
 
     #[napi]
-    pub fn add_instance(&mut self, instance: &Instance) -> Result<()> {
+    pub fn add_instance(&mut self, instance: &ResourceInstance) -> Result<()> {
         self.inner
             .add_instance(instance.inner_ref().clone())
             .map_err(Error::from_reason)
@@ -135,12 +135,12 @@ impl Graph {
     }
 
     #[napi]
-    pub fn get_instance(&self, id: String) -> Result<Option<Instance>> {
+    pub fn get_instance(&self, id: String) -> Result<Option<ResourceInstance>> {
         let cid = parse_concept_id(&id)?;
         Ok(self
             .inner
             .get_instance(&cid)
-            .map(|i| Instance::from_rust(i.clone())))
+            .map(|i| ResourceInstance::from_rust(i.clone())))
     }
 
     #[napi]
@@ -207,11 +207,11 @@ impl Graph {
     }
 
     #[napi]
-    pub fn all_instances(&self) -> Vec<Instance> {
+    pub fn all_instances(&self) -> Vec<ResourceInstance> {
         self.inner
             .all_instances()
             .into_iter()
-            .map(|i| Instance::from_rust(i.clone()))
+            .map(|i| ResourceInstance::from_rust(i.clone()))
             .collect()
     }
 

@@ -2,8 +2,6 @@ use crate::parser::{parse_to_graph_with_options, ParseOptions};
 use crate::{Graph, NamespaceRegistry};
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
-use colored::Colorize;
-use serde_json::to_string_pretty;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +12,9 @@ pub struct ValidateArgs {
 
     #[arg(long)]
     pub no_color: bool,
+
+    #[arg(long)]
+    pub show_source: bool,
 
     #[arg(required = true)]
     pub target: PathBuf,
@@ -30,13 +31,18 @@ pub fn run(args: ValidateArgs) -> Result<()> {
     let use_color = !args.no_color;
 
     if args.target.is_dir() {
-        validate_directory(&args.target, args.format, use_color)
+        validate_directory(&args.target, args.format, use_color, args.show_source)
     } else {
-        validate_file(&args.target, args.format, use_color)
+        validate_file(&args.target, args.format, use_color, args.show_source)
     }
 }
 
-fn validate_file(path: &Path, format: OutputFormat, use_color: bool) -> Result<()> {
+fn validate_file(
+    path: &Path,
+    format: OutputFormat,
+    use_color: bool,
+    show_source: bool,
+) -> Result<()> {
     let source =
         read_to_string(path).with_context(|| format!("Failed to read file {}", path.display()))?;
     let registry = NamespaceRegistry::discover(path).map_err(|e| anyhow::anyhow!(e.to_string()))?;
@@ -46,10 +52,15 @@ fn validate_file(path: &Path, format: OutputFormat, use_color: bool) -> Result<(
     let options = ParseOptions { default_namespace };
     let graph = parse_to_graph_with_options(&source, &options)
         .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", path.display(), e))?;
-    report_validation(graph, format, use_color)
+    report_validation(graph, format, use_color, show_source, Some(&source))
 }
 
-fn validate_directory(path: &Path, format: OutputFormat, use_color: bool) -> Result<()> {
+fn validate_directory(
+    path: &Path,
+    format: OutputFormat,
+    use_color: bool,
+    show_source: bool,
+) -> Result<()> {
     let registry = NamespaceRegistry::discover(path)
         .map_err(|e| anyhow::anyhow!("Failed to load registry near {}: {}", path.display(), e))?
         .ok_or_else(|| {
@@ -84,10 +95,23 @@ fn validate_directory(path: &Path, format: OutputFormat, use_color: bool) -> Res
             .map_err(|e| anyhow::anyhow!("Failed to merge {}: {}", binding.path.display(), e))?;
     }
 
-    report_validation(graph, format, use_color)
+    // For directory validation, we don't pass source code for now as errors could be from any file
+    // TODO: Map errors back to specific files in directory mode
+    report_validation(graph, format, use_color, show_source, None)
 }
 
-fn report_validation(graph: Graph, format: OutputFormat, use_color: bool) -> Result<()> {
+fn report_validation(
+    graph: Graph,
+    format: OutputFormat,
+    use_color: bool,
+    show_source: bool,
+    source: Option<&str>,
+) -> Result<()> {
+    // Note: show_source and source are currently unused because validation violations
+    // don't yet include source range information. These parameters are kept for future
+    // implementation when source snippets can be displayed.
+    let _ = (show_source, source); // Acknowledge parameters for future use
+
     let result = graph.validate();
 
     match format {
@@ -103,18 +127,20 @@ fn report_validation(graph: Graph, format: OutputFormat, use_color: bool) -> Res
                         },
                         "policy_name": v.policy_name,
                         "message": v.message,
+                        "context": v.context,
                     })
                 }).collect::<Vec<_>>(),
             });
             println!(
                 "{}",
-                to_string_pretty(&json_output).context("Failed to serialize output")?
+                serde_json::to_string_pretty(&json_output).context("Failed to serialize output")?
             );
         }
         OutputFormat::Human | OutputFormat::Lsp => {
             if result.error_count > 0 {
                 let msg = format!("Validation failed: {} errors", result.error_count);
                 if use_color {
+                    use colored::Colorize;
                     println!("{}", msg.red());
                 } else {
                     println!("{}", msg);
@@ -127,6 +153,7 @@ fn report_validation(graph: Graph, format: OutputFormat, use_color: bool) -> Res
                         crate::policy::Severity::Info => "INFO",
                     };
                     let severity_colored = if use_color {
+                        use colored::Colorize;
                         match v.severity {
                             crate::policy::Severity::Error => severity.red().to_string(),
                             crate::policy::Severity::Warning => severity.yellow().to_string(),
@@ -143,6 +170,7 @@ fn report_validation(graph: Graph, format: OutputFormat, use_color: bool) -> Res
                     result.violations.len()
                 );
                 if use_color {
+                    use colored::Colorize;
                     println!("{}", msg.green());
                 } else {
                     println!("{}", msg);

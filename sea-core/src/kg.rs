@@ -1,4 +1,6 @@
 use crate::graph::Graph;
+use crate::parser::ast::TargetFormat;
+use crate::projection::{find_projection_override, ProjectionRegistry};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -143,22 +145,63 @@ impl KnowledgeGraph {
     pub fn from_graph(graph: &Graph) -> Result<Self, KgError> {
         let mut kg = Self::new();
 
+        let registry = ProjectionRegistry::new(graph);
+        let projections = registry.find_projections_for_target(&TargetFormat::Kg);
+        let projection = projections.first().copied();
+
         for entity in graph.all_entities() {
+            let mut rdf_class = "sea:Entity".to_string();
+            let mut prop_map = std::collections::HashMap::new();
+
+            if let Some(proj) = projection {
+                if let Some(rule) = find_projection_override(proj, "Entity", entity.name()) {
+                    if let Some(cls) = rule.fields.get("rdf_class").and_then(|v| v.as_str()) {
+                        if Self::is_valid_rdf_term(cls) {
+                            rdf_class = cls.to_string();
+                        } else {
+                            eprintln!("Warning: Invalid RDF term for rdf_class, skipping: {}", cls);
+                        }
+                    }
+                    if let Some(props) = rule.fields.get("properties").and_then(|v| v.as_object()) {
+                        for (k, v) in props {
+                            if let Some(v_str) = v.as_str() {
+                                if Self::is_valid_rdf_term(v_str) {
+                                    prop_map.insert(k.clone(), v_str.to_string());
+                                } else {
+                                    eprintln!(
+                                        "Warning: Invalid RDF term for property '{}', skipping: {}",
+                                        k, v_str
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
                 predicate: "rdf:type".to_string(),
-                object: "sea:Entity".to_string(),
+                object: rdf_class,
             });
 
+            let label_pred = prop_map
+                .get("name")
+                .cloned()
+                .unwrap_or_else(|| "rdfs:label".to_string());
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
-                predicate: "rdfs:label".to_string(),
+                predicate: label_pred,
                 object: format!("\"{}\"", Self::escape_turtle_literal(entity.name())),
             });
 
+            let ns_pred = prop_map
+                .get("namespace")
+                .cloned()
+                .unwrap_or_else(|| "sea:namespace".to_string());
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
-                predicate: "sea:namespace".to_string(),
+                predicate: ns_pred,
                 object: format!("\"{}\"", Self::escape_turtle_literal(entity.namespace())),
             });
         }
@@ -1226,6 +1269,32 @@ impl KnowledgeGraph {
         };
 
         (value, suffix)
+    }
+
+    /// Validates that a string is a safe RDF term for use in triples.
+    /// Returns true if the term is valid (no quotes, angle brackets, control chars, backslashes, or illegal colons).
+    fn is_valid_rdf_term(term: &str) -> bool {
+        // Check for dangerous characters
+        if term.contains('"') || term.contains('<') || term.contains('>') || term.contains('\\') {
+            return false;
+        }
+
+        // Check for control characters
+        if term.chars().any(|c| c.is_control()) {
+            return false;
+        }
+
+        // Check for illegal colons (only allow prefixed names like "sea:Something" or local names without colons)
+        // A valid prefixed name has exactly one colon not at the start or end
+        let colon_count = term.matches(':').count();
+        if colon_count > 1 {
+            return false;
+        }
+        if colon_count == 1 && (term.starts_with(':') || term.ends_with(':')) {
+            return false;
+        }
+
+        true
     }
 }
 

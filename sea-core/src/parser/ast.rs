@@ -14,6 +14,7 @@ use pest::iterators::{Pair, Pairs};
 use pest::{Parser, Span};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -59,6 +60,38 @@ pub struct MetricMetadata {
     pub severity: Option<Severity>,
     pub target: Option<Decimal>,
     pub window: Option<Duration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TargetFormat {
+    Calm,
+    Kg,
+    Sbvr,
+}
+
+impl std::fmt::Display for TargetFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetFormat::Calm => write!(f, "CALM"),
+            TargetFormat::Kg => write!(f, "KG"),
+            TargetFormat::Sbvr => write!(f, "SBVR"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MappingRule {
+    pub primitive_type: String,
+    pub primitive_name: String,
+    pub target_type: String,
+    pub fields: HashMap<String, JsonValue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectionOverride {
+    pub primitive_type: String,
+    pub primitive_name: String,
+    pub fields: HashMap<String, JsonValue>,
 }
 
 /// Abstract Syntax Tree for SEA DSL
@@ -134,6 +167,16 @@ pub enum AstNode {
         name: String,
         expression: Expression,
         metadata: MetricMetadata,
+    },
+    MappingDecl {
+        name: String,
+        target: TargetFormat,
+        rules: Vec<MappingRule>,
+    },
+    ProjectionDecl {
+        name: String,
+        target: TargetFormat,
+        overrides: Vec<ProjectionOverride>,
     },
 }
 
@@ -227,6 +270,8 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
         Rule::policy_decl => parse_policy(pair),
         Rule::concept_change_decl => parse_concept_change(pair),
         Rule::metric_decl => parse_metric(pair),
+        Rule::mapping_decl => parse_mapping(pair),
+        Rule::projection_decl => parse_projection(pair),
         _ => Err(ParseError::GrammarError(format!(
             "Unexpected rule: {:?}",
             pair.as_rule()
@@ -1562,6 +1607,246 @@ fn expression_to_json(expr: &Expression) -> ParseResult<JsonValue> {
     }
 }
 
+/// Parse mapping declaration
+fn parse_mapping(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected mapping name".to_string()))?,
+    )?;
+
+    let target_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected target format".to_string()))?;
+    let target = parse_target_format(target_pair)?;
+
+    let mut rules = Vec::new();
+
+    for rule_pair in inner {
+        if rule_pair.as_rule() == Rule::mapping_rule {
+            rules.push(parse_mapping_rule(rule_pair)?);
+        }
+    }
+
+    Ok(AstNode::MappingDecl {
+        name,
+        target,
+        rules,
+    })
+}
+
+fn parse_target_format(pair: Pair<Rule>) -> ParseResult<TargetFormat> {
+    match pair.as_str().to_lowercase().as_str() {
+        "calm" => Ok(TargetFormat::Calm),
+        "kg" => Ok(TargetFormat::Kg),
+        "sbvr" => Ok(TargetFormat::Sbvr),
+        _ => Err(ParseError::GrammarError(format!(
+            "Unknown target format: {}",
+            pair.as_str()
+        ))),
+    }
+}
+
+fn parse_mapping_rule(pair: Pair<Rule>) -> ParseResult<MappingRule> {
+    let mut inner = pair.into_inner();
+
+    let primitive_type = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected primitive type".to_string()))?
+        .as_str()
+        .to_string();
+
+    let primitive_name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected primitive name".to_string()))?,
+    )?;
+
+    let target_structure = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected target structure".to_string()))?;
+
+    let mut target_inner = target_structure.into_inner();
+    let target_type = parse_identifier(
+        target_inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected target type".to_string()))?,
+    )?;
+
+    let mut fields = HashMap::new();
+    for field_pair in target_inner {
+        if field_pair.as_rule() == Rule::mapping_field {
+            let mut field_inner = field_pair.into_inner();
+            let key = parse_identifier(
+                field_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Expected field key".to_string()))?,
+            )?;
+            let value_pair = field_inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected field value".to_string()))?;
+
+            let value = match value_pair.as_rule() {
+                Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
+                Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
+                Rule::object_literal => parse_object_literal(value_pair)?,
+                _ => {
+                    return Err(ParseError::GrammarError(
+                        "Unexpected mapping field value".to_string(),
+                    ))
+                }
+            };
+            fields.insert(key, value);
+        }
+    }
+
+    Ok(MappingRule {
+        primitive_type,
+        primitive_name,
+        target_type,
+        fields,
+    })
+}
+
+fn parse_object_literal(pair: Pair<Rule>) -> ParseResult<JsonValue> {
+    let mut map = serde_json::Map::new();
+    let mut inner = pair.into_inner();
+    while let Some(key_pair) = inner.next() {
+        let key = parse_string_literal(key_pair)?;
+        let value_pair = inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected value in object literal".to_string())
+        })?;
+        let value = match value_pair.as_rule() {
+            Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
+            Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
+            Rule::number => {
+                let d = parse_decimal(value_pair)?;
+                // Parse the decimal string as f64 to create a JSON Number
+                let f = d.to_f64().ok_or_else(|| {
+                    ParseError::InvalidQuantity(format!(
+                        "Decimal value {} cannot be represented as f64",
+                        d
+                    ))
+                })?;
+                if !f.is_finite() {
+                    return Err(ParseError::InvalidQuantity(format!(
+                        "Decimal value {} converts to non-finite f64",
+                        d
+                    )));
+                }
+                let num = serde_json::Number::from_f64(f).ok_or_else(|| {
+                    ParseError::InvalidQuantity(format!(
+                        "Cannot create JSON Number from decimal {}",
+                        d
+                    ))
+                })?;
+                JsonValue::Number(num)
+            }
+            _ => {
+                return Err(ParseError::GrammarError(
+                    "Unexpected object field value".to_string(),
+                ))
+            }
+        };
+        map.insert(key, value);
+    }
+    Ok(JsonValue::Object(map))
+}
+
+/// Parse projection declaration
+fn parse_projection(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+
+    let name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected projection name".to_string()))?,
+    )?;
+
+    let target_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected target format".to_string()))?;
+    let target = parse_target_format(target_pair)?;
+
+    let mut overrides = Vec::new();
+
+    for rule_pair in inner {
+        if rule_pair.as_rule() == Rule::projection_rule {
+            overrides.push(parse_projection_rule(rule_pair)?);
+        }
+    }
+
+    Ok(AstNode::ProjectionDecl {
+        name,
+        target,
+        overrides,
+    })
+}
+
+fn parse_projection_rule(pair: Pair<Rule>) -> ParseResult<ProjectionOverride> {
+    let mut inner = pair.into_inner();
+
+    let primitive_type = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected primitive type".to_string()))?
+        .as_str()
+        .to_string();
+
+    let primitive_name = parse_string_literal(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected primitive name".to_string()))?,
+    )?;
+
+    let mut fields = HashMap::new();
+    for field_pair in inner {
+        if field_pair.as_rule() == Rule::projection_field {
+            let mut field_inner = field_pair.into_inner();
+            let key = parse_identifier(
+                field_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Expected field key".to_string()))?,
+            )?;
+            let value_pair = field_inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected field value".to_string()))?;
+
+            let value = match value_pair.as_rule() {
+                Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
+                Rule::property_mapping => parse_property_mapping(value_pair)?,
+                _ => {
+                    return Err(ParseError::GrammarError(
+                        "Unexpected projection field value".to_string(),
+                    ))
+                }
+            };
+            fields.insert(key, value);
+        }
+    }
+
+    Ok(ProjectionOverride {
+        primitive_type,
+        primitive_name,
+        fields,
+    })
+}
+
+fn parse_property_mapping(pair: Pair<Rule>) -> ParseResult<JsonValue> {
+    let mut map = serde_json::Map::new();
+    let mut inner = pair.into_inner();
+    while let Some(key_pair) = inner.next() {
+        let key = parse_string_literal(key_pair)?;
+        let value_pair = inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected value in property mapping".to_string())
+        })?;
+        let value = parse_string_literal(value_pair)?;
+        map.insert(key, JsonValue::String(value));
+    }
+    Ok(JsonValue::Object(map))
+}
+
 /// Convert AST to Graph
 pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     ast_to_graph_with_options(ast, &ParseOptions::default())
@@ -1955,6 +2240,60 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
             graph.add_metric(metric).map_err(|e| {
                 ParseError::GrammarError(format!("Failed to add metric '{}': {}", name, e))
+            })?;
+        }
+    }
+
+    // Seventh pass: Add mappings
+    for node in &ast.declarations {
+        if let AstNode::MappingDecl {
+            name,
+            target,
+            rules,
+        } = node
+        {
+            let namespace = ast
+                .metadata
+                .namespace
+                .clone()
+                .or_else(|| options.default_namespace.clone())
+                .unwrap_or_else(|| "default".to_string());
+            let mapping = crate::primitives::MappingContract::new(
+                crate::ConceptId::from_concept(&namespace, name),
+                name.clone(),
+                namespace,
+                target.clone(),
+                rules.clone(),
+            );
+            graph
+                .add_mapping(mapping)
+                .map_err(|e| ParseError::GrammarError(format!("Failed to add mapping: {}", e)))?;
+        }
+    }
+
+    // Eighth pass: Add projections
+    for node in &ast.declarations {
+        if let AstNode::ProjectionDecl {
+            name,
+            target,
+            overrides,
+        } = node
+        {
+            let namespace = ast
+                .metadata
+                .namespace
+                .clone()
+                .or_else(|| options.default_namespace.clone())
+                .unwrap_or_else(|| "default".to_string());
+            let projection = crate::primitives::ProjectionContract::new(
+                crate::ConceptId::from_concept(&namespace, name),
+                name.clone(),
+                namespace,
+                target.clone(),
+                overrides.clone(),
+            );
+            graph.add_projection(projection).map_err(|e| {
+                ParseError::GrammarError(format!("Failed to add projection: {}", e))
             })?;
         }
     }

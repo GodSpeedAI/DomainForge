@@ -226,28 +226,10 @@ pub struct Instance {
 #[wasm_bindgen]
 impl Instance {
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        resource_id: String,
-        entity_id: String,
-        namespace: Option<String>,
-    ) -> Result<Instance, JsValue> {
-        let resource_uuid = Uuid::from_str(&resource_id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid resource_id UUID: {}", e)))?;
-        let entity_uuid = Uuid::from_str(&entity_id)
-            .map_err(|e| JsValue::from_str(&format!("Invalid entity_id UUID: {}", e)))?;
-
-        let ns = match namespace {
-            Some(n) => n,
-            None => "default".to_string(),
-        };
-
-        let instance = RustInstance::new_with_namespace(
-            crate::ConceptId::from(resource_uuid),
-            crate::ConceptId::from(entity_uuid),
-            ns,
-        );
-
-        Ok(Self { inner: instance })
+    pub fn new(name: String, entity_type: String, namespace: Option<String>) -> Instance {
+        let ns = namespace.unwrap_or_else(|| "default".to_string());
+        let instance = RustInstance::new_with_namespace(name, entity_type, ns);
+        Self { inner: instance }
     }
 
     #[wasm_bindgen(getter)]
@@ -255,14 +237,14 @@ impl Instance {
         self.inner.id().to_string()
     }
 
-    #[wasm_bindgen(getter, js_name = entityId)]
-    pub fn entity_id(&self) -> String {
-        self.inner.entity_id().to_string()
+    #[wasm_bindgen(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
     }
 
-    #[wasm_bindgen(getter, js_name = resourceId)]
-    pub fn resource_id(&self) -> String {
-        self.inner.resource_id().to_string()
+    #[wasm_bindgen(getter, js_name = entityType)]
+    pub fn entity_type(&self) -> String {
+        self.inner.entity_type().to_string()
     }
 
     #[wasm_bindgen(getter)]
@@ -274,6 +256,40 @@ impl Instance {
             Some(ns.to_string())
         }
     }
+
+    #[wasm_bindgen(js_name = setField)]
+    pub fn set_field(&mut self, key: String, value: JsValue) -> Result<(), JsValue> {
+        let json_value: serde_json::Value = serde_wasm_bindgen::from_value(value)
+            .map_err(|e| JsValue::from_str(&format!("Failed to convert value: {}", e)))?;
+        self.inner.set_field(key, json_value);
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = getField)]
+    pub fn get_field(&self, key: String) -> JsValue {
+        self.inner
+            .get_field(&key)
+            .and_then(|v| serde_wasm_bindgen::to_value(v).inspect_err(|_e| {}).ok())
+            .unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }
 
-impl_wasm_common!(Instance, RustInstance);
+impl Instance {
+    pub fn inner(&self) -> &RustInstance {
+        &self.inner
+    }
+
+    pub fn from_inner(inner: RustInstance) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustInstance {
+        self.inner
+    }
+}

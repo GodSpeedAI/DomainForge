@@ -1,7 +1,8 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{
-    ConceptChange, Entity, Flow, Instance, Metric, RelationType, Resource, ResourceInstance, Role,
+    ConceptChange, Entity, Flow, Instance, MappingContract, Metric, ProjectionContract,
+    RelationType, Resource, ResourceInstance, Role,
 };
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;
@@ -43,6 +44,10 @@ pub struct Graph {
     #[serde(default)]
     metrics: IndexMap<ConceptId, Metric>,
     #[serde(default)]
+    mappings: IndexMap<ConceptId, MappingContract>,
+    #[serde(default)]
+    projections: IndexMap<ConceptId, ProjectionContract>,
+    #[serde(default)]
     entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
     #[serde(default)]
     config: GraphConfig,
@@ -64,7 +69,10 @@ impl Graph {
             && self.policies.is_empty()
             && self.patterns.is_empty()
             && self.concept_changes.is_empty()
+            && self.concept_changes.is_empty()
             && self.metrics.is_empty()
+            && self.mappings.is_empty()
+            && self.projections.is_empty()
     }
 
     /// Set the evaluation mode for policy evaluation.
@@ -489,6 +497,20 @@ impl Graph {
             .ok_or_else(|| format!("Entity instance '{}' not found", name))
     }
 
+    pub fn has_entity_instance_by_id(&self, id: &ConceptId) -> bool {
+        self.entity_instances.contains_key(id)
+    }
+
+    pub fn get_entity_instance_by_id(&self, id: &ConceptId) -> Option<&Instance> {
+        self.entity_instances.get(id)
+    }
+
+    pub fn remove_entity_instance_by_id(&mut self, id: &ConceptId) -> Result<Instance, String> {
+        self.entity_instances
+            .shift_remove(id)
+            .ok_or_else(|| format!("Entity instance with id '{}' not found", id))
+    }
+
     pub fn flows_from(&self, entity_id: &ConceptId) -> Vec<&Flow> {
         self.flows
             .values()
@@ -664,6 +686,56 @@ impl Graph {
         self.metrics.values().collect()
     }
 
+    pub fn mapping_count(&self) -> usize {
+        self.mappings.len()
+    }
+
+    pub fn add_mapping(&mut self, mapping: MappingContract) -> Result<(), String> {
+        let id = mapping.id().clone();
+        if self.mappings.contains_key(&id) {
+            return Err(format!("Mapping with ID {} already exists", id));
+        }
+        self.mappings.insert(id, mapping);
+        Ok(())
+    }
+
+    pub fn has_mapping(&self, id: &ConceptId) -> bool {
+        self.mappings.contains_key(id)
+    }
+
+    pub fn get_mapping(&self, id: &ConceptId) -> Option<&MappingContract> {
+        self.mappings.get(id)
+    }
+
+    pub fn all_mappings(&self) -> Vec<&MappingContract> {
+        self.mappings.values().collect()
+    }
+
+    pub fn projection_count(&self) -> usize {
+        self.projections.len()
+    }
+
+    pub fn add_projection(&mut self, projection: ProjectionContract) -> Result<(), String> {
+        let id = projection.id().clone();
+        if self.projections.contains_key(&id) {
+            return Err(format!("Projection with ID {} already exists", id));
+        }
+        self.projections.insert(id, projection);
+        Ok(())
+    }
+
+    pub fn has_projection(&self, id: &ConceptId) -> bool {
+        self.projections.contains_key(id)
+    }
+
+    pub fn get_projection(&self, id: &ConceptId) -> Option<&ProjectionContract> {
+        self.projections.get(id)
+    }
+
+    pub fn all_projections(&self) -> Vec<&ProjectionContract> {
+        self.projections.values().collect()
+    }
+
     /// Extend this graph with all nodes and policies from another graph.
     /// The operation is atomic: the existing graph is only modified if the entire
     /// merge succeeds, which prevents partial state when errors occur.
@@ -687,6 +759,8 @@ impl Graph {
             patterns,
             concept_changes,
             metrics,
+            mappings,
+            projections,
             entity_roles,
             config: _,
         } = other;
@@ -739,6 +813,14 @@ impl Graph {
 
         for metric in metrics.into_values() {
             self.add_metric(metric)?;
+        }
+
+        for mapping in mappings.into_values() {
+            self.add_mapping(mapping)?;
+        }
+
+        for projection in projections.into_values() {
+            self.add_projection(projection)?;
         }
 
         Ok(())
