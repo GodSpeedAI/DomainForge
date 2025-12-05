@@ -127,7 +127,7 @@ impl<'a> ModuleResolver<'a> {
         })?;
 
         match &import.specifier {
-            ImportSpecifier::Wildcard => Ok(()),
+            ImportSpecifier::Wildcard(_) => Ok(()),
             ImportSpecifier::Named(items) => {
                 for item in items {
                     if !module.exports.contains(&item.name) {
@@ -146,16 +146,9 @@ impl<'a> ModuleResolver<'a> {
 fn collect_exports(ast: &Ast) -> HashSet<String> {
     let mut exports = HashSet::new();
     for node in &ast.declarations {
-        match node {
-            AstNode::Export(inner) => {
-                if let Some(name) = declaration_name(inner.as_ref()) {
-                    exports.insert(name.to_string());
-                }
-            }
-            other => {
-                if let Some(name) = declaration_name(other) {
-                    exports.insert(name.to_string());
-                }
+        if let AstNode::Export(inner) = node {
+            if let Some(name) = declaration_name(inner.as_ref()) {
+                exports.insert(name.to_string());
             }
         }
     }
@@ -192,9 +185,13 @@ pub fn parse_with_registry(
     let content = fs::read_to_string(path).map_err(|e| {
         ParseError::GrammarError(format!("Failed to read {}: {}", path.display(), e))
     })?;
+    
+    // ParseOptions are constructed here to be returned to the caller,
+    // even though parse_source doesn't currently use them.
     let mut options = ParseOptions::default();
     options.namespace_registry = Some(registry.clone());
     options.entry_path = Some(path.to_path_buf());
+    
     let ast = parse_source(&content)?;
     Ok((ast, options))
 }

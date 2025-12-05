@@ -56,14 +56,15 @@ export Entity "Customer"
     let registry = NamespaceRegistry::from_file(&registry_path).expect("registry");
     let mut resolver = ModuleResolver::new(&registry).expect("resolver");
 
+    let order_content = fs::read_to_string(&order_file).unwrap();
     resolver
-        .validate_entry(&order_file, &fs::read_to_string(&order_file).unwrap())
+        .validate_entry(&order_file, &order_content)
         .expect("entry should validate");
 
     assert!(resolver
         .validate_dependencies(
             &order_file,
-            &sea_core::parser::parse(&fs::read_to_string(&order_file).unwrap()).unwrap()
+            &sea_core::parser::parse(&order_content).unwrap()
         )
         .is_ok());
 }
@@ -78,8 +79,8 @@ fn detects_dependency_cycles() {
         &order_file,
         r#"
 @namespace "acme.order"
-import * from "acme.common"
-Entity "Order"
+import * as common from "acme.common"
+export Entity "Order"
 "#,
     );
 
@@ -88,7 +89,7 @@ Entity "Order"
         &common_file,
         r#"
 @namespace "acme.common"
-import * from "acme.order"
+import * as order from "acme.order"
 export Entity "Customer"
 "#,
     );

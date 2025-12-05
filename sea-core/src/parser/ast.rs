@@ -38,7 +38,7 @@ pub struct ImportDecl {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImportSpecifier {
     Named(Vec<ImportItem>),
-    Wildcard,
+    Wildcard(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -350,7 +350,15 @@ fn parse_import_decl(pair: Pair<Rule>) -> ParseResult<ImportDecl> {
 
 fn parse_import_specifier(pair: Pair<Rule>) -> ParseResult<ImportSpecifier> {
     match pair.as_rule() {
-        Rule::import_wildcard => Ok(ImportSpecifier::Wildcard),
+        Rule::import_wildcard => {
+            let mut inner = pair.into_inner();
+            let alias = parse_identifier(
+                inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Expected alias for wildcard import".to_string()))?,
+            )?;
+            Ok(ImportSpecifier::Wildcard(alias))
+        }
         Rule::import_specifier | Rule::import_named => {
             let mut items = Vec::new();
             for item in pair.into_inner() {

@@ -14,9 +14,9 @@ file_header = { annotation* ~ import_decl* }
 // Import declarations
 import_decl = { ^"import" ~ import_specifier ~ ^"from" ~ string_literal }
 import_specifier = { import_named | import_wildcard }
-import_named = { "{" ~ import_item ~ ("," ~ import_item)* ~ "}" }
+import_named = { "{" ~ import_item ~ ("," ~ import_item)* ~ ","? ~ "}" }
 import_item = { identifier ~ (^"as" ~ identifier)? }
-import_wildcard = { "*" }
+import_wildcard = { "*" ~ ^"as" ~ identifier }
 
 // Export modifier
 export_decl = { ^"export" ~ declaration_inner }

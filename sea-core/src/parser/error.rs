@@ -26,6 +26,7 @@ pub enum ParseError {
     },
     InvalidExpression(String),
     InvalidQuantity(String),
+    Validation(String),
 }
 
 impl ParseError {
@@ -109,6 +110,7 @@ impl fmt::Display for ParseError {
             }
             ParseError::InvalidExpression(msg) => write!(f, "Invalid expression: {}", msg),
             ParseError::InvalidQuantity(msg) => write!(f, "Invalid quantity: {}", msg),
+            ParseError::Validation(msg) => write!(f, "Validation error: {}", msg),
         }
     }
 }

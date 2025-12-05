@@ -5,7 +5,7 @@ fn parses_imports_and_exports() {
     let source = r#"
         @namespace "acme.finance"
         import { Payment } from "acme.shared"
-        import * from "acme.utils"
+        import * as utils from "acme.utils"
 
         export Entity "Invoice"
         Entity "Internal" // not exported explicitly but still parsed

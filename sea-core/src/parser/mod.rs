@@ -70,14 +70,23 @@ pub fn parse_to_graph(source: &str) -> ParseResult<Graph> {
 /// let graph = parse_to_graph_with_options("Entity \"Warehouse\"", &options).unwrap();
 /// ```
 pub fn parse_to_graph_with_options(source: &str, options: &ParseOptions) -> ParseResult<Graph> {
-    if let (Some(registry), Some(path)) = (&options.namespace_registry, &options.entry_path) {
-        let mut resolver = crate::module::resolver::ModuleResolver::new(registry)?;
-        let ast = resolver.validate_entry(path, source)?;
-        resolver.validate_dependencies(path, &ast)?;
-        ast::ast_to_graph_with_options(ast, options)
-    } else {
-        let ast = parse(source)?;
-        ast::ast_to_graph_with_options(ast, options)
+    match (&options.namespace_registry, &options.entry_path) {
+        (Some(registry), Some(path)) => {
+            let mut resolver = crate::module::resolver::ModuleResolver::new(registry)?;
+            let ast = resolver.validate_entry(path, source)?;
+            resolver.validate_dependencies(path, &ast)?;
+            ast::ast_to_graph_with_options(ast, options)
+        }
+        (Some(_), None) => Err(ParseError::Validation(
+            "Namespace registry provided without entry path".to_string(),
+        )),
+        (None, Some(_)) => Err(ParseError::Validation(
+            "Entry path provided without namespace registry".to_string(),
+        )),
+        (None, None) => {
+            let ast = parse(source)?;
+            ast::ast_to_graph_with_options(ast, options)
+        }
     }
 }
 
