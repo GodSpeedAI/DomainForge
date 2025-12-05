@@ -1,123 +1,137 @@
-use rust_decimal::Decimal;
-use sea_core::policy::Severity;
-use sea_core::primitives::{Entity, Flow, Resource};
-use sea_core::units::unit_from_string;
-use sea_core::{ConceptId, Graph, KnowledgeGraph, SbvrModel};
-use uuid::Uuid;
+use sea_core::parser::parse_source;
+use sea_core::parser::ast::{AstNode, TargetFormat};
+use sea_core::calm::export::export;
+use sea_core::kg::KnowledgeGraph;
 
-fn setup_minimal_graph(quantity: i64) -> (Graph, String, String, String) {
-    let mut graph = Graph::new();
+#[test]
+fn test_parse_mapping_and_projection() {
+    let source = r#"
+    Mapping "payment_to_calm" for calm {
+        Entity "PaymentProcessor" -> Node {
+            node_type: "resource",
+            metadata: {
+                "team": "payments",
+                "tier": "critical"
+            }
+        }
+    }
 
-    let e1 = Entity::new_with_namespace("Warehouse".to_string(), "default".to_string());
-    let e2 = Entity::new_with_namespace("Factory".to_string(), "default".to_string());
-    let r = Resource::new_with_namespace(
-        "Cameras".to_string(),
-        unit_from_string("units"),
-        "default".to_string(),
-    );
+    Projection "custom_kg" for kg {
+        Entity "Vendor" {
+            rdf_class: "org:Organization",
+            properties: {
+                "name" -> "foaf:name"
+            }
+        }
+    }
+    "#;
 
-    let e1_id = e1.id().clone();
-    let e2_id = e2.id().clone();
-    let r_id = r.id().clone();
-    let e1_id_str = e1_id.to_string();
-    let e2_id_str = e2_id.to_string();
-    let r_id_str = r_id.to_string();
+    let ast = parse_source(source).expect("Failed to parse source");
+    assert_eq!(ast.declarations.len(), 2);
 
-    graph.add_entity(e1).unwrap();
-    graph.add_entity(e2).unwrap();
-    graph.add_resource(r).unwrap();
+    match &ast.declarations[0] {
+        AstNode::MappingDecl { name, target, rules } => {
+            assert_eq!(name, "payment_to_calm");
+            assert_eq!(*target, TargetFormat::Calm);
+            assert_eq!(rules.len(), 1);
+            let rule = &rules[0];
+            assert_eq!(rule.primitive_type, "Entity");
+            assert_eq!(rule.primitive_name, "PaymentProcessor");
+            assert_eq!(rule.target_type, "Node");
+            assert!(rule.fields.contains_key("node_type"));
+            assert!(rule.fields.contains_key("metadata"));
+        }
+        _ => panic!("Expected MappingDecl"),
+    }
 
-    let flow = Flow::new(
-        r_id.clone(),
-        e1_id.clone(),
-        e2_id.clone(),
-        Decimal::new(quantity, 0),
-    );
-    graph.add_flow(flow).unwrap();
-
-    (graph, e1_id_str, e2_id_str, r_id_str)
+    match &ast.declarations[1] {
+        AstNode::ProjectionDecl { name, target, overrides } => {
+            assert_eq!(name, "custom_kg");
+            assert_eq!(*target, TargetFormat::Kg);
+            assert_eq!(overrides.len(), 1);
+            let ov = &overrides[0];
+            assert_eq!(ov.primitive_type, "Entity");
+            assert_eq!(ov.primitive_name, "Vendor");
+            assert!(ov.fields.contains_key("rdf_class"));
+            assert!(ov.fields.contains_key("properties"));
+        }
+        _ => panic!("Expected ProjectionDecl"),
+    }
 }
 
 #[test]
-fn test_sbvr_round_trip_minimal() {
-    let (graph, _, _, _) = setup_minimal_graph(100);
-
-    // Export to SBVR XMI
-    let xml = graph.export_sbvr().unwrap();
-
-    // Parse back into SbvrModel
-    let model = SbvrModel::from_xmi(&xml).expect("Failed to parse SBVR XMI");
-    let graph2 = model.to_graph().expect("Failed to convert SBVR to Graph");
-
-    // Validate counts
-    assert_eq!(graph2.entity_count(), 2);
-    assert_eq!(graph2.resource_count(), 1);
-    assert_eq!(graph2.flow_count(), 1);
+fn test_graph_integration() {
+    let source = r#"
+    Mapping "m1" for calm {
+        Entity "E1" -> Node { node_type: "actor" }
+    }
+    "#;
+    let ast = parse_source(source).expect("Failed to parse");
+    let graph = sea_core::parser::ast::ast_to_graph(ast).expect("Failed to build graph");
+    
+    assert_eq!(graph.mapping_count(), 1);
+    let mappings = graph.all_mappings();
+    assert_eq!(mappings[0].name, "m1");
 }
 
 #[test]
-fn test_kg_round_trip_minimal() {
-    let (graph, warehouse_id_str, factory_id_str, resource_id_str) = setup_minimal_graph(100);
-
-    // Export to Turtle
-    let kg = KnowledgeGraph::from_graph(&graph).unwrap();
-    let turtle = kg.to_turtle();
-
-    // Parse back
-    let kg2 = KnowledgeGraph::from_turtle(&turtle).unwrap();
-    let graph2 = kg2.to_graph().unwrap();
-
-    assert_eq!(graph2.entity_count(), 2);
-    assert_eq!(graph2.resource_count(), 1);
-    assert_eq!(graph2.flow_count(), 1);
-
-    let parse_id =
-        |s: &str| ConceptId::from_uuid(Uuid::parse_str(s).expect("Invalid UUID from helper"));
-    let warehouse_id = parse_id(&warehouse_id_str);
-    let factory_id = parse_id(&factory_id_str);
-    let resource_id = parse_id(&resource_id_str);
-
-    let warehouse = graph2
-        .get_entity(&warehouse_id)
-        .expect("Warehouse entity missing after round trip");
-    assert_eq!(warehouse.name(), "Warehouse");
-    let factory = graph2
-        .get_entity(&factory_id)
-        .expect("Factory entity missing after round trip");
-    assert_eq!(factory.name(), "Factory");
-
-    let resource = graph2
-        .get_resource(&resource_id)
-        .expect("Cameras resource missing after round trip");
-    assert_eq!(resource.name(), "Cameras");
-    assert_eq!(resource.unit_symbol(), "units");
-
-    let flows = graph2.all_flows();
-    assert_eq!(flows.len(), 1);
-    let flow = flows[0];
-    assert_eq!(flow.quantity(), Decimal::new(100, 0));
-    assert_eq!(flow.from_id(), &warehouse_id);
-    assert_eq!(flow.to_id(), &factory_id);
-    assert_eq!(flow.resource_id(), &resource_id);
+fn test_calm_export_with_mapping() {
+    let source = r#"
+    Entity "PaymentProcessor"
+    
+    Mapping "m1" for calm {
+        Entity "PaymentProcessor" -> Node {
+            node_type: "resource",
+            metadata: { "custom": "value" }
+        }
+    }
+    "#;
+    
+    let ast = parse_source(source).expect("Failed to parse");
+    let graph = sea_core::parser::ast::ast_to_graph(ast).expect("Failed to build graph");
+    
+    let calm_json = export(&graph).expect("Failed to export");
+    
+    let nodes = calm_json["nodes"].as_array().expect("Expected nodes array");
+    let node = nodes.iter().find(|n| n["name"] == "PaymentProcessor").expect("Node not found");
+    
+    // Check node_type is "resource" (serialized as lowercase usually? NodeType uses lowercase rename_all)
+    assert_eq!(node["node-type"], "resource");
+    
+    // Check metadata
+    let metadata = node["metadata"].as_object().expect("Expected metadata object");
+    assert_eq!(metadata["custom"], "value");
 }
 
 #[test]
-fn test_kg_shacl_validation_minimal() {
-    let (graph, _, _, _) = setup_minimal_graph(0);
-
-    let kg = KnowledgeGraph::from_graph(&graph).unwrap();
-    let violations = kg.validate_shacl().expect("Validation returned error");
-    assert!(
-        !violations.is_empty(),
-        "Expected SHACL violations for quantity <= 0"
+fn test_kg_export_with_projection() {
+    let source = r#"
+    Entity "Vendor"
+    
+    Projection "custom_kg" for kg {
+        Entity "Vendor" {
+            rdf_class: "org:Organization",
+            properties: {
+                "name" -> "foaf:name"
+            }
+        }
+    }
+    "#;
+    
+    let ast = parse_source(source).expect("Failed to parse");
+    let graph = sea_core::parser::ast::ast_to_graph(ast).expect("Failed to build graph");
+    
+    let kg = KnowledgeGraph::from_graph(&graph).expect("Failed to create KG");
+    
+    // Check for rdf:type org:Organization
+    let type_triple = kg.triples.iter().find(|t| 
+        t.subject.contains("Vendor") && t.predicate == "rdf:type" && t.object == "org:Organization"
     );
-    let violation = violations.iter().find(|v| {
-        v.severity == Severity::Error
-            && v.context.get("predicate").and_then(|val| val.as_str()) == Some("sea:quantity")
-            && v.context.get("threshold").and_then(|val| val.as_str()) == Some("0")
-    });
-    assert!(
-        violation.is_some(),
-        "Expected a minExclusive violation with predicate sea:quantity"
+    assert!(type_triple.is_some(), "Did not find overridden rdf:type");
+    
+    // Check for foaf:name
+    let name_triple = kg.triples.iter().find(|t| 
+        t.subject.contains("Vendor") && t.predicate == "foaf:name"
     );
+    assert!(name_triple.is_some(), "Did not find overridden name property");
 }

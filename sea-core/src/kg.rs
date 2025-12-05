@@ -1,4 +1,6 @@
 use crate::graph::Graph;
+use crate::parser::ast::TargetFormat;
+use crate::projection::{find_projection_override, ProjectionRegistry};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -143,22 +145,52 @@ impl KnowledgeGraph {
     pub fn from_graph(graph: &Graph) -> Result<Self, KgError> {
         let mut kg = Self::new();
 
+        let registry = ProjectionRegistry::new(graph);
+        let projections = registry.find_projections_for_target(&TargetFormat::Kg);
+        let projection = projections.first().copied();
+
         for entity in graph.all_entities() {
+            let mut rdf_class = "sea:Entity".to_string();
+            let mut prop_map = std::collections::HashMap::new();
+
+            if let Some(proj) = projection {
+                if let Some(rule) = find_projection_override(proj, "Entity", entity.name()) {
+                    if let Some(cls) = rule.fields.get("rdf_class").and_then(|v| v.as_str()) {
+                        rdf_class = cls.to_string();
+                    }
+                    if let Some(props) = rule.fields.get("properties").and_then(|v| v.as_object()) {
+                        for (k, v) in props {
+                            if let Some(v_str) = v.as_str() {
+                                prop_map.insert(k.clone(), v_str.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
                 predicate: "rdf:type".to_string(),
-                object: "sea:Entity".to_string(),
+                object: rdf_class,
             });
 
+            let label_pred = prop_map
+                .get("name")
+                .cloned()
+                .unwrap_or_else(|| "rdfs:label".to_string());
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
-                predicate: "rdfs:label".to_string(),
+                predicate: label_pred,
                 object: format!("\"{}\"", Self::escape_turtle_literal(entity.name())),
             });
 
+            let ns_pred = prop_map
+                .get("namespace")
+                .cloned()
+                .unwrap_or_else(|| "sea:namespace".to_string());
             kg.triples.push(Triple {
                 subject: format!("sea:{}", Self::uri_encode(entity.name())),
-                predicate: "sea:namespace".to_string(),
+                predicate: ns_pred,
                 object: format!("\"{}\"", Self::escape_turtle_literal(entity.namespace())),
             });
         }

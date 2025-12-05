@@ -1,5 +1,6 @@
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Metric as RustMetric, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, MappingContract as RustMapping, Metric as RustMetric,
+    ProjectionContract as RustProjection, Resource as RustResource,
     ResourceInstance as RustResourceInstance,
 };
 
@@ -529,6 +530,54 @@ impl Metric {
 
 impl Metric {
     pub fn from_rust(inner: RustMetric) -> Self {
+        Self { inner }
+    }
+}
+
+#[napi]
+pub struct Mapping {
+    inner: RustMapping,
+}
+
+#[napi]
+impl Mapping {
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    
+    #[napi(getter)]
+    pub fn target_format(&self) -> String {
+        format!("{:?}", self.inner.target_format)
+    }
+}
+
+impl Mapping {
+    pub fn from_rust(inner: RustMapping) -> Self {
+        Self { inner }
+    }
+}
+
+#[napi]
+pub struct Projection {
+    inner: RustProjection,
+}
+
+#[napi]
+impl Projection {
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    
+    #[napi(getter)]
+    pub fn target_format(&self) -> String {
+        format!("{:?}", self.inner.target_format)
+    }
+}
+
+impl Projection {
+    pub fn from_rust(inner: RustProjection) -> Self {
         Self { inner }
     }
 }

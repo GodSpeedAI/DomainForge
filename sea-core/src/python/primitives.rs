@@ -1,7 +1,8 @@
 #![allow(clippy::useless_conversion, clippy::wrong_self_convention)]
 
 use crate::primitives::{
-    Entity as RustEntity, Flow as RustFlow, Metric as RustMetric, Resource as RustResource,
+    Entity as RustEntity, Flow as RustFlow, MappingContract as RustMapping, Metric as RustMetric,
+    ProjectionContract as RustProjection, Resource as RustResource,
     ResourceInstance as RustResourceInstance,
 };
 use crate::units::unit_from_string;
@@ -534,6 +535,56 @@ impl Metric {
 
 impl Metric {
     pub fn from_rust(inner: RustMetric) -> Self {
+        Self { inner }
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Mapping {
+    inner: RustMapping,
+}
+
+#[pymethods]
+impl Mapping {
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    
+    #[getter]
+    fn target_format(&self) -> String {
+        format!("{:?}", self.inner.target_format)
+    }
+}
+
+impl Mapping {
+    pub fn from_rust(inner: RustMapping) -> Self {
+        Self { inner }
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Projection {
+    inner: RustProjection,
+}
+
+#[pymethods]
+impl Projection {
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    
+    #[getter]
+    fn target_format(&self) -> String {
+        format!("{:?}", self.inner.target_format)
+    }
+}
+
+impl Projection {
+    pub fn from_rust(inner: RustProjection) -> Self {
         Self { inner }
     }
 }
