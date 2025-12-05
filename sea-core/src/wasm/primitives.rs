@@ -226,11 +226,7 @@ pub struct Instance {
 #[wasm_bindgen]
 impl Instance {
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        name: String,
-        entity_type: String,
-        namespace: Option<String>,
-    ) -> Instance {
+    pub fn new(name: String, entity_type: String, namespace: Option<String>) -> Instance {
         let ns = namespace.unwrap_or_else(|| "default".to_string());
         let instance = RustInstance::new_with_namespace(name, entity_type, ns);
         Self { inner: instance }

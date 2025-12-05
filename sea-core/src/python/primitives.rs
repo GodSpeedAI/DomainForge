@@ -551,7 +551,7 @@ impl Mapping {
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
-    
+
     #[getter]
     fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())
@@ -588,7 +588,7 @@ impl Projection {
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
-    
+
     #[getter]
     fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())

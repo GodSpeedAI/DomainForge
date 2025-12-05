@@ -1,9 +1,9 @@
 use super::models::{
     CalmModel, CalmNode, CalmRelationship, FlowDetails, NodeType, Parties, RelationshipType,
 };
+use crate::parser::ast::TargetFormat;
 use crate::patterns::Pattern;
 use crate::policy::Policy;
-use crate::parser::ast::TargetFormat;
 use crate::policy::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp};
 use crate::primitives::{
     Entity, Flow, MappingContract, Metric, ProjectionContract, Resource, ResourceInstance,
@@ -129,10 +129,7 @@ fn export_metric(metric: &Metric) -> CalmNode {
     metadata.insert("sea:metric_type".to_string(), json!("Metric"));
 
     if let Some(ri) = &metric.refresh_interval {
-        metadata.insert(
-            "sea:refresh_interval".to_string(),
-            json!(ri.num_seconds()),
-        );
+        metadata.insert("sea:refresh_interval".to_string(), json!(ri.num_seconds()));
     }
     if let Some(u) = &metric.unit {
         metadata.insert("sea:unit".to_string(), json!(u));
@@ -177,34 +174,38 @@ fn export_flow(
     // If the mapping says "Flow" -> "Relationship" { relationship_type: "dataflow" }
     // We might want to change it to Simple("dataflow")?
     // The plan example: Flow "Payment" -> Relationship { relationship_type: "dataflow" }
-    
+
     if let Some(map) = mapping {
-         // Flow doesn't have a name per se, but it has an ID. 
-         // Or maybe we map by Resource name? "Flow 'Payment'" implies Resource 'Payment'?
-         // The grammar says: primitive_type ~ string_literal
-         // Flow "Payment" -> ...
-         // In SEA, Flow is defined as `flow "Resource" from ...`
-         // So the name is likely the Resource name.
-         match graph.get_resource(flow.resource_id()) {
-             Some(resource) => {
-                 let resource_name = resource.name();
-                 if let Some(rule) = find_mapping_rule(map, "Flow", resource_name) {
-                     if let Some(rt_str) = rule.fields.get("relationship_type").and_then(|v| v.as_str()) {
-                         if rt_str != "flow" {
-                             relationship_type = RelationshipType::Simple(rt_str.to_string());
-                         }
-                     }
-                 }
-             }
-             None => {
-                 eprintln!(
-                     "Warning: Resource with ID {} not found for flow {}. Skipping mapping.",
-                     flow.resource_id(),
-                     flow.id()
-                 );
-             }
-         }
-     }
+        // Flow doesn't have a name per se, but it has an ID.
+        // Or maybe we map by Resource name? "Flow 'Payment'" implies Resource 'Payment'?
+        // The grammar says: primitive_type ~ string_literal
+        // Flow "Payment" -> ...
+        // In SEA, Flow is defined as `flow "Resource" from ...`
+        // So the name is likely the Resource name.
+        match graph.get_resource(flow.resource_id()) {
+            Some(resource) => {
+                let resource_name = resource.name();
+                if let Some(rule) = find_mapping_rule(map, "Flow", resource_name) {
+                    if let Some(rt_str) = rule
+                        .fields
+                        .get("relationship_type")
+                        .and_then(|v| v.as_str())
+                    {
+                        if rt_str != "flow" {
+                            relationship_type = RelationshipType::Simple(rt_str.to_string());
+                        }
+                    }
+                }
+            }
+            None => {
+                eprintln!(
+                    "Warning: Resource with ID {} not found for flow {}. Skipping mapping.",
+                    flow.resource_id(),
+                    flow.id()
+                );
+            }
+        }
+    }
 
     CalmRelationship {
         unique_id: flow.id().to_string(),

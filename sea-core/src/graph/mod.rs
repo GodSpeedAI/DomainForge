@@ -1,8 +1,8 @@
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{
-    ConceptChange, Entity, Flow, Instance, MappingContract, Metric, ProjectionContract, RelationType,
-    Resource, ResourceInstance, Role,
+    ConceptChange, Entity, Flow, Instance, MappingContract, Metric, ProjectionContract,
+    RelationType, Resource, ResourceInstance, Role,
 };
 use crate::validation_result::ValidationResult;
 use crate::ConceptId;

@@ -72,11 +72,7 @@ mod wasm_tests {
 
     #[wasm_bindgen_test]
     fn test_instance_creation() {
-        let instance = Instance::new(
-            "warehouse_1".to_string(),
-            "Warehouse".to_string(),
-            None
-        );
+        let instance = Instance::new("warehouse_1".to_string(), "Warehouse".to_string(), None);
 
         assert!(!instance.id().is_empty());
         assert_eq!(instance.name(), "warehouse_1");

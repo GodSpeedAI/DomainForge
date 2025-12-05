@@ -545,7 +545,7 @@ impl Mapping {
     pub fn name(&self) -> String {
         self.inner.name().to_string()
     }
-    
+
     #[napi(getter)]
     pub fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())
@@ -577,7 +577,7 @@ impl Projection {
     pub fn name(&self) -> String {
         self.inner.name().to_string()
     }
-    
+
     #[napi(getter)]
     pub fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())

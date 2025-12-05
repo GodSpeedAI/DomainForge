@@ -79,7 +79,6 @@ impl std::fmt::Display for TargetFormat {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MappingRule {
     pub primitive_type: String,
@@ -1668,7 +1667,7 @@ fn parse_mapping_rule(pair: Pair<Rule>) -> ParseResult<MappingRule> {
     let target_structure = inner
         .next()
         .ok_or_else(|| ParseError::GrammarError("Expected target structure".to_string()))?;
-    
+
     let mut target_inner = target_structure.into_inner();
     let target_type = parse_identifier(
         target_inner
@@ -1688,12 +1687,16 @@ fn parse_mapping_rule(pair: Pair<Rule>) -> ParseResult<MappingRule> {
             let value_pair = field_inner
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Expected field value".to_string()))?;
-            
+
             let value = match value_pair.as_rule() {
                 Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
                 Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
                 Rule::object_literal => parse_object_literal(value_pair)?,
-                _ => return Err(ParseError::GrammarError("Unexpected mapping field value".to_string())),
+                _ => {
+                    return Err(ParseError::GrammarError(
+                        "Unexpected mapping field value".to_string(),
+                    ))
+                }
             };
             fields.insert(key, value);
         }
@@ -1712,7 +1715,9 @@ fn parse_object_literal(pair: Pair<Rule>) -> ParseResult<JsonValue> {
     let mut inner = pair.into_inner();
     while let Some(key_pair) = inner.next() {
         let key = parse_string_literal(key_pair)?;
-        let value_pair = inner.next().ok_or_else(|| ParseError::GrammarError("Expected value in object literal".to_string()))?;
+        let value_pair = inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected value in object literal".to_string())
+        })?;
         let value = match value_pair.as_rule() {
             Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
             Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
@@ -1738,8 +1743,12 @@ fn parse_object_literal(pair: Pair<Rule>) -> ParseResult<JsonValue> {
                     ))
                 })?;
                 JsonValue::Number(num)
-            },
-            _ => return Err(ParseError::GrammarError("Unexpected object field value".to_string())),
+            }
+            _ => {
+                return Err(ParseError::GrammarError(
+                    "Unexpected object field value".to_string(),
+                ))
+            }
         };
         map.insert(key, value);
     }
@@ -1803,11 +1812,15 @@ fn parse_projection_rule(pair: Pair<Rule>) -> ParseResult<ProjectionOverride> {
             let value_pair = field_inner
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Expected field value".to_string()))?;
-            
+
             let value = match value_pair.as_rule() {
                 Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
                 Rule::property_mapping => parse_property_mapping(value_pair)?,
-                _ => return Err(ParseError::GrammarError("Unexpected projection field value".to_string())),
+                _ => {
+                    return Err(ParseError::GrammarError(
+                        "Unexpected projection field value".to_string(),
+                    ))
+                }
             };
             fields.insert(key, value);
         }
@@ -1825,7 +1838,9 @@ fn parse_property_mapping(pair: Pair<Rule>) -> ParseResult<JsonValue> {
     let mut inner = pair.into_inner();
     while let Some(key_pair) = inner.next() {
         let key = parse_string_literal(key_pair)?;
-        let value_pair = inner.next().ok_or_else(|| ParseError::GrammarError("Expected value in property mapping".to_string()))?;
+        let value_pair = inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected value in property mapping".to_string())
+        })?;
         let value = parse_string_literal(value_pair)?;
         map.insert(key, JsonValue::String(value));
     }
@@ -2231,7 +2246,12 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Seventh pass: Add mappings
     for node in &ast.declarations {
-        if let AstNode::MappingDecl { name, target, rules } = node {
+        if let AstNode::MappingDecl {
+            name,
+            target,
+            rules,
+        } = node
+        {
             let namespace = ast
                 .metadata
                 .namespace

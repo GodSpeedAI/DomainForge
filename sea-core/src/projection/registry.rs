@@ -26,14 +26,14 @@ impl<'a> ProjectionRegistry<'a> {
             .filter(|p| p.target_format() == target)
             .collect()
     }
-    
+
     pub fn get_mapping_by_name(&self, name: &str) -> Option<&MappingContract> {
         self.graph
             .all_mappings()
             .into_iter()
             .find(|m| m.name() == name)
     }
-    
+
     pub fn get_projection_by_name(&self, name: &str) -> Option<&ProjectionContract> {
         self.graph
             .all_projections()
