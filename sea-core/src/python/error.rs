@@ -20,8 +20,6 @@ pub fn to_python_exception(py: Python, err: ValidationError) -> PyErr {
             let exc = PyException::new_err(message);
             let exc_obj = exc.value(py);
 
-            // Set custom attributes
-            // Set custom attributes
             if let Err(e) = exc_obj.setattr("code", code) {
                 return e;
             }

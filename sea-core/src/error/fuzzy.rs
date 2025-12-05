@@ -1,8 +1,8 @@
-/// Fuzzy string matching for "did you mean?" suggestions
-///
-/// This module implements the Levenshtein distance algorithm (Wagner-Fischer)
-/// to provide helpful suggestions when users make typos in entity names,
-/// resource names, or other identifiers.
+//! Fuzzy string matching for "did you mean?" suggestions.
+//!
+//! Implements the Levenshtein distance algorithm (Wagner-Fischer) to provide
+//! helpful suggestions when users make typos in entity names, resource names,
+//! or other identifiers.
 /// Calculate the Levenshtein distance between two strings
 ///
 /// Uses the Wagner-Fischer dynamic programming algorithm with O(mn) time complexity

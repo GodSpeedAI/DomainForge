@@ -2,8 +2,8 @@
 
 ## Snapshot
 - Status: multi-language DSL (Rust core with Python/TypeScript/WASM bindings) in **alpha** (`sea-core` 0.0.1, `sea-dsl`/`@domainforge/sea` 0.1.0).
-- Maturity: strong architectural docs and benchmarks; build currently failing, so not production-ready.
-- Test surface: 60+ Rust parser/graph tests, Python + TS integration suites, CLI workflows; latest runs blocked by build/lint errors.
+- Maturity: strong architectural docs/benchmarks; core build now green and Rust CLI suite passing.
+- Test surface: 60+ Rust parser/graph/CLI tests (all passing via `cargo test -p sea-core --features cli`); Python + TS integration suites present but not re-run in this pass.
 - Distribution: source-build only (README notes PyPI/npm “coming soon”); no publish automation observed.
 
 ## What’s Working
@@ -13,23 +13,20 @@
 - Planning/reference material is rich (`docs/plans/*`, `docs/reference/*`, `docs/specs/*`), giving clear roadmap.
 
 ## Gaps & Blockers (highest first)
-- **Build fails**: PyO3/WASM conversions for `ReferenceType` missing trait impls (`sea-core/src/python/error.rs:121`, `sea-core/src/validation_error.rs:223`, `sea-core/src/wasm/error.rs:79`). Core crate does not compile.
-- **Clippy hard failures**: doc-comment spacing and loop idioms stop `cargo clippy -D warnings` (`sea-core/src/error/fuzzy.rs:5`, `sea-core/src/validation_error.rs:4`, `sea-core/src/python/error.rs:9`, `sea-core/src/error/diagnostics.rs:192,256`).
-- **Module system correctness**: CodeRabbit flags unresolved issues—wildcard imports need aliasing, trailing commas rejected, exports over-collected, ParseOptions ignored, and test covering import/export missing an `export` keyword (`sea-core/grammar/sea.pest` ~17–19; `sea-core/src/module/resolver.rs:146-200`; `sea-core/tests/module_resolution_tests.rs:59-84`; `sea-core/src/parser/mod.rs:73-81`).
-- **Release packaging**: No CI/publish config for crates.io/PyPI/npm; package metadata still “Alpha” and source-only build instructions.
-- **Quality signal gap**: No recent passing test log; `just ai-validate` would currently fail due to above; clippy and cargo errors imply CI would be red.
+- **Release automation & distribution**: No CI/publish config for crates.io/PyPI/npm; packages still “Alpha” and source-only builds.
+- **Cross-language verification**: Python/TypeScript integration tests not re-run after fixes; need parity check and stub regen if APIs changed.
+- **Operational hygiene**: Need CI coverage (fmt, clippy, Rust/Python/TS tests) and artifact signing/versioning plan.
 
 ## Production Readiness
-- Current state: **Not production-ready** due to compile/clippy failures and unresolved module-resolution semantics.
-- Stability: Core design is sound and well-documented, but enforcement of deterministic exports/imports and bindings parity needs fixes.
-- Operational hygiene: Lacks evidence of automated CI pipelines, release artifacts, or published packages.
+- Current state: **Core build and CLI tests passing**; still **pre-production** until release/CI and cross-language checks are in place.
+- Stability: Core module resolution/export collection fixed; ReferenceType conversions aligned across Rust/Python/WASM; clippy blockers resolved.
+- Operational hygiene: Lacks automated CI pipelines, release artifacts, or published packages.
 
 ## Recommended Next Steps (priority order)
-1) Restore green build: add `IntoPyObject/Serialize` for `ReferenceType` or adjust conversion, fix clippy offenders, rerun `cargo test -p sea-core --features cli`.
-2) Fix module system issues per CodeRabbit review (grammar aliasing/trailing comma, export collection, ParseOptions use, and test fixture export) and add regression tests.
-3) Re-run full matrix (`just all-tests`) across Rust/Python/TS; capture logs in `docs/evidence/` to baseline health.
-4) Stand up CI (fmt, clippy, tests) and begin release automation; decide on versioning and artifact signing for crates.io/PyPI/npm/wasm-pack.
-5) Update docs/README to reflect current support matrix, publish timelines, and any API breakages from module changes.
+1) Run cross-language test matrix (`just python-test`, `just ts-test`) and regenerate stubs/types if needed; capture logs in `docs/evidence/`.
+2) Stand up CI (fmt, clippy, Rust/Python/TS tests) and release automation for crates.io/PyPI/npm/wasm-pack, with signing/version policy.
+3) Update docs/README with current support matrix and release channels; publish changelog entry for module-resolution/export changes.
+4) Plan packaging timelines (alpha → beta), including binary distribution for CLI and prebuilt bindings.
 
 ## Overall Take
-The project has a solid architecture and cross-language scaffolding, but immediate engineering work is needed to get back to a compiling, test-passing state and to finish module semantics before considering production usage or publishing binaries.
+Architecture and semantics are solid; core build is green. Remaining work is primarily release engineering and validating bindings parity before calling the project production-ready.

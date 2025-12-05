@@ -80,9 +80,14 @@ pub fn parse_to_graph_with_options(source: &str, options: &ParseOptions) -> Pars
         (Some(_), None) => Err(ParseError::Validation(
             "Namespace registry provided without entry path".to_string(),
         )),
-        (None, Some(_)) => Err(ParseError::Validation(
-            "Entry path provided without namespace registry".to_string(),
-        )),
+        (None, Some(path)) => {
+            log::warn!(
+                "Entry path '{}' provided without namespace registry; module resolution skipped",
+                path.display()
+            );
+            let ast = parse(source)?;
+            ast::ast_to_graph_with_options(ast, options)
+        }
         (None, None) => {
             let ast = parse(source)?;
             ast::ast_to_graph_with_options(ast, options)

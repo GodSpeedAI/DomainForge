@@ -185,13 +185,13 @@ pub fn parse_with_registry(
     let content = fs::read_to_string(path).map_err(|e| {
         ParseError::GrammarError(format!("Failed to read {}: {}", path.display(), e))
     })?;
-    
+
     // ParseOptions are constructed here to be returned to the caller,
     // even though parse_source doesn't currently use them.
     let mut options = ParseOptions::default();
     options.namespace_registry = Some(registry.clone());
     options.entry_path = Some(path.to_path_buf());
-    
+
     let ast = parse_source(&content)?;
     Ok((ast, options))
 }
