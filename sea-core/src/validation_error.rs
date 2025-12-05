@@ -125,6 +125,10 @@ pub enum ErrorCode {
     E501_AmbiguousNamespace,
     E502_InvalidNamespace,
     E503_ModuleNotFound,
+    E504_SymbolNotExported,
+    E505_CircularDependency,
+    E506_AmbiguousImport,
+    E507_InvalidExport,
 }
 
 impl ErrorCode {
@@ -172,6 +176,10 @@ impl ErrorCode {
             ErrorCode::E501_AmbiguousNamespace => "E501",
             ErrorCode::E502_InvalidNamespace => "E502",
             ErrorCode::E503_ModuleNotFound => "E503",
+            ErrorCode::E504_SymbolNotExported => "E504",
+            ErrorCode::E505_CircularDependency => "E505",
+            ErrorCode::E506_AmbiguousImport => "E506",
+            ErrorCode::E507_InvalidExport => "E507",
         }
     }
 
@@ -208,6 +216,10 @@ impl ErrorCode {
             ErrorCode::E501_AmbiguousNamespace => "Ambiguous namespace",
             ErrorCode::E502_InvalidNamespace => "Invalid namespace",
             ErrorCode::E503_ModuleNotFound => "Module not found",
+            ErrorCode::E504_SymbolNotExported => "Imported symbol is not exported",
+            ErrorCode::E505_CircularDependency => "Circular dependency detected",
+            ErrorCode::E506_AmbiguousImport => "Ambiguous import",
+            ErrorCode::E507_InvalidExport => "Invalid export",
         }
     }
 }

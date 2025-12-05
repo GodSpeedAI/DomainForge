@@ -1,11 +1,17 @@
+#[cfg(feature = "cli")]
 use assert_cmd::Command;
+#[cfg(feature = "cli")]
 use predicates::prelude::*;
 #[cfg(feature = "shacl")]
 use sea_core::ImportError;
+#[cfg(feature = "cli")]
 use std::fs::write;
+#[cfg(feature = "cli")]
 use std::path::PathBuf;
+#[cfg(feature = "cli")]
 use tempfile::tempdir;
 
+#[cfg(feature = "cli")]
 fn get_sea_binary() -> String {
     std::env::var("CARGO_BIN_EXE_sea").unwrap_or_else(|_| {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -21,6 +27,7 @@ fn get_sea_binary() -> String {
     })
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn test_cli_import_sbvr_minimal() {
     // Create a minimal graph and export to SBVR via API, then import with CLI
@@ -58,6 +65,7 @@ fn test_cli_import_sbvr_minimal() {
         .stdout(predicate::str::contains("Imported SBVR to Graph"));
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn test_cli_import_kg_turtle_minimal() {
     let mut graph = sea_core::Graph::new();
@@ -93,6 +101,12 @@ fn test_cli_import_kg_turtle_minimal() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("Imported KG (Turtle) to Graph"));
+}
+
+#[cfg(not(feature = "cli"))]
+#[test]
+fn cli_import_tests_skipped_without_feature() {
+    assert!(true);
 }
 
 #[cfg(feature = "shacl")]

@@ -373,6 +373,8 @@ fn test_parse_to_graph_with_options_overrides_namespace() {
 
     let options = ParseOptions {
         default_namespace: Some("logistics".to_string()),
+        namespace_registry: None,
+        entry_path: None,
     };
 
     let graph = parse_to_graph_with_options(source, &options).unwrap();
@@ -390,6 +392,8 @@ fn test_parse_to_graph_with_options_preserves_explicit_namespace() {
 
     let options = ParseOptions {
         default_namespace: Some("logistics".to_string()),
+        namespace_registry: None,
+        entry_path: None,
     };
 
     let graph = parse_to_graph_with_options(source, &options).unwrap();

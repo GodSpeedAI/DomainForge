@@ -49,7 +49,11 @@ fn validate_file(
     let default_namespace = registry
         .as_ref()
         .and_then(|reg| reg.namespace_for(path).map(|ns| ns.to_string()));
-    let options = ParseOptions { default_namespace };
+    let options = ParseOptions {
+        default_namespace,
+        namespace_registry: registry.clone(),
+        entry_path: Some(path.to_path_buf()),
+    };
     let graph = parse_to_graph_with_options(&source, &options)
         .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", path.display(), e))?;
     report_validation(graph, format, use_color, show_source, Some(&source))
@@ -87,6 +91,8 @@ fn validate_directory(
             .with_context(|| format!("Failed to read {}", binding.path.display()))?;
         let options = ParseOptions {
             default_namespace: Some(binding.namespace.clone()),
+            namespace_registry: Some(registry.clone()),
+            entry_path: Some(binding.path.clone()),
         };
         let file_graph = parse_to_graph_with_options(&source, &options)
             .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", binding.path.display(), e))?;

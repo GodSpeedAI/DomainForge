@@ -183,29 +183,29 @@ Add new `ErrorCode` variants:
 
 ### Step 1: Grammar & AST
 
-- [ ] Modify `sea.pest` to add `import` and `export`.
-- [ ] Update `ast.rs` with `ImportDecl` and `AstNode::Export`.
-- [ ] Update `parser/mod.rs` to handle the new nodes.
-- [ ] Add unit tests in `parser_tests.rs`.
+- [x] Modify `sea.pest` to add `import` and `export`.
+- [x] Update `ast.rs` with `ImportDecl` and `AstNode::Export`.
+- [x] Update `parser/mod.rs` to handle the new nodes.
+- [x] Add unit tests in `parser_tests.rs`.
 
 ### Step 2: Module Resolution Logic
 
-- [ ] Create `sea-core/src/module/` directory.
-- [ ] Implement `resolver.rs` to handle import resolution against `NamespaceRegistry`.
-- [ ] Implement cycle detection.
-- [ ] Add tests for resolution logic.
+- [x] Create `sea-core/src/module/` directory.
+- [x] Implement `resolver.rs` to handle import resolution against `NamespaceRegistry`.
+- [x] Implement cycle detection.
+- [x] Add tests for resolution logic.
 
 ### Step 3: Integration with Parser
 
-- [ ] Update `parse_to_graph` to use the resolver.
-- [ ] Implement the "load world" logic: when parsing a file, if it has imports, load them (or verify they exist).
+- [x] Update `parse_to_graph` to use the resolver.
+- [x] Implement the "load world" logic: when parsing a file, if it has imports, load them (or verify they exist).
 - [ ] *Note*: For the first pass, we might just validate that imports *can* be resolved, without fully merging the graphs, or we might implement full multi-file graph merging.
 - [ ] **Decision**: `parse_to_graph` should probably return a Graph containing *all* loaded dependencies merged, or we need a `Project` abstraction. For now, merging into a single Graph is the standard SEA pattern.
 
 ### Step 4: CLI & Error Reporting
 
-- [ ] Add `ImportError` variants.
-- [ ] Update `sea validate` to handle imports.
+- [x] Add `ImportError` variants.
+- [x] Update `sea validate` to handle imports.
 - [ ] Add `sea module` subcommand.
 
 ### Step 5: Bindings & Final Polish

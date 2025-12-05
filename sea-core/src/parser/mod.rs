@@ -1,5 +1,6 @@
 use crate::graph::Graph;
 use pest_derive::Parser;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[grammar = "grammar/sea.pest"]
@@ -29,6 +30,10 @@ pub struct ParseOptions {
     /// When `Some`, unqualified declarations receive this namespace.
     /// When `None`, entities and resources must provide their own namespace.
     pub default_namespace: Option<String>,
+    /// Optional namespace registry used for module resolution.
+    pub namespace_registry: Option<crate::registry::NamespaceRegistry>,
+    /// Path to the entry file being parsed, used for module resolution.
+    pub entry_path: Option<PathBuf>,
 }
 
 /// Parse SEA DSL source code into an AST
@@ -60,12 +65,20 @@ pub fn parse_to_graph(source: &str) -> ParseResult<Graph> {
 ///
 /// let options = ParseOptions {
 ///     default_namespace: Some("logistics".to_string()),
+///     ..Default::default()
 /// };
 /// let graph = parse_to_graph_with_options("Entity \"Warehouse\"", &options).unwrap();
 /// ```
 pub fn parse_to_graph_with_options(source: &str, options: &ParseOptions) -> ParseResult<Graph> {
-    let ast = parse(source)?;
-    ast::ast_to_graph_with_options(ast, options)
+    if let (Some(registry), Some(path)) = (&options.namespace_registry, &options.entry_path) {
+        let mut resolver = crate::module::resolver::ModuleResolver::new(registry)?;
+        let ast = resolver.validate_entry(path, source)?;
+        resolver.validate_dependencies(path, &ast)?;
+        ast::ast_to_graph_with_options(ast, options)
+    } else {
+        let ast = parse(source)?;
+        ast::ast_to_graph_with_options(ast, options)
+    }
 }
 
 #[cfg(test)]

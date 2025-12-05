@@ -33,6 +33,7 @@ pub mod error;
 pub mod graph;
 pub mod kg;
 pub mod kg_import;
+pub mod module;
 pub mod parser;
 pub mod patterns;
 pub mod policy;

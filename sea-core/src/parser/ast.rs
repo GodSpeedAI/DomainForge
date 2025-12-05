@@ -25,6 +25,26 @@ pub struct FileMetadata {
     pub namespace: Option<String>,
     pub version: Option<String>,
     pub owner: Option<String>,
+    pub imports: Vec<ImportDecl>,
+}
+
+/// Import declaration for a module file
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImportDecl {
+    pub specifier: ImportSpecifier,
+    pub from_module: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ImportSpecifier {
+    Named(Vec<ImportItem>),
+    Wildcard,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImportItem {
+    pub name: String,
+    pub alias: Option<String>,
 }
 
 /// Policy metadata
@@ -104,6 +124,7 @@ pub struct Ast {
 /// AST Node types
 #[derive(Debug, Clone, PartialEq)]
 pub enum AstNode {
+    Export(Box<AstNode>),
     Entity {
         name: String,
         version: Option<String>,
@@ -226,29 +247,35 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
     let mut metadata = FileMetadata::default();
 
     for annotation in pair.into_inner() {
-        if annotation.as_rule() == Rule::annotation {
-            let mut inner = annotation.into_inner();
-            let name = inner
-                .next()
-                .ok_or_else(|| ParseError::GrammarError("Expected annotation name".to_string()))?;
-            let value = inner
-                .next()
-                .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
+        match annotation.as_rule() {
+            Rule::annotation => {
+                let mut inner = annotation.into_inner();
+                let name = inner.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected annotation name".to_string())
+                })?;
+                let value = inner.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected annotation value".to_string())
+                })?;
 
-            let name_str = name.as_str().to_lowercase();
-            let value_str = parse_string_literal(value)?;
+                let name_str = name.as_str().to_lowercase();
+                let value_str = parse_string_literal(value)?;
 
-            match name_str.as_str() {
-                "namespace" => metadata.namespace = Some(value_str),
-                "version" => metadata.version = Some(value_str),
-                "owner" => metadata.owner = Some(value_str),
-                _ => {
-                    return Err(ParseError::GrammarError(format!(
-                        "Unknown annotation: {}",
-                        name_str
-                    )))
+                match name_str.as_str() {
+                    "namespace" => metadata.namespace = Some(value_str),
+                    "version" => metadata.version = Some(value_str),
+                    "owner" => metadata.owner = Some(value_str),
+                    _ => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Unknown annotation: {}",
+                            name_str
+                        )))
+                    }
                 }
             }
+            Rule::import_decl => {
+                metadata.imports.push(parse_import_decl(annotation)?);
+            }
+            _ => {}
         }
     }
 
@@ -258,6 +285,21 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
 /// Parse a single declaration
 fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
     match pair.as_rule() {
+        Rule::export_decl => {
+            let mut inner = pair.into_inner();
+            let wrapped = inner.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected declaration after export".to_string())
+            })?;
+            let node = parse_declaration(wrapped)?;
+            Ok(AstNode::Export(Box::new(node)))
+        }
+        Rule::declaration_inner => {
+            let inner = pair
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Empty declaration".to_string()))?;
+            parse_declaration(inner)
+        }
         Rule::dimension_decl => parse_dimension(pair),
         Rule::unit_decl => parse_unit_declaration(pair),
         Rule::entity_decl => parse_entity(pair),
@@ -277,6 +319,64 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
             pair.as_rule()
         ))),
     }
+}
+
+fn parse_import_decl(pair: Pair<Rule>) -> ParseResult<ImportDecl> {
+    let mut inner = pair.into_inner();
+    let specifier_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Missing import specifier".to_string()))?;
+    let from_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Missing import source".to_string()))?;
+
+    let specifier = match specifier_pair.as_rule() {
+        Rule::import_specifier | Rule::import_named | Rule::import_wildcard => {
+            parse_import_specifier(specifier_pair)?
+        }
+        _ => {
+            return Err(ParseError::GrammarError(format!(
+                "Unexpected import specifier: {:?}",
+                specifier_pair.as_rule()
+            )))
+        }
+    };
+
+    Ok(ImportDecl {
+        specifier,
+        from_module: parse_string_literal(from_pair)?,
+    })
+}
+
+fn parse_import_specifier(pair: Pair<Rule>) -> ParseResult<ImportSpecifier> {
+    match pair.as_rule() {
+        Rule::import_wildcard => Ok(ImportSpecifier::Wildcard),
+        Rule::import_specifier | Rule::import_named => {
+            let mut items = Vec::new();
+            for item in pair.into_inner() {
+                if item.as_rule() == Rule::import_item {
+                    items.push(parse_import_item(item)?);
+                }
+            }
+            Ok(ImportSpecifier::Named(items))
+        }
+        _ => Err(ParseError::GrammarError(
+            "Invalid import specifier".to_string(),
+        )),
+    }
+}
+
+fn parse_import_item(pair: Pair<Rule>) -> ParseResult<ImportItem> {
+    let mut inner = pair.into_inner();
+    let name_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected import item name".to_string()))?;
+    let alias = inner.next().map(parse_identifier).transpose()?;
+
+    Ok(ImportItem {
+        name: parse_identifier(name_pair)?,
+        alias,
+    })
 }
 
 /// Parse dimension declaration
@@ -1847,6 +1947,13 @@ fn parse_property_mapping(pair: Pair<Rule>) -> ParseResult<JsonValue> {
     Ok(JsonValue::Object(map))
 }
 
+fn unwrap_export(node: &AstNode) -> &AstNode {
+    match node {
+        AstNode::Export(inner) => inner.as_ref(),
+        other => other,
+    }
+}
+
 /// Convert AST to Graph
 pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     ast_to_graph_with_options(ast, &ParseOptions::default())
@@ -1868,6 +1975,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // First pass: Register dimensions and units
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         match node {
             AstNode::Dimension { name } => {
                 use crate::units::{Dimension, UnitRegistry};
@@ -1899,6 +2007,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Register patterns with eager regex validation
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::Pattern { name, regex } = node {
             let namespace = default_namespace.clone();
             let pattern = Pattern::new(name.clone(), namespace, regex.clone())
@@ -1912,6 +2021,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Register concept changes
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::ConceptChange {
             name,
             from_version,
@@ -1935,6 +2045,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Second pass: Add roles, entities, and resources
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         match node {
             AstNode::Role { name, domain } => {
                 if role_map.contains_key(name) {
@@ -2027,6 +2138,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Third pass: Add flows
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::Flow {
             resource_name,
             from_entity,
@@ -2057,6 +2169,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Fourth pass: Add relations
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::Relation {
             name,
             subject_role,
@@ -2110,6 +2223,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Instance pass: Add instances (after entities are created)
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::Instance {
             name,
             entity_type,
@@ -2137,6 +2251,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Fifth pass: Add policies
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::Policy {
             name,
             version,
@@ -2197,6 +2312,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Sixth pass: Add metrics
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::Metric {
             name,
             expression,
@@ -2246,6 +2362,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Seventh pass: Add mappings
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::MappingDecl {
             name,
             target,
@@ -2273,6 +2390,7 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
 
     // Eighth pass: Add projections
     for node in &ast.declarations {
+        let node = unwrap_export(node);
         if let AstNode::ProjectionDecl {
             name,
             target,
