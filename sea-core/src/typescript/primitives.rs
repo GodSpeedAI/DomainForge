@@ -671,9 +671,8 @@ impl Role {
         &self.inner
     }
 
-    pub(crate) fn into_inner(self) -> RustRole {
-        self.inner
-    }
+    // `into_inner` previously existed here but is not used in the TypeScript
+    // bindings. Removing it to avoid `dead_code` lints from clippy.
 }
 
 #[napi]
@@ -780,7 +779,6 @@ impl Relation {
         &self.inner
     }
 
-    pub(crate) fn into_inner(self) -> RustRelation {
-        self.inner
-    }
+    // `into_inner` previously existed here but is not used in the TypeScript
+    // bindings. Removing it to avoid `dead_code` lints from clippy.
 }
