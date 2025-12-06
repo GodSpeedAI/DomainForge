@@ -63,6 +63,7 @@ impl Graph {
     }
 
     fn add_relation(&mut self, relation: &Relation) -> PyResult<()> {
+        // The Rust Graph API currently exposes `add_relation_type`; keep the same call for parity.
         self.inner
             .add_relation_type(relation.clone().into_inner())
             .map_err(|e| PyValueError::new_err(format!("Add relation error: {}", e)))

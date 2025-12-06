@@ -264,17 +264,6 @@ impl<'py> IntoPyObject<'py> for ReferenceType {
     }
 }
 
-#[cfg(feature = "python")]
-impl<'py> IntoPyObject<'py> for &ReferenceType {
-    type Target = PyAny;
-    type Output = pyo3::Bound<'py, PyAny>;
-    type Error = pyo3::PyErr;
-
-    fn into_pyobject(self, py: Python<'py>) -> pyo3::PyResult<Self::Output> {
-        Ok(pyo3::types::PyString::new(py, &self.to_string()).into_any())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum ValidationError {
     SyntaxError {

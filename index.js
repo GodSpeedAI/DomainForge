@@ -359,6 +359,9 @@ const requiredExports = [
   'Resource',
   'Flow',
   'ResourceInstance',
+  'Metric',
+  'Mapping',
+  'Projection',
   'Role',
   'Relation',
 ];

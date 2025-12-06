@@ -8,7 +8,3 @@ creation_rules:
   - path_regex: ".*secrets/.*\\.ya?ml$"
     # Use a YAML list for age recipients (not a map). Some sops versions validate this
     # field as a string or list of strings; using a list is broadly compatible.
-    age:
-      # Per-developer template: replace with your own AGE key.
-      # For CI, inject this via the `SOPS_AGE_KEY` secret or via a wrapper.
-      - "<AGE_RECIPIENT_PLACEHOLDER>"

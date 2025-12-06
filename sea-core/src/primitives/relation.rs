@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct RelationType {
     id: ConceptId,
     name: String,
+    namespace: String,
     subject_role: ConceptId,
     predicate: String,
     object_role: ConceptId,
@@ -29,6 +30,7 @@ impl RelationType {
         Self {
             id,
             name,
+            namespace,
             subject_role,
             predicate: predicate.into(),
             object_role,
@@ -42,6 +44,10 @@ impl RelationType {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.namespace
     }
 
     pub fn subject_role(&self) -> &ConceptId {

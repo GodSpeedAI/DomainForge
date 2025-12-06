@@ -645,7 +645,10 @@ impl Role {
 
     #[napi]
     pub fn get_attribute(&self, key: String) -> Option<String> {
-        self.inner.attributes().get(&key).and_then(|v| serde_json::to_string(v).ok())
+        self.inner
+            .attributes()
+            .get(&key)
+            .and_then(|v| serde_json::to_string(v).ok())
     }
 
     #[napi]
@@ -666,6 +669,10 @@ impl Role {
 
     pub(crate) fn inner_ref(&self) -> &RustRole {
         &self.inner
+    }
+
+    pub(crate) fn into_inner(self) -> RustRole {
+        self.inner
     }
 }
 
@@ -697,11 +704,9 @@ impl Relation {
         );
 
         let via_id = match via_flow_id {
-            Some(id) => Some(crate::ConceptId::from(
-                Uuid::from_str(&id).map_err(|e| {
-                    Error::from_reason(format!("Invalid via_flow_id UUID: {}", e))
-                })?,
-            )),
+            Some(id) => Some(crate::ConceptId::from(Uuid::from_str(&id).map_err(
+                |e| Error::from_reason(format!("Invalid via_flow_id UUID: {}", e)),
+            )?)),
             None => None,
         };
 
@@ -719,6 +724,11 @@ impl Relation {
     #[napi(getter)]
     pub fn name(&self) -> String {
         self.inner.name().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn namespace(&self) -> String {
+        self.inner.namespace().to_string()
     }
 
     #[napi(getter)]
@@ -743,13 +753,20 @@ impl Relation {
 
     #[napi]
     pub fn to_string(&self) -> String {
+        let via_flow = self
+            .inner
+            .via_flow()
+            .map(|id| id.to_string())
+            .unwrap_or_else(|| "None".to_string());
         format!(
-            "Relation(id='{}', name='{}', predicate='{}', subject='{}', object='{}')",
+            "Relation(id='{}', name='{}', namespace='{}', predicate='{}', subject='{}', object='{}', via_flow_id='{}')",
             self.inner.id(),
             self.inner.name(),
+            self.inner.namespace(),
             self.inner.predicate(),
             self.inner.subject_role(),
-            self.inner.object_role()
+            self.inner.object_role(),
+            via_flow
         )
     }
 }
@@ -761,5 +778,9 @@ impl Relation {
 
     pub(crate) fn inner_ref(&self) -> &RustRelation {
         &self.inner
+    }
+
+    pub(crate) fn into_inner(self) -> RustRelation {
+        self.inner
     }
 }

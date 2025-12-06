@@ -708,22 +708,20 @@ impl Relation {
         namespace: Option<String>,
         via_flow_id: Option<String>,
     ) -> PyResult<Self> {
-        let subject_id = crate::ConceptId::from(
-            Uuid::from_str(&subject_role_id)
-                .map_err(|e| PyValueError::new_err(format!("Invalid subject_role_id UUID: {}", e)))?,
-        );
+        let subject_id =
+            crate::ConceptId::from(Uuid::from_str(&subject_role_id).map_err(|e| {
+                PyValueError::new_err(format!("Invalid subject_role_id UUID: {}", e))
+            })?);
 
-        let object_id = crate::ConceptId::from(
-            Uuid::from_str(&object_role_id)
-                .map_err(|e| PyValueError::new_err(format!("Invalid object_role_id UUID: {}", e)))?,
-        );
+        let object_id =
+            crate::ConceptId::from(Uuid::from_str(&object_role_id).map_err(|e| {
+                PyValueError::new_err(format!("Invalid object_role_id UUID: {}", e))
+            })?);
 
         let via_id = match via_flow_id {
-            Some(id) => Some(crate::ConceptId::from(
-                Uuid::from_str(&id).map_err(|e| {
-                    PyValueError::new_err(format!("Invalid via_flow_id UUID: {}", e))
-                })?,
-            )),
+            Some(id) => Some(crate::ConceptId::from(Uuid::from_str(&id).map_err(
+                |e| PyValueError::new_err(format!("Invalid via_flow_id UUID: {}", e)),
+            )?)),
             None => None,
         };
 
@@ -741,6 +739,11 @@ impl Relation {
     #[getter]
     fn name(&self) -> String {
         self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        Some(self.inner.namespace().to_string())
     }
 
     #[getter]
@@ -764,13 +767,20 @@ impl Relation {
     }
 
     fn __repr__(&self) -> String {
+        let via_flow = self
+            .inner
+            .via_flow()
+            .map(|id| id.to_string())
+            .unwrap_or_else(|| "None".to_string());
         format!(
-            "Relation(id='{}', name='{}', predicate='{}', subject='{}', object='{}')",
+            "Relation(id='{}', name='{}', namespace='{}', predicate='{}', subject='{}', object='{}', via_flow_id='{}')",
             self.inner.id(),
             self.inner.name(),
+            self.inner.namespace(),
             self.inner.predicate(),
             self.inner.subject_role(),
-            self.inner.object_role()
+            self.inner.object_role(),
+            via_flow
         )
     }
 }

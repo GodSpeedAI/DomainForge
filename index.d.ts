@@ -197,6 +197,9 @@ export declare class Relation {
   get predicate(): string
   get objectRoleId(): string
   get viaFlowId(): string | null
+  get namespace(): string | null
+  setAttribute(key: string, valueJson: string): void
+  getAttribute<T = unknown>(key: string): T | undefined
   toString(): string
 }
 export declare class NamespaceBinding {

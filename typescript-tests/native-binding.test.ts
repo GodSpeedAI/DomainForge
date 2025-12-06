@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-
-const helper = require('../lib/validate_native_exports');
+import { validateNativeExports } from '../lib/validate_native_exports';
 
 describe('validateNativeExports helper', () => {
     it('throws a helpful error when required exports are missing', () => {
         const fakeBinding = { Graph: {} }; // minimal missing many required symbols
         const required = ['Graph', 'Entity', 'Resource'];
-        expect(() => helper.validateNativeExports(fakeBinding, required)).toThrowError(/Missing required export\(s\): Entity, Resource|missing required export/i);
+        expect(() => validateNativeExports(fakeBinding, required)).toThrowError(/Missing required export\(s\): Entity, Resource|missing required export/i);
     });
 
     it('does not throw when required exports are present', () => {
@@ -16,6 +15,6 @@ describe('validateNativeExports helper', () => {
             Resource: {},
         };
         const required = ['Graph', 'Entity', 'Resource'];
-        expect(() => helper.validateNativeExports(fakeBinding, required)).not.toThrow();
+        expect(() => validateNativeExports(fakeBinding, required)).not.toThrow();
     });
 });
