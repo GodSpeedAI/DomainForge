@@ -67,34 +67,6 @@ Populate all placeholder files in `docs/new_docs/` with production-ready documen
 | `typescript-binding-quickstart.md` | Install via npm → parse .sea file → access entities → integrate with Node.js project. Include Vitest example. |
 | `wasm-in-browser.md` | Load WASM in browser → parse .sea content from textarea → render results. Include complete HTML+JS example. |
 
-### How-Tos (`docs/new_docs/how-tos/`)
-
-| File | Content Requirements |
-|------|---------------------|
-| `install-cli.md` | All installation methods: cargo install, GitHub releases (Linux/macOS/Windows), from source. Include verification steps. |
-| `parse-sea-files.md` | CLI parsing, programmatic parsing (Rust/Python/TS), handling parse errors, batch processing multiple files. |
-| `export-to-calm.md` | Step-by-step CALM JSON export. Cover: CLI command, programmatic API, customizing output, validating against CALM schema. Reference FINOS CALM spec. |
-| `import-from-calm.md` | Import existing CALM JSON into SEA format. Cover: CLI, API, handling import warnings, round-trip validation. |
-| `generate-rdf-turtle.md` | Generate RDF/Turtle output for knowledge graph integration. Cover: CLI, API, namespace configuration, integration with triple stores. |
-| `define-policies.md` | Write policy expressions: syntax, operators, three-valued logic, quantifiers (forall, exists). Include practical examples (access control, validation rules). |
-| `create-custom-units.md` | Define custom units of measure. Cover: built-in units, unit syntax, unit conversion, using units in resources. |
-| `run-cross-language-tests.md` | Run all test suites: `just all-tests`, individual suites, CI configuration, debugging test failures. |
-| `extend-grammar.md` | Add new syntax to SEA: modify sea.pest → update AST → add parser tests → update projections. Include concrete example (e.g., adding a new keyword). |
-
-### Reference (`docs/new_docs/reference/`)
-
-| File | Content Requirements |
-|------|---------------------|
-| `grammar-spec.md` | Complete grammar reference. Parse and document every rule in `sea.pest`. Include EBNF-style notation, examples for each construct, and edge cases. |
-| `primitives-api.md` | Document all primitives: Entity, Resource, Flow, Instance, Policy. For each: fields, constructors, methods, relationships, serialization format. |
-| `cli-commands.md` | All CLI commands with flags, options, examples, exit codes. Generate from actual CLI help output if available. |
-| `python-api.md` | Complete Python API reference. Document every exposed class/function from PyO3 bindings. Include type hints, examples, exceptions. |
-| `typescript-api.md` | Complete TypeScript API reference. Document every exposed type/function from napi-rs bindings. Include TypeScript types, examples, error handling. |
-| `wasm-api.md` | WASM API reference. Document exposed functions, memory considerations, browser vs Node.js usage differences. |
-| `error-codes.md` | All error codes from `validation_error.rs` and `docs/specs/error_codes.md`. Include: code, message, cause, resolution. |
-| `calm-mapping.md` | Detailed mapping between SEA primitives and CALM JSON. Reference existing `docs/reference/specs/calm-mapping.md`. Include bidirectional mapping tables. |
-| `configuration.md` | All configuration options: environment variables, config files, CLI flags, programmatic configuration. |
-
 ### Explanations (`docs/new_docs/explanations/`)
 
 | File | Content Requirements |
@@ -173,8 +145,6 @@ For each file, provide the complete content ready to save. Use this format:
 
 Process files in this order:
 
-1. Reference docs (establishes terminology)
-2. Explanations (provides context)
-3. How-tos (practical tasks)
-4. Tutorials (guided learning)
-5. Playbooks (operational procedures)
+1. Explanations (provides context)
+2. Tutorials (guided learning)
+3. Playbooks (operational procedures)
