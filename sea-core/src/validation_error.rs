@@ -1,4 +1,6 @@
 use crate::units::Dimension;
+#[cfg(feature = "python")]
+use pyo3::{IntoPyObject, PyAny, Python};
 use std::fmt;
 
 /// Threshold for fuzzy matching suggestions (Levenshtein distance)
@@ -248,6 +250,17 @@ impl fmt::Display for ReferenceType {
             ReferenceType::Flow => write!(f, "Flow"),
             ReferenceType::Other(s) => write!(f, "{}", s),
         }
+    }
+}
+
+#[cfg(feature = "python")]
+impl<'py> IntoPyObject<'py> for ReferenceType {
+    type Target = PyAny;
+    type Output = pyo3::Bound<'py, PyAny>;
+    type Error = pyo3::PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> pyo3::PyResult<Self::Output> {
+        Ok(pyo3::types::PyString::new(py, &self.to_string()).into_any())
     }
 }
 

@@ -310,7 +310,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [],
             "relationships": []
@@ -330,7 +330,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -366,7 +366,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -399,7 +399,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -461,7 +461,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -519,7 +519,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -581,7 +581,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -626,7 +626,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -671,7 +671,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -718,7 +718,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -765,7 +765,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -822,7 +822,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -873,7 +873,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -924,7 +924,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -957,7 +957,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -991,7 +991,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -1045,7 +1045,7 @@ mod tests {
             "version": "2.0",
             "metadata": {
                 "sea:exported": true,
-                "sea:version": "0.0.1"
+                "sea:version": crate::VERSION
             },
             "nodes": [
                 {
@@ -1094,7 +1094,7 @@ mod tests {
     fn test_import_policy_node() {
         let calm_json = json!({
             "version": "2.0",
-            "metadata": {"sea:exported": true, "sea:version": "0.0.1"},
+            "metadata": {"sea:exported": true, "sea:version": crate::VERSION},
             "nodes": [
                 {
                     "unique-id": "entity-1",
@@ -1128,7 +1128,7 @@ mod tests {
     fn test_import_association_relationship() {
         let calm_json = json!({
             "version": "2.0",
-            "metadata": {"sea:exported": true, "sea:version": "0.0.1"},
+            "metadata": {"sea:exported": true, "sea:version": crate::VERSION},
             "nodes": [
                 {
                     "unique-id": "entity-1",

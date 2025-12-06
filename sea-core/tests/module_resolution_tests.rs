@@ -57,15 +57,12 @@ export Entity "Customer"
     let mut resolver = ModuleResolver::new(&registry).expect("resolver");
 
     let order_content = fs::read_to_string(&order_file).unwrap();
-    resolver
+    let order_ast = resolver
         .validate_entry(&order_file, &order_content)
         .expect("entry should validate");
 
     assert!(resolver
-        .validate_dependencies(
-            &order_file,
-            &sea_core::parser::parse(&order_content).unwrap()
-        )
+        .validate_dependencies(&order_file, &order_ast)
         .is_ok());
 }
 

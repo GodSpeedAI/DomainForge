@@ -110,6 +110,19 @@ python examples/camera_factory.py
 
 > 💡 **Note:** Pre-built packages (PyPI/npm) coming soon. Currently build from source.
 
+### Support Matrix & Tests
+
+- Rust core + CLI: `cargo test -p sea-core --features cli`
+- Python bindings: `just python-test` (uses virtualenv if present)
+- TypeScript bindings: `just ts-test` (Vitest)
+- WASM: `wasm-pack build sea-core --target web --features wasm` (size checks in CI)
+
+### Release Channels
+
+- Source build: supported today for Rust/Python/TypeScript/WASM.
+- CI workflows: GitHub Actions (`.github/workflows/ci.yml`, `release.yml`, `publish-python.yml`) build/test/package when secrets (PyPI/npm/crates.io) are configured.
+- Upcoming: tagged releases will publish CLI binaries, wheels, npm package, and wasm-pack output once tokens are added.
+
 ---
 
 ## 💻 CLI Usage

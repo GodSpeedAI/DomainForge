@@ -7,7 +7,7 @@ use napi_derive::napi;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::primitives::{Entity, Flow, Resource, ResourceInstance};
+use super::primitives::{Entity, Flow, Relation, Resource, ResourceInstance, Role};
 
 #[napi]
 pub struct Graph {
@@ -59,6 +59,20 @@ impl Graph {
     }
 
     #[napi]
+    pub fn add_role(&mut self, role: &Role) -> Result<()> {
+        self.inner
+            .add_role(role.inner_ref().clone())
+            .map_err(Error::from_reason)
+    }
+
+    #[napi]
+    pub fn add_relation(&mut self, relation: &Relation) -> Result<()> {
+        self.inner
+            .add_relation_type(relation.inner_ref().clone())
+            .map_err(Error::from_reason)
+    }
+
+    #[napi]
     pub fn entity_count(&self) -> u32 {
         self.inner.entity_count() as u32
     }
@@ -81,6 +95,16 @@ impl Graph {
     #[napi]
     pub fn pattern_count(&self) -> u32 {
         self.inner.pattern_count() as u32
+    }
+
+    #[napi]
+    pub fn role_count(&self) -> u32 {
+        self.inner.role_count() as u32
+    }
+
+    #[napi]
+    pub fn relation_count(&self) -> u32 {
+        self.inner.relation_count() as u32
     }
 
     #[napi]
@@ -141,6 +165,13 @@ impl Graph {
             .inner
             .get_instance(&cid)
             .map(|i| ResourceInstance::from_rust(i.clone())))
+    }
+
+    #[napi]
+    pub fn find_role_by_name(&self, name: String) -> Option<String> {
+        self.inner
+            .find_role_by_name(&name)
+            .map(|uuid| uuid.to_string())
     }
 
     #[napi]
@@ -212,6 +243,24 @@ impl Graph {
             .all_instances()
             .into_iter()
             .map(|i| ResourceInstance::from_rust(i.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_roles(&self) -> Vec<Role> {
+        self.inner
+            .all_roles()
+            .into_iter()
+            .map(|r| Role::from_rust(r.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_relations(&self) -> Vec<Relation> {
+        self.inner
+            .all_relations()
+            .into_iter()
+            .map(|relation| Relation::from_rust(relation.clone()))
             .collect()
     }
 

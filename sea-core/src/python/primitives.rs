@@ -2,8 +2,8 @@
 
 use crate::primitives::{
     Entity as RustEntity, Flow as RustFlow, MappingContract as RustMapping, Metric as RustMetric,
-    ProjectionContract as RustProjection, Resource as RustResource,
-    ResourceInstance as RustResourceInstance,
+    ProjectionContract as RustProjection, RelationType as RustRelation, Resource as RustResource,
+    ResourceInstance as RustResourceInstance, Role as RustRole,
 };
 use crate::units::unit_from_string;
 use pyo3::exceptions::{PyKeyError, PyValueError};
@@ -609,6 +609,188 @@ impl Projection {
     }
 
     pub fn into_inner(self) -> RustProjection {
+        self.inner
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Role {
+    inner: RustRole,
+}
+
+#[pymethods]
+impl Role {
+    #[new]
+    #[pyo3(signature = (name, namespace=None))]
+    fn new(name: String, namespace: Option<String>) -> Self {
+        let inner = match namespace {
+            Some(ns) => RustRole::new_with_namespace(name, ns),
+            None => RustRole::new_with_namespace(name, "default".to_string()),
+        };
+        Self { inner }
+    }
+
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
+    }
+
+    fn set_attribute(&mut self, key: String, value: Bound<'_, PyAny>) -> PyResult<()> {
+        let json_value = pythonize::depythonize(&value)?;
+        self.inner.set_attribute(key, json_value);
+        Ok(())
+    }
+
+    fn get_attribute(&self, key: String, py: Python) -> PyResult<PyObject> {
+        match self.inner.attributes().get(&key) {
+            Some(value) => {
+                let py_value = pythonize::pythonize(py, value)?;
+                Ok(py_value.into())
+            }
+            None => Err(PyKeyError::new_err(format!(
+                "Attribute '{}' not found",
+                key
+            ))),
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Role(id='{}', name='{}', namespace={:?})",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.namespace()
+        )
+    }
+}
+
+impl Role {
+    pub fn from_rust(inner: RustRole) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustRole {
+        self.inner
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct Relation {
+    inner: RustRelation,
+}
+
+#[pymethods]
+impl Relation {
+    #[new]
+    #[pyo3(signature = (name, subject_role_id, predicate, object_role_id, namespace=None, via_flow_id=None))]
+    fn new(
+        name: String,
+        subject_role_id: String,
+        predicate: String,
+        object_role_id: String,
+        namespace: Option<String>,
+        via_flow_id: Option<String>,
+    ) -> PyResult<Self> {
+        let subject_id =
+            crate::ConceptId::from(Uuid::from_str(&subject_role_id).map_err(|e| {
+                PyValueError::new_err(format!("Invalid subject_role_id UUID: {}", e))
+            })?);
+
+        let object_id =
+            crate::ConceptId::from(Uuid::from_str(&object_role_id).map_err(|e| {
+                PyValueError::new_err(format!("Invalid object_role_id UUID: {}", e))
+            })?);
+
+        let via_id = match via_flow_id {
+            Some(id) => Some(crate::ConceptId::from(Uuid::from_str(&id).map_err(
+                |e| PyValueError::new_err(format!("Invalid via_flow_id UUID: {}", e)),
+            )?)),
+            None => None,
+        };
+
+        let ns = namespace.unwrap_or_else(|| "default".to_string());
+        let inner = RustRelation::new(name, ns, subject_id, predicate, object_id, via_id);
+
+        Ok(Self { inner })
+    }
+
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        Some(self.inner.namespace().to_string())
+    }
+
+    #[getter]
+    fn subject_role_id(&self) -> String {
+        self.inner.subject_role().to_string()
+    }
+
+    #[getter]
+    fn predicate(&self) -> String {
+        self.inner.predicate().to_string()
+    }
+
+    #[getter]
+    fn object_role_id(&self) -> String {
+        self.inner.object_role().to_string()
+    }
+
+    #[getter]
+    fn via_flow_id(&self) -> Option<String> {
+        self.inner.via_flow().map(|id| id.to_string())
+    }
+
+    fn __repr__(&self) -> String {
+        let via_flow = self
+            .inner
+            .via_flow()
+            .map(|id| id.to_string())
+            .unwrap_or_else(|| "None".to_string());
+        format!(
+            "Relation(id='{}', name='{}', namespace='{}', predicate='{}', subject='{}', object='{}', via_flow_id='{}')",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.namespace(),
+            self.inner.predicate(),
+            self.inner.subject_role(),
+            self.inner.object_role(),
+            via_flow
+        )
+    }
+}
+
+impl Relation {
+    pub fn from_rust(inner: RustRelation) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> RustRelation {
         self.inner
     }
 }

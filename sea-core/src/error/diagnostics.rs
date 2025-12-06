@@ -188,10 +188,17 @@ impl HumanFormatter {
             ));
         }
 
-        // Show the error line(s)
-        // Show the error line(s)
-        #[allow(clippy::needless_range_loop)]
-        for line_idx in start_line..=end_line.min(lines.len() - 1) {
+        let last_line = end_line.min(lines.len().saturating_sub(1));
+        if last_line < start_line {
+            return output;
+        }
+
+        for (line_idx, line) in lines
+            .iter()
+            .enumerate()
+            .skip(start_line)
+            .take(last_line.saturating_sub(start_line) + 1)
+        {
             let line_num = line_idx + 1;
             output.push_str(&format!(
                 "{} | {}\n",
@@ -199,7 +206,7 @@ impl HumanFormatter {
                     &format!("{:>width$}", line_num, width = line_num_width),
                     "blue"
                 ),
-                lines[line_idx]
+                line
             ));
 
             // Add caret indicators for the error range
@@ -209,7 +216,7 @@ impl HumanFormatter {
                 let end_col = if line_idx == end_line {
                     range.end.column.saturating_sub(1)
                 } else {
-                    lines[line_idx].len()
+                    line.len()
                 };
 
                 let caret_padding = " ".repeat(start_col);

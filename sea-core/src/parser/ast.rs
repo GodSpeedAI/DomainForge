@@ -352,11 +352,9 @@ fn parse_import_specifier(pair: Pair<Rule>) -> ParseResult<ImportSpecifier> {
     match pair.as_rule() {
         Rule::import_wildcard => {
             let mut inner = pair.into_inner();
-            let alias = parse_identifier(
-                inner
-                    .next()
-                    .ok_or_else(|| ParseError::GrammarError("Expected alias for wildcard import".to_string()))?,
-            )?;
+            let alias = parse_identifier(inner.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected alias for wildcard import".to_string())
+            })?)?;
             Ok(ImportSpecifier::Wildcard(alias))
         }
         Rule::import_specifier | Rule::import_named => {

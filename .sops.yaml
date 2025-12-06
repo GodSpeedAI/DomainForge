@@ -1,0 +1,10 @@
+# .sops.yaml - SOPS configuration for DomainForge
+# Note: SOPS does not expand templates or env variables in this file.
+# If you want to use an env var for the recipient, pass it via the CLI:
+#   sops --encrypt --age "$AGE_PUBLIC_KEY" secrets/secret.yaml
+# Or generate a .sops.yaml at runtime via envsubst/yq that injects the key.
+
+creation_rules:
+  - path_regex: ".*secrets/.*\\.ya?ml$"
+    # Use a YAML list for age recipients (not a map). Some sops versions validate this
+    # field as a string or list of strings; using a list is broadly compatible.

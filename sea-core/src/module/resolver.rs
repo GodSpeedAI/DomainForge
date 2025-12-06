@@ -185,13 +185,17 @@ pub fn parse_with_registry(
     let content = fs::read_to_string(path).map_err(|e| {
         ParseError::GrammarError(format!("Failed to read {}: {}", path.display(), e))
     })?;
-    
-    // ParseOptions are constructed here to be returned to the caller,
-    // even though parse_source doesn't currently use them.
-    let mut options = ParseOptions::default();
-    options.namespace_registry = Some(registry.clone());
-    options.entry_path = Some(path.to_path_buf());
-    
+
+    // `ParseOptions` are constructed here to be returned to the caller,
+    // even though `parse_source` currently doesn't use them. Initialize
+    // fields directly in the `ParseOptions` construction to avoid
+    // field reassignment lint from clippy (clippy::field-reassign-with-default).
+    let options = ParseOptions {
+        namespace_registry: Some(registry.clone()),
+        entry_path: Some(path.to_path_buf()),
+        ..Default::default()
+    };
+
     let ast = parse_source(&content)?;
     Ok((ast, options))
 }

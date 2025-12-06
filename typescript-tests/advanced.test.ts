@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { Entity, Flow, Instance, Resource } from '../index';
+import { Entity, Flow, ResourceInstance, Resource } from '../index';
 
 describe('Instance Advanced Features', () => {
     it('creates instance with namespace', () => {
         const entity = new Entity('Warehouse', 'logistics');
         const resource = new Resource('Camera', 'units', 'inventory');
 
-        const instance = new Instance(resource.id, entity.id, 'inventory');
+        const instance = new ResourceInstance(resource.id, entity.id, 'inventory');
         expect(instance.namespace).toBe('inventory');
     });
 
     it('manages instance attributes', () => {
         const entity = new Entity('Warehouse');
         const resource = new Resource('Camera', 'units');
-        const instance = new Instance(resource.id, entity.id);
+        const instance = new ResourceInstance(resource.id, entity.id);
 
         instance.setAttribute('serial_number', JSON.stringify('CAM-12345'));
         expect(JSON.parse(instance.getAttribute('serial_number')!)).toBe('CAM-12345');
@@ -22,7 +22,7 @@ describe('Instance Advanced Features', () => {
     it('handles complex instance metadata', () => {
         const entity = new Entity('Warehouse');
         const resource = new Resource('Camera', 'units');
-        const instance = new Instance(resource.id, entity.id);
+        const instance = new ResourceInstance(resource.id, entity.id);
 
         const metadata = {
             serial: 'CAM-12345',
@@ -156,7 +156,7 @@ describe('Namespace Handling', () => {
     it('instances can have different namespace than resource/entity', () => {
         const entity = new Entity('Warehouse', 'logistics');
         const resource = new Resource('Camera', 'units', 'inventory');
-        const instance = new Instance(resource.id, entity.id, 'tracking');
+        const instance = new ResourceInstance(resource.id, entity.id, 'tracking');
 
         expect(entity.namespace).toBe('logistics');
         expect(resource.namespace).toBe('inventory');

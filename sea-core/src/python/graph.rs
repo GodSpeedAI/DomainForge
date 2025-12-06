@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::primitives::{Entity, Flow, Resource, ResourceInstance};
+use super::primitives::{Entity, Flow, Relation, Resource, ResourceInstance, Role};
 
 #[pyclass]
 #[derive(Clone)]
@@ -56,6 +56,19 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Add instance error: {}", e)))
     }
 
+    fn add_role(&mut self, role: &Role) -> PyResult<()> {
+        self.inner
+            .add_role(role.clone().into_inner())
+            .map_err(|e| PyValueError::new_err(format!("Add role error: {}", e)))
+    }
+
+    fn add_relation(&mut self, relation: &Relation) -> PyResult<()> {
+        // The Rust Graph API currently exposes `add_relation_type`; keep the same call for parity.
+        self.inner
+            .add_relation_type(relation.clone().into_inner())
+            .map_err(|e| PyValueError::new_err(format!("Add relation error: {}", e)))
+    }
+
     fn entity_count(&self) -> usize {
         self.inner.entity_count()
     }
@@ -74,6 +87,14 @@ impl Graph {
 
     fn pattern_count(&self) -> usize {
         self.inner.pattern_count()
+    }
+
+    fn role_count(&self) -> usize {
+        self.inner.role_count()
+    }
+
+    fn relation_count(&self) -> usize {
+        self.inner.relation_count()
     }
 
     fn has_entity(&self, id: String) -> PyResult<bool> {
@@ -126,6 +147,12 @@ impl Graph {
             .inner
             .get_instance(&cid)
             .map(|i| ResourceInstance::from_rust(i.clone())))
+    }
+
+    fn find_role_by_name(&self, name: String) -> Option<String> {
+        self.inner
+            .find_role_by_name(&name)
+            .map(|uuid| uuid.to_string())
     }
 
     fn find_entity_by_name(&self, name: String) -> Option<String> {
@@ -189,6 +216,22 @@ impl Graph {
             .all_instances()
             .into_iter()
             .map(|i| ResourceInstance::from_rust(i.clone()))
+            .collect()
+    }
+
+    fn all_roles(&self) -> Vec<Role> {
+        self.inner
+            .all_roles()
+            .into_iter()
+            .map(|role| Role::from_rust(role.clone()))
+            .collect()
+    }
+
+    fn all_relations(&self) -> Vec<Relation> {
+        self.inner
+            .all_relations()
+            .into_iter()
+            .map(|relation| Relation::from_rust(relation.clone()))
             .collect()
     }
 
