@@ -1,6 +1,5 @@
 from sea_dsl import Graph
 
-
 PAYMENT_DSL = """
 Role "Payer"
 Role "Payee"

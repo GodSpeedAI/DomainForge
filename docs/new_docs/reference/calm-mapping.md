@@ -1,4 +1,4 @@
- 
+
 # SEA DSL ↔ CALM Mapping Specification
 
 **Version:** 1.0

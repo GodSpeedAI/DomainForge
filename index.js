@@ -116,7 +116,7 @@ switch (platform) {
         nativeBinding = require('@domainforge/sea-darwin-universal')
       }
       break
-    } catch {}
+    } catch { }
     switch (arch) {
       case 'x64':
         localFileExisted = existsSync(join(__dirname, 'sea-core.darwin-x64.node'))

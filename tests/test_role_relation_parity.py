@@ -1,6 +1,7 @@
-import pytest
-from sea_dsl import Role, Relation
 import uuid
+
+import pytest
+from sea_dsl import Relation, Role
 
 
 def test_role_creation():
