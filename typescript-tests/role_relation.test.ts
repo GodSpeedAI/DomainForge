@@ -1,6 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { Role, Relation } from '../index';
-import { randomUUID } from 'crypto';
+import { describe, expect, it } from 'vitest';
+import { Relation, Role } from '../index';
 
 describe('Role', () => {
     it('creates role with name', () => {
@@ -26,7 +25,6 @@ describe('Relation', () => {
     it('creates relation between roles', () => {
         const subject = new Role('Payer');
         const object = new Role('Payee');
-        const flowId = '00000000-0000-0000-0000-000000000000'; // mock or use uuid
 
         const relation = new Relation(
             'Payment',
@@ -48,7 +46,7 @@ describe('Relation', () => {
         const subject = new Role('Payer');
         const object = new Role('Payee');
         // valid UUID required for flowId
-        const flowId = '123e4567-e89b-12d3-a456-426614174000'; 
+        const flowId = '123e4567-e89b-12d3-a456-426614174000';
 
         const relation = new Relation(
             'Payment',

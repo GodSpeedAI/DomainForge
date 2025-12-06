@@ -25,7 +25,22 @@ runs:
       shell: bash
       run: |
         SOPS_VERSION="3.9.4"
-        curl -sSLo sops "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
+        case "$RUNNER_OS" in
+          Linux)
+            SOPS_BINARY="sops-v${SOPS_VERSION}.linux.amd64"
+            ;;
+          macOS)
+            SOPS_BINARY="sops-v${SOPS_VERSION}.darwin.amd64"
+            ;;
+          Windows)
+            SOPS_BINARY="sops-v${SOPS_VERSION}.exe"
+            ;;
+          *)
+            echo "Unsupported OS: $RUNNER_OS"
+            exit 1
+            ;;
+        esac
+        curl -sSLo sops "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/${SOPS_BINARY}"
         chmod +x sops
         mkdir -p $HOME/.local/bin
         mv sops $HOME/.local/bin/sops
