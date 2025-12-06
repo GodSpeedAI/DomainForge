@@ -12,13 +12,17 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Decrypt secrets
+        id: secrets
+        uses: ./.github/actions/decrypt-secrets
+        with:
+          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish sea-core to crates.io
-        run: cargo publish --manifest-path sea-core/Cargo.toml --token ${CARGO_REGISTRY_TOKEN}
+        run: cargo publish --manifest-path sea-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }}

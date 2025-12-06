@@ -110,6 +110,31 @@ echo -n "age1...yourPublicKey..." | pbcopy
 ```bash
 # Encrypt with sops using an age public key
 sops --encrypt --age "age1YOURPUBKEY" --in-place secrets/secrets.yaml
+
+> ⚠️ Tip: If you see an error like
+>
+> invalid age key configuration: expected string, []string, or nil, got map[string]interface {}
+>
+> it usually means your `.sops.yaml` used a `map` representation such as:
+>
+> ```yaml
+> creation_rules:
+>   - path_regex: "secrets/.*\\.ya?ml$"
+>     age:
+>       recipients:
+>         - "age1YOURPUBKEY"
+> ```
+>
+> but sops expects `age` to be a plain string or a list of strings. Change it to this instead:
+>
+> ```yaml
+> creation_rules:
+>   - path_regex: "secrets/.*\\.ya?ml$"
+>     age:
+>       - "age1YOURPUBKEY"
+> ```
+>
+> This change is compatible with most sops versions and avoids the "invalid age key configuration" error.
 ```
 
 Notes & troubleshooting:

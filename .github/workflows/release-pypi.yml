@@ -21,10 +21,15 @@ jobs:
             target: x86_64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-    env:
-      MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Decrypt secrets
+        if: runner.os == 'Linux'
+        id: secrets
+        uses: ./.github/actions/decrypt-secrets
+        with:
+          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -48,4 +53,4 @@ jobs:
             --target ${{ matrix.target }} \
             --skip-existing
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          MATURIN_PYPI_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}

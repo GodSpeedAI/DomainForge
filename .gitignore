@@ -111,7 +111,7 @@ node_modules
 *.bak.coderabbit.yml
 #docs/plans/
 
-# Secrets templates (keep unencrypted templates local only)
+# Secrets: keep unencrypted templates local; allow encrypted secrets.yaml to be committed
 secrets/*.template.yaml
 secrets/*.unencrypted.yaml
-/secrets/secrets.yaml
+# NOTE: secrets/secrets.yaml is sops-encrypted and safe to commit
