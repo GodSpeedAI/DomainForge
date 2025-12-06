@@ -43,7 +43,26 @@ Rust errors (`Result<T, E>`) are mapped to language-specific exceptions:
 - **Python**: `sea.SeaError` (inherits from `Exception`)
 - **TypeScript**: `Error` object with specific code properties.
 
+## Build isolation and feature flags
+
+- Cargo features are mutually exclusive for Python and TypeScript builds; do **not** enable both in a single build.
+
+  ```toml
+  [features]
+  default = []
+  python = ["pyo3", "pythonize"]
+  typescript = ["napi", "napi-derive"]
+  three_valued_logic = []
+  ```
+
+- Build commands by target:
+  - **Python**: `maturin develop --features python,three_valued_logic` (or `maturin build --release ...`), then `pytest`/`just python-test`.
+  - **TypeScript**: `npm run build` (or `cargo build --features typescript,three_valued_logic` for debugging), then `npm test`.
+  - **WASM**: `wasm-pack build sea-core --target web --features wasm` (see the WASM tutorial for serving).
+- When switching between bindings, run `cargo clean` to avoid cross-contamination of artifacts and symbol leaks.
+
 ## See Also
 
 - [Architecture Overview](architecture-overview.md)
 - [Adding a New Primitive](../playbooks/adding-new-primitive.md)
+- [Troubleshoot NAPI Builds](../how-tos/troubleshoot-napi-builds.md)

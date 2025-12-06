@@ -27,6 +27,9 @@ namespace = "finance"
 
 - `paths`: search paths for imported namespaces.
 - `namespace`: optional default namespace when files omit `Namespace` declarations.
+- Schema lives at `schemas/sea-registry.schema.json`; invalid glob patterns or overlapping matches fail fast.
+- If a file matches multiple namespaces, the longest literal prefix wins; enable `--fail-on-ambiguity` (CLI) when you prefer a hard error.
+- See [`registry.md`](./registry.md) for full format and examples.
 
 ## Rust crate features
 

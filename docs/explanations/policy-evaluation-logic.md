@@ -20,6 +20,7 @@ graph LR
 Policies are written in a subset of the SEA DSL designed for logic. Expressions are parsed into an expression tree defined in `sea-core/src/policy/expression.rs`.
 
 Common expression types:
+
 - **Quantifiers**: `forall`, `exists`
 - **Comparisons**: `==`, `!=`, `>`, `<`
 - **Logical Operators**: `and`, `or`, `not`, `implies`
@@ -28,6 +29,7 @@ Common expression types:
 ## Variable Binding
 
 When a quantifier is evaluated (e.g., `forall f in Flow`), the engine:
+
 1. Iterates deterministically over the collection (`Flow`).
 2. Binds the current item to the variable name (`f`).
 3. Evaluates the inner expression body with this context.
@@ -35,6 +37,7 @@ When a quantifier is evaluated (e.g., `forall f in Flow`), the engine:
 ## Evaluation Order
 
 Evaluation is strictly deterministic due to the use of `IndexMap` in the underlying graph store.
+
 1. **Global Scope**: Constants and global definitions are loaded.
 2. **Policy Iteration**: Policies are evaluated in the order they appear in the source file (or import order).
 3. **Short-Circuiting**:
@@ -44,8 +47,17 @@ Evaluation is strictly deterministic due to the use of `IndexMap` in the underly
 ## Three-Valued Logic
 
 The engine uses Kleene's three-valued logic (`True`, `False`, `Unknown`).
+
 - If a property is missing (e.g., `f.encryption`), the comparison returns `Unknown` rather than crashing or defaulting to false.
 - This allows policies to distinguish between "bad architecture" (False) and "incomplete architecture" (Unknown).
+
+### Runtime toggle
+
+- Three-valued logic is **on by default**. Switch to strict boolean evaluation via:
+  - Rust: `graph.set_evaluation_mode(false)`
+  - Python: `graph.set_evaluation_mode(False)`
+  - TypeScript/WASM: `graph.setEvaluationMode(false)`
+- Use this only for environments that require binary pass/fail semantics; unknown facts will then be treated as errors.
 
 ## Side Effects
 

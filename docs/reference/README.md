@@ -19,6 +19,7 @@ MECE checklist:
 - `error-codes.md` provides remediation steps for validation output.
 - `calm-mapping.md` documents integration with FINOS CALM.
 - `configuration.md` centralizes environment variables and registry options.
+- `registry.md` documents workspace namespace mappings (`.sea-registry.toml`).
 
 ## File map and highlights
 
@@ -196,4 +197,3 @@ just all-tests
 
 
 (End of reference overview)
-
