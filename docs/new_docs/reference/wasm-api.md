@@ -88,6 +88,12 @@ The WASM bindings expose the same API as the Rust core:
 - `Resource` - Quantifiable subjects of value
 - `Flow` - Transfers of resources between entities
 - `Instance` - Physical instances of resources at locations
+ - `ResourceInstance` - Physical instances of resources at locations (use `ResourceInstance.new(name, resourceId, quantity?, namespace?, attributes?)`)
+ - `Role` - A role label used to classify entities and to define relations (construct via `Role.new(name, namespace?)`)
+ - `Relation` - A relation connecting roles, optionally tied to a flow (`Relation.new(name, subjectRoleId, predicate, objectRoleId, viaFlowId?, namespace?, attributes?)`)
+ - `Metric` - Observability metrics collected for flows and resources (created via `Metric.new(name, unit?, namespace?)`)
+ - `Mapping` - Used for data projections and mapping definitions across models (mapping constructor: `Mapping.new(...)` - refer to mapping docs for details)
+ - `Projection` - Projections allow building derived views (e.g., CALM projections) from the Graph
 - `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
 
 ### Constructor Patterns (November 2025)
@@ -277,9 +283,9 @@ const importedGraph = await Graph.importCalm(calmJson);
 
 ## Related Documentation
 
-- [Phase 9 Plan](../docs/plans/Phase%209%20WASM%20Bindings.md)
-- [Package README](../pkg/README.md)
-- [Browser Example](../examples/browser.html)
+- [Phase 9 Plan](../../work/plans/Phase 9_WASM Bindings.md)
+- [Package README](../../pkg/README.md)
+- [Browser Example](../../examples/browser.html)
 
 ## License
 

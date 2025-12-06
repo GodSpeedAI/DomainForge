@@ -14,9 +14,9 @@ Goal:
 2.
 3.
 
-Result/Verify:
+## Result / Verify
 
-Troubleshooting:
+## Troubleshooting
 
 Links:
 

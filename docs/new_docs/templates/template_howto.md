@@ -6,14 +6,14 @@ Goal: (outcome)
 
 ## Prerequisites
 
--
+- None
 
 ## Steps (be concise)
 
 1.
 2.
 
-Common pitfalls/Troubleshooting:
+## Common pitfalls / Troubleshooting
 
 Links:
 

@@ -21,12 +21,18 @@ Error:   --> 3:12
 
 ## 3. Using the Pest Debugger
 
-If you are modifying the grammar:
+If you are modifying the grammar, you can use either the web-based playground or the command-line debugger depending on your workflow:
 
-1. Go to [pest.rs](https://pest.rs/).
-2. Paste the content of `sea-core/grammar/sea.pest` into the grammar box.
-3. Paste your failing input into the input box.
-4. Watch the rule matching visualization to see where it diverges.
+- Web playground (fast, visual):
+  1. Go to [pest.rs](https://pest.rs/).
+  2. Paste the content of `sea-core/grammar/sea.pest` into the grammar box.
+  3. Paste your failing input into the input box.
+  4. Watch the rule matching visualization to see where it diverges.
+
+- CLI debugger (`pest_debugger`) — useful for iterative debugging locally:
+  1. Install the CLI via cargo: `cargo install pest_debugger` or via `cargo install --git https://github.com/pest-parser/pest` if you prefer the latest.
+  2. Run the CLI against your grammar and failing input: `pest_debugger --grammar sea-core/grammar/sea.pest --input test.repro.sea`.
+  3. Use the interactive prompt to step rules and inspect matches.
 
 ## 4. Reporting Grammar Bugs
 

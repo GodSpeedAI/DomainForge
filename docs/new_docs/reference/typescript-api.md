@@ -67,6 +67,18 @@ const graph = Graph.parse(source);
 
 console.log(`Parsed ${graph.entityCount()} entities`);
 console.log(`Parsed ${graph.flowCount()} flows`);
+
+### Error Handling
+
+`Graph.parse(source: string)` may throw an `Error` on invalid input. The binding typically surfaces syntax issues as a standard `Error` with a message that includes parser details (line/column); some runtimes may implement a specific `ParseError` subclass. Callers should wrap parsing in a try/catch and handle errors accordingly:
+
+```ts
+try {
+  const g = Graph.parse(source);
+} catch (e) {
+  // `e` typically includes a message and a line/column in the text
+  console.error('Failed to parse', e);
+}
 ```
 
 ## API Reference
@@ -183,6 +195,9 @@ class Graph {
   // CALM integration (architecture-as-code)
   exportCalm(): string;  // Returns CALM JSON string
   static importCalm(json: string): Graph;  // Import from CALM JSON
+}
+
+`Graph.importCalm` will throw if the JSON is invalid or violates schema constraints; callers should also wrap `importCalm` in try/catch and inspect error messages for details.
 }
 ```
 

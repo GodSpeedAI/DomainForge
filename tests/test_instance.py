@@ -1,5 +1,5 @@
 """
-Additional Python tests for SEA DSL bindings - Instance support
+Additional Python tests for SEA DSL bindings - ResourceInstance support
 """
 
 import pytest
@@ -7,7 +7,7 @@ import sea_dsl
 
 
 def test_instance_creation():
-    """Test creating an Instance"""
+    """Test creating a ResourceInstance"""
     entity = sea_dsl.Entity("Warehouse")
     resource = sea_dsl.Resource("Camera", "units")
 
@@ -18,7 +18,7 @@ def test_instance_creation():
 
 
 def test_instance_with_namespace():
-    """Test creating an Instance with namespace"""
+    """Test creating a ResourceInstance with namespace"""
     entity = sea_dsl.Entity("Warehouse", "logistics")
     resource = sea_dsl.Resource("Camera", "units", "inventory")
 
@@ -27,7 +27,7 @@ def test_instance_with_namespace():
 
 
 def test_instance_attributes():
-    """Test Instance attributes"""
+    """Test ResourceInstance attributes"""
     entity = sea_dsl.Entity("Warehouse")
     resource = sea_dsl.Resource("Camera", "units")
 
@@ -37,7 +37,7 @@ def test_instance_attributes():
 
 
 def test_graph_add_instance():
-    """Test adding an Instance to a Graph"""
+    """Test adding a ResourceInstance to a Graph"""
     graph = sea_dsl.Graph()
     entity = sea_dsl.Entity("Warehouse")
     resource = sea_dsl.Resource("Camera", "units")
@@ -52,7 +52,7 @@ def test_graph_add_instance():
 
 
 def test_graph_instance_validation():
-    """Test Graph validates Instance references"""
+    """Test Graph validates ResourceInstance references"""
     graph = sea_dsl.Graph()
     entity = sea_dsl.Entity("Warehouse")
     resource = sea_dsl.Resource("Camera", "units")

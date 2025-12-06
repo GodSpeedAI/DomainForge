@@ -1,7 +1,10 @@
 # Reference Template
 
-Title:
-Summary: What this reference covers.
+## Title
+Replace with the title of this reference.
+
+## Summary
+What this reference covers.
 
 ## Shape & Schema
 

@@ -53,7 +53,11 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
    from pathlib import Path
 
    graph = Graph.parse(Path("examples/policies.sea").read_text())
-   policy_json = Path("policy.json").read_text()  # JSON form of crate::policy::Policy
+   # `policy.json` must be the JSON representation of the Policy object (crate::policy::Policy).
+   # You can create this file by authoring JSON manually or by exporting a policy from an authoring tool.
+   # Example quick generation:
+   # echo '{"id":"policy-uuid","name":"Limit","expression":"forall f in flows: f.quantity <= 1000"}' > policy.json
+   policy_json = Path("policy.json").read_text()
    result = graph.evaluate_policy(policy_json)
    print(result.violations)
    ```
@@ -67,6 +71,9 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
    import { readFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("examples/policies.sea", "utf8"));
+   // `policy.json` is a JSON payload matching crate::policy::Policy (id, name, expression, modality)
+   // Create with an authoring tool or echo the JSON as a quick example
+   // echo '{"id":"policy-uuid","name":"Limit","expression":"forall f in flows: f.quantity <= 1000"}' > policy.json
    const policyJson = readFileSync("policy.json", "utf8");
    const outcome = graph.evaluatePolicy(policyJson);
    console.log(outcome.violations);

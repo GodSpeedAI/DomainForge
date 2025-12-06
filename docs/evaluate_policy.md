@@ -433,6 +433,6 @@ npm test -- typescript-tests/three_valued_eval.test.ts
 
 ## See Also
 
-- [Policy Expression Syntax](./policy_expressions.md) (if exists)
-- [Graph API Reference](./graph_api.md) (if exists)
-- [Three-Valued Logic in SEA DSL](./three_valued_logic.md) (if exists)
+- [Policy Expression Syntax](new_docs/reference/grammar-spec.md)
+- [Graph API Reference](new_docs/reference/primitives-api.md)
+- [Three-Valued Logic in SEA DSL](new_docs/explanations/three-valued-logic.md)

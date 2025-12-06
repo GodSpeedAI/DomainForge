@@ -10,21 +10,24 @@ Goal: Install and verify the DomainForge SEA CLI on Linux, macOS, and Windows.
 
 ## Install from Source (recommended until binary releases are published)
 
-1) Clone the repo and install:
+1. Clone the repo and install:
 
 ```bash
 git clone https://github.com/GodSpeedAI/DomainForge.git
 cd DomainForge
+# For the CLI only
 cargo install --path sea-core --features cli
+# If you need SHACL validation (validate-kg), include the shacl feature as well
+cargo install --path sea-core --features "cli,shacl"
 ```
 
-2) Ensure Cargo bin is on PATH:
+2. Ensure Cargo bin is on PATH (Linux/macOS):
 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
-3) Verify the binary:
+3. Verify the binary:
 
 ```bash
 sea --version
@@ -44,6 +47,13 @@ sea validate --format human sea-core/examples/basic.sea
 - Use **Developer PowerShell** or **x64 Native Tools Command Prompt** to ensure MSVC is available.
 - Set the default toolchain: `rustup default stable-x86_64-pc-windows-msvc`.
 - If OpenSSL build errors appear, install `vcpkg` and ensure `VCPKGRS_DYNAMIC=1` before running `cargo install`.
+- Ensure Rust binaries are on your PATH in PowerShell:
+
+  ```powershell
+   $env:PATH += ";$HOME\.cargo\bin"
+   # Or persist for current user
+   setx PATH "$env:PATH;$HOME\.cargo\bin"
+  ```
 
 ## macOS-specific Notes
 
@@ -58,9 +68,15 @@ sea validate --format human sea-core/examples/basic.sea
 ## Running Smoke Tests after Installation
 
 ```bash
+# For users installing from source (developer/local builds):
 sea validate --format human sea-core/examples/basic.sea
 sea project --format calm sea-core/examples/basic.sea /tmp/basic.calm.json
 sea project --format kg sea-core/examples/basic.sea /tmp/basic.ttl
+
+# For users installing from a release binary: if `sea` provides a built-in self-check command, run it; otherwise validate using a minimal inline example:
+# Example (if no self-check command exists):
+echo 'entity A {}' > /tmp/minimal.sea
+sea validate --format human /tmp/minimal.sea
 ```
 
 - These commands confirm parsing, CALM export, and KG export paths.
@@ -82,7 +98,7 @@ sea project --format kg sea-core/examples/basic.sea /tmp/basic.ttl
 - [ ] `sea --version` prints the expected version string.
 - [ ] `sea validate` succeeds against `sea-core/examples/basic.sea`.
 - [ ] `sea project --format calm` produces a CALM file containing `sea:version` metadata.
-- [ ] `sea project --format kg` generates Turtle without SHACL errors when run through `sea validate-kg` (with `shacl` feature).
+  - [ ] `sea project --format kg` generates Turtle without SHACL errors when run through `sea validate-kg` (requires installing with the `shacl` feature: `--features cli,shacl`).
 
 ## Links
 

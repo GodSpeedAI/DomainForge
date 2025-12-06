@@ -22,6 +22,8 @@ Error codes follow the format `EXXX` where:
 
 ## E001-E099: Syntax and Parsing Errors
 
+*Note:* Codes in the range **E011–E099** are currently reserved for future syntax/parse error additions and will be documented as the project expands. For now, E001–E010 cover the commonly used parsing diagnostics.
+
 ### E001: Undefined Entity
 
 **Description**: Reference to an entity that has not been defined.
@@ -64,45 +66,13 @@ Flow "Steel" from "Supplier" to "Factory" quantity 100 kg
 
 ---
 
-### E003: Unit Mismatch
+### E003: Unit Mismatch (moved)
 
-**Description**: Incompatible units or dimensions in an expression.
-
-**Example**:
-
-```sea
-Resource "Steel" quantity 100 kg
-Flow "Steel" from "A" to "B" quantity 50 meters
-// Error: Cannot mix Mass (kg) and Length (meters)
-```
-
-**Common Fixes**:
-
-- Use consistent units throughout
-- Add unit conversion if mixing units is intentional
-- Check unit definitions
-
-**Suggestion**: Shows expected vs. found dimensions.
+**Description**: This entry was previously documented in the Syntax/Parsing section and has been moved to the Unit/Dimension category (E200–E299). See `E200: Dimension Mismatch` and `E203: Incompatible Dimensions` for details and suggested fixes.
 
 ---
 
-### E004: Type Mismatch
-
-**Description**: Type incompatibility in an expression or assignment.
-
-**Example**:
-
-```sea
-// Attempting to assign a string where a number is expected
-```
-
-**Common Fixes**:
-
-- Ensure types match in assignments
-- Use appropriate type conversions
-- Check function signatures
-
-**Suggestion**: Shows expected vs. found types.
+*Note:* The old `E004: Type Mismatch` entry has been moved into the Type System section (E100–E199). See `E100: Incompatible Types` for details and suggested fixes.
 
 ---
 
@@ -231,6 +201,20 @@ Entity "Entity" in logistics
 
 **Description**: Types cannot be used together in the given context.
 
+**Note**: This entry also covers `Type Mismatch` cases (previously E004) such as assigning a string where a number is expected.
+
+**Example**:
+
+```sea
+// Attempting to assign a string where a number is expected
+```
+
+**Common Fixes**:
+
+- Ensure types match in assignments
+- Use appropriate type conversions
+- Check function signatures
+
 **Common Fixes**:
 
 - Use compatible types
@@ -307,6 +291,8 @@ quantity 10 kg + 5 meters
 - Review calculation logic
 
 ---
+
+*Note*: `E003: Unit Mismatch` was historically listed in the Syntax/Parsing category (E003) and has been consolidated under the Unit/Dimension category. Consult `E200`/`E203` for dimension/unit mismatches.
 
 ### E201: Invalid Unit
 
@@ -568,7 +554,12 @@ import { Graph } from "sea-dsl-wasm";
 try {
   const graph = Graph.parse(source);
 } catch (e) {
-  const [msg, meta] = e.split("__SEA_DSL_ERROR_METADATA__: ");
+  // Different bindings emit metadata tokens with different markers.
+  // Node/NAPI wrappers commonly use "__metadata__: " while WASM/json errors may use
+  // "__SEA_DSL_ERROR_METADATA__: ". Try both when extracting metadata.
+  const raw = e.message || e.toString();
+  const token = raw.includes("__SEA_DSL_ERROR_METADATA__:") ? "__SEA_DSL_ERROR_METADATA__: " : "__metadata__: ";
+  const [msg, meta] = raw.split(token);
   const metadata = JSON.parse(meta);
   console.error(`Error ${metadata.code}: ${msg}`);
   if (metadata.suggestion) {

@@ -489,6 +489,6 @@ fi
 
 ## See Also
 
-- [Error Code Catalog](error_codes.md) - Complete error code reference
+- [Error Code Catalog](../specs/error_codes.md) - Complete error code reference
 - [CLI Documentation](../reference/cli.md) - Full CLI usage
-- [API Specification](api_specification.md) - Programmatic validation
+- [API Specification](../reference/specs/api_specification.md) - Programmatic validation

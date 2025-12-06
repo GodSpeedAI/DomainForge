@@ -7,16 +7,16 @@ inputs:
 outputs:
   pypi-api-token:
     description: "PyPI API token"
-    value: ${{ steps.extract.outputs.pypi_api_token }}
+    value: ${{ steps.extract.outputs.pypi-api-token }}
   pypi-test-api-token:
     description: "PyPI Test API token"
-    value: ${{ steps.extract.outputs.pypi_test_api_token }}
+    value: ${{ steps.extract.outputs.pypi-test-api-token }}
   npm-token:
     description: "NPM token"
-    value: ${{ steps.extract.outputs.npm_token }}
+    value: ${{ steps.extract.outputs.npm-token }}
   cargo-registry-token:
     description: "Cargo registry token"
-    value: ${{ steps.extract.outputs.cargo_registry_token }}
+    value: ${{ steps.extract.outputs.cargo-registry-token }}
 
 runs:
   using: "composite"
@@ -27,7 +27,10 @@ runs:
         SOPS_VERSION="3.9.4"
         curl -sSLo sops "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
         chmod +x sops
-        sudo mv sops /usr/local/bin/sops
+        mkdir -p $HOME/.local/bin
+        mv sops $HOME/.local/bin/sops
+        chmod +x $HOME/.local/bin/sops
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
         sops --version
 
     - name: Decrypt secrets
@@ -40,10 +43,10 @@ runs:
         sops --decrypt secrets/secrets.yaml > /tmp/decrypted-secrets.yaml
 
         # Extract values and set as outputs (masked)
-        PYPI_API_TOKEN=$(grep -E '^PYPY_API_TOKEN:' /tmp/decrypted-secrets.yaml | sed 's/^PYPY_API_TOKEN: *"\(.*\)"$/\1/' || echo "")
-        PYPI_TEST_API_TOKEN=$(grep -E '^PYPY_TEST_API_TOKEN:' /tmp/decrypted-secrets.yaml | sed 's/^PYPY_TEST_API_TOKEN: *"\(.*\)"$/\1/' || echo "")
-        NPM_TOKEN=$(grep -E '^NPM_TOKEN:' /tmp/decrypted-secrets.yaml | sed 's/^NPM_TOKEN: *"\(.*\)"$/\1/' || echo "")
-        CARGO_REGISTRY_TOKEN=$(grep -E '^CARGO_REGISTRY_TOKEN:' /tmp/decrypted-secrets.yaml | sed 's/^CARGO_REGISTRY_TOKEN: *"\(.*\)"$/\1/' || echo "")
+        PYPI_API_TOKEN=$(grep -E '^PYPI_API_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        PYPI_TEST_API_TOKEN=$(grep -E '^PYPI_TEST_API_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        NPM_TOKEN=$(grep -E '^NPM_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        CARGO_REGISTRY_TOKEN=$(grep -E '^CARGO_REGISTRY_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
 
         # Mask secrets in logs
         echo "::add-mask::${PYPI_API_TOKEN}"
@@ -52,10 +55,10 @@ runs:
         echo "::add-mask::${CARGO_REGISTRY_TOKEN}"
 
         # Set outputs
-        echo "pypi_api_token=${PYPI_API_TOKEN}" >> $GITHUB_OUTPUT
-        echo "pypi_test_api_token=${PYPI_TEST_API_TOKEN}" >> $GITHUB_OUTPUT
-        echo "npm_token=${NPM_TOKEN}" >> $GITHUB_OUTPUT
-        echo "cargo_registry_token=${CARGO_REGISTRY_TOKEN}" >> $GITHUB_OUTPUT
+        echo "pypi-api-token=${PYPI_API_TOKEN}" >> $GITHUB_OUTPUT
+        echo "pypi-test-api-token=${PYPI_TEST_API_TOKEN}" >> $GITHUB_OUTPUT
+        echo "npm-token=${NPM_TOKEN}" >> $GITHUB_OUTPUT
+        echo "cargo-registry-token=${CARGO_REGISTRY_TOKEN}" >> $GITHUB_OUTPUT
 
         # Clean up
         rm -f /tmp/decrypted-secrets.yaml

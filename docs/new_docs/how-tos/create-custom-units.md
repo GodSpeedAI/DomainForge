@@ -2,9 +2,12 @@
 
 Goal: Define custom dimensions/units and validate quantities using them in SEA models.
 
-## Prerequisites
+- ## Prerequisites
 
-- SEA CLI installed (`cargo install --path sea-core --features cli`).
+- SEA CLI installed.
+
+   - For developers building from source: `cargo install --path sea-core --features cli` (produces the `sea` binary).
+   - For users installing from crates.io or binaries: use the official release package or `cargo install sea-core` (if published), or download the published binary from GitHub Releases.
 - Familiarity with resources and flows in the SEA DSL.
 - Optional: Python/TypeScript bindings if you want to assert units programmatically.
 
@@ -43,15 +46,33 @@ Goal: Define custom dimensions/units and validate quantities using them in SEA m
 
    - The `as` clause requests conversion using defined factors.
 
-4. **Validate with the CLI**
+4. **Create the example file and validate with the CLI**
+
+   Create `examples/custom_units.sea` (this file contains the model used by the following examples):
+
+```bash
+mkdir -p examples
+cat > examples/custom_units.sea <<'SEA'
+Dimension "Currency"
+Unit "USD" of "Currency" factor 1 base "USD"
+Unit "EUR" of "Currency" factor 1.07 base "USD"
+
+Resource "Money" unit "USD"
+Entity "Alice"
+Entity "Bob"
+Flow "Money" from "Alice" to "Bob" quantity 100
+SEA
+```
+
+   Now validate the file with the CLI:
 
    ```bash
    sea validate --format human examples/custom_units.sea
    ```
 
-   - Fails if a unit or dimension is missing, duplicated, or forms a circular base chain.
+   This validation will fail if a unit or dimension is missing, duplicated, or forms a circular base chain.
 
-5. **Inspect units in Python**
+5. **Inspect units in Python (re-using examples/custom_units.sea)**
 
    ```python
    from sea_dsl import Graph
@@ -61,7 +82,7 @@ Goal: Define custom dimensions/units and validate quantities using them in SEA m
    assert resource.unit == "USD"
    ```
 
-6. **Inspect units in TypeScript**
+6. **Inspect units in TypeScript (re-using examples/custom_units.sea)**
 
    ```ts
    import { Graph } from "@domainforge/sea";

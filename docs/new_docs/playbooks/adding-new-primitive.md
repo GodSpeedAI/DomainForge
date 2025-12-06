@@ -51,10 +51,10 @@ This playbook outlines the steps required to add a new primitive (e.g., `Zone`, 
 3. **Graph**:
 
    ```rust
-   pub struct Graph {
-       pub zones: IndexMap<ConceptId, Zone>,
-       //
-   }
+      pub struct Graph {
+         pub zones: IndexMap<ConceptId, Zone>,
+         // ... other primitive collections (entities, resources, flows, roles, relations, instances)
+      }
    ```
 
 ## Verification

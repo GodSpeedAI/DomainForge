@@ -11,53 +11,71 @@ This playbook describes the process for releasing a new beta version of DomainFo
 ## Steps
 
 1. **Version Bump**:
-   Update version in:
-   - `Cargo.toml` (workspace members)
-   - `pyproject.toml`
-   - `package.json`
-   - `sea-core/Cargo.toml`
 
-2. **Changelog**:
-   Update `CHANGELOG.md` with new features and breaking changes.
+Update version in:
 
-3. **Build & Test**:
+- `Cargo.toml` (workspace members)
+- `pyproject.toml`
+- `package.json`
+- `sea-core/Cargo.toml`
 
-   ```bash
-   just setup
-   just all-tests
-   ```
+1. **Changelog**:
 
-4. **Publish Rust Core**:
+Update `CHANGELOG.md` with new features and breaking changes.
 
-   ```bash
-   cargo publish -p sea-core
-   ```
+1. **Build & Test**:
 
-5. **Publish Python**:
+```bash
+just setup
+just all-tests
+```
 
-   ```bash
-   maturin publish
-   ```
+1. **Git Tag**:
 
-6. **Publish TypeScript**:
+```bash
+git tag -a v0.x.0 -m "Release v0.x.0"
+git push origin v0.x.0
+```
 
-   ```bash
-   npm publish
-   ```
+1. **Publish Rust Core**:
 
-7. **Git Tag**:
+```bash
+cargo publish -p sea-core
+```
 
-   ```bash
-   git tag -a v0.x.0 -m "Release v0.x.0"
-   git push origin v0.x.0
-   ```
+1. **Publish Python**:
 
-8. **GitHub Release**:
-   Draft a new release on GitHub using the changelog notes.
+```bash
+maturin publish
+```
 
-## Rollback Plan
+1. **Publish TypeScript**:
+
+```bash
+npm publish
+```
+
+1. **GitHub Release**:
+
+Draft a new release on GitHub using the changelog notes.
 
 If a critical bug is found immediately:
 
-- **Rust**: Yank the crate (`cargo yank`).
-- **NPM/PyPI**: Deprecate the version or publish a patch immediately.
+- **Rust**: Yank the crate (`cargo yank -r <version>`).
+
+- **NPM**: Deprecate the package version and suggest replacement:
+
+```bash
+npm deprecate @domainforge/sea@0.x.0 "Critical security bug; use @domainforge/sea@0.x.1"
+```
+
+- **PyPI**: Yank or unyank is not commonly available; use yanking with `pipy` tools or publish a hotfix patch:
+
+```bash
+# Publish a hotfix
+git checkout -b hotfix/0.x.1
+bumpversion patch
+git push origin hotfix/0.x.1
+# Create release and upload via twine/maturin
+maturin publish --skip-existing
+```

@@ -211,4 +211,4 @@ To run benchmarks in CI:
 
 - [Criterion.rs Documentation](https://bheisler.github.io/criterion.rs/book/)
 - [Rust Performance Book](https://nnethercote.github.io/perf-book/)
-- [Benchmarking Best Practices](https://easyperf.net/blog/2018/08/26/Basics-of-profiling)
+ - [Benchmarking Best Practices](https://brendangregg.com/perf.html)

@@ -2,6 +2,21 @@
 
 This reference documents the core data structures used throughout DomainForge across Rust, Python, and TypeScript bindings. It mirrors the definitions in `sea-core/src/primitives/` and the exposed binding classes in `sea-core/src/python/` and `sea-core/src/typescript/`.
 
+## Types
+
+- `AttributeValue`: Union used for attribute payloads. Acceptable values include:
+  - `null`
+  - `boolean`
+  - `string`
+  - `Decimal` (arbitrary-precision decimal represented as a `string` in JSON)
+  - `bytes` (base64 encoded strings in JSON)
+  - `array` of `AttributeValue`
+  - `object` maps (`string` -> `AttributeValue`)
+
+- `AttributeMap`: A map of `string` -> `AttributeValue`. Implementations use `IndexMap` for deterministic iteration.
+
+- `Decimal`: Arbitrary-precision decimal used for quantities and numeric values. In JSON, `Decimal` values are serialized as strings to preserve precision (for example, `"1.07"`).
+
 ## Overview
 
 The SEA DSL produces a graph of primitives:
@@ -27,7 +42,7 @@ Each section below lists fields, constructors, methods, validation rules, and se
 
 ### Constructors
 
-- Rust: `Entity::new(name: String, namespace: Option<String>, attributes: AttributeMap)`
+- Rust: `RelationType::new(name, namespace, subject_role, predicate, object_role, via_flow)`
 - Python: `Entity(name: str, namespace: Optional[str] = None, attributes: Optional[dict] = None)`
 - TypeScript: `new Entity(name: string, namespace?: string, attributes?: Record<string, AttributeValue>)`
 
@@ -161,9 +176,9 @@ Each section below lists fields, constructors, methods, validation rules, and se
 - `namespace: Option<String>`
 - `attributes: AttributeMap`
 
-### Constructors
-
-- Rust: `RelationType::new(name, subject_role, predicate, object_role, via_flow, namespace, attributes)`
+-### Constructors
+-
+- Rust: `RelationType::new(name, namespace, subject_role, predicate, object_role, via_flow)`
 - Python: `Relation(name: str, subject_role_id: str, predicate: str, object_role_id: str, via_flow_id: Optional[str] = None, namespace: Optional[str] = None, attributes: Optional[dict] = None)`
 - TypeScript: `new Relation(name: string, subjectRoleId: string, predicate: string, objectRoleId: string, viaFlowId?: string, namespace?: string, attributes?: Record<string, AttributeValue>)`
 
@@ -194,7 +209,7 @@ Quantities are reused by flows and instances.
 
 - Fields: `value: Decimal`, `unit: Option<String>`
 - Python: `Quantity(value: Decimal, unit: Optional[str])`
-- TypeScript: `{ value: string | number; unit?: string }` (values are strings in JSON to preserve precision).
+- TypeScript: `{ value: number | string; unit?: string }` — The TypeScript bindings return a `number` for convenience; however, when serializing to JSON the Decimal is represented as a `string` to preserve precision. Consumers should prefer string representation when round-tripping or when precise decimal fidelity is required.
 
 Conversions follow the dimension/unit registry; mismatches are surfaced as validation errors.
 

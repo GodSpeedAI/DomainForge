@@ -42,7 +42,7 @@ Flow "Money" from "User" to "User" quantity 1
 Identifiers are double-quoted strings. They may include spaces and symbols except for an unescaped `"`. Escapes follow Rust string rules (e.g., `\"`).
 
 ```
-quoted = _{ '"' ~ (!'"' ~ ANY)* ~ '"' }
+quoted = _{ '"' ~ (\\("\\"|"\\\\"|"\\n"|"\\r"|"\\t") | (!'"' ~ ANY))* ~ '"' }
 ```
 
 ### Numbers

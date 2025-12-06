@@ -10,13 +10,14 @@ DomainForge can run entirely client-side using WebAssembly. This allows for buil
 ## Step 1: Build WASM
 
 ```bash
-cd sea-core
-wasm-pack build --target web --out-dir ../examples/wasm-demo/pkg
+# From the project root, change to the example directory and build the WASM
+cd sea-core/examples/wasm-demo
+wasm-pack build --target web --out-dir ./pkg
 ```
 
 ## Step 2: HTML Setup
 
-Create `index.html`.
+Create `examples/wasm-demo/index.html`.
 
 ```html
 <!DOCTYPE html>

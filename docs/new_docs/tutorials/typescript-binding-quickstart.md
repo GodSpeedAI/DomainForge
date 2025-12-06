@@ -20,7 +20,7 @@ npm install domainforge
 Create `index.ts`.
 
 ```typescript
-import { parse, Model, Flow } from 'domainforge';
+import { parse, Model, Flow } from '@domainforge/sea';
 
 const seaContent = `
 entity API { type = "service" }
@@ -68,11 +68,14 @@ Found flow: upload
 ```typescript
 // architecture.test.ts
 import { describe, it, expect } from 'vitest';
-import { parse } from 'domainforge';
+import { parse } from '@domainforge/sea';
 import * as fs from 'fs';
 
 describe('Architecture Rules', () => {
-  const model = parse(fs.readFileSync('./system.sea', 'utf-8'));
+  let model;
+  beforeAll(() => {
+    model = parse(fs.readFileSync('./system.sea', 'utf-8'));
+  });
 
   it('should have all databases encrypted', () => {
     const dbs = model.resources.filter(r => r.type === 'database');

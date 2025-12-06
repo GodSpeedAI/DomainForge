@@ -37,9 +37,9 @@ Goal: Extend the SEA grammar in `sea-core/grammar/sea.pest`, update the parser/A
 
 5. **Expose through bindings**
 
-   - Python: Add new fields/classes in `sea-core/src/python/primitives.rs` and wire them into `graph.rs` if they are part of the `Graph` API.
-   - TypeScript: Mirror changes in `sea-core/src/typescript/primitives.rs` and adjust `index.d.ts` typing.
-   - WASM: Update `sea-core/src/wasm/` exports if browser consumers need the feature.
+   - Python: Add new fields/classes in `sea-core/src/python/primitives.rs` and wire them into `sea-core/src/python/lib.rs` or `graph.rs` if they are part of the `Graph` API.
+   - TypeScript: Mirror changes in `sea-core/src/typescript/primitives.rs` and adjust `sea-core/src/typescript/index.d.ts` typing.
+   - WASM: Update `sea-core/src/wasm/mod.rs` (or `sea-core/src/wasm/lib.rs`) exports to expose the new types if browser consumers need the feature.
 
 6. **Add parser tests (Rust)**
 

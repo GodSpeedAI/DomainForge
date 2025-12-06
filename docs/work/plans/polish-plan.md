@@ -40,7 +40,6 @@ Partially implemented items (needs further work):
   format and CLI workflow, plus sample `.sea` files in `examples/namespaces`.
 
 ---
->>>>>>> codex/review-and-merge-chore/fix-gaps-with-main:docs/work/plans/polish-plan.md
 
 ### Implementation Strategy
 

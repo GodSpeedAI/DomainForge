@@ -4,8 +4,11 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 
 ## Prerequisites
 
-- Rust toolchain 1.77+ and the SEA CLI installed (`cargo install --path sea-core --features cli`).
-- Optional: Python bindings (`pip install -e sea-core[python]` via `maturin develop`) and TypeScript package (`npm install` then `npm run build`).
+- Rust toolchain 1.77+ and the SEA CLI installed.
+
+   - For developers building from this repo: `cargo install --path sea-core --features cli` (produces the `sea` binary).
+   - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `sea --version`.
+- Optional: Python bindings (install locally via `maturin develop --features python` or via PyPI when published) and TypeScript package (`npm install @domainforge/sea` then `npm run build`).
 - A `.sea` source file. Use `sea-core/examples/basic.sea` or any model under `examples/` to follow along.
 
 ## Steps (be concise)

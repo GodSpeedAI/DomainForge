@@ -84,7 +84,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 
 - Use `jq` to spot-check key sections (roles, relations, flows) and ensure UUIDs are present.
 - If a relation references a flow ID, confirm the flow exists and carries a valid UUID; missing IDs cause export failures.
-- For large models, prefer `sea project --format calm input.sea >(gzip > calm.json.gz)` to stream-compress during export.
+- For large models, prefer `sea project --format calm input.sea | gzip > calm.json.gz` to stream-compress during export (portable across Bourne-like shells and Windows with compatible tools).
 
 ## Troubleshooting
 

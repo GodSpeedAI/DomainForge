@@ -1,3 +1,4 @@
+ 
 # SEA DSL ↔ CALM Mapping Specification
 
 **Version:** 1.0
@@ -156,6 +157,7 @@ Flow {
 ```rust
 Instance {
     id: Uuid,
+  resource_id: Uuid,
     entity_id: Uuid,
     attributes: HashMap<String, Value>
 }
@@ -224,6 +226,10 @@ Policy {
     name: String,
     expression: PolicyExpression
 }
+  // Optional policy metadata fields exposed in mappings
+  modality: Option<String>,  // e.g., "Obligation", "Permission"
+  kind: Option<String>,      // e.g., enforcement kind or modality subtype
+  priority: Option<i32>,     // integer priority for conflict resolution
 ```
 
 **CALM Node Structure:**
@@ -274,7 +280,7 @@ The `PolicyExpression` enum serializes to SBVR (Semantics of Business Vocabulary
 
 **Example Mappings:**
 - `QuantifierForAll("entity", "entities", AtomicComparison("entity.capacity", "<=", "10000"))` → `"ForAll entity in entities: entity.capacity <= 10000"`
-- `LogicalAnd(AtomicComparison("flow.quantity", ">", "0"), AtomicComparison("flow.resource", "=", "Camera"))` → `"(flow.quantity > 0) AND (flow.resource = \"Camera\")"`
+- `LogicalAnd(AtomicComparison("flow.quantity", ">", "0"), AtomicComparison("flow.resource", "=", "Camera"))` → `"(flow.quantity > 0) AND (flow.resource = Camera)"`
 
 **Deserialization (Parsing):**
 - Parse SBVR syntax back to `PolicyExpression` enum variants
@@ -368,8 +374,8 @@ The `assert_semantically_equivalent` function compares two graphs for semantic e
 
 - **Entities**: Match by `(name, namespace)` with identical attribute sets (keys equal, ordering ignored). Attribute values compared by deep equality with specific numeric rules: primitive ints/strings exact match, floats compared with epsilon (1e-9), NaN/inf handled explicitly, collections compared element-wise (preserve ordering unless domain says otherwise), maps compared by key/value deep-equality. Custom complex types must be canonicalized (sorted keys) before comparison.
 - **Resources**: Match by `(name, unit)` with identical attribute sets using same comparison rules.
-- **Flows**: Match by `(source_name, destination_name, resource_name, quantity)` with quantity compared using numeric rules above.
-- **Instances**: Match by `(resource_name, entity_name, serial)` with serial optional.
+- **Flows**: Match by `(from_id, to_id, resource_id, quantity)` with quantity compared using numeric rules above. When name-based matching is used, the implementation may resolve names to IDs before asserting equivalence.
+- **Instances**: Match by `(resource_id, entity_id, id)`; if the instance `id` is regenerated during import, matching may fall back to comparing `(resource_id, entity_id, attributes)`.
 - **Policies**: Match by expression text and severity level.
 
 ```rust

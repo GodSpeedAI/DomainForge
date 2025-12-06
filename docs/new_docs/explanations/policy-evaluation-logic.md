@@ -54,6 +54,40 @@ Policy evaluation is **read-only**. It cannot modify the graph. It produces a li
 - The result (Pass/Fail/Unknown).
 - A trace of the specific elements that caused a failure (e.g., the specific Flow that violated the rule).
 
+### ValidationResult & TraceEntry schema
+
+The policy engine returns a structured `ValidationResult` that is convenient to consume in CI and automation. The JSON schema is:
+
+```json
+{
+    "policyName": "string",
+    "result": "Pass|Fail|Unknown",
+    "violations": [
+        {
+            "id": "string",         // UUID of the primitive involved
+            "type": "Entity|Resource|Flow|Instance|Role|Relation",
+            "displayName": "string", // optional human-readable name
+            "path": ["string"],      // optional path (e.g., ["flows", "0"]) for locating in larger payloads
+            "details": {              // optional free-form details useful for diagnostics
+                 "field": "value"
+            }
+        }
+    ]
+}
+```
+
+Example `ValidationResult` (policy failure):
+
+```json
+{
+    "policyName": "payment_threshold",
+    "result": "Fail",
+    "violations": [
+        { "id": "3a3e5d08-...", "type":"Flow", "displayName":"Money transfer", "path":["flows","0"], "details":{"quantity": 15000, "expectedMax": 10000} }
+    ]
+}
+```
+
 ## See Also
 
 - [Three-Valued Logic](three-valued-logic.md)

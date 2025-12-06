@@ -94,7 +94,7 @@ We do not reimplement logic in other languages. Instead, we wrap the Rust types.
 
 - **Python**: Uses [PyO3](https://pyo3.rs/). Rust structs are exposed as Python classes. Methods call directly into Rust code.
 - **TypeScript**: Uses [napi-rs](https://napi.rs/). High-performance Node.js addons.
-- **WASM**: Uses [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/). Allows the full compiler and policy engine to run in the browser.
+ - **WASM**: Uses [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen). Allows the full compiler and policy engine to run in the browser.
 
 ## Key Design Principles
 

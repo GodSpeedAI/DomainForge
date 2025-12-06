@@ -64,7 +64,7 @@ cd ..
 python3 -m http.server 8000
 ```
 
-Open: http://localhost:8000/examples/browser.html
+Open (in your browser): `http://localhost:8000/examples/browser.html` (after starting the local server)
 
 ## 6. Run Tests
 

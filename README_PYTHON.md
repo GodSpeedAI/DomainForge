@@ -204,7 +204,6 @@ try:
 except Exception as e:
     print('Ambiguity detected:', e)
 ```
->>>>>>> codex/review-and-merge-chore/fix-gaps-with-main
 
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit

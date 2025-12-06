@@ -145,7 +145,7 @@ Configuration for custom unit systems:
 
 - When using `.sea-registry.toml`, paths are resolved relative to the registry file’s location.
 - Namespaces are case-sensitive; mixing `Finance` and `finance` results in distinct namespaces.
-- For CALM imports, the default namespace is `default` unless overridden via `--namespace` (planned) or post-processing.
+- For CALM imports, the default namespace is `default` unless overridden via `--namespace` (not yet available) or via post-processing.
 
 ## Performance tuning
 

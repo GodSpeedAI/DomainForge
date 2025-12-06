@@ -180,8 +180,8 @@ flow = Flow.new(
 - `Graph.parse(source)`: Parse DSL source into a graph
 - `export_calm()`: Export graph to CALM JSON format
 - `Graph.import_calm(json_str)`: Import graph from CALM JSON
- - `add_policy(policy)`: Add a policy to the graph
- - `add_association(owner_id, owned_id, rel_type)`: Add ownership/association relation between two entities (owner/owned)
+- `add_policy(policy)`: Add a policy to the graph
+- `add_association(owner_id, owned_id, rel_type)`: Add ownership/association relation between two entities (owner/owned)
 
 
 **Breaking Changes:**
@@ -204,7 +204,7 @@ try:
 except Exception as e:
     print('Ambiguity detected:', e)
 ```
->>>>>>> codex/review-and-merge-chore/fix-gaps-with-main
+ 
 
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit

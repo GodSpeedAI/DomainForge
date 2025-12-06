@@ -6,7 +6,7 @@
 
 - **Core (Rust)**: Advanced (Phase 2 features like Roles, Relations, Module System implemented).
 - **Bindings (Python/TS)**: Lagging (Missing Roles, Relations, Module interfaces).
-- **Meta**: Documentation is outdated; Release pipelines are non-existent.
+- **Meta**: Documentation is outdated; Release pipelines are scaffolded (secrets and final verification required).
 
 **Goal**: Synchronize all layers of the stack and establish a release pipeline to achieve a "Production-Ready" Alpha/Beta state.
 

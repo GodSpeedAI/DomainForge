@@ -10,7 +10,6 @@ def test_role_creation():
     assert role.id is not None
 
     # Check ID format (should be UUID-like or namespaced)
-    assert role.id is not None
     # ID should be a UUID string
     uuid.UUID(role.id)
 

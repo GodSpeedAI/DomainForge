@@ -17,6 +17,7 @@ jobs:
 
       - name: Decrypt secrets
         id: secrets
+        continue-on-error: true
         uses: ./.github/actions/decrypt-secrets
         with:
           sops-age-key: ${{ secrets.SOPS_AGE_KEY }}

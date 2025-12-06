@@ -310,7 +310,26 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Graph, AggregateFunction, BinaryOp, Severity, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, Dimension, Unit } = nativeBinding
+const {
+  Graph,
+  AggregateFunction,
+  BinaryOp,
+  Severity,
+  Entity,
+  Resource,
+  Flow,
+  ResourceInstance,
+  Instance,
+  Metric,
+  Mapping,
+  Projection,
+  Role,
+  Relation,
+  NamespaceBinding,
+  NamespaceRegistry,
+  Dimension,
+  Unit,
+} = nativeBinding
 
 module.exports.Graph = Graph
 module.exports.AggregateFunction = AggregateFunction
@@ -330,3 +349,18 @@ module.exports.NamespaceBinding = NamespaceBinding
 module.exports.NamespaceRegistry = NamespaceRegistry
 module.exports.Dimension = Dimension
 module.exports.Unit = Unit
+
+// Verify native exports present and provide a helpful error if not
+const { validateNativeExports } = require('./lib/validate_native_exports');
+
+const requiredExports = [
+  'Graph',
+  'Entity',
+  'Resource',
+  'Flow',
+  'ResourceInstance',
+  'Role',
+  'Relation',
+];
+
+validateNativeExports(nativeBinding, requiredExports);
