@@ -110,3 +110,8 @@ node_modules
 *.bak
 *.bak.coderabbit.yml
 #docs/plans/
+
+# Secrets templates (keep unencrypted templates local only)
+secrets/*.template.yaml
+secrets/*.unencrypted.yaml
+/secrets/secrets.yaml

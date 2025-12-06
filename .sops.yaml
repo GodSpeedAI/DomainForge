@@ -1,0 +1,9 @@
+# .sops.yaml - SOPS configuration for DomainForge
+# This config tells sops to default to AGE recipients when encrypting files under `secrets/`.
+# Replace the AGE recipient below with your public key (the user has it on their machine).
+
+creation_rules:
+  - path_regex: ".*secrets/.*\\.ya?ml$"
+    age:
+      recipients:
+        - "age1REPLACE_WITH_YOUR_PUBLIC_KEY"

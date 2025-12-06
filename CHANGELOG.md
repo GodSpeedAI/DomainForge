@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed module import/export correctness: wildcard imports now require aliases, trailing commas allowed in named imports, exports only collected from explicit `export` nodes, and parser entry options handle missing registry more gracefully.
+- Stabilized cross-language bindings: `ReferenceType` now serializes to Python/WASM, eliminating PyO3/serde build failures; clippy lint cleanups across diagnostics and fuzzy matcher.
+- Test matrix validated across Rust (`cargo test -p sea-core --features cli`), Python (`just python-test`), and TypeScript (`just ts-test`).
 - Implemented workspace `NamespaceRegistry` improvements:
   - Added longest-literal-prefix precedence for overlapping glob patterns to choose the most specific namespace instead of erroring on conflict.
   - Added deterministic alphabetical tie-breaker as fallback when literal prefixes are equal.
