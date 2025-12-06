@@ -22,10 +22,10 @@
 //!
 //! ```
 //! use sea_core::VERSION;
-//! assert_eq!(VERSION, "0.0.1");
+//! assert_eq!(VERSION, "0.1.0");
 //! ```
 
-pub const VERSION: &str = "0.0.1";
+pub const VERSION: &str = "0.1.0";
 
 pub mod calm;
 pub mod concept_id;
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_version() {
-        assert_eq!(VERSION, "0.0.1");
+        assert_eq!(VERSION, "0.1.0");
     }
 }
 
@@ -115,6 +115,8 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::primitives::Mapping>()?;
     m.add_class::<python::primitives::Projection>()?;
     m.add_class::<python::graph::Graph>()?;
+    m.add_class::<python::primitives::Role>()?;
+    m.add_class::<python::primitives::Relation>()?;
     m.add_class::<python::registry::NamespaceRegistry>()?;
     m.add_class::<python::registry::NamespaceBinding>()?;
     m.add_class::<python::policy::Severity>()?;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Entity, Resource, Flow, Instance } from '../index';
+import { Entity, Resource, Flow, ResourceInstance } from '../index';
 
 describe('Entity', () => {
   it('creates entity with name', () => {
@@ -68,12 +68,12 @@ describe('Flow', () => {
   });
 });
 
-describe('Instance', () => {
+describe('ResourceInstance', () => {
   it('creates instance', () => {
     const entity = new Entity('Warehouse');
     const resource = new Resource('Cameras', 'units');
     
-    const instance = new Instance(resource.id, entity.id);
+    const instance = new ResourceInstance(resource.id, entity.id);
     expect(instance.resourceId).toBe(resource.id);
     expect(instance.entityId).toBe(entity.id);
   });
@@ -82,7 +82,7 @@ describe('Instance', () => {
     const entity = new Entity('Warehouse');
     const resource = new Resource('Cameras', 'units');
     
-    const instance = new Instance(resource.id, entity.id, 'inventory');
+    const instance = new ResourceInstance(resource.id, entity.id, 'inventory');
     expect(instance.namespace).toBe('inventory');
   });
 });

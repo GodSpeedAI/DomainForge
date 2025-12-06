@@ -1,6 +1,7 @@
 """
 Additional Python tests for SEA DSL bindings - Instance support
 """
+
 import pytest
 import sea_dsl
 
@@ -10,7 +11,7 @@ def test_instance_creation():
     entity = sea_dsl.Entity("Warehouse")
     resource = sea_dsl.Resource("Camera", "units")
 
-    instance = sea_dsl.Instance(resource.id, entity.id)
+    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
     assert instance.resource_id == resource.id
     assert instance.entity_id == entity.id
     assert len(instance.id) == 36
@@ -21,7 +22,7 @@ def test_instance_with_namespace():
     entity = sea_dsl.Entity("Warehouse", "logistics")
     resource = sea_dsl.Resource("Camera", "units", "inventory")
 
-    instance = sea_dsl.Instance(resource.id, entity.id, "inventory")
+    instance = sea_dsl.ResourceInstance(resource.id, entity.id, "inventory")
     assert instance.namespace == "inventory"
 
 
@@ -30,7 +31,7 @@ def test_instance_attributes():
     entity = sea_dsl.Entity("Warehouse")
     resource = sea_dsl.Resource("Camera", "units")
 
-    instance = sea_dsl.Instance(resource.id, entity.id)
+    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
     instance.set_attribute("serial_number", "CAM-12345")
     assert instance.get_attribute("serial_number") == "CAM-12345"
 
@@ -44,7 +45,7 @@ def test_graph_add_instance():
     graph.add_entity(entity)
     graph.add_resource(resource)
 
-    instance = sea_dsl.Instance(resource.id, entity.id)
+    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
     graph.add_instance(instance)
 
     assert graph.instance_count() == 1
@@ -59,7 +60,7 @@ def test_graph_instance_validation():
     graph.add_entity(entity)
     # Not adding resource
 
-    instance = sea_dsl.Instance(resource.id, entity.id)
+    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
 
     with pytest.raises(ValueError, match="Resource not found"):
         graph.add_instance(instance)
@@ -87,7 +88,7 @@ def test_round_trip_serialization():
     flow.set_attribute("priority", "high")
     graph.add_flow(flow)
 
-    instance = sea_dsl.Instance(cameras.id, warehouse.id, "inventory")
+    instance = sea_dsl.ResourceInstance(cameras.id, warehouse.id, "inventory")
     instance.set_attribute("serial", "SN-001")
     graph.add_instance(instance)
 

@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Graph, AggregateFunction, BinaryOp, Severity, Entity, Resource, Flow, Instance, NamespaceBinding, NamespaceRegistry, Dimension, Unit } = nativeBinding
+const { Graph, AggregateFunction, BinaryOp, Severity, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, Dimension, Unit } = nativeBinding
 
 module.exports.Graph = Graph
 module.exports.AggregateFunction = AggregateFunction
@@ -319,7 +319,13 @@ module.exports.Severity = Severity
 module.exports.Entity = Entity
 module.exports.Resource = Resource
 module.exports.Flow = Flow
+module.exports.ResourceInstance = ResourceInstance
 module.exports.Instance = Instance
+module.exports.Metric = Metric
+module.exports.Mapping = Mapping
+module.exports.Projection = Projection
+module.exports.Role = Role
+module.exports.Relation = Relation
 module.exports.NamespaceBinding = NamespaceBinding
 module.exports.NamespaceRegistry = NamespaceRegistry
 module.exports.Dimension = Dimension

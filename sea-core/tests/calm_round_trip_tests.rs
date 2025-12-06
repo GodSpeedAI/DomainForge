@@ -124,7 +124,7 @@ fn test_round_trip_preserves_metadata() {
 
     assert_eq!(calm_json["version"], "2.0");
     assert_eq!(calm_json["metadata"]["sea:exported"], true);
-    assert_eq!(calm_json["metadata"]["sea:version"], "0.0.1");
+    assert_eq!(calm_json["metadata"]["sea:version"], sea_core::VERSION);
     assert!(calm_json["metadata"]["sea:timestamp"].is_string());
 
     let imported_graph = import(calm_json).unwrap();

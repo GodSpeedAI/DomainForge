@@ -26,17 +26,17 @@ Unit "EUR" of "Currency" factor 1.07 base "USD"
 Resource "Money" unit "USD"
 Entity "Alice"
 Entity "Bob"
-Flow "Money" from "Alice" to "Bob" quantity 100 "EUR"
+Flow "Money" from "Alice" to "Bob" quantity 100
 ```
 
 - Resources reference the canonical unit.
-- Flows can use any declared unit; conversions happen via the base factor.
+- Use `as "<Unit>"` in aggregations/policies to request conversions (e.g., `sum(f.quantity as "EUR")`).
 
 ## Validate and Test
 
 - CLI: `sea validate model.sea` (fails if the unit/dimension is unknown or factor is invalid).
-- Python: `from sea_dsl import Unit; Unit.parse("USD")` to confirm registration; parse a graph and inspect `resource.unit`.
-- TypeScript: `Unit.parse("EUR")` and `Graph.parse(...)` to ensure flows keep the correct unit strings.
+- Python: `from sea_dsl import Graph; graph = Graph.parse(open("model.sea").read()); assert graph.all_resources()[0].unit == "USD"`.
+- TypeScript: `const graph = Graph.parse(fs.readFileSync("model.sea","utf8")); expect(graph.allResources()[0].unit).toBe("USD");`.
 
 ## Edge Cases
 

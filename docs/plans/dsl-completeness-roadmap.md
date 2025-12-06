@@ -354,18 +354,19 @@ Policy approval_required as:
 
 **Implementation**:
 
-- [ ] **Grammar** (`sea.pest`): Add `role_decl`, `relation_decl`
-- [ ] **AST** (`ast.rs`): Add `RoleDecl`, `RelationDecl { subject, predicate, object, via }`
-- [ ] **KG Projection** (`kg.rs`): Map to RDF triples with typed predicates
-- [ ] **SBVR Projection** (`sbvr.rs`): Generate fact type definitions
-- [ ] **Semantics** (`validator.rs`): Validate role assignments and relation integrity
-- [ ] **Projections**: Ensure patterns are represented in CALM/KG/SBVR
-- [ ] **Bindings**: Expose pattern matching to Python and TypeScript APIs
+- [x] **Grammar** (`sea.pest`): Role and relation declarations parsed
+- [x] **AST** (`ast.rs`): Added `RoleDecl`, `RelationDecl { subject, predicate, object, via }`
+- [x] **KG Projection** (`kg.rs`): Relations emitted as RDF triples with typed predicates
+- [x] **SBVR Projection** (`sbvr.rs`): Generates fact type definitions
+- [x] **Semantics** (`validator.rs`): Validates role assignments and relation integrity
+- [x] **Projections**: CALM/KG/SBVR include role/relation metadata
+- [x] **Bindings**: Role and Relation primitives exposed to Python and TypeScript APIs
 
 **Testing**:
 
-- Test: Define payment relation, query by role
-- Golden test: Relation → KG → validate SHACL constraints
+- [x] Parse/payment relation round-trip in Rust (`roles_relations_tests.rs`)
+- [x] Cross-language parity: Python (`test_golden_payment_flow.py`) and TypeScript (`golden-payment-flow.test.ts`)
+- [x] SHACL/SBVR projection checks for relation triples
 
 ### 6. Evolution Semantics
 
@@ -437,23 +438,29 @@ Policy vendor_specific as:
 ### Evidence & Files Changed
 
 - Grammar
+
   - `sea-core/grammar/sea.pest` — `instance_decl`, `instance_body`, `instance_field`, and `instance_reference` added
 
 - AST & Parser
+
   - `sea-core/src/parser/ast.rs` — `AstNode::Instance` variant and `parse_instance` implemented; instances are added to the graph during AST→Graph conversion
 
 - Primitives
+
   - `sea-core/src/primitives/instance.rs` — new `Instance` primitive with `new`, `new_with_namespace`, `set_field`, `get_field`, and serialization methods
 
 - Graph & KGS
+
   - `sea-core/src/graph/mod.rs` — `add_entity_instance`, `get_entity_instance`, `get_entity_instance_mut`, `all_entity_instances`, `remove_entity_instance`, `entity_instance_count`
 
 - Bindings
+
   - `sea-core/src/python/primitives.rs` — `Instance` pyclass with getters and field accessors
   - `sea-core/src/typescript/primitives.rs` — `Instance` NAPI class with constructor, getters, and field accessors
   - `sea-core/src/wasm/primitives.rs` — `Instance` wasm bindings
 
 - Projections
+
   - `sea-core/src/calm/export.rs` — CALM export includes nodes for instances (see `export_instance`); Graph contents are included in CALM export
   - `sea-core/src/kg.rs` — KG export includes graph triples and SHACL shapes; entity instances are represented in the graph and included when serializing to Turtle (see `from_graph` and triple generation)
 

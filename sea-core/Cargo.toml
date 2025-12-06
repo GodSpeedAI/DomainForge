@@ -1,6 +1,6 @@
 [package]
 name = "sea-core"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["DomainForge Contributors"]
 edition = "2021"
 rust-version = "1.77"
@@ -85,4 +85,3 @@ required-features = ["cli"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
-

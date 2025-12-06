@@ -26,9 +26,10 @@ export const enum BinaryOp {
   Contains = 12,
   StartsWith = 13,
   EndsWith = 14,
-  Before = 15,
-  After = 16,
-  During = 17
+  HasRole = 15,
+  Before = 16,
+  After = 17,
+  During = 18
 }
 /** Severity level for policy violations */
 export const enum Severity {
@@ -56,11 +57,16 @@ export declare class Graph {
   addEntity(entity: Entity): void
   addResource(resource: Resource): void
   addFlow(flow: Flow): void
-  addInstance(instance: Instance): void
+  addInstance(instance: ResourceInstance): void
+  addRole(role: Role): void
+  addRelation(relation: Relation): void
   entityCount(): number
   resourceCount(): number
   flowCount(): number
   instanceCount(): number
+  patternCount(): number
+  roleCount(): number
+  relationCount(): number
   hasEntity(id: string): boolean
   hasResource(id: string): boolean
   hasFlow(id: string): boolean
@@ -68,7 +74,8 @@ export declare class Graph {
   getEntity(id: string): Entity | null
   getResource(id: string): Resource | null
   getFlow(id: string): Flow | null
-  getInstance(id: string): Instance | null
+  getInstance(id: string): ResourceInstance | null
+  findRoleByName(name: string): string | null
   findEntityByName(name: string): string | null
   findResourceByName(name: string): string | null
   flowsFrom(entityId: string): Array<Flow>
@@ -76,7 +83,9 @@ export declare class Graph {
   allEntities(): Array<Entity>
   allResources(): Array<Resource>
   allFlows(): Array<Flow>
-  allInstances(): Array<Instance>
+  allInstances(): Array<ResourceInstance>
+  allRoles(): Array<Role>
+  allRelations(): Array<Relation>
   static parse(source: string): Graph
   exportCalm(): string
   static importCalm(calmJson: string): Graph
@@ -135,7 +144,7 @@ export declare class Flow {
   getAttribute(key: string): string | null
   toString(): string
 }
-export declare class Instance {
+export declare class ResourceInstance {
   constructor(resourceId: string, entityId: string, namespace?: string | undefined | null)
   get id(): string
   get resourceId(): string
@@ -143,6 +152,51 @@ export declare class Instance {
   get namespace(): string | null
   setAttribute(key: string, valueJson: string): void
   getAttribute(key: string): string | null
+  toString(): string
+}
+export declare class Instance {
+  constructor(name: string, entityType: string, namespace?: string | undefined | null)
+  get id(): string
+  get name(): string
+  get entityType(): string
+  get namespace(): string | null
+  setField(key: string, valueJson: string): void
+  getField(key: string): string | null
+  toString(): string
+}
+export declare class Metric {
+  get name(): string
+  get namespace(): string | null
+  get threshold(): number | null
+  get target(): number | null
+  get unit(): string | null
+  get severity(): string | null
+}
+export declare class Mapping {
+  get name(): string
+  get targetFormat(): string
+}
+export declare class Projection {
+  get name(): string
+  get targetFormat(): string
+}
+export declare class Role {
+  constructor(name: string, namespace?: string | undefined | null)
+  get id(): string
+  get name(): string
+  get namespace(): string | null
+  setAttribute(key: string, valueJson: string): void
+  getAttribute(key: string): string | null
+  toString(): string
+}
+export declare class Relation {
+  constructor(name: string, subjectRoleId: string, predicate: string, objectRoleId: string, namespace?: string | undefined | null, viaFlowId?: string | undefined | null)
+  get id(): string
+  get name(): string
+  get subjectRoleId(): string
+  get predicate(): string
+  get objectRoleId(): string
+  get viaFlowId(): string | null
   toString(): string
 }
 export declare class NamespaceBinding {

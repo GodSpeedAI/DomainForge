@@ -1,7 +1,7 @@
 use crate::primitives::{
     Entity as RustEntity, Flow as RustFlow, MappingContract as RustMapping, Metric as RustMetric,
-    ProjectionContract as RustProjection, Resource as RustResource,
-    ResourceInstance as RustResourceInstance,
+    ProjectionContract as RustProjection, RelationType as RustRelation, Resource as RustResource,
+    ResourceInstance as RustResourceInstance, Role as RustRole,
 };
 
 use crate::units::unit_from_string;
@@ -594,6 +594,172 @@ impl Projection {
     }
 
     pub fn inner_ref(&self) -> &RustProjection {
+        &self.inner
+    }
+}
+
+#[napi]
+pub struct Role {
+    inner: RustRole,
+}
+
+#[napi]
+#[allow(clippy::inherent_to_string)]
+impl Role {
+    #[napi(constructor)]
+    pub fn new(name: String, namespace: Option<String>) -> Self {
+        let inner = match namespace {
+            Some(ns) => RustRole::new_with_namespace(name, ns),
+            None => RustRole::new_with_namespace(name, "default".to_string()),
+        };
+        Self { inner }
+    }
+
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        let ns = self.inner.namespace();
+        if ns == "default" {
+            None
+        } else {
+            Some(ns.to_string())
+        }
+    }
+
+    #[napi]
+    pub fn set_attribute(&mut self, key: String, value_json: String) -> Result<()> {
+        let json_value: serde_json::Value = serde_json::from_str(&value_json)
+            .map_err(|e| Error::from_reason(format!("Failed to parse JSON: {}", e)))?;
+        self.inner.set_attribute(key, json_value);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn get_attribute(&self, key: String) -> Option<String> {
+        self.inner.attributes().get(&key).and_then(|v| serde_json::to_string(v).ok())
+    }
+
+    #[napi]
+    pub fn to_string(&self) -> String {
+        format!(
+            "Role(id='{}', name='{}', namespace={:?})",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.namespace()
+        )
+    }
+}
+
+impl Role {
+    pub(crate) fn from_rust(inner: RustRole) -> Self {
+        Self { inner }
+    }
+
+    pub(crate) fn inner_ref(&self) -> &RustRole {
+        &self.inner
+    }
+}
+
+#[napi]
+pub struct Relation {
+    inner: RustRelation,
+}
+
+#[napi]
+#[allow(clippy::inherent_to_string)]
+impl Relation {
+    #[napi(constructor)]
+    pub fn new(
+        name: String,
+        subject_role_id: String,
+        predicate: String,
+        object_role_id: String,
+        namespace: Option<String>,
+        via_flow_id: Option<String>,
+    ) -> Result<Self> {
+        let subject_id = crate::ConceptId::from(
+            Uuid::from_str(&subject_role_id)
+                .map_err(|e| Error::from_reason(format!("Invalid subject_role_id UUID: {}", e)))?,
+        );
+
+        let object_id = crate::ConceptId::from(
+            Uuid::from_str(&object_role_id)
+                .map_err(|e| Error::from_reason(format!("Invalid object_role_id UUID: {}", e)))?,
+        );
+
+        let via_id = match via_flow_id {
+            Some(id) => Some(crate::ConceptId::from(
+                Uuid::from_str(&id).map_err(|e| {
+                    Error::from_reason(format!("Invalid via_flow_id UUID: {}", e))
+                })?,
+            )),
+            None => None,
+        };
+
+        let ns = namespace.unwrap_or_else(|| "default".to_string());
+        let inner = RustRelation::new(name, ns, subject_id, predicate, object_id, via_id);
+
+        Ok(Self { inner })
+    }
+
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn subject_role_id(&self) -> String {
+        self.inner.subject_role().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn predicate(&self) -> String {
+        self.inner.predicate().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn object_role_id(&self) -> String {
+        self.inner.object_role().to_string()
+    }
+
+    #[napi(getter)]
+    pub fn via_flow_id(&self) -> Option<String> {
+        self.inner.via_flow().map(|id| id.to_string())
+    }
+
+    #[napi]
+    pub fn to_string(&self) -> String {
+        format!(
+            "Relation(id='{}', name='{}', predicate='{}', subject='{}', object='{}')",
+            self.inner.id(),
+            self.inner.name(),
+            self.inner.predicate(),
+            self.inner.subject_role(),
+            self.inner.object_role()
+        )
+    }
+}
+
+impl Relation {
+    pub(crate) fn from_rust(inner: RustRelation) -> Self {
+        Self { inner }
+    }
+
+    pub(crate) fn inner_ref(&self) -> &RustRelation {
         &self.inner
     }
 }
