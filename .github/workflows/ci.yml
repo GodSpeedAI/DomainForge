@@ -302,13 +302,11 @@ jobs:
 
       - name: Install wasm-opt (binaryen) for optimization
         run: |
-          sudo apt-get update && sudo apt-get install -y binaryen || true
-          if ! command -v wasm-opt &> /dev/null; then
-             echo "wasm-opt not found after apt install, trying manual download..."
-             wget -q https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
-             tar -xzf binaryen-version_117-x86_64-linux.tar.gz
-             sudo cp binaryen-version_117/bin/wasm-opt /usr/local/bin/
-          fi
+          echo "Downloading wasm-opt..."
+          wget -q https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
+          tar -xzf binaryen-version_117-x86_64-linux.tar.gz
+          sudo cp binaryen-version_117/bin/wasm-opt /usr/local/bin/
+          wasm-opt --version
 
       - name: Build WASM (release)
         run: |

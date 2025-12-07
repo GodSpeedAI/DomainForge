@@ -87,4 +87,4 @@ path = "src/bin/sea.rs"
 required-features = ["cli"]
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = true
+wasm-opt = false
