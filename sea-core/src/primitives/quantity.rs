@@ -1,7 +1,10 @@
 use crate::units::Dimension;
+#[cfg(feature = "formatting")]
 use icu_decimal::FixedDecimalFormatter;
+#[cfg(feature = "formatting")]
 use icu_locid::Locale;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "formatting")]
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -24,6 +27,7 @@ impl Quantity {
     }
 }
 
+#[cfg(feature = "formatting")]
 pub struct QuantityFormatter {
     formatter: FixedDecimalFormatter,
     // locale is kept for future use (e.g. currency formatting)
@@ -31,6 +35,7 @@ pub struct QuantityFormatter {
     locale: Locale,
 }
 
+#[cfg(feature = "formatting")]
 impl QuantityFormatter {
     pub fn new(locale: Locale) -> Self {
         let formatter = FixedDecimalFormatter::try_new(&(&locale).into(), Default::default())

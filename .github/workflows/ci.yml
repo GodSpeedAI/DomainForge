@@ -300,10 +300,25 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
 
-      - name: Build WASM
+      - name: Install wasm-opt (binaryen) for optimization
+        run: |
+          sudo apt-get update && sudo apt-get install -y binaryen || true
+          if ! command -v wasm-opt &> /dev/null; then
+             echo "wasm-opt not found after apt install, trying manual download..."
+             wget -q https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
+             tar -xzf binaryen-version_117-x86_64-linux.tar.gz
+             sudo cp binaryen-version_117/bin/wasm-opt /usr/local/bin/
+          fi
+
+      - name: Build WASM (release)
         run: |
           cd sea-core
-          wasm-pack build --target web --features wasm
+          wasm-pack build --target web --release --features wasm
+          # Optional: optimize with wasm-opt if installed (binaryen)
+          if command -v wasm-opt &> /dev/null; then
+            echo "🔧 Running wasm-opt..."
+            wasm-opt -Oz -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm && mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm || true
+          fi
 
       - name: Check bundle size
         run: |

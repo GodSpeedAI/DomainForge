@@ -27,6 +27,12 @@
 
 pub const VERSION: &str = "0.1.0";
 
+// Use a compact allocator when building for WebAssembly to reduce binary size
+// `wee_alloc` is an optional, small global allocator suitable for WASM.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
 pub mod calm;
 pub mod concept_id;
 pub mod error;
