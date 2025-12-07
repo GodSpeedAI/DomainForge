@@ -54,6 +54,18 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
   - Successful casts return a concrete quantity typed with the requested unit, not `Any`, and downstream checks propagate that concrete type.
   - Example: `1000 "ms" as "s"` produces `1 "s"` with the target unit recorded for later comparisons.
 
+#### Parser contract for cast expressions
+
+- `cast_expr` is considered the outermost form of `primary_expr` (i.e., `primary_expr = { cast_expr | ... }`) so the `as` suffix binds tighter than binary operators but looser than atom-level access (field/index) and is left-associative for chains like `value as "ms" as "s"`.
+- The grammar accepts any string literal after `as` so validation is deferred until evaluation; the parser only ensures the operand itself is a valid `primary_expr`.
+- The AST carries the literal verbatim (`Expression::Cast { operand, target_type }`) and keeps the operand boxed so any downstream stage can further inspect or optimize before the cast runs.
+
+#### Evaluator validation and type propagation
+
+- The evaluator must resolve the target unit at runtime by looking it up in the global unit registry; if the string literal does not name a registered unit, return an `EvalError` (e.g., `UnknownUnit`) that mentions the missing symbol so diagnostics stay actionable.
+- After a successful conversion the expression result should include concrete unit/type metadata (for example, wrapping the numeric value into a `Quantity { value, unit }` structure or annotating the evaluation context) so downstream policies and projections can reason about the actual dimension rather than treating the value as untyped.
+- Unknown units, mismatched dimensions, or forbidden conversions must fail at evaluation time, not at parse time, because the registry contents and user-defined units are only known once the runtime context is available.
+
 ## 3. [x] DSL Layering (Profiles)
 
 **Goal**: Introduce "Profiles" to allow different DSL dialects (e.g., `profile: "cloud"`, `profile: "data"`).

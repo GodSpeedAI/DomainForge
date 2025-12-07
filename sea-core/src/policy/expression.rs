@@ -170,6 +170,13 @@ impl Expression {
         }
     }
 
+    pub fn cast(operand: Expression, target_type: impl Into<String>) -> Self {
+        Expression::Cast {
+            operand: Box::new(operand),
+            target_type: target_type.into(),
+        }
+    }
+
     pub fn comparison(
         var: &str,
         op: &str,

@@ -15,7 +15,8 @@ Entity "MyApp" @replaces "System"
 "#;
 
     // We need a registry for module resolution
-    let registry = NamespaceRegistry::new_empty(PathBuf::from("."));
+    let registry = NamespaceRegistry::new_empty(PathBuf::from("."))
+        .expect("Failed to create namespace registry");
     let mut entry_file = NamedTempFile::new().expect("Failed to create entry file");
     entry_file
         .write_all(source.as_bytes())

@@ -3,9 +3,9 @@ use std::sync::OnceLock;
 
 #[derive(Debug, Clone)]
 pub struct Profile {
-    pub name: String,
-    pub description: String,
-    pub allowed_features: HashSet<String>,
+    name: String,
+    description: String,
+    allowed_features: HashSet<String>,
 }
 
 impl Profile {
@@ -19,6 +19,18 @@ impl Profile {
 
     pub fn is_feature_allowed(&self, feature: &str) -> bool {
         self.allowed_features.contains(feature)
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+
+    pub fn allowed_features(&self) -> &HashSet<String> {
+        &self.allowed_features
     }
 }
 

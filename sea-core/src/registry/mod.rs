@@ -149,13 +149,13 @@ impl From<WalkError> for RegistryError {
 }
 
 impl NamespaceRegistry {
-    pub fn new_empty(root: PathBuf) -> Self {
-        let canonical_root = root.canonicalize().unwrap_or(root);
-        Self {
+    pub fn new_empty(root: PathBuf) -> Result<Self, RegistryError> {
+        let canonical_root = root.canonicalize()?;
+        Ok(Self {
             root: canonical_root,
             default_namespace: "default".to_string(),
             entries: Vec::new(),
-        }
+        })
     }
 
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, RegistryError> {

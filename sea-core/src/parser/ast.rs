@@ -1168,10 +1168,7 @@ fn parse_cast_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
 
     if let Some(as_pair) = inner.next() {
         let target_type = parse_string_literal(as_pair)?;
-        Ok(Expression::Cast {
-            operand: Box::new(primary),
-            target_type,
-        })
+        Ok(Expression::cast(primary, target_type))
     } else {
         Ok(primary)
     }
@@ -2046,7 +2043,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
 
     // First pass: Register dimensions and units
     {
-        use crate::units::{Dimension, Unit, UnitRegistry};
+        use crate::units::{Dimension, Unit, UnitError, UnitRegistry};
         let registry = UnitRegistry::global();
         let mut registry = registry.write().map_err(|e| {
             ParseError::GrammarError(format!("Failed to lock unit registry: {}", e))
@@ -2073,10 +2070,32 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                         *factor,
                         base_unit.clone(),
                     );
-                    if registry.get_unit(symbol).is_err() {
-                        registry.register(unit).map_err(|e| {
-                            ParseError::GrammarError(format!("Failed to register unit: {}", e))
-                        })?;
+                    match registry.get_unit(symbol) {
+                        Ok(existing) => {
+                            if existing != &unit {
+                                return Err(ParseError::GrammarError(format!(
+                                    "Conflicting unit '{}' already registered (existing: dimension={}, base_factor={}, base_unit={}; new: dimension={}, base_factor={}, base_unit={})",
+                                    symbol,
+                                    existing.dimension(),
+                                    existing.base_factor(),
+                                    existing.base_unit(),
+                                    unit.dimension(),
+                                    unit.base_factor(),
+                                    unit.base_unit(),
+                                )));
+                            }
+                        }
+                        Err(UnitError::UnitNotFound(_)) => {
+                            registry.register(unit).map_err(|e| {
+                                ParseError::GrammarError(format!("Failed to register unit: {}", e))
+                            })?;
+                        }
+                        Err(err) => {
+                            return Err(ParseError::GrammarError(format!(
+                                "Failed to inspect unit '{}': {}",
+                                symbol, err
+                            )));
+                        }
                     }
                 }
                 _ => {}

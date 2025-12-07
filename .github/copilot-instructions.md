@@ -157,29 +157,6 @@ Run `just all-tests` to verify all bindings remain in sync.
 
 **Self-check**: Before submitting code, ask: "Did I make a mistake that future AI agents might repeat?" If yes, document it here.
 
-## MCP Tool Use
-
-Use chained MCP tools to enhance your thinking and generations particularly in the context of coding and research via the following workflow and loop:
-
-### Coding Context Tool Workflow
-
-1. **Recall**: `search-memory` for prior decisions; skim `changes` for current diff.
-2. **Discover**: Context7/Ref/Exa for library APIs; `search`/`githubRepo` to locate code.
-3. **Plan Check**: Use `vibe_check` to confirm scope is minimal and generator-first.
-4. **Implement**: `edit` in small batches (≤2 files) → `runTests`/`runTasks` via Nx.
-5. **Verify**: capture command outputs; if red, debug and rerun before moving on.
-6. **Persist & Route**: summarize decisions; `add-memory` key learnings; hand off to specialists when better suited.
-
-### Research Context  Chained Research Loop
-
-1. **Clarify Scope**: define goal, constraints, repos/paths.
-2. **Recall**: `search-memory` for prior decisions; check `changes` if relevant.
-3. **Discover**: use Exa/Ref/Context7 for fast landscape + exact APIs; prefer official docs.
-4. **Inspect**: `search` repo hot spots; read source over secondary blogs.
-5. **Validate**: `vibe_check` to sanity-check coverage; triangulate with at least two sources.
-6. **Synthesize**: group insights, highlight tradeoffs, attach code/command examples.
-7. **Persist & Route**: `add-memory` durable conclusions; handoff to the right specialist.
-
 ## General Guidance
 - prioritize clarity and maintainability in code
 - follow existing project conventions unless there's a strong reason to deviate

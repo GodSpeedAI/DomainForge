@@ -1,5 +1,7 @@
 use crate::units::Dimension;
 #[cfg(feature = "formatting")]
+use fixed_decimal::FixedDecimal;
+#[cfg(feature = "formatting")]
 use icu_decimal::FixedDecimalFormatter;
 #[cfg(feature = "formatting")]
 use icu_locid::Locale;
@@ -46,7 +48,7 @@ impl QuantityFormatter {
     pub fn format(&self, quantity: &Quantity) -> Result<String, String> {
         // Convert f64 to FixedDecimal for formatting
         // FixedDecimal::from_str handles float string representation
-        let decimal = fixed_decimal::FixedDecimal::from_str(&quantity.value.to_string())
+        let decimal = FixedDecimal::from_str(&quantity.value.to_string())
             .map_err(|e| format!("Failed to convert quantity value to decimal: {}", e))?;
         let formatted_value = self.formatter.format(&decimal).to_string();
         Ok(format!("{} \"{}\"", formatted_value, quantity.unit))

@@ -21,9 +21,12 @@ Resource "CPU"
     // 4. Parse Printed to Graph
     let graph2 = parse_to_graph(&printed).unwrap();
 
-    // 5. Compare Graphs (basic check)
-    assert_eq!(graph.entity_count(), graph2.entity_count());
-    assert_eq!(graph.resource_count(), graph2.resource_count());
+    // 5. Compare Graphs (structural check via serialization)
+    let graph_json =
+        serde_json::to_value(&graph).expect("Failed to serialize graph for comparison");
+    let graph2_json =
+        serde_json::to_value(&graph2).expect("Failed to serialize parsed graph for comparison");
+    assert_eq!(graph_json, graph2_json);
 
     // 6. Ensure serialized forms stay stable across another round-trip
     let printed_again = printer.print(&graph2.to_ast());

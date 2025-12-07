@@ -302,20 +302,22 @@ jobs:
 
       - name: Install wasm-opt (binaryen) for optimization
         run: |
+          set -euo pipefail
           echo "Downloading wasm-opt..."
-          wget -q https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
+          wget https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
           tar -xzf binaryen-version_117-x86_64-linux.tar.gz
           sudo cp binaryen-version_117/bin/wasm-opt /usr/local/bin/
           wasm-opt --version
 
       - name: Build WASM (release)
         run: |
+          set -euo pipefail
           cd sea-core
           wasm-pack build --target web --release --features wasm
           # Optional: optimize with wasm-opt if installed (binaryen)
           if command -v wasm-opt &> /dev/null; then
             echo "🔧 Running wasm-opt..."
-            wasm-opt -Oz -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm && mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm || true
+            wasm-opt -Oz -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm && mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
           fi
 
       - name: Check bundle size

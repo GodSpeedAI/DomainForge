@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-623%20passing-brightgreen.svg)](sea-core/tests/)
 
 ---
@@ -1025,7 +1025,7 @@ print(f'Flow: {flow.quantity} {cameras.name} from {factory.name} to {warehouse.n
 
 ## 📄 License
 
-SEA DSL is open source under the [Apache 2.0 License](LICENSE).
+SEA DSL is open source under the [MIT OR Apache-2.0 License](LICENSE) (see also [LICENSE-MIT](LICENSE-MIT)).
 
 ---
 

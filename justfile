@@ -162,6 +162,7 @@ ci-pipeline:
     just ci-check-binary-size target/release/sea
     just ci-package-binary target/release/sea sea.tar.gz
     just ci-verify-package sea.tar.gz sea
+    just ci-check-package-size sea.tar.gz
     @echo "✅ CI pipeline passed!"
 
 # Check debug binary size (with higher limit)
