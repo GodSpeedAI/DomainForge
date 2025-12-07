@@ -219,12 +219,7 @@ jobs:
         run: |
           # Create a sample SEA file
           tmpdir=$(mktemp -d)
-          cat > "$tmpdir/test.sea" <<'EOF'
-          Entity "Warehouse" {
-            name: String
-            location: String
-          }
-          EOF
+          echo 'Entity "Warehouse" { name: String, location: String }' > "$tmpdir/test.sea"
 
           # Verify CLI executes and validates the file
           ./target/debug/sea validate "$tmpdir/test.sea" && echo "✓ SEA validation working correctly"
