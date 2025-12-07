@@ -2,25 +2,25 @@
 
 This plan addresses the critique regarding the SEA DSL implementation, focusing on grammar consistency, architectural layering (profiles), and policy simplification.
 
-## 1. Grammar & Syntax Cleanup
+## 1. [x] Grammar & Syntax Cleanup
 
 **Goal**: Ensure the grammar is robust, consistent, and matches the documentation/examples.
 
 ### Tasks
 
-- [ ] **Review `sea.pest`**:
+- [x] **Review `sea.pest`**:
   - Verify `declaration_inner` rule is complete and not corrupted.
   - Confirm all keywords use case-insensitive matching (e.g., `^"entity"`).
-- [ ] **Standardize Casing**:
+- [x] **Standardize Casing**:
   - Decision: Keep grammar case-insensitive (`^"keyword"`) to be user-friendly.
   - Action: Enforce "Capitalized" convention (e.g., `Entity`, `Resource`) in all documentation and examples.
   - Action: Update `sea format` (if exists) or `PrettyPrinter` to output Capitalized keywords.
-- [ ] **Fix Examples**:
+- [x] **Fix Examples**:
   - Scan all `.sea` files in `examples/` and `sea-core/examples/`.
   - Remove any `...` placeholders that are not valid syntax.
   - Ensure all examples parse successfully with the current grammar.
 
-## 2. DSL Layering (Profiles)
+## 2. [ ] DSL Layering (Profiles)
 
 **Goal**: Prevent the DSL from becoming a "kitchen sink" by enforcing profiles for different use cases (Core, Policy, Observability, etc.).
 
@@ -44,7 +44,7 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
   - Add `--profile` flag to `sea validate` and `sea parse` commands.
   - Default to `Full` (or `Core` if we want to be strict) if not specified.
 
-## 3. Policy & Expression Hardening
+## 3. [ ] Policy & Expression Hardening
 
 **Goal**: Avoid "code in DSL" complexity and ensure policies are debuggable.
 
@@ -58,7 +58,7 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
   - Show which entities/resources were accessed during evaluation.
   - Output: "Policy 'X' evaluated to True because Entity 'Y' has field 'Z' = 10".
 
-## 4. Canonical Graph & Isomorphism
+## 4. [ ] Canonical Graph & Isomorphism
 
 **Goal**: Reinforce `Graph` as the source of truth.
 
@@ -70,7 +70,7 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
 - [ ] **Update Python Bindings**:
   - Ensure `sea_dsl.Graph` exposes the new profile options if needed.
 
-## 5. Documentation & Golden Paths
+## 5. [ ]Documentation & Golden Paths
 
 **Goal**: Provide clear, working examples for each profile.
 
