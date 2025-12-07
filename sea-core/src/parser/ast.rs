@@ -2073,7 +2073,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                         *factor,
                         base_unit.clone(),
                     );
-                    if registry.get_unit(&symbol).is_err() {
+                    if registry.get_unit(symbol).is_err() {
                         registry.register(unit).map_err(|e| {
                             ParseError::GrammarError(format!("Failed to register unit: {}", e))
                         })?;

@@ -149,12 +149,12 @@ fn test_pretty_print_projection_arrow_and_trailing_commas() {
 
 #[test]
 fn test_pretty_print_policy_kind_modality_display() {
-    let kinds = vec![
+    let kinds = [
         PolicyKind::Constraint,
         PolicyKind::Derivation,
         PolicyKind::Obligation,
     ];
-    let modalities = vec![
+    let modalities = [
         PolicyModality::Obligation,
         PolicyModality::Prohibition,
         PolicyModality::Permission,

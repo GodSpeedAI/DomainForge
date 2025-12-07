@@ -28,28 +28,18 @@ pub struct ProfileRegistry {
 
 impl ProfileRegistry {
     fn new() -> Self {
-        let mut profiles = Vec::new();
-
-        // Default profile - everything enabled
-        profiles.push(Profile::new(
-            "default",
-            "Standard SEA DSL profile with all core features",
-            &["core", "cloud", "data"],
-        ));
-
-        // Cloud profile
-        profiles.push(Profile::new(
-            "cloud",
-            "Cloud infrastructure modeling",
-            &["core", "cloud"],
-        ));
-
-        // Data profile
-        profiles.push(Profile::new(
-            "data",
-            "Data modeling and governance",
-            &["core", "data"],
-        ));
+        let profiles = vec![
+            // Default profile - everything enabled
+            Profile::new(
+                "default",
+                "Standard SEA DSL profile with all core features",
+                &["core", "cloud", "data"],
+            ),
+            // Cloud profile
+            Profile::new("cloud", "Cloud infrastructure modeling", &["core", "cloud"]),
+            // Data profile
+            Profile::new("data", "Data modeling and governance", &["core", "data"]),
+        ];
 
         Self { profiles }
     }

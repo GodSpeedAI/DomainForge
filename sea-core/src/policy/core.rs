@@ -264,7 +264,7 @@ impl Policy {
                 Err(format!("Cannot evaluate unexpanded variable: {}", name))
             }
             Expression::Cast { .. } => {
-                let val = self.get_runtime_value(expr, graph)?;
+                let val = Self::get_runtime_value(expr, graph)?;
                 val.as_bool()
                     .ok_or_else(|| format!("Expected boolean from cast, got: {}", val))
             }
@@ -348,7 +348,7 @@ impl Policy {
                 Err("Cannot evaluate non-expanded quantifier".to_string())
             }
             Expression::MemberAccess { object, member } => {
-                let value = self.get_runtime_value(expr, graph)?;
+                let value = Self::get_runtime_value(expr, graph)?;
                 match value {
                     serde_json::Value::Bool(v) => Ok(v),
                     serde_json::Value::Null => Ok(false),
@@ -388,7 +388,7 @@ impl Policy {
             Expression::Literal(v) => Ok(T::from_option_bool(v.as_bool())),
             Expression::Variable(name) => Err(format!("Cannot evaluate unexpanded variable: {}", name)),
             Expression::Cast { .. } => {
-                let val = self.get_runtime_value(expr, graph)?;
+                let val = Self::get_runtime_value(expr, graph)?;
                 Ok(T::from_option_bool(val.as_bool()))
             }
             Expression::Binary { op, left, right } => match op {
@@ -402,8 +402,8 @@ impl Policy {
                     })
                 }
                 BinaryOp::Equal | BinaryOp::NotEqual => {
-                    let left_val = self.get_runtime_value(left, graph);
-                    let right_val = self.get_runtime_value(right, graph);
+                    let left_val = Self::get_runtime_value(left, graph);
+                    let right_val = Self::get_runtime_value(right, graph);
                     match (left_val, right_val) {
                         (Ok(lv), Ok(rv)) => {
                             // If either operand is JSON Null, the comparison yields Null.
@@ -448,30 +448,29 @@ impl Policy {
                 | BinaryOp::LessThan
                 | BinaryOp::GreaterThanOrEqual
                 | BinaryOp::LessThanOrEqual => {
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
                             } else {
-                                let numeric = match self.normalize_units_nullable(
-                                    Self::parse_numeric_with_unit_value(&lv)
-                                        .ok()
-                                        .flatten(),
-                                    Self::parse_numeric_with_unit_value(&rv)
-                                        .ok()
-                                        .flatten(),
-                                )? {
-                                    Some((l, r)) => Some(match op {
+                                let numeric = self
+                                    .normalize_units_nullable(
+                                        Self::parse_numeric_with_unit_value(&lv)
+                                            .ok()
+                                            .flatten(),
+                                        Self::parse_numeric_with_unit_value(&rv)
+                                            .ok()
+                                            .flatten(),
+                                    )?
+                                    .map(|(l, r)| match op {
                                         BinaryOp::GreaterThan => l > r,
                                         BinaryOp::LessThan => l < r,
                                         BinaryOp::GreaterThanOrEqual => l >= r,
                                         BinaryOp::LessThanOrEqual => l <= r,
                                         _ => unreachable!(),
-                                    }),
-                                    None => None,
-                                };
+                                    });
 
                                 Ok(T::from_option_bool(numeric))
                             }
@@ -483,8 +482,8 @@ impl Policy {
                     Err("Arithmetic operations not supported in boolean context".to_string())
                 }
                 BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => {
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
@@ -509,8 +508,8 @@ impl Policy {
                     Ok(T::from_option_bool(Some(role_check)))
                 }
                 BinaryOp::Matches => {
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
 
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
@@ -548,8 +547,8 @@ impl Policy {
                     }
 
                     // Parse and compare ISO 8601 timestamps
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
@@ -627,7 +626,7 @@ impl Policy {
             }
             Expression::MemberAccess { object: _, member: _ } => {
                 // Resolve object/member to a runtime value and convert to bool
-                let value = self.get_runtime_value(expr, graph)?;
+                let value = Self::get_runtime_value(expr, graph)?;
                 Ok(T::from_option_bool(value.as_bool()))
             }
             Expression::Aggregation { .. } => Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string()),
@@ -651,10 +650,10 @@ impl Policy {
     {
         let left_val = self
             .get_literal_value(left)
-            .or_else(|_| self.get_runtime_value(left, graph))?;
+            .or_else(|_| Self::get_runtime_value(left, graph))?;
         let right_val = self
             .get_literal_value(right)
-            .or_else(|_| self.get_runtime_value(right, graph))?;
+            .or_else(|_| Self::get_runtime_value(right, graph))?;
         Ok(op(&left_val, &right_val))
     }
 
@@ -727,7 +726,7 @@ impl Policy {
     }
 
     fn collect_roles(&self, expr: &Expression, graph: &Graph) -> Result<Vec<String>, String> {
-        let value = self.get_runtime_value(expr, graph)?;
+        let value = Self::get_runtime_value(expr, graph)?;
 
         if let Some(arr) = value.as_array() {
             return Ok(arr
@@ -827,7 +826,7 @@ impl Policy {
     ) -> Result<(Decimal, Option<String>), String> {
         let value = self
             .get_literal_value(expr)
-            .or_else(|_| self.get_runtime_value(expr, graph))?;
+            .or_else(|_| Self::get_runtime_value(expr, graph))?;
         Self::parse_numeric_with_unit_value(&value)?
             .ok_or_else(|| format!("Expected numeric value, got: {}", value))
     }
@@ -910,17 +909,13 @@ impl Policy {
     fn get_string_value(&self, expr: &Expression, graph: &Graph) -> Result<String, String> {
         let v = self
             .get_literal_value(expr)
-            .or_else(|_| self.get_runtime_value(expr, graph))?;
+            .or_else(|_| Self::get_runtime_value(expr, graph))?;
         v.as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| "Expected string value".to_string())
     }
 
-    fn get_runtime_value(
-        &self,
-        expr: &Expression,
-        graph: &Graph,
-    ) -> Result<serde_json::Value, String> {
+    fn get_runtime_value(expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),
             Expression::MemberAccess { object, member } => {
@@ -1047,7 +1042,7 @@ impl Policy {
                 operand,
                 target_type,
             } => {
-                let val = self.get_runtime_value(operand, graph)?;
+                let val = Self::get_runtime_value(operand, graph)?;
                 let (value_dec, source_unit) = Self::parse_numeric_with_unit_value(&val)
                     .map_err(|e| format!("Invalid cast operand: {}", e))?
                     .ok_or_else(|| {
