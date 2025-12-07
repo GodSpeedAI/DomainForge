@@ -1,9 +1,9 @@
 use sea_core::parser::ast::{Ast, AstNode, FileMetadata};
+use sea_core::parser::ast::{MappingRule, PolicyKind, PolicyMetadata, PolicyModality};
 use sea_core::parser::printer::PrettyPrinter;
-use std::collections::HashMap;
-use serde_json::json;
-use sea_core::parser::ast::{PolicyMetadata, PolicyKind, PolicyModality, MappingRule};
 use sea_core::policy::Expression;
+use serde_json::json;
+use std::collections::HashMap;
 
 #[test]
 fn test_pretty_print_ast() {
@@ -77,10 +77,7 @@ fn test_pretty_print_policy_header() {
 #[test]
 fn test_pretty_print_mapping_nested_and_trailing_commas() {
     let mut fields = HashMap::new();
-    fields.insert(
-        "nested".to_string(),
-        json!({ "bar": 1, "baz": [1, 2] }),
-    );
+    fields.insert("nested".to_string(), json!({ "bar": 1, "baz": [1, 2] }));
     fields.insert("simple".to_string(), json!("ok"));
 
     let rule = MappingRule {
@@ -114,7 +111,7 @@ fn test_pretty_print_mapping_nested_and_trailing_commas() {
 
 #[test]
 fn test_pretty_print_projection_arrow_and_trailing_commas() {
-    use sea_core::parser::ast::{ProjectionOverride};
+    use sea_core::parser::ast::ProjectionOverride;
 
     let mut fields = HashMap::new();
     fields.insert("nested".to_string(), json!({ "bar": 1, "baz": [1, 2] }));
@@ -152,8 +149,16 @@ fn test_pretty_print_projection_arrow_and_trailing_commas() {
 
 #[test]
 fn test_pretty_print_policy_kind_modality_display() {
-    let kinds = vec![PolicyKind::Constraint, PolicyKind::Derivation, PolicyKind::Obligation];
-    let modalities = vec![PolicyModality::Obligation, PolicyModality::Prohibition, PolicyModality::Permission];
+    let kinds = vec![
+        PolicyKind::Constraint,
+        PolicyKind::Derivation,
+        PolicyKind::Obligation,
+    ];
+    let modalities = vec![
+        PolicyModality::Obligation,
+        PolicyModality::Prohibition,
+        PolicyModality::Permission,
+    ];
 
     for kind in kinds.iter() {
         for modality in modalities.iter() {
@@ -176,7 +181,12 @@ fn test_pretty_print_policy_kind_modality_display() {
             let output = PrettyPrinter::new().print(&ast);
             // The printed header must contain "per <Kind> <Modality>"
             let expected_header = format!("per {} {}", kind, modality);
-            assert!(output.contains(&expected_header), "Missing header: {}\nGot: {}", expected_header, output);
+            assert!(
+                output.contains(&expected_header),
+                "Missing header: {}\nGot: {}",
+                expected_header,
+                output
+            );
             // Also contains priority
             assert!(output.contains("priority 7"));
         }
