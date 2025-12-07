@@ -1,314 +1,214 @@
 # Grammar Specification
 
-This document is the canonical reference for the SEA (Semantic Entity Architecture) grammar. It mirrors the rules defined in `sea-core/grammar/sea.pest` and complements them with examples, edge cases, and validation notes so authors can reason about how the parser interprets DSL files.
+Canonical reference for the SEA DSL grammar. This mirrors `sea-core/grammar/sea.pest` and demonstrates the supported syntax with copy/pasteable examples. Keywords are case-insensitive in the parser (`^"keyword"`), but documentation and pretty-printing use capitalized forms (e.g., `Entity`, `Resource`, `Flow`).
 
-## Reading this document
+## File shape
 
-- **Scope**: Every rule currently accepted by the parser. Deprecated constructs are called out explicitly.
-- **Notation**: Rules are written in Pest-style syntax alongside EBNF-like prose. Literals appear in quotes, identifiers in *italics*, and optional parts in square brackets.
-- **Examples**: Each rule includes at least one minimal and one realistic example. Copy/paste them into `sea parse` to verify behavior.
-- **Validation**: Notes explain when the semantic validator rejects syntactically valid constructs (e.g., unknown units or duplicate IDs).
-
-## Top-level structure
-
-A SEA file is a sequence of declarations. Whitespace and comments may appear between declarations.
-
-```
-file = { SOI ~ decl* ~ EOI }
+```sea
+program = { SOI ~ file_header? ~ declaration* ~ EOI }
+file_header = { annotation* ~ import_decl* }
 ```
 
-Supported declaration types:
+- **Annotations**: `@namespace`, `@version`, `@owner` with string values.
+- **Imports**: `Import {Foo, Bar as Baz} from "path/to/file.sea"` or `Import * as alias from "module"`.
 
-- Namespace block
-- Dimension and Unit declarations
-- Entity, Resource, Flow declarations
-- Instances of resources
-- Roles and relations
-- Policies
+Example header:
 
-Example (minimal file):
-
-```
-Namespace "default"
-Entity "User"
-Resource "Money" units
-Flow "Money" from "User" to "User" quantity 1
+```sea
+@namespace "finance.payments"
+@owner "platform-team"
+Import {Ledger as L} from "../common/ledger.sea"
 ```
 
-## Lexical elements
+## Names, identifiers, literals
 
-### Identifiers and strings
+- **Names** (`name` rule): double-quoted string or `"""` multiline string.
+- **Identifiers** (`identifier` rule): `[A-Za-z_][A-Za-z0-9_]*`.
+- **String literal**: double-quoted with escapes; multiline uses triple quotes.
+- **Number**: decimal with optional fraction and leading sign; no scientific notation.
+- **Boolean**: `true` / `false`.
+- **Comments/whitespace**: `// ...` to end of line; whitespace ignored outside strings.
 
-Identifiers are double-quoted strings. They may include spaces and symbols except for an unescaped `"`. Escapes follow Rust string rules (e.g., `\"`).
+## Declarations
 
+Order is flexible; duplicates fail validation.
+
+### Entity
+
+```sea
+Entity "Name" [v1.2.3] [@replaces "Old" v1.0.0] [@changes ["note1", "note2"]] [in domain]
 ```
-quoted = _{ '"' ~ (\\("\\"|"\\\\"|"\\n"|"\\r"|"\\t") | (!'"' ~ ANY))* ~ '"' }
-```
-
-### Numbers
-
-Quantities and unit factors use decimal numbers. Scientific notation is not supported.
-
-```
-number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
-```
-
-- Leading zeros are allowed (`0.5`).
-- Trailing decimals without a fraction (`10.`) are rejected by the parser.
-
-### Comments and whitespace
-
-Comments start with `//` and run to the end of the line. Blank lines and spaces are ignored except inside strings.
-
-```
-comment = _{ "//" ~ (!NEWLINE ~ ANY)* }
-```
-
-## Namespaces
-
-```
-namespace_decl = { "Namespace" ~ quoted }
-```
-
-- Optional. If omitted, the default namespace is `"default"`.
-- Declarations that follow inherit the last declared namespace until a new namespace appears.
 
 Example:
 
-```
-Namespace "finance"
-Entity "Account"
-Namespace "ops"
-Entity "User"
+```sea
+Entity "VendorV2" v2.0.0
+    @replaces "Vendor" v1.0.0
+    @changes ["added credit_limit", "added payment_terms"]
+    in procurement
 ```
 
-## Dimensions and units
+### Resource
 
-Dimensions introduce a physical dimension; units attach to a dimension and optionally specify conversion factors.
-
+```sea
+Resource "Name" [units|<unit>] [in domain]
 ```
-dimension_decl = { "Dimension" ~ quoted }
-unit_decl = {
-  "Unit" ~ quoted ~ "of" ~ quoted ~
-  ["factor" ~ number] ~ ["base" ~ quoted]
+
+Examples:
+
+```sea
+Resource "Money" USD in finance
+Resource "Logs" units
+```
+
+### Flow
+
+```sea
+Flow "ResourceName" from "SourceEntity" to "TargetEntity" [quantity <number>]
+```
+
+Example:
+
+```sea
+Flow "Money" from "Customer" to "PaymentProcessor" quantity 1000
+```
+
+### Pattern
+
+```sea
+Pattern "Email" matches "^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$"
+```
+
+### Role
+
+```sea
+Role "Approver" [in domain]
+```
+
+### Relation
+
+```sea
+Relation "Payment"
+  subject: "Payer"
+  predicate: "pays"
+  object: "Payee"
+  [via: flow "Money"]
+```
+
+### ConceptChange
+
+```sea
+ConceptChange "Vendor_v2_migration"
+  @from_version v2.0.0
+  @to_version v2.1.0
+  @migration_policy mandatory
+  @breaking_change true
+```
+
+### Instance
+
+```sea
+Instance instance_id of "EntityName" [{
+    field: expression,
+    other: expression
+}]
+```
+
+Example:
+
+```sea
+Instance order_123 of "Order" {
+    amount: 150,
+    currency: "USD"
 }
 ```
 
-Rules:
+### Dimension and Unit
 
-- `factor` multiplies the base unit to reach this unit. Defaults to `1`.
-- `base` identifies the canonical unit within the dimension. At least one unit per dimension must declare a base.
-- Circular `base` chains fail validation even if they parse.
-
-Example:
-
-```
+```sea
 Dimension "Currency"
 Unit "USD" of "Currency" factor 1 base "USD"
 Unit "EUR" of "Currency" factor 1.07 base "USD"
 ```
 
-## Entities
+### Policy
 
-Entities represent actors or systems.
-
+```sea
+Policy policy_name [per Constraint|Derivation|Obligation] [Obligation|Prohibition|Permission] [priority <number>] [@rationale "..."] [@tags ["a","b"]] [v1.0.0] as:
+    expression
 ```
-entity_decl = { "Entity" ~ quoted }
-```
-
-Notes:
-
-- IDs are case-sensitive; duplicates in the same namespace are rejected.
-- Use namespaces to disambiguate logically distinct entities with the same display name.
-
-## Resources
-
-Resources describe what flows between entities.
-
-```
-resource_decl = { "Resource" ~ quoted ~ [resource_mod*] }
-resource_mod = { "units" | "unit" ~ quoted }
-```
-
-- `units` marks the resource as dimensional without fixing a unit (e.g., `Resource "Money" units`).
-- `unit "<Unit>"` binds the resource to a specific unit and is validated against known dimensions.
-
-## Flows
-
-Flows connect a resource between two entities and may assign quantities.
-
-```
-flow_decl = {
-  "Flow" ~ quoted ~ "from" ~ quoted ~ "to" ~ quoted ~
-  ["quantity" ~ number] ~ [quantity_unit]
-}
-quantity_unit = { quoted }
-```
-
-Rules:
-
-- The resource name must match a declared resource (same namespace).
-- `quantity` is optional. If present with units, units must align with the resource’s dimension.
 
 Example:
 
-```
-Flow "Money" from "Alice" to "Bob" quantity 100 "USD"
+```sea
+Policy payment_threshold per Constraint Obligation priority 5 @tags ["finance"] as:
+    forall f in flows: (f.resource = "Money" and f.quantity <= 10000)
 ```
 
-## Instances
+### Metric
 
-Instances attach concrete IDs and quantities to resources for runtime evaluation.
-
+```sea
+Metric "name" as: expression
+  [@refresh_interval <number> "seconds"]
+  [@unit "USD"]
+  [@threshold <number>]
+  [@severity "critical"]
+  [@target <number>]
+  [@window <number> "seconds"]
 ```
-instance_decl = {
-  "Instance" ~ quoted ~ "of" ~ quoted ~
-  ["quantity" ~ number ~ [quoted]]
+
+### Mapping
+
+```sea
+Mapping "name" for calm|kg|sbvr {
+    Entity "Customer" -> Target { "id": "customer_id" }
+    Flow "Money" -> Target { "from": true }
 }
 ```
 
-Notes:
+### Projection
 
-- `Instance "order-1" of "Order"` associates a logical instance identifier with a resource definition.
-- If a quantity unit is provided, it is validated against the resource unit/dimension.
-
-## Roles
-
-Roles label participants in relations or flows.
-
-```
-role_decl = { "Role" ~ quoted ~ [role_mod*] }
-role_mod = { "namespace" ~ quoted | "attributes" ~ attributes }
-```
-
-- `attributes` mirrors entity attributes syntax (key/value pairs) and is optional.
-- Role IDs must be unique per namespace.
-
-## Relations
-
-Relations connect two roles with a predicate, optionally tied to a flow.
-
-```
-relation_decl = {
-  "Relation" ~ quoted ~
-  "subject:" ~ quoted ~
-  "predicate:" ~ quoted ~
-  "object:" ~ quoted ~
-  ["via:" ~ flow_ref]
+```sea
+Projection "name" for calm|kg|sbvr {
+    Entity "Customer" { "name": "customer_name" }
 }
-flow_ref = { "flow" ~ quoted }
 ```
 
-Rules:
+## Expressions (summary)
 
-- Subject/object names refer to previously declared roles.
-- The optional `via: flow` binds the relation to a flow identifier.
-
-Example:
-
-```
-Relation "Payment"
-  subject: "Payer"
-  predicate: "pays"
-  object: "Payee"
-  via: flow "Money"
-```
-
-## Attributes
-
-Entities, resources, roles, and instances may carry attributes.
-
-```
-attributes = { "{" ~ (attribute_pair ~ ("," ~ attribute_pair)*)? ~ "}" }
-attribute_pair = { quoted ~ ":" ~ attribute_value }
-attribute_value = { quoted | number | "true" | "false" }
+```sea
+expression      = or_expr
+or_expr         = and_expr ("or" and_expr)*
+and_expr        = not_expr ("and" not_expr)*
+not_expr        = "not" not_expr | comparison_expr
+comparison_expr = additive_expr (comparison_op additive_expr)?
+comparison_op   = >= | <= | != | = | > | < | contains | startswith | endswith | matches | before | after | during | has_role
+additive_expr   = multiplicative_expr ((+|-) multiplicative_expr)*
+multiplicative_expr = unary_expr ((*|/) unary_expr)*
+unary_expr      = "-" unary_expr | primary_expr
+primary_expr    = (expression) | group_by_expr | member_access | aggregation_expr | quantified_expr | instance_reference | literal | identifier
 ```
 
-- Attribute maps do not preserve order.
-- Boolean values are lowercase.
+Additional forms:
 
-## Policies
+- **Quantifier**: `forall x in flows: (x.quantity > 0)` (the `in` keyword is case-insensitive).
+- **Aggregation**: `sum(f in flows where f.resource = "Money": f.quantity as "USD")`.
+- **Group by**: `group_by(f in flows: f.to) { sum(f.quantity) > 10 }`.
+- **Member access**: `flow.quantity`, `entity.name`.
+- **Literals**: strings, multiline strings, numbers, booleans, quantities (`100 "USD"`), time literals (`"2025-12-31T23:59:59Z"`), interval literals (`interval("09:00","17:00")`).
 
-Policies define logical assertions over graph elements.
+## Validation highlights
 
-```
-policy_decl = { "Policy" ~ quoted ~ "as:" ~ policy_expr }
-```
+- Duplicate declarations in the same namespace are rejected.
+- Unknown references (entities, resources, roles, units) fail validation.
+- Unit conversions must align with declared dimensions.
+- ConceptChange annotations must include valid semantic versions.
+- Policies and metrics use three-valued logic; undefined data may yield `Unknown`.
 
-### Expressions
+## Workflow for grammar changes
 
-Core expression forms include comparisons, logical connectives, quantifiers, and arithmetic. The Pest grammar encodes precedence; high level:
-
-- Literals: numbers, strings, booleans
-- Accessors: `f.quantity`, `e.name`
-- Comparators: `=`, `!=`, `<`, `<=`, `>`, `>=`, `matches`
-- Logical: `and`, `or`, `not`
-- Quantifiers: `forall`, `exists`
-
-Example policy:
-
-```
-Policy payment_threshold as:
-  forall f in flows where f.resource = "Money":
-    f.quantity <= 10000 "USD"
-```
-
-### Quantifiers
-
-```
-quantifier = { ("forall" | "exists") ~ ident ~ "in" ~ collection ~ ["where" ~ predicate] ~ ":" ~ policy_expr }
-collection = { "entities" | "resources" | "flows" | "instances" }
-ident = { (LETTER | "_") ~ (LETTER | NUMBER | "_")* }
-```
-
-- The `where` clause filters before evaluating the body.
-- Bodies may nest quantifiers.
-
-### Matches operator
-
-`matches` performs regex matching using Rust’s `regex` crate semantics.
-
-```
-predicate = { value ~ "matches" ~ quoted }
-```
-
-- Patterns are anchored by default if you include `^`/`$`; otherwise substring matches are allowed.
-- Invalid regex patterns surface as validation errors.
-
-## Errors and validation
-
-Syntactically valid files may still fail semantic validation. Common checks:
-
-- **Undefined references**: flows referencing unknown resources or entities; relations referencing unknown roles.
-- **Duplicate IDs**: entities/resources/roles with the same name in a namespace.
-- **Unit mismatches**: quantities expressed with units incompatible with the resource dimension.
-- **Cardinality**: policies referencing empty collections when `forall` expects at least one element may evaluate to `Unknown` in three-valued mode.
-
-Refer to [`../reference/error-codes.md`](./error-codes.md) for the exhaustive error catalog.
-
-## Projections
-
-The parser output feeds multiple projections:
-
-- **Graph store**: internal representation used by validators and evaluators.
-- **CALM export/import**: ensures bidirectional mapping of roles, relations, and units (see `calm-mapping.md`).
-- **RDF/Turtle**: mapping to triples in `sea-core/src/kg.rs`.
-- **SBVR**: fact types emitted for roles/relations.
-
-## Extending the grammar
-
-To add new constructs:
-
-1. Update `sea-core/grammar/sea.pest` with the new rule.
-2. Extend the AST types and parser in `sea-core/src/parser/`.
-3. Add semantic validation and projections.
-4. Update this document with the new rule, examples, and edge cases.
-
-See the how-to in `docs/new_docs/how-tos/extend-grammar.md` for a guided walkthrough.
-
-## See also
-
-- [`primitives-api.md`](./primitives-api.md) for data structures produced by parsing.
-- [`../how-tos/parse-sea-files.md`](../how-tos/parse-sea-files.md) for CLI and language-specific parsing examples.
-- [`error-codes.md`](./error-codes.md) for validation failures.
-- [`../explanations/semantic-modeling-concepts.md`](../explanations/semantic-modeling-concepts.md) for modeling guidance.
+1. Update `sea-core/grammar/sea.pest`.
+2. Update AST and parser in `sea-core/src/parser/`.
+3. Add parser tests in `sea-core/tests/parser_*.rs`.
+4. Update projections (CALM/KG) if affected.
+5. Refresh this document and relevant examples.

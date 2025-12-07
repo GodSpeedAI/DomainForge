@@ -251,7 +251,7 @@ aggregate_fn = {
 // Syntax: forall x in Collection: (condition)
 // Syntax: exists x in Collection: (condition)
 quantified_expr = {
-    quantifier ~ identifier ~ "in" ~ collection ~ ":" ~ "(" ~ expression ~ ")"
+    quantifier ~ identifier ~ ^"in" ~ collection ~ ":" ~ "(" ~ expression ~ ")"
 }
 
 quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }

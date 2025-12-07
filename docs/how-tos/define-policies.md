@@ -14,8 +14,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 
    ```sea
    Policy payment_threshold as:
-     forall f in flows where f.resource = "Money":
-       f.quantity <= 10000 "USD"
+     forall f in flows: (f.resource = "Money" and f.quantity <= 10000 "USD")
    ```
 
    - Use comprehensions (`forall`, `exists`) and comparisons (`=`, `<=`, `matches`).
@@ -33,8 +32,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
      via: flow "Money"
 
    Policy payer_must_exist as:
-     forall r in relations where r.name = "Payment":
-       exists role in roles where role.id = r.subject_role_id
+     forall r in relations: (r.name = "Payment" and r.subject = "Payer")
    ```
 
 3. **Validate the policy with the CLI**
@@ -88,8 +86,8 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 ## Expression Basics
 
 - **Boolean logic**: `and`, `or`, `not` with standard precedence; wrap complex conditions in parentheses.
-- **Comparisons**: `=`, `!=`, `<`, `<=`, `>`, `>=`, `matches` (regex-like), `in` (membership over collections).
-- **Quantifiers**: `forall <var> in <collection> where <predicate>: <body>` and `exists ...`.
+- **Comparisons**: `=`, `!=`, `<`, `<=`, `>`, `>=`, `matches` (regex-like), `contains`, `startswith`, `endswith`.
+- **Quantifiers**: `forall <var> in <collection>: (<predicate>)` and `exists ...`.
 - **Three-valued logic**: `Unknown` propagates when operands lack data; enable it when modeling incomplete datasets.
 
 ## Best Practices

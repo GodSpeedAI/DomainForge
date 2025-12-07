@@ -11,10 +11,7 @@ DomainForge uses a specific set of primitives to model enterprise architecture. 
 **Examples**: `Customer`, `PaymentService`, `InventorySystem`.
 
 ```sea
-entity PaymentService {
-    type = "service"
-    layer = "backend"
-}
+Entity "PaymentService"
 ```
 
 ### 2. Resource
@@ -24,10 +21,7 @@ entity PaymentService {
 **Examples**: `UserDatabase`, `OrderQueue`, `S3Bucket`.
 
 ```sea
-resource UserDatabase {
-    type = "database"
-    engine = "postgres"
-}
+Resource "UserDatabase" units
 ```
 
 ### 3. Flow
@@ -37,11 +31,7 @@ resource UserDatabase {
 **Key Attribute**: Flows are strictly typed (e.g., `read`, `write`, `trigger`).
 
 ```sea
-flow process_payment {
-    from = PaymentService
-    to = UserDatabase
-    interaction = "write"
-}
+Flow "Payment" from "PaymentService" to "UserDatabase" quantity 1
 ```
 
 ### 4. Instance
@@ -50,10 +40,9 @@ flow process_payment {
 **When to use**: Use Instances to model physical deployments (e.g., "Production Payment Service" vs "Staging Payment Service").
 
 ```sea
-instance prod_payment_db {
-    of = UserDatabase
-    env = "production"
-    region = "us-east-1"
+Instance prod_payment_db of "UserDatabase" {
+    env: "production",
+    region: "us-east-1"
 }
 ```
 
@@ -63,11 +52,8 @@ instance prod_payment_db {
 **When to use**: Use Policies to enforce security, compliance, or architectural standards.
 
 ```sea
-policy secure_writes {
-    enforce: forall f in Flow {
-        if f.interaction == "write" then f.from.layer == "backend"
-    }
-}
+Policy secure_writes as:
+    forall f in flows: (f.to = "UserDatabase" and f.quantity >= 1)
 ```
 
 ## Modeling Patterns

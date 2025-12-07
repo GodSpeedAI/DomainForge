@@ -33,8 +33,14 @@ fn test_pretty_print_ast() {
     let printer = PrettyPrinter::new();
     let output = printer.print(&ast);
 
-    assert!(output.contains("namespace test_ns"));
-    assert!(output.contains("Entity \"Factory\""));
-    assert!(output.contains("Resource \"Widget\" (units)"));
-    assert!(output.contains("Flow \"Widget\" from \"Warehouse\" to \"Factory\" quantity 100"));
+    let expected = r#"@namespace "test_ns"
+
+Entity "Factory"
+
+Resource "Widget" units
+
+Flow "Widget" from "Warehouse" to "Factory" quantity 100
+"#;
+
+    assert_eq!(output, expected);
 }
