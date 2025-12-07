@@ -35,22 +35,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry/index
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          prefix-key: ${{ env.CACHE_VERSION }}-lint
 
       - name: Run rustfmt
         run: cargo fmt --all --check
@@ -84,17 +72,11 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          prefix-key: ${{ env.CACHE_VERSION }}-test
+          shared-key: ${{ matrix.os }}
 
       - name: Run unit tests
         run: just ci-test-rust
@@ -150,18 +132,17 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache dependencies
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ env.CACHE_VERSION }}-python
+          shared-key: py${{ matrix.python-version }}
+
+      - name: Cache Python venv
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-            .venv
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock', 'requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
+          path: .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-venv-${{ hashFiles('requirements*.txt') }}
 
       - name: Setup Python environment
         run: just python-setup
@@ -189,15 +170,11 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry/index
-            sea-core/target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock', 'package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-
+          prefix-key: ${{ env.CACHE_VERSION }}-ts
+          workspaces: sea-core
 
       - name: Install dependencies
         run: npm ci
@@ -218,6 +195,11 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ env.CACHE_VERSION }}-integration
 
       - name: Install Node
         uses: actions/setup-node@v4
@@ -285,26 +267,30 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache dependencies
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ env.CACHE_VERSION }}-wasm
+
+      - name: Cache WASM tools
         uses: actions/cache@v4
+        id: wasm-tools-cache
         with:
           path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
+            ~/.cargo/bin/wasm-pack
+            /usr/local/bin/wasm-opt
+          key: wasm-tools-v1-wasm-pack-0.13-binaryen-117
 
       - name: Install wasm-pack
+        if: steps.wasm-tools-cache.outputs.cache-hit != 'true'
         run: cargo install wasm-pack --locked
 
       - name: Install wasm-opt (binaryen) for optimization
+        if: steps.wasm-tools-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           echo "Downloading wasm-opt..."
-          wget https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
+          wget -q https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
           tar -xzf binaryen-version_117-x86_64-linux.tar.gz
           sudo cp binaryen-version_117/bin/wasm-opt /usr/local/bin/
           wasm-opt --version
