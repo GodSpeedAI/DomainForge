@@ -34,6 +34,7 @@ napi = { version = "2.16", features = ["async", "dyn-symbols"], optional = true 
 napi-derive = { version = "2.16", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
+lol_alloc = { version = "0.4", optional = true }
 percent-encoding = "2.3.2"
 roxmltree = "0.21.1"
 oxigraph = { version = "0.3", optional = true }
@@ -71,7 +72,7 @@ crate-type = ["rlib", "cdylib"]
 default = []
 python = ["pyo3", "pythonize"]
 typescript = ["napi", "napi-derive"]
-wasm = ["wasm-bindgen", "serde-wasm-bindgen", "uuid/js"]
+wasm = ["wasm-bindgen", "serde-wasm-bindgen", "uuid/js", "lol_alloc"]
 shacl = ["oxigraph"]
 formatting = ["icu_decimal", "icu_locid", "fixed_decimal"]
 cli = ["three_valued_logic", "clap", "colored", "formatting"]
