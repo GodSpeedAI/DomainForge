@@ -9,6 +9,8 @@ use crate::ConceptId;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+pub mod to_ast;
+
 /// Configuration for graph evaluation behavior
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphConfig {

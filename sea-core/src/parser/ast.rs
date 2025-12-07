@@ -25,6 +25,7 @@ pub struct FileMetadata {
     pub namespace: Option<String>,
     pub version: Option<String>,
     pub owner: Option<String>,
+    pub profile: Option<String>,
     pub imports: Vec<ImportDecl>,
 }
 
@@ -284,6 +285,7 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
                     "namespace" => metadata.namespace = Some(value_str),
                     "version" => metadata.version = Some(value_str),
                     "owner" => metadata.owner = Some(value_str),
+                    "profile" => metadata.profile = Some(value_str),
                     _ => {
                         return Err(ParseError::GrammarError(format!(
                             "Unknown annotation: {}",
@@ -961,6 +963,7 @@ fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
         Rule::additive_expr => parse_additive_expr(pair),
         Rule::multiplicative_expr => parse_multiplicative_expr(pair),
         Rule::unary_expr => parse_unary_expr(pair),
+        Rule::cast_expr => parse_cast_expr(pair),
         Rule::primary_expr => parse_primary_expr(pair),
         _ => Err(ParseError::InvalidExpression(format!(
             "Unexpected expression rule: {:?}",
@@ -1154,6 +1157,24 @@ fn parse_multiplicative_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     }
 
     Ok(left)
+}
+
+/// Parse cast expression
+fn parse_cast_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let mut inner = pair.into_inner();
+    let primary = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected primary expression in cast".to_string())
+    })?)?;
+
+    if let Some(as_pair) = inner.next() {
+        let target_type = parse_string_literal(as_pair)?;
+        Ok(Expression::Cast {
+            operand: Box::new(primary),
+            target_type,
+        })
+    } else {
+        Ok(primary)
+    }
 }
 
 /// Parse unary expression
@@ -1709,6 +1730,7 @@ fn expression_kind(expr: &Expression) -> &'static str {
         Expression::GroupBy { .. } => "group_by",
         Expression::Binary { .. } => "binary",
         Expression::Unary { .. } => "unary",
+        Expression::Cast { .. } => "cast",
         Expression::Quantifier { .. } => "quantifier",
         Expression::MemberAccess { .. } => "member_access",
         Expression::Aggregation { .. } => "aggregation",
@@ -1986,6 +2008,18 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
 }
 
 pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
+    // Validate profile if specified
+    if let Some(profile_name) = &ast.metadata.profile {
+        use crate::parser::profiles::ProfileRegistry;
+        let registry = ProfileRegistry::global();
+        if registry.get(profile_name).is_none() {
+            return Err(ParseError::Validation(format!(
+                "Unknown profile: '{}'. Available profiles: default, cloud, data",
+                profile_name
+            )));
+        }
+    }
+
     let mut graph = Graph::new();
     let mut entity_map = HashMap::new();
     let mut role_map = HashMap::new();
@@ -2023,9 +2057,12 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
                     *factor,
                     base_unit.clone(),
                 );
-                UnitRegistry::global().register(unit).map_err(|e| {
-                    ParseError::GrammarError(format!("Failed to register unit: {}", e))
-                })?;
+                let registry = UnitRegistry::global();
+                if registry.get_unit(&symbol).is_err() {
+                    registry.register(unit).map_err(|e| {
+                        ParseError::GrammarError(format!("Failed to register unit: {}", e))
+                    })?;
+                }
             }
             _ => {}
         }

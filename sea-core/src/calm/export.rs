@@ -330,6 +330,16 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
             format!("interval(\"{}\", \"{}\")", start, end)
         }
         Expression::Variable(s) => s.to_string(),
+        Expression::Cast {
+            operand,
+            target_type,
+        } => {
+            format!(
+                "{} as \"{}\"",
+                serialize_expression_for_export(operand),
+                target_type
+            )
+        }
         Expression::Binary { op, left, right } => {
             let op_str = match op {
                 BinaryOp::And => "and",

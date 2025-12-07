@@ -149,6 +149,14 @@ impl From<WalkError> for RegistryError {
 }
 
 impl NamespaceRegistry {
+    pub fn new_empty(root: PathBuf) -> Self {
+        Self {
+            root,
+            default_namespace: "default".to_string(),
+            entries: Vec::new(),
+        }
+    }
+
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, RegistryError> {
         let registry_path = path.as_ref();
         let contents = fs::read_to_string(registry_path)?;

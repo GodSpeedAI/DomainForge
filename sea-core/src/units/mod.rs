@@ -423,13 +423,15 @@ impl UnitRegistry {
     }
 }
 
-static DEFAULT_UNIT_REGISTRY: OnceLock<UnitRegistry> = OnceLock::new();
+pub fn get_default_registry() -> &'static UnitRegistry {
+    UnitRegistry::global()
+}
 
 /// Helper function to get a Unit from a string symbol, using the default registry
 /// Returns a Count-based unit if the symbol is not found
 pub fn unit_from_string(symbol: impl Into<String>) -> Unit {
     let symbol = symbol.into();
-    let registry = DEFAULT_UNIT_REGISTRY.get_or_init(UnitRegistry::default);
+    let registry = UnitRegistry::global();
 
     registry.get_unit(&symbol).cloned().unwrap_or_else(|_| {
         // Default to Count dimension for unknown units

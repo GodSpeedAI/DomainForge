@@ -45,6 +45,11 @@ pub enum Expression {
         operand: Box<Expression>,
     },
 
+    Cast {
+        operand: Box<Expression>,
+        target_type: String,
+    },
+
     Quantifier {
         quantifier: Quantifier,
         variable: String,
@@ -239,6 +244,12 @@ impl fmt::Display for Expression {
             }
             Expression::Unary { op, operand } => {
                 write!(f, "{} {}", op, operand)
+            }
+            Expression::Cast {
+                operand,
+                target_type,
+            } => {
+                write!(f, "{} as \"{}\"", operand, target_type)
             }
             Expression::Quantifier {
                 quantifier,

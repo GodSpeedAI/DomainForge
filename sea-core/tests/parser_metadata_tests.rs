@@ -18,6 +18,7 @@ fn test_parse_full_header() {
             namespace: Some("com.acme.finance".to_string()),
             version: Some("2.2.0".to_string()),
             owner: Some("team-payments".to_string()),
+            profile: None,
             imports: Vec::new(),
         }
     );
@@ -35,6 +36,7 @@ fn test_parse_partial_header() {
             namespace: Some("com.acme.logistics".to_string()),
             version: None,
             owner: None,
+            profile: None,
             imports: Vec::new(),
         }
     );

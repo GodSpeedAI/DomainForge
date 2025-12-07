@@ -2,7 +2,9 @@ use super::expression::{BinaryOp, Expression, UnaryOp};
 use super::violation::{Severity, Violation};
 use crate::graph::Graph;
 use crate::policy::ThreeValuedBool;
+use crate::units::{get_default_registry, unit_from_string};
 use crate::{ConceptId, SemanticVersion};
+use rust_decimal::prelude::FromStr;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -260,6 +262,11 @@ impl Policy {
             Expression::Variable(name) => {
                 Err(format!("Cannot evaluate unexpanded variable: {}", name))
             }
+            Expression::Cast { .. } => {
+                let val = self.get_runtime_value(expr, graph)?;
+                val.as_bool()
+                    .ok_or_else(|| format!("Expected boolean from cast, got: {}", val))
+            }
             Expression::Binary { op, left, right } => match op {
                 BinaryOp::And | BinaryOp::Or => {
                     let left_val = self.evaluate_expression_boolean(left, graph)?;
@@ -379,6 +386,10 @@ impl Policy {
         match expr {
             Expression::Literal(v) => Ok(T::from_option_bool(v.as_bool())),
             Expression::Variable(name) => Err(format!("Cannot evaluate unexpanded variable: {}", name)),
+            Expression::Cast { .. } => {
+                let val = self.get_runtime_value(expr, graph)?;
+                Ok(T::from_option_bool(val.as_bool()))
+            }
             Expression::Binary { op, left, right } => match op {
                 BinaryOp::And | BinaryOp::Or => {
                     let l = self.evaluate_expression_three_valued(left, graph)?;
@@ -398,9 +409,34 @@ impl Policy {
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
                             } else {
+                                let are_equal = if let (Some(l_obj), Some(r_obj)) =
+                                    (lv.as_object(), rv.as_object())
+                                {
+                                    if let (Some(l_val), Some(l_unit), Some(r_val), Some(r_unit)) = (
+                                        l_obj.get("__quantity_value").and_then(|v| v.as_str()),
+                                        l_obj.get("__quantity_unit").and_then(|v| v.as_str()),
+                                        r_obj.get("__quantity_value").and_then(|v| v.as_str()),
+                                        r_obj.get("__quantity_unit").and_then(|v| v.as_str()),
+                                    ) {
+                                        if l_unit == r_unit {
+                                            let l_dec = rust_decimal::Decimal::from_str(l_val)
+                                                .unwrap_or_default();
+                                            let r_dec = rust_decimal::Decimal::from_str(r_val)
+                                                .unwrap_or_default();
+                                            l_dec == r_dec
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        lv == rv
+                                    }
+                                } else {
+                                    lv == rv
+                                };
+
                                 let eq = match op {
-                                    BinaryOp::Equal => lv == rv,
-                                    BinaryOp::NotEqual => lv != rv,
+                                    BinaryOp::Equal => are_equal,
+                                    BinaryOp::NotEqual => !are_equal,
                                     _ => unreachable!(),
                                 };
                                 Ok(T::from_option_bool(Some(eq)))
@@ -420,17 +456,44 @@ impl Policy {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
-                            } else if let (Some(l), Some(r)) = (lv.as_f64(), rv.as_f64()) {
-                                let res = match op {
-                                    BinaryOp::GreaterThan => l > r,
-                                    BinaryOp::LessThan => l < r,
-                                    BinaryOp::GreaterThanOrEqual => l >= r,
-                                    BinaryOp::LessThanOrEqual => l <= r,
-                                    _ => unreachable!(),
-                                };
-                                Ok(T::from_option_bool(Some(res)))
                             } else {
-                                Ok(T::Null)
+                                let l_opt = lv
+                                    .as_f64()
+                                    .or_else(|| lv.as_i64().map(|i| i as f64))
+                                    .or_else(|| {
+                                        if let Some(obj) = lv.as_object() {
+                                            obj.get("__quantity_value")
+                                                .and_then(|v| v.as_str())
+                                                .and_then(|s| s.parse::<f64>().ok())
+                                        } else {
+                                            None
+                                        }
+                                    });
+                                let r_opt = rv
+                                    .as_f64()
+                                    .or_else(|| rv.as_i64().map(|i| i as f64))
+                                    .or_else(|| {
+                                        if let Some(obj) = rv.as_object() {
+                                            obj.get("__quantity_value")
+                                                .and_then(|v| v.as_str())
+                                                .and_then(|s| s.parse::<f64>().ok())
+                                        } else {
+                                            None
+                                        }
+                                    });
+
+                                if let (Some(l), Some(r)) = (l_opt, r_opt) {
+                                    let res = match op {
+                                        BinaryOp::GreaterThan => l > r,
+                                        BinaryOp::LessThan => l < r,
+                                        BinaryOp::GreaterThanOrEqual => l >= r,
+                                        BinaryOp::LessThanOrEqual => l <= r,
+                                        _ => unreachable!(),
+                                    };
+                                    Ok(T::from_option_bool(Some(res)))
+                                } else {
+                                    Ok(T::Null)
+                                }
                             }
                         }
                         _ => Ok(T::Null),
@@ -735,7 +798,15 @@ impl Policy {
             .or_else(|_| self.get_runtime_value(expr, graph))?;
         v.as_f64()
             .or_else(|| v.as_i64().map(|i| i as f64))
-            .ok_or_else(|| "Expected numeric value".to_string())
+            .or_else(|| {
+                if let Some(obj) = v.as_object() {
+                    if let Some(val_str) = obj.get("__quantity_value").and_then(|v| v.as_str()) {
+                        return val_str.parse::<f64>().ok();
+                    }
+                }
+                None
+            })
+            .ok_or_else(|| format!("Expected numeric value, got: {}", v))
     }
 
     fn get_string_value(&self, expr: &Expression, graph: &Graph) -> Result<String, String> {
@@ -873,6 +944,46 @@ impl Policy {
                     graph,
                 )?;
                 Ok(v)
+            }
+            Expression::Cast {
+                operand,
+                target_type,
+            } => {
+                let val = self.get_runtime_value(operand, graph)?;
+
+                if let Some(obj) = val.as_object() {
+                    if let (Some(q_val), Some(q_unit)) =
+                        (obj.get("__quantity_value"), obj.get("__quantity_unit"))
+                    {
+                        let value_str = q_val.as_str().unwrap_or("0");
+                        let unit_str = q_unit.as_str().unwrap_or("");
+
+                        let value_dec = rust_decimal::Decimal::from_str(value_str)
+                            .map_err(|e| format!("Invalid decimal in quantity: {}", e))?;
+
+                        let from_unit = unit_from_string(unit_str);
+                        let to_unit = unit_from_string(target_type);
+
+                        let registry = get_default_registry();
+                        let converted = registry
+                            .convert(value_dec, &from_unit, &to_unit)
+                            .map_err(|e| format!("Unit conversion failed: {:?}", e))?;
+
+                        return Ok(serde_json::json!({
+                            "__quantity_value": converted.to_string(),
+                            "__quantity_unit": target_type
+                        }));
+                    }
+                }
+
+                if let Some(num) = val.as_f64() {
+                    return Ok(serde_json::json!({
+                        "__quantity_value": num.to_string(),
+                        "__quantity_unit": target_type
+                    }));
+                }
+
+                Err(format!("Cannot cast value {} to {}", val, target_type))
             }
             Expression::QuantityLiteral { value, unit } => Ok(
                 serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit}),

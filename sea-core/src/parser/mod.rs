@@ -8,6 +8,7 @@ pub struct SeaParser;
 
 pub mod ast;
 pub mod error;
+pub mod profiles;
 pub mod lint;
 pub mod printer;
 pub mod string_utils;

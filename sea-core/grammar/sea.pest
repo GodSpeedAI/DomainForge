@@ -26,7 +26,7 @@ annotation = {
 }
 
 annotation_name = {
-    ^"namespace" | ^"version" | ^"owner"
+    ^"namespace" | ^"version" | ^"owner" | ^"profile"
 }
 
 // Declarations
@@ -203,7 +203,9 @@ multiplicative_expr = { unary_expr ~ ((mul_op ~ unary_expr)*) }
 
 mul_op = { "*" | "/" }
 
-unary_expr = { ("-" ~ unary_expr) | primary_expr }
+unary_expr = { ("-" ~ unary_expr) | cast_expr }
+
+cast_expr = { primary_expr ~ (^"as" ~ string_literal)? }
 
 primary_expr = {
     "(" ~ expression ~ ")" |
