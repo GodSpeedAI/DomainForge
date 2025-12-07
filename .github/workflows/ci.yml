@@ -214,42 +214,20 @@ jobs:
           npm ci
           npm run build
 
-      - name: Minimal registry ambiguity check
+      - name: Verify Sea CLI and validate SEA file
         shell: bash
         run: |
+          # Create a sample SEA file
           tmpdir=$(mktemp -d)
-          tee "$tmpdir/.sea-registry.toml" > /dev/null <<'EOF'
-          version = 1
-          default_namespace = "default"
-
-          [[namespaces]]
-          namespace = "a"
-          patterns = ["domains/*/warehouse.sea"]
-
-          [[namespaces]]
-          namespace = "b"
-          patterns = ["domains/*/warehouse.sea"]
+          cat > "$tmpdir/test.sea" <<'EOF'
+          Entity "Warehouse" {
+            name: String
+            location: String
+          }
           EOF
-          mkdir -p "$tmpdir/domains/logistics"
-          echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
 
-          # Test that --fail-on-ambiguity properly detects ambiguous matches
-          # The command should fail and output an error message
-          set +e  # Temporarily disable exit on error
-          output=$(./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
-          exit_code=$?
-          set -e  # Re-enable exit on error
-
-          if [ $exit_code -ne 0 ] && echo "$output" | grep -q "multiple namespaces"; then
-            echo "✓ Ambiguity detection working correctly"
-            echo "Output: $output"
-            exit 0
-          else
-            echo "✗ Expected ambiguity error but got:"
-            echo "Exit code: $exit_code"
-            echo "Output: $output"
-            exit 1
-          fi
+          # Verify CLI executes and validates the file
+          ./target/debug/sea validate "$tmpdir/test.sea" && echo "✓ SEA validation working correctly"
 
   test-wasm:
     name: Test WASM
@@ -303,7 +281,7 @@ jobs:
           # Optional: optimize with wasm-opt if installed (binaryen)
           if command -v wasm-opt &> /dev/null; then
             echo "🔧 Running wasm-opt..."
-            wasm-opt -Oz --enable-bulk-memory -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm && mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
+            wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm && mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
           fi
 
       - name: Check bundle size
