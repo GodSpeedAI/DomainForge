@@ -1,3 +1,4 @@
+#![cfg(not(target_arch = "wasm32"))]
 use sea_core::registry::NamespaceRegistry;
 use std::fs;
 use tempfile::tempdir;

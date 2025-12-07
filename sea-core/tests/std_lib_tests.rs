@@ -1,3 +1,4 @@
+#![cfg(not(target_arch = "wasm32"))]
 use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
 use sea_core::registry::NamespaceRegistry;
 use std::io::Write;

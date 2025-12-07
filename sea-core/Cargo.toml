@@ -34,7 +34,6 @@ napi = { version = "2.16", features = ["async", "dyn-symbols"], optional = true 
 napi-derive = { version = "2.16", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
-wee_alloc = { version = "0.4.5", optional = true }
 percent-encoding = "2.3.2"
 roxmltree = "0.21.1"
 oxigraph = { version = "0.3", optional = true }
@@ -47,11 +46,13 @@ anyhow = "1.0.100"
 getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [dev-dependencies]
-proptest = "1.0"
+proptest = { version = "1.0", default-features = false, features = ["std", "bit-set"] }
 wasm-bindgen-test = "0.3"
-jsonschema = "0.18"
+jsonschema = { version = "0.18", default-features = false }
 roxmltree = "0.21.1"
 rust_decimal_macros = "1.33"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tempfile = "3.12"
 assert_cmd = "2.0"
 predicates = "3"
@@ -70,7 +71,7 @@ crate-type = ["rlib", "cdylib"]
 default = []
 python = ["pyo3", "pythonize"]
 typescript = ["napi", "napi-derive"]
-wasm = ["wasm-bindgen", "serde-wasm-bindgen", "uuid/js", "wee_alloc"]
+wasm = ["wasm-bindgen", "serde-wasm-bindgen", "uuid/js"]
 shacl = ["oxigraph"]
 formatting = ["icu_decimal", "icu_locid", "fixed_decimal"]
 cli = ["three_valued_logic", "clap", "colored", "formatting"]
