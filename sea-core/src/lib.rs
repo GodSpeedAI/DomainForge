@@ -31,7 +31,8 @@ pub const VERSION: &str = "0.1.0";
 // `lol_alloc` is a small global allocator suitable for WASM, replacing the unmaintained `wee_alloc`.
 #[cfg(feature = "lol_alloc")]
 #[global_allocator]
-static ALLOC: lol_alloc::LockedAllocator<lol_alloc::FreeListAllocator> = lol_alloc::LockedAllocator::new(lol_alloc::FreeListAllocator::new());
+static ALLOC: lol_alloc::LockedAllocator<lol_alloc::FreeListAllocator> =
+    lol_alloc::LockedAllocator::new(lol_alloc::FreeListAllocator::new());
 
 pub mod calm;
 pub mod concept_id;
