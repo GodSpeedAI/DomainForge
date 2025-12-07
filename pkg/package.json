@@ -1,46 +1,25 @@
 {
   "name": "@domainforge/sea-wasm",
+  "type": "module",
+  "collaborators": [
+    "DomainForge Contributors"
+  ],
+  "description": "Rust core library implementing the SEA DSL primitives and validation engine.",
   "version": "0.1.0",
-  "description": "SEA DSL WebAssembly bindings for browser and edge runtime",
-  "license": "MIT",
-  "author": "DomainForge Team",
+  "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GodSpeedAI/domainforge.git"
-  },
-  "bugs": {
-    "url": "https://github.com/GodSpeedAI/domainforge/issues"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  },
-  "main": "index.js",
-  "types": "sea_core.d.ts",
-  "exports": {
-    ".": {
-      "import": "./index.js",
-      "require": "./index.js",
-      "browser": "./index.js"
-    }
+    "url": "https://github.com/GodSpeedAI/DomainForge"
   },
   "files": [
     "sea_core_bg.wasm",
     "sea_core.js",
-    "sea_core.d.ts",
-    "index.js",
-    "README.md"
+    "sea_core.d.ts"
   ],
+  "main": "sea_core.js",
+  "homepage": "https://github.com/GodSpeedAI/DomainForge",
+  "types": "sea_core.d.ts",
   "sideEffects": [
-    "./index.js"
-  ],
-  "keywords": [
-    "wasm",
-    "webassembly",
-    "dsl",
-    "domain-modeling",
-    "sea",
-    "domainforge",
-    "browser",
-    "edge"
+    "./snippets/*"
   ]
 }
