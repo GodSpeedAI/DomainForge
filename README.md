@@ -108,7 +108,7 @@ python -c "import sea_dsl; print(sea_dsl.__version__)"
 python examples/camera_factory.py
 ```
 
-> 💡 **Note:** Pre-built packages (PyPI/npm) coming soon. Currently build from source.
+> 💡 **Note:** Pre-built packages are available — install via registries or build from source if you prefer.
 
 ### Support Matrix & Tests
 
@@ -121,7 +121,7 @@ python examples/camera_factory.py
 
 - Source build: supported today for Rust/Python/TypeScript/WASM.
 - CI workflows: GitHub Actions (`.github/workflows/ci.yml`, `release.yml`, `publish-python.yml`) build/test/package when secrets (PyPI/npm/crates.io) are configured.
-- Upcoming: tagged releases will publish CLI binaries, wheels, npm package, and wasm-pack output once tokens are added.
+- Tagged releases publish CLI binaries, wheels, npm package, and wasm-pack output per release.
 
 ---
 
@@ -757,7 +757,7 @@ cargo add sea-core --path ./sea-core
 # Output in pkg/ directory
 ```
 
-**Note**: Pre-built packages for PyPI and npm are not yet published. Build from source as shown above.
+**Note**: Pre-built packages are available from PyPI and npm — see the package registries for the latest installation instructions.
 
 ### ✅ Verify Installation
 
