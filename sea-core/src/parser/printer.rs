@@ -6,6 +6,7 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::fmt::Write;
 
+#[derive(Copy, Clone)]
 enum ObjectStyle {
     ColonSeparated,
     ArrowSeparated,
@@ -98,7 +99,11 @@ impl PrettyPrinter {
             }
             ImportSpecifier::Wildcard(alias) => format!("* as {}", alias),
         };
-        format!("Import {} from {}", specifier, self.quote(&import.from_module))
+        format!(
+            "Import {} from {}",
+            specifier,
+            self.quote(&import.from_module)
+        )
     }
 
     fn render_import_item(&self, item: &ImportItem) -> String {
@@ -173,9 +178,11 @@ impl PrettyPrinter {
                 expression,
                 metadata,
             } => self.format_metric(name, expression, metadata),
-            AstNode::MappingDecl { name, target, rules } => {
-                self.format_mapping(name, target, rules)
-            }
+            AstNode::MappingDecl {
+                name,
+                target,
+                rules,
+            } => self.format_mapping(name, target, rules),
             AstNode::ProjectionDecl {
                 name,
                 target,
@@ -241,12 +248,7 @@ impl PrettyPrinter {
         }
     }
 
-    fn format_resource(
-        &self,
-        name: &str,
-        unit: Option<&str>,
-        domain: Option<&str>,
-    ) -> String {
+    fn format_resource(&self, name: &str, unit: Option<&str>, domain: Option<&str>) -> String {
         match (unit, domain) {
             (Some(unit), Some(ns)) => {
                 format!("Resource {} {} in {}", self.quote(name), unit, ns)
@@ -257,13 +259,7 @@ impl PrettyPrinter {
         }
     }
 
-    fn format_flow(
-        &self,
-        resource: &str,
-        from: &str,
-        to: &str,
-        quantity: Option<i32>,
-    ) -> String {
+    fn format_flow(&self, resource: &str, from: &str, to: &str, quantity: Option<i32>) -> String {
         let mut line = format!(
             "Flow {} from {} to {}",
             self.quote(resource),
@@ -277,11 +273,7 @@ impl PrettyPrinter {
     }
 
     fn format_pattern(&self, name: &str, regex: &str) -> String {
-        format!(
-            "Pattern {} matches {}",
-            self.quote(name),
-            self.quote(regex)
-        )
+        format!("Pattern {} matches {}", self.quote(name), self.quote(regex))
     }
 
     fn format_role(&self, name: &str, domain: &Option<String>) -> String {
@@ -301,7 +293,11 @@ impl PrettyPrinter {
     ) -> String {
         let mut lines = Vec::new();
         lines.push(format!("Relation {}", self.quote(name)));
-        lines.push(format!("{}subject: {}", self.indent(1), self.quote(subject)));
+        lines.push(format!(
+            "{}subject: {}",
+            self.indent(1),
+            self.quote(subject)
+        ));
         lines.push(format!(
             "{}predicate: {}",
             self.indent(1),
@@ -309,11 +305,7 @@ impl PrettyPrinter {
         ));
         lines.push(format!("{}object: {}", self.indent(1), self.quote(object)));
         if let Some(flow) = via_flow {
-            lines.push(format!(
-                "{}via: flow {}",
-                self.indent(1),
-                self.quote(flow)
-            ));
+            lines.push(format!("{}via: flow {}", self.indent(1), self.quote(flow)));
         }
         lines.join("\n")
     }
@@ -343,10 +335,10 @@ impl PrettyPrinter {
     ) -> String {
         let mut header = format!("Policy {}", name);
         if let Some(kind) = &metadata.kind {
-            header.push_str(&format!(" per {}", format!("{kind:?}")));
+            header.push_str(&format!(" per {}", kind));
         }
         if let Some(modality) = &metadata.modality {
-            header.push_str(&format!(" {}", format!("{modality:?}")));
+            header.push_str(&format!(" {}", modality));
         }
         if let Some(priority) = metadata.priority {
             header.push_str(&format!(" priority {}", priority));
@@ -385,19 +377,24 @@ impl PrettyPrinter {
         }
 
         let mut lines = Vec::new();
-        lines.push(format!("Instance {} of {} {{", name, self.quote(entity_type)));
+        lines.push(format!(
+            "Instance {} of {} {{",
+            name,
+            self.quote(entity_type)
+        ));
 
         let mut entries: Vec<_> = fields.iter().collect();
         entries.sort_by(|a, b| a.0.cmp(b.0));
         for (idx, (field, value)) in entries.iter().enumerate() {
-            let suffix = if idx == entries.len() - 1 { "" } else { "," };
-            lines.push(format!(
-                "{}{}: {}{}",
-                self.indent(1),
-                field,
-                value,
-                suffix
-            ));
+            let is_last = idx == entries.len() - 1;
+            let suffix = if self.trailing_commas {
+                ","
+            } else if is_last {
+                ""
+            } else {
+                ","
+            };
+            lines.push(format!("{}{}: {}{}", self.indent(1), field, value, suffix));
         }
 
         lines.push("}".to_string());
@@ -414,11 +411,7 @@ impl PrettyPrinter {
     ) -> String {
         let mut lines = Vec::new();
         lines.push(format!("ConceptChange {}", self.quote(name)));
-        lines.push(format!(
-            "{}@from_version v{}",
-            self.indent(1),
-            from_version
-        ));
+        lines.push(format!("{}@from_version v{}", self.indent(1), from_version));
         lines.push(format!("{}@to_version v{}", self.indent(1), to_version));
         lines.push(format!(
             "{}@migration_policy {}",
@@ -499,7 +492,14 @@ impl PrettyPrinter {
             let mut fields: Vec<_> = rule.fields.iter().collect();
             fields.sort_by(|a, b| a.0.cmp(b.0));
             for (idx, (field, value)) in fields.iter().enumerate() {
-                let suffix = if idx == fields.len() - 1 { "" } else { "," };
+                let is_last = idx == fields.len() - 1;
+                let suffix = if self.trailing_commas {
+                    ","
+                } else if is_last {
+                    ""
+                } else {
+                    ","
+                };
                 field_lines.push(format!(
                     "{}{}: {}{}",
                     self.indent(2),
@@ -523,11 +523,7 @@ impl PrettyPrinter {
         overrides: &[ProjectionOverride],
     ) -> String {
         let mut lines = Vec::new();
-        lines.push(format!(
-            "Projection {} for {} {{",
-            self.quote(name),
-            target
-        ));
+        lines.push(format!("Projection {} for {} {{", self.quote(name), target));
 
         for override_entry in overrides {
             let mut override_lines = Vec::new();
@@ -541,7 +537,14 @@ impl PrettyPrinter {
             let mut fields: Vec<_> = override_entry.fields.iter().collect();
             fields.sort_by(|a, b| a.0.cmp(b.0));
             for (idx, (field, value)) in fields.iter().enumerate() {
-                let suffix = if idx == fields.len() - 1 { "" } else { "," };
+                let is_last = idx == fields.len() - 1;
+                let suffix = if self.trailing_commas {
+                    ","
+                } else if is_last {
+                    ""
+                } else {
+                    ","
+                };
                 override_lines.push(format!(
                     "{}{}: {}{}",
                     self.indent(2),
@@ -573,6 +576,10 @@ impl PrettyPrinter {
                             JsonValue::String(s) => self.quote(s),
                             JsonValue::Bool(b) => b.to_string(),
                             JsonValue::Number(n) => n.to_string(),
+                            JsonValue::Object(_) | JsonValue::Array(_) => {
+                                // Recursively format nested objects/arrays so they are rendered correctly
+                                self.format_mapping_value(v, object_style)
+                            }
                             _ => self.quote(&v.to_string()),
                         };
                         let separator = match object_style {
@@ -584,6 +591,14 @@ impl PrettyPrinter {
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("{{ {} }}", rendered)
+            }
+            JsonValue::Array(arr) => {
+                let items = arr
+                    .iter()
+                    .map(|v| self.format_mapping_value(v, object_style))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("[{}]", items)
             }
             _ => self.quote(&value.to_string()),
         }

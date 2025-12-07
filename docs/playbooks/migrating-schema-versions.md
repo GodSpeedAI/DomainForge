@@ -27,7 +27,7 @@ connection "c1" from "A" to "B"
 ```
 *New:*
 ```sea
-Flow "Data" from "A" to "B"
+flow "Data" from "A" to "B"
 ```
 
 ## Backward Compatibility

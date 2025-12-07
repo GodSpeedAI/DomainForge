@@ -64,11 +64,31 @@ pub enum PolicyKind {
     Obligation,
 }
 
+impl std::fmt::Display for PolicyKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PolicyKind::Constraint => write!(f, "Constraint"),
+            PolicyKind::Derivation => write!(f, "Derivation"),
+            PolicyKind::Obligation => write!(f, "Obligation"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolicyModality {
     Obligation,
     Prohibition,
     Permission,
+}
+
+impl std::fmt::Display for PolicyModality {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PolicyModality::Obligation => write!(f, "Obligation"),
+            PolicyModality::Prohibition => write!(f, "Prohibition"),
+            PolicyModality::Permission => write!(f, "Permission"),
+        }
+    }
 }
 
 /// Metric declaration AST node

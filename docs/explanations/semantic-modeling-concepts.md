@@ -24,6 +24,8 @@ Entity "PaymentService"
 Resource "UserDatabase" units
 ```
 
+`units` denotes a count-based unit (i.e., number of instances/items). Use `units` for raw counts or specify another unit (e.g., `kg`, `USD`) when applicable; this aligns the resource with the `Unit` registry so flow quantities and aggregations can be compared consistently.
+
 ### 3. Flow
 
 **What it is**: A directional interaction between two concepts, often involving a resource.
@@ -31,7 +33,12 @@ Resource "UserDatabase" units
 **Key Attribute**: Flows are strictly typed (e.g., `read`, `write`, `trigger`).
 
 ```sea
-Flow "Payment" from "PaymentService" to "UserDatabase" quantity 1
+flow "Payment" {
+    from = "PaymentService",
+    to = "UserDatabase",
+    interaction = "write",
+    quantity = 1
+}
 ```
 
 ### 4. Instance

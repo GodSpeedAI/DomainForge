@@ -12,10 +12,10 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 
 1. **Write a policy in DSL**
 
-   ```sea
-   Policy payment_threshold as:
-     forall f in flows: (f.resource = "Money" and f.quantity <= 10000 "USD")
-   ```
+    ```sea
+    Policy payment_threshold as:
+       forall f in flows: (f.resource = "Money" and f.quantity <= 10000 as "USD")
+    ```
 
    - Use comprehensions (`forall`, `exists`) and comparisons (`=`, `<=`, `matches`).
    - Qualify names with namespaces when needed (`finance/Money`).
@@ -87,13 +87,14 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 
 - **Boolean logic**: `and`, `or`, `not` with standard precedence; wrap complex conditions in parentheses.
 - **Comparisons**: `=`, `!=`, `<`, `<=`, `>`, `>=`, `matches` (regex-like), `contains`, `startswith`, `endswith`.
-- **Quantifiers**: `forall <var> in <collection>: (<predicate>)` and `exists ...`.
+- **Quantifiers**: `forall <var> in <collection>: (<predicate>)` and `exists <var> in <collection>: (<predicate>)`.
 - **Three-valued logic**: `Unknown` propagates when operands lack data; enable it when modeling incomplete datasets.
 
 ## Best Practices
 
 - Keep policies near the DSL constructs they reference or register them via `.sea-registry.toml` so namespace resolution works.
 - Normalize units before comparison; rely on `as "<Unit>"` to request conversions explicitly.
+- Note: Examples in this guide use the `as "<Unit>"` form to make unit conversions explicit and avoid accidental unit mismatches.
 - Avoid side effects; policies should be deterministic for reproducible validation.
 - Document intent with comments; the parser ignores lines starting with `#`.
 

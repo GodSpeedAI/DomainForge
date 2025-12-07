@@ -382,6 +382,8 @@ Policy leak_scope as:
 **Example**:
 
 ```sea
+Entity "A"
+Entity "B"
 Flow "Data" from "A" to "B" quantity 1
 Flow "Data" from "B" to "A" quantity 1
 // Error: circular dependency between A and B
