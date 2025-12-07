@@ -14,7 +14,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 
     ```sea
     Policy payment_threshold as:
-       forall f in flows: (f.resource = "Money" and f.quantity <= 10000 as "USD")
+       forall f in flows: (f.resource = "Money" and f.quantity <= 10000 "USD")
     ```
 
    - Use comprehensions (`forall`, `exists`) and comparisons (`=`, `<=`, `matches`).
