@@ -193,13 +193,11 @@ export declare class Relation {
   constructor(name: string, subjectRoleId: string, predicate: string, objectRoleId: string, namespace?: string | undefined | null, viaFlowId?: string | undefined | null)
   get id(): string
   get name(): string
+  get namespace(): string
   get subjectRoleId(): string
   get predicate(): string
   get objectRoleId(): string
   get viaFlowId(): string | null
-  get namespace(): string | null
-  setAttribute(key: string, valueJson: string): void
-  getAttribute<T = unknown>(key: string): T | undefined
   toString(): string
 }
 export declare class NamespaceBinding {

@@ -37,7 +37,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.android-arm64.node')
           } else {
-            nativeBinding = require('@domainforge/sea-android-arm64')
+            nativeBinding = require('@sprime01/sea-android-arm64')
           }
         } catch (e) {
           loadError = e
@@ -49,7 +49,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.android-arm-eabi.node')
           } else {
-            nativeBinding = require('@domainforge/sea-android-arm-eabi')
+            nativeBinding = require('@sprime01/sea-android-arm-eabi')
           }
         } catch (e) {
           loadError = e
@@ -69,7 +69,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.win32-x64-msvc.node')
           } else {
-            nativeBinding = require('@domainforge/sea-win32-x64-msvc')
+            nativeBinding = require('@sprime01/sea-win32-x64-msvc')
           }
         } catch (e) {
           loadError = e
@@ -83,7 +83,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.win32-ia32-msvc.node')
           } else {
-            nativeBinding = require('@domainforge/sea-win32-ia32-msvc')
+            nativeBinding = require('@sprime01/sea-win32-ia32-msvc')
           }
         } catch (e) {
           loadError = e
@@ -97,7 +97,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.win32-arm64-msvc.node')
           } else {
-            nativeBinding = require('@domainforge/sea-win32-arm64-msvc')
+            nativeBinding = require('@sprime01/sea-win32-arm64-msvc')
           }
         } catch (e) {
           loadError = e
@@ -113,10 +113,10 @@ switch (platform) {
       if (localFileExisted) {
         nativeBinding = require('./sea-core.darwin-universal.node')
       } else {
-        nativeBinding = require('@domainforge/sea-darwin-universal')
+        nativeBinding = require('@sprime01/sea-darwin-universal')
       }
       break
-    } catch { }
+    } catch {}
     switch (arch) {
       case 'x64':
         localFileExisted = existsSync(join(__dirname, 'sea-core.darwin-x64.node'))
@@ -124,7 +124,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.darwin-x64.node')
           } else {
-            nativeBinding = require('@domainforge/sea-darwin-x64')
+            nativeBinding = require('@sprime01/sea-darwin-x64')
           }
         } catch (e) {
           loadError = e
@@ -138,7 +138,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.darwin-arm64.node')
           } else {
-            nativeBinding = require('@domainforge/sea-darwin-arm64')
+            nativeBinding = require('@sprime01/sea-darwin-arm64')
           }
         } catch (e) {
           loadError = e
@@ -157,7 +157,7 @@ switch (platform) {
       if (localFileExisted) {
         nativeBinding = require('./sea-core.freebsd-x64.node')
       } else {
-        nativeBinding = require('@domainforge/sea-freebsd-x64')
+        nativeBinding = require('@sprime01/sea-freebsd-x64')
       }
     } catch (e) {
       loadError = e
@@ -174,7 +174,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-x64-musl.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-x64-musl')
+              nativeBinding = require('@sprime01/sea-linux-x64-musl')
             }
           } catch (e) {
             loadError = e
@@ -187,7 +187,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-x64-gnu.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-x64-gnu')
+              nativeBinding = require('@sprime01/sea-linux-x64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -203,7 +203,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-arm64-musl.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-arm64-musl')
+              nativeBinding = require('@sprime01/sea-linux-arm64-musl')
             }
           } catch (e) {
             loadError = e
@@ -216,7 +216,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-arm64-gnu.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-arm64-gnu')
+              nativeBinding = require('@sprime01/sea-linux-arm64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -232,7 +232,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-arm-musleabihf.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-arm-musleabihf')
+              nativeBinding = require('@sprime01/sea-linux-arm-musleabihf')
             }
           } catch (e) {
             loadError = e
@@ -245,7 +245,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-arm-gnueabihf.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-arm-gnueabihf')
+              nativeBinding = require('@sprime01/sea-linux-arm-gnueabihf')
             }
           } catch (e) {
             loadError = e
@@ -261,7 +261,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-riscv64-musl.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-riscv64-musl')
+              nativeBinding = require('@sprime01/sea-linux-riscv64-musl')
             }
           } catch (e) {
             loadError = e
@@ -274,7 +274,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./sea-core.linux-riscv64-gnu.node')
             } else {
-              nativeBinding = require('@domainforge/sea-linux-riscv64-gnu')
+              nativeBinding = require('@sprime01/sea-linux-riscv64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -289,7 +289,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./sea-core.linux-s390x-gnu.node')
           } else {
-            nativeBinding = require('@domainforge/sea-linux-s390x-gnu')
+            nativeBinding = require('@sprime01/sea-linux-s390x-gnu')
           }
         } catch (e) {
           loadError = e
@@ -310,26 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const {
-  Graph,
-  AggregateFunction,
-  BinaryOp,
-  Severity,
-  Entity,
-  Resource,
-  Flow,
-  ResourceInstance,
-  Instance,
-  Metric,
-  Mapping,
-  Projection,
-  Role,
-  Relation,
-  NamespaceBinding,
-  NamespaceRegistry,
-  Dimension,
-  Unit,
-} = nativeBinding
+const { Graph, AggregateFunction, BinaryOp, Severity, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, Dimension, Unit } = nativeBinding
 
 module.exports.Graph = Graph
 module.exports.AggregateFunction = AggregateFunction
@@ -349,21 +330,3 @@ module.exports.NamespaceBinding = NamespaceBinding
 module.exports.NamespaceRegistry = NamespaceRegistry
 module.exports.Dimension = Dimension
 module.exports.Unit = Unit
-
-// Verify native exports present and provide a helpful error if not
-const { validateNativeExports } = require('./lib/validate_native_exports');
-
-const requiredExports = [
-  'Graph',
-  'Entity',
-  'Resource',
-  'Flow',
-  'ResourceInstance',
-  'Metric',
-  'Mapping',
-  'Projection',
-  'Role',
-  'Relation',
-];
-
-validateNativeExports(nativeBinding, requiredExports);
