@@ -54,7 +54,8 @@ rust_decimal_macros = "1.33"
 tempfile = "3.12"
 assert_cmd = "2.0"
 predicates = "3"
-criterion = { version = "0.4" }
+# Note: criterion was removed due to unmaintained/unsound `atty` transitive dependency (RUSTSEC-2024-0375, RUSTSEC-2021-0145).
+# If benchmarks are needed, consider using `divan` or re-adding criterion when its deps are updated.
 
 [build-dependencies]
 napi-build = "2.1"
