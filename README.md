@@ -953,7 +953,6 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 | 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)               | Configure `.sea-registry.toml` and workspace glob patterns  |
 | 📖 [**Error Code Catalog**](docs/specs/error_codes.md)                    | Complete list of validation error codes and fixes           |
 
-
 <details>
 <summary><h2>✏️ Contributing</h2></summary>
 
@@ -1002,11 +1001,13 @@ SEA DSL is open source under the [MIT License](LICENSE).
 
 Built on the shoulders of giants:
 
-- **ERP5 Unified Business Model** - Foundational primitive design
-- **SBVR Standard (OMG)** - Semantic business vocabulary
-- **FINOS CALM** - Architecture-as-Code integration
-- **Rust Community** - High-performance core runtime
+- **[ERP5 Unified Business Model](https://www.erp5.com/)** - Foundational primitive design
+- **[SBVR Standard (OMG)](https://www.omg.org/spec/SBVR/)** - Semantic business vocabulary
+- **[FINOS CALM](https://github.com/finos/architecture-as-code)** - Architecture-as-Code integration
+- **[Rust Community](https://www.rust-lang.org/)** - High-performance core runtime
 
 ---
 
-**Build enterprise models that business analysts can read and machines can execute**
+> **Build enterprise models that business analysts can read and machines can execute**
+
+
