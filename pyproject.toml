@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "SEA DSL - Semantic Enterprise Architecture Domain Specific Language"
 readme = "README_PYTHON.md"
 requires-python = ">=3.11"
-license = { text = "MIT OR Apache-2.0" }
+license = { text = "Apache-2.0" }
 authors = [
     { name = "DomainForge Contributors" }
 ]
