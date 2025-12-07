@@ -27,12 +27,12 @@ Goal: Define custom dimensions/units and validate quantities using them in SEA m
 
 2. **Attach units to resources and flows**
 
-   ```sea
-   Resource "Money" unit "USD"
-   Entity "Alice"
-   Entity "Bob"
-   Flow "Money" from "Alice" to "Bob" quantity 100
-   ```
+```sea
+Resource "Money" USD
+Entity "Alice"
+Entity "Bob"
+Flow "Money" from "Alice" to "Bob" quantity 100
+```
 
    - Resources reference the canonical unit.
    - Flows inherit the resource unit unless explicitly overridden.
@@ -41,11 +41,10 @@ Goal: Define custom dimensions/units and validate quantities using them in SEA m
 
    ```sea
    Policy euro_cap as:
-     forall f in flows where f.resource = "Money":
-       f.quantity as "EUR" <= 10000 "EUR"
+     forall f in flows: (f.resource = "Money" and f.quantity <= 10000)
    ```
 
-   - The `as` clause requests conversion using defined factors.
+   - Keep comparisons in the resource's canonical unit to avoid ambiguous conversions.
 
 4. **Create the example file and validate with the CLI**
 
@@ -58,7 +57,7 @@ Dimension "Currency"
 Unit "USD" of "Currency" factor 1 base "USD"
 Unit "EUR" of "Currency" factor 1.07 base "USD"
 
-Resource "Money" unit "USD"
+Resource "Money" USD
 Entity "Alice"
 Entity "Bob"
 Flow "Money" from "Alice" to "Bob" quantity 100
@@ -117,7 +116,7 @@ assert resource.unit == "USD"
 
 - [ ] Dimension and unit declarations parse without errors.
 - [ ] Resources reference valid units and flows inherit them correctly.
-- [ ] Policy conversions using `as "<Unit>"` succeed with expected values.
+- [ ] Policy comparisons use consistent units (or canonical units) to avoid mismatches.
 - [ ] CALM/KG exports include the units and survive round-trip import.
 
 ## Links

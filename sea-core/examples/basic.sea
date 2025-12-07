@@ -1,3 +1,4 @@
 Entity "User" in auth
-Resource "Token" units
-Flow "Login" from "User" to "User" resource "Token" quantity 1
+Resource "Token" units in auth
+# Note: This Flow uses the Resource "Token" by name
+Flow "Token" from "User" to "User" quantity 1

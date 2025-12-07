@@ -23,11 +23,11 @@ For now, manual updates are required.
 **Example: Renaming `connection` to `flow`**
 *Old:*
 ```sea
-connection c1 { ... }
+connection "c1" from "A" to "B"
 ```
 *New:*
 ```sea
-flow c1 { ... }
+flow "Data" from "A" to "B"
 ```
 
 ## Backward Compatibility

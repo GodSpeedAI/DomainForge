@@ -15,22 +15,12 @@ We are modeling "ShopEasy", an online store. It has:
 Create a file `shopeasy.sea`. Start by defining the active components.
 
 ```sea
-entity Storefront {
-    type = "service"
-    language = "typescript"
-    public = true
-}
+@namespace "shopeasy"
 
-entity OrderService {
-    type = "service"
-    language = "rust"
-    layer = "backend"
-}
-
-entity PaymentGateway {
-    type = "external_service"
-    provider = "stripe"
-}
+Entity "Storefront"
+Entity "OrderService"
+Entity "PaymentGateway"
+Entity "OrderDatabase"
 ```
 
 ## Step 2: Define Resources
@@ -38,16 +28,10 @@ entity PaymentGateway {
 Now define the passive infrastructure.
 
 ```sea
-resource OrderDB {
-    type = "database"
-    engine = "postgres"
-    encrypted = true
-}
-
-resource EmailQueue {
-    type = "queue"
-    engine = "rabbitmq"
-}
+Resource "OrderRequest" units
+Resource "OrderRecord" units
+Resource "PaymentIntent" units
+Resource "ConfirmationMessage" units
 ```
 
 ## Step 3: Connect with Flows
@@ -55,30 +39,10 @@ resource EmailQueue {
 Model how these components interact.
 
 ```sea
-flow place_order {
-    from = Storefront
-    to = OrderService
-    interaction = "http_post"
-    payload = "OrderRequest"
-}
-
-flow save_order {
-    from = OrderService
-    to = OrderDB
-    interaction = "sql_insert"
-}
-
-flow process_payment {
-    from = OrderService
-    to = PaymentGateway
-    interaction = "api_call"
-}
-
-flow queue_confirmation {
-    from = OrderService
-    to = EmailQueue
-    interaction = "publish"
-}
+Flow "OrderRequest" from "Storefront" to "OrderService"
+Flow "OrderRecord" from "OrderService" to "OrderDatabase"
+Flow "PaymentIntent" from "OrderService" to "PaymentGateway"
+Flow "ConfirmationMessage" from "OrderService" to "Storefront"
 ```
 
 ## Step 4: Define Instances
@@ -86,16 +50,14 @@ flow queue_confirmation {
 Model the physical deployment in the production environment.
 
 ```sea
-instance prod_order_service {
-    of = OrderService
-    env = "production"
-    replicas = 3
+Instance prod_order_service of "OrderService" {
+    env: "production",
+    replicas: 3
 }
 
-instance prod_db {
-    of = OrderDB
-    env = "production"
-    region = "us-west-2"
+Instance prod_db of "OrderDatabase" {
+    env: "production",
+    region: "us-west-2"
 }
 ```
 
@@ -110,7 +72,7 @@ sea-cli parse shopeasy.sea
 ## Understanding the Output
 
 The parser confirms that:
-1. All references are valid (e.g., `from = Storefront` refers to a defined Entity).
+1. All references are valid (e.g., `Flow "OrderRequest" from "Storefront"` points to declared entities).
 2. The syntax is correct.
 3. The graph is connected.
 

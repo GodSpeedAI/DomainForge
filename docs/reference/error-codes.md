@@ -52,7 +52,7 @@ Flow "Materials" from "Warehouse" to "Factory" quantity 100
 **Example**:
 
 ```sea
-Flow "Steel" from "Supplier" to "Factory" quantity 100 kg
+Flow "Steel" from "Supplier" to "Factory" quantity 100
 // Error: Resource "Steel" is not defined
 ```
 
@@ -104,14 +104,13 @@ Flow "Materials" from "Warehouse" to // Missing destination
 **Example**:
 
 ```sea
-entity API {}
-resource Payload {}
-flow send from API to API resource Payload
+Entity "API"
+Resource "Payload" units
+Flow "Payload" from "API" to "API"
 
-policy invalid_expr {
-  when Payload && 42
+Policy invalid_expr as:
+  Payload and 42
   // Error: mixes a resource reference and a number without a valid operator
-}
 ```
 
 **Common Fixes**:
@@ -151,10 +150,10 @@ Entity "Warehouse" in manufacturing
 **Example**:
 
 ```sea
-entity API {}
-resource Payload {}
+Entity "API"
+Resource "Payload" units
 // Missing entity definition for Backend
-flow api_to_backend from API to Backend resource Payload
+Flow "Payload" from "API" to "Backend"
 // Error: "Backend" is referenced but never declared
 ```
 
@@ -175,7 +174,7 @@ flow api_to_backend from API to Backend resource Payload
 **Example**:
 
 ```sea
-Resource "Steel" quantity -100 kg
+Flow "Steel" from "Mine" to "Refinery" quantity -100
 // Error: Negative quantity
 ```
 
@@ -217,12 +216,9 @@ Entity "Entity" in logistics
 **Example**:
 
 ```sea
-entity Client {}
-entity Server {}
-resource Data { units = "bytes" }
-
-flow upload from Client to Server resource Data quantity "high"
-// Error: quantity expects a Decimal value, not a string
+Policy upload_capacity as:
+  "high" + 5
+// Error: cannot add a string and a number
 ```
 
 **Common Fixes**:
@@ -290,7 +286,8 @@ flow upload from Client to Server resource Data quantity "high"
 **Example**:
 
 ```sea
-quantity 10 kg + 5 meters
+Policy dimension_collision as:
+  10 "kg" + 5 "meters"
 // Error: Cannot add Mass and Length
 ```
 
@@ -349,13 +346,11 @@ quantity 10 kg + 5 meters
 **Example**:
 
 ```sea
-policy scoped_check {
-  when exists entity e satisfies e.type == "service"
-}
+Policy scoped_check as:
+  exists e in entities: (e.name = "service")
 
-policy leak_scope {
-  when e.name == "api" // Error: `e` is not in scope here
-}
+Policy leak_scope as:
+  e.name = "api" // Error: `e` is not in scope here
 ```
 
 **Common Fixes**:
@@ -387,8 +382,10 @@ policy leak_scope {
 **Example**:
 
 ```sea
-entity A { depends_on = "B" }
-entity B { depends_on = "A" }
+Entity "A"
+Entity "B"
+Flow "Data" from "A" to "B" quantity 1
+Flow "Data" from "B" to "A" quantity 1
 // Error: circular dependency between A and B
 ```
 

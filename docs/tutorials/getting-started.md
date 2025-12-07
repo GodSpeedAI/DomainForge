@@ -29,23 +29,12 @@ sea-cli --version
 Create a new file named `hello.sea` in your favorite text editor. We will model a simple "Hello World" system with a Web Server and a Database.
 
 ```sea
-// hello.sea
+@namespace "hello.world"
 
-entity WebServer {
-    type = "service"
-    layer = "frontend"
-}
-
-resource UserDB {
-    type = "database"
-    engine = "postgres"
-}
-
-flow greeting_flow {
-    from = WebServer
-    to = UserDB
-    interaction = "read"
-}
+Entity "WebServer"
+Entity "UserDatabase"
+Resource "UserData" units
+Flow "UserData" from "WebServer" to "UserDatabase" quantity 1
 ```
 
 ## Step 3: Parse and Validate
@@ -70,11 +59,8 @@ Found:
 Let's add a rule to ensure our architecture is secure. Append this to `hello.sea`:
 
 ```sea
-policy secure_db_access {
-    enforce: forall f in Flow {
-        if f.to.type == "database" then f.interaction == "read"
-    }
-}
+Policy secure_db_access as:
+    forall f in flows: (f.to = "UserDatabase" and f.quantity <= 1)
 ```
 
 Run the parser again. The CLI automatically evaluates policies.
@@ -92,13 +78,10 @@ Policy Results:
 
 ## Step 5: Break the Policy
 
-Change the interaction in `greeting_flow` to "write" and run the CLI again.
+Increase the quantity on the flow and re-validate to see the policy fail.
 
 ```sea
-flow greeting_flow {
-    // ...
-    interaction = "write"
-}
+Flow "UserData" from "WebServer" to "UserDatabase" quantity 5
 ```
 
 **Expected Output:**
@@ -106,7 +89,7 @@ flow greeting_flow {
 ...
 Policy Results:
   [FAIL] secure_db_access
-     -> Violation at Flow(greeting_flow)
+     -> Violation at Flow("UserData")
 ```
 
 ## Next Steps
