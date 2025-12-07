@@ -938,79 +938,6 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 ---
 
 <details>
-<summary><h2>🚦 Implementation Status & Roadmap</h2></summary>
-
-### ✅ **Completed (v0.1.0)** - November 2025
-
-**Core Framework:**
-
-- [x] Five universal primitives (Entity, Resource, Flow, Instance, Policy)
-- [x] Graph storage with **IndexMap** for deterministic iteration
-- [x] Referential integrity enforcement (add/remove validation)
-- [x] Pest-based DSL parser with full grammar support
-- [x] **Multiline string support** (`"""..."""`) for entity/resource names
-- [x] SBVR-aligned policy expression engine
-- [x] UUID-based primitive identification (v4 + v7 support)
-- [x] Namespace support with default namespace ("default")
-- [x] ValidationError convenience constructors
-
-**Language Bindings:**
-
-- [x] Rust core library (`sea-core`)
-- [x] Python bindings via PyO3 + maturin (`sea-dsl`)
-- [x] TypeScript bindings via napi-rs (`@domainforge/sea`)
-- [x] WebAssembly bindings via wasm-bindgen (`@domainforge/sea-wasm`)
-- [x] Cross-language parity testing (100% semantic equivalence)
-
-**Standards Integration:**
-
-- [x] CALM (Common Architecture Language Model) bidirectional conversion
-- [x] CALM JSON Schema v1 validation
-- [x] Round-trip testing (SEA → CALM → SEA)
-- [x] Metadata preservation with `sea:` namespace
-
-**Testing & Quality:**
-
-- [x] **623+ total tests** - All passing, zero failures
-  - 523 Rust tests (unit + integration + doctests)
-  - 43 Python integration tests
-  - 57 TypeScript/Vitest tests
-- [x] Cross-language parity testing (Python ≡ TypeScript ≡ Rust)
-- [x] Property-based tests (proptest for graph invariants)
-- [x] CALM round-trip validation (SEA → CALM → SEA)
-- [x] Performance benchmarks (<100ms for 10K nodes)
-- [x] Deterministic iteration testing (IndexMap verification)
-
-**Documentation:**
-
-- [x] Complete API specifications (Rust, Python, TypeScript)
-- [x] Architecture Decision Records (8 ADRs)
-- [x] Phase-by-phase implementation plans
-- [x] C4 architecture diagrams
-- [x] SBVR/UBM design context documentation
-
-### 🔄 **Future Enhancements (v0.2+)**
-
-- [ ] Visual modeling UI (drag-and-drop interface)
-- [ ] SQL/PostgreSQL storage adapter
-- [ ] Real-time collaborative editing
-- [ ] Advanced policy analytics dashboard
-- [ ] GraphQL API server
-- [ ] CLI tool for model manipulation
-
-### 🔮 **Research & Exploration**
-
-- [ ] Machine learning-assisted model validation
-- [ ] Streaming validation for infinite graphs
-- [ ] Cloud-hosted SaaS validation service
-- [ ] Industry-specific template libraries (finance, logistics, healthcare)
-- [ ] Integration with popular ERP systems
-
-</details>
-
----
-
-<details>
 <summary><h2>📖 Documentation & Resources</h2></summary>
 
 | Resource                                                                  | Description                                                 |
@@ -1026,26 +953,6 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 | 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)               | Configure `.sea-registry.toml` and workspace glob patterns  |
 | 📖 [**Error Code Catalog**](docs/specs/error_codes.md)                    | Complete list of validation error codes and fixes           |
 
-### 🆕 Recent API Changes (November 2025)
-
-**Breaking Changes:**
-
-- **Namespace API**: `namespace()` now returns `&str` instead of `Option<&str>` (always returns "default" if unspecified)
-- **Constructor patterns**: Use `Entity::new_with_namespace(name, ns)` for explicit namespace; when migrating from the old `Entity::new(name)` callsite, pass `"default"` as the namespace to preserve previous behavior.
-- **Resource namespace default**: Prefer `Resource::new_with_namespace(name, unit, "default")` when an explicit namespace is required; existing `Resource::new(name, unit)` callsites should be updated to pass an explicit namespace (commonly `"default"`).
-- **Flow API**: Constructor takes `ConceptId` values (not references) - clone IDs before passing
-
-**New Features:**
-
-- **Multiline strings**: Parser now supports `"""..."""` syntax for entity/resource names with embedded newlines
-- **ValidationError helpers**: Convenience constructors like `undefined_entity()`, `unit_mismatch()`, `type_mismatch()`
-- **IndexMap storage**: Graph uses IndexMap for deterministic iteration (guarantees reproducible policy evaluation)
-
-**See**: [Copilot Instructions](.github/copilot-instructions.md) for complete migration guide and patterns.
-
-</details>
-
----
 
 <details>
 <summary><h2>✏️ Contributing</h2></summary>
