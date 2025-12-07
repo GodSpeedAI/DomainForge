@@ -19,7 +19,9 @@ Entity "Server"
     let result = parse_to_graph(source);
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err.to_string().contains("Unknown profile: 'unknown_profile'"));
+    assert!(err
+        .to_string()
+        .contains("Unknown profile: 'unknown_profile'"));
 }
 
 #[test]

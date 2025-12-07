@@ -205,7 +205,7 @@ Additional forms:
 
 - Duplicate declarations in the same namespace are rejected.
 - Unknown references (entities, resources, roles, units) fail validation.
-- Unit conversions must align with declared dimensions.
+- Unit conversions must align with declared dimensions or documented built-in units (see Time units below).
 - ConceptChange annotations must include valid semantic versions.
 - Policies and metrics use three-valued logic; undefined data may yield `Unknown`.
 
@@ -225,6 +225,17 @@ The SEA DSL supports unit literals and a general-purpose `as` coercion operator.
     ```
 
 - **Declaration `as:` introducer**: The `as` keyword is also used in `Policy` and `Metric` declarations to introduce expression bodies (e.g. `Policy name as:`). This is a distinct syntactic usage.
+
+### Built-in Time units
+
+Common time units are available without explicit declarations. The compiler preloads the `Time` dimension with the following units:
+
+- `s` (base, seconds)
+- `ms` (milliseconds, factor `0.001` to `s`)
+- `us` (microseconds, factor `0.000001` to `s`)
+- `ns` (nanoseconds, factor `0.000000001` to `s`)
+
+Examples such as `1000 "ms" as "s"` rely on these built-ins. Projects can still declare additional time units, and all conversions must remain dimensionally compatible.
 
 ## Workflow for grammar changes
 

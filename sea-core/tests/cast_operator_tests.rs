@@ -11,10 +11,13 @@ fn test_cast_operator_parsing() {
     "#;
 
     let graph = parse_to_graph(source).expect("Failed to parse");
-    let policy = graph.all_policies().into_iter().next().expect("No policy found");
+    let policy = graph
+        .all_policies()
+        .into_iter()
+        .next()
+        .expect("No policy found");
 
     let result = policy.evaluate(&graph).expect("Evaluation failed");
-    println!("Result: {:?}", result);
     assert!(result.is_satisfied);
 }
 
@@ -29,7 +32,11 @@ fn test_cast_operator_evaluation() {
     "#;
 
     let graph = parse_to_graph(source).expect("Failed to parse");
-    let policy = graph.all_policies().into_iter().next().expect("No policy found");
+    let policy = graph
+        .all_policies()
+        .into_iter()
+        .next()
+        .expect("No policy found");
 
     let result = policy.evaluate(&graph).expect("Evaluation failed");
     assert!(result.is_satisfied);
@@ -45,8 +52,34 @@ fn test_cast_number_to_unit() {
     "#;
 
     let graph = parse_to_graph(source).expect("Failed to parse");
-    let policy = graph.all_policies().into_iter().next().expect("No policy found");
+    let policy = graph
+        .all_policies()
+        .into_iter()
+        .next()
+        .expect("No policy found");
 
     let result = policy.evaluate(&graph).expect("Evaluation failed");
     assert!(result.is_satisfied);
+}
+
+#[test]
+fn test_cast_incompatible_units_errors() {
+    let source = r#"
+    Dimension "Time4"
+    Unit "s4" of "Time4" factor 1 base "s4"
+    Dimension "Money4"
+    Unit "USD4" of "Money4" factor 1 base "USD4"
+
+    Policy invalid_cast as: 1 "s4" as "USD4"
+    "#;
+
+    let graph = parse_to_graph(source).expect("Failed to parse");
+    let policy = graph
+        .all_policies()
+        .into_iter()
+        .next()
+        .expect("No policy found");
+
+    let result = policy.evaluate(&graph);
+    assert!(result.is_err(), "Expected cast to fail across dimensions");
 }

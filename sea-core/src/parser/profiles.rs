@@ -58,6 +58,10 @@ impl ProfileRegistry {
         self.profiles.iter().find(|p| p.name == name)
     }
 
+    pub fn list_names(&self) -> Vec<&str> {
+        self.profiles.iter().map(|p| p.name.as_str()).collect()
+    }
+
     pub fn global() -> &'static ProfileRegistry {
         static REGISTRY: OnceLock<ProfileRegistry> = OnceLock::new();
         REGISTRY.get_or_init(ProfileRegistry::new)

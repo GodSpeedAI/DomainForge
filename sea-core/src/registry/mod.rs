@@ -150,8 +150,9 @@ impl From<WalkError> for RegistryError {
 
 impl NamespaceRegistry {
     pub fn new_empty(root: PathBuf) -> Self {
+        let canonical_root = root.canonicalize().unwrap_or_else(|_| root);
         Self {
-            root,
+            root: canonical_root,
             default_namespace: "default".to_string(),
             entries: Vec::new(),
         }

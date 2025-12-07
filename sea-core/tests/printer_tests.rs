@@ -172,7 +172,7 @@ fn test_pretty_print_policy_kind_modality_display() {
             let ast = Ast {
                 metadata: FileMetadata::default(),
                 declarations: vec![AstNode::Policy {
-                    name: format!("{}-{}", format!("{:?}", kind), format!("{:?}", modality)),
+                    name: format!("{:?}-{:?}", kind, modality),
                     version: None,
                     metadata: metadata.clone(),
                     expression: Expression::literal(true),

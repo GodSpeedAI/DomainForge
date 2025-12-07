@@ -111,7 +111,12 @@ impl<'a> ModuleResolver<'a> {
                 "std" | "std:core" => include_str!("../../std/core.sea"),
                 "std:http" => include_str!("../../std/http.sea"),
                 "std:aws" => include_str!("../../std/aws.sea"),
-                _ => return Err(ParseError::GrammarError(format!("Unknown std module: {}", namespace))),
+                _ => {
+                    return Err(ParseError::GrammarError(format!(
+                        "Unknown std module: {}",
+                        namespace
+                    )))
+                }
             };
             return parse_source(content);
         }
@@ -123,7 +128,7 @@ impl<'a> ModuleResolver<'a> {
     }
 
     fn resolve_module_path(&self, namespace: &str) -> ParseResult<PathBuf> {
-        if namespace.starts_with("std") {
+        if namespace == "std" || namespace.starts_with("std:") {
             return Ok(PathBuf::from(format!("__std__{}", namespace)));
         }
 

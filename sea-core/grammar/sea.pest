@@ -234,7 +234,7 @@ aggregation_expr = {
 }
 
 aggregation_comprehension = {
-    identifier ~ ^"in" ~ collection ~ window_clause? ~ (^"where" ~ expression)? ~ ":" ~ expression ~ (^"as" ~ string_literal)?
+    identifier ~ ^"in" ~ collection ~ window_clause? ~ (^"where" ~ expression)? ~ ":" ~ expression
 }
 
 window_clause = {

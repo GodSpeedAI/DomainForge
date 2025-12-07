@@ -2007,16 +2007,27 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     ast_to_graph_with_options(ast, &ParseOptions::default())
 }
 
-pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
-    // Validate profile if specified
-    if let Some(profile_name) = &ast.metadata.profile {
-        use crate::parser::profiles::ProfileRegistry;
-        let registry = ProfileRegistry::global();
-        if registry.get(profile_name).is_none() {
-            return Err(ParseError::Validation(format!(
-                "Unknown profile: '{}'. Available profiles: default, cloud, data",
-                profile_name
-            )));
+pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
+    use crate::parser::profiles::ProfileRegistry;
+    let registry = ProfileRegistry::global();
+    let active_profile = ast
+        .metadata
+        .profile
+        .clone()
+        .or_else(|| options.active_profile.clone())
+        .unwrap_or_else(|| "default".to_string());
+    ast.metadata.profile.get_or_insert(active_profile.clone());
+
+    if registry.get(&active_profile).is_none() {
+        let available = registry.list_names().join(", ");
+        let message = format!(
+            "Unknown profile: '{}'. Available profiles: {}",
+            active_profile, available
+        );
+        if options.tolerate_profile_warnings {
+            log::warn!("{}", message);
+        } else {
+            return Err(ParseError::Validation(message));
         }
     }
 
@@ -2034,37 +2045,42 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         .unwrap_or_else(|| "default".to_string());
 
     // First pass: Register dimensions and units
-    for node in &ast.declarations {
-        let node = unwrap_export(node);
-        match node {
-            AstNode::Dimension { name } => {
-                use crate::units::{Dimension, UnitRegistry};
-                let dim = Dimension::parse(name);
-                UnitRegistry::global().register_dimension(dim);
-            }
-            AstNode::UnitDeclaration {
-                symbol,
-                dimension,
-                factor,
-                base_unit,
-            } => {
-                use crate::units::{Dimension, Unit, UnitRegistry};
-                let dim = Dimension::parse(dimension);
-                let unit = Unit::new(
-                    symbol.clone(),
-                    symbol.clone(),
-                    dim,
-                    *factor,
-                    base_unit.clone(),
-                );
-                let registry = UnitRegistry::global();
-                if registry.get_unit(&symbol).is_err() {
-                    registry.register(unit).map_err(|e| {
-                        ParseError::GrammarError(format!("Failed to register unit: {}", e))
-                    })?;
+    {
+        use crate::units::{Dimension, Unit, UnitRegistry};
+        let registry = UnitRegistry::global();
+        let mut registry = registry.write().map_err(|e| {
+            ParseError::GrammarError(format!("Failed to lock unit registry: {}", e))
+        })?;
+
+        for node in &ast.declarations {
+            let node = unwrap_export(node);
+            match node {
+                AstNode::Dimension { name } => {
+                    let dim = Dimension::parse(name);
+                    registry.register_dimension(dim);
                 }
+                AstNode::UnitDeclaration {
+                    symbol,
+                    dimension,
+                    factor,
+                    base_unit,
+                } => {
+                    let dim = Dimension::parse(dimension);
+                    let unit = Unit::new(
+                        symbol.clone(),
+                        symbol.clone(),
+                        dim,
+                        *factor,
+                        base_unit.clone(),
+                    );
+                    if registry.get_unit(&symbol).is_err() {
+                        registry.register(unit).map_err(|e| {
+                            ParseError::GrammarError(format!("Failed to register unit: {}", e))
+                        })?;
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 

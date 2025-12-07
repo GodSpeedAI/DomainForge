@@ -34,6 +34,7 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         default_namespace,
         namespace_registry: registry.clone(),
         entry_path: Some(args.input.clone()),
+        ..Default::default()
     };
     let graph = parse_to_graph_with_options(&source, &options)
         .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", args.input.display(), e))?;

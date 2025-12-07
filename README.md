@@ -102,7 +102,7 @@ print(f"✅ Model valid: {results.is_valid}")
 
 ### New Features (v0.2.0)
 
-- **Unit Conversion**: Use the `as` operator for type-safe unit conversions (e.g., `1000 "ms" as "s"`).
+- **Unit Conversion**: Use the `as` operator for type-safe unit conversions (e.g., `1000 'ms' as 's'`).
 - **Profiles**: Define DSL dialects with `@profile "cloud"` or `@profile "data"`.
 - **Standard Library**: Import built-in types from `std:core`, `std:http`, and `std:aws`.
 

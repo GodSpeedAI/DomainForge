@@ -36,6 +36,24 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
 - [x] **Update Evaluator (`sea-core/src/policy/evaluation.rs`)**:
   - Implement `eval_cast` logic (initially for unit conversion, e.g., `1000 "ms" as "s"`).
 
+### Casting semantics and validation
+
+- **Compatibility matrix**:
+  - Quantity ↔ Quantity (same dimension): allowed, with conversion via the registry.
+  - Number → Quantity: allowed, wraps the numeric value with the target unit.
+  - String/Boolean/Unknown unit: rejected with a clear diagnostic.
+  - Dimension mismatch (e.g., duration → currency): rejected.
+- **Conversion mechanics**:
+  - Use a canonical base unit per dimension with deterministic scale factors from the registry.
+  - Perform arithmetic with `Decimal` to avoid float rounding; no silent truncation.
+  - Unknown or non-convertible unit pairs surface an evaluation error.
+- **Failure modes**:
+  - Unsupported casts return a deterministic error message that names the offending unit/value.
+  - Parsing/typecheck can pre-reject obviously invalid casts; runtime still guards conversions.
+- **Type inference**:
+  - Successful casts return a concrete quantity typed with the requested unit, not `Any`, and downstream checks propagate that concrete type.
+  - Example: `1000 "ms" as "s"` produces `1 "s"` with the target unit recorded for later comparisons.
+
 ## 3. [x] DSL Layering (Profiles)
 
 **Goal**: Introduce "Profiles" to allow different DSL dialects (e.g., `profile: "cloud"`, `profile: "data"`).
@@ -50,6 +68,21 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
   - Validate that used keywords/constructs are allowed in the current profile.
 - [x] **Add `profile` Keyword to Grammar**:
   - Allow `profile: "name"` at the top of the file.
+
+### Profile enforcement rules
+
+- **Default and precedence**:
+  - Active profile = `profile:` declared in the file, else project-level option, else `"default"`.
+  - `"default"` is permissive and allows all core/cloud/data constructs; additional profiles may restrict keywords.
+- **Error semantics**:
+  - Profile violations are hard parse errors by default.
+  - Parser option `tolerate_profile_warnings` can downgrade violations to warnings for soft-rollout; violations are still logged.
+- **Conflict resolution**:
+  - Explicit file profile > project-level > default.
+  - If multiple profiles define rules for a keyword, explicit allow wins over deny; tie breaks deterministically by precedence above.
+- **Parser API**:
+  - `ParseOptions` carries `active_profile` and `tolerate_profile_warnings`.
+  - Diagnostics include the requested profile and the list of available profiles from `ProfileRegistry`.
 
 ## 4. [x] Standard Library (Modules)
 

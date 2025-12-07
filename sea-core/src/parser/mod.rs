@@ -8,9 +8,9 @@ pub struct SeaParser;
 
 pub mod ast;
 pub mod error;
-pub mod profiles;
 pub mod lint;
 pub mod printer;
+pub mod profiles;
 pub mod string_utils;
 
 pub use ast::parse_expression_from_str;
@@ -20,6 +20,7 @@ pub use ast::AstNode;
 pub use error::{ParseError, ParseResult};
 pub use lint::*;
 pub use printer::PrettyPrinter;
+pub use profiles::{Profile, ProfileRegistry};
 pub use string_utils::unescape_string;
 
 /// Controls how the SEA parser interprets declarations.
@@ -35,6 +36,10 @@ pub struct ParseOptions {
     pub namespace_registry: Option<crate::registry::NamespaceRegistry>,
     /// Path to the entry file being parsed, used for module resolution.
     pub entry_path: Option<PathBuf>,
+    /// Active profile to enforce when no profile is declared in the source file.
+    pub active_profile: Option<String>,
+    /// Downgrades profile violations from hard errors to warnings when set.
+    pub tolerate_profile_warnings: bool,
 }
 
 /// Parse SEA DSL source code into an AST
@@ -52,7 +57,7 @@ pub fn parse_to_graph(source: &str) -> ParseResult<Graph> {
 ///
 /// # Parameters
 /// - `source`: DSL text that will be parsed into AST nodes.
-/// - `options`: Controls parser behavior (currently `default_namespace` for missing namespaces).
+/// - `options`: Controls parser behavior (`default_namespace`, module resolution via `namespace_registry`/`entry_path`, `active_profile`, and whether profile violations are warnings).
 ///
 /// # Returns
 /// A `ParseResult` containing the constructed `Graph` or a `ParseError`.

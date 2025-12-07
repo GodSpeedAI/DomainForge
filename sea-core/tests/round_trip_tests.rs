@@ -24,4 +24,8 @@ Resource "CPU"
     // 5. Compare Graphs (basic check)
     assert_eq!(graph.entity_count(), graph2.entity_count());
     assert_eq!(graph.resource_count(), graph2.resource_count());
+
+    // 6. Ensure serialized forms stay stable across another round-trip
+    let printed_again = printer.print(&graph2.to_ast());
+    assert_eq!(printed, printed_again);
 }
