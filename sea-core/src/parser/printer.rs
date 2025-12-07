@@ -35,6 +35,12 @@ impl PrettyPrinter {
         Self::default()
     }
 
+    /// Returns a configured PrettyPrinter with trailing commas enabled/disabled.
+    pub fn with_trailing_commas(mut self, trailing: bool) -> Self {
+        self.trailing_commas = trailing;
+        self
+    }
+
     pub fn print(&self, ast: &Ast) -> String {
         let mut sections = Vec::new();
         let mut header = String::new();
