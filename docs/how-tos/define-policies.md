@@ -93,8 +93,9 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 ## Best Practices
 
 - Keep policies near the DSL constructs they reference or register them via `.sea-registry.toml` so namespace resolution works.
-- Normalize units before comparison; rely on `as "<Unit>"` to request conversions explicitly.
-- Note: Examples in this guide use the `as "<Unit>"` form to make unit conversions explicit and avoid accidental unit mismatches.
+- Normalize units before comparison. Prefer quantity literals (e.g., `100 "USD"`) and numeric + quoted unit for annotations (e.g., `@refresh_interval 60 "seconds"`).
+- Use `as "<Unit>"` only where the grammar explicitly supports it — for example as a coercion suffix in an aggregation comprehension (`sum(f in flows: f.quantity as "USD")`).
+- Note: Some examples use the `as "<Unit>"` form where the grammar allows it (e.g., aggregation coercion) to make conversions explicit. Annotation durations and quantity literals follow the canonical forms shown above.
 - Avoid side effects; policies should be deterministic for reproducible validation.
 - Document intent with comments; the parser ignores lines starting with `#`.
 

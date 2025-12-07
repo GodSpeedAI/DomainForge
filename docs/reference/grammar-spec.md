@@ -205,6 +205,30 @@ Additional forms:
 - ConceptChange annotations must include valid semantic versions.
 - Policies and metrics use three-valued logic; undefined data may yield `Unknown`.
 
+### Unit conversions & "as" usage
+
+The SEA DSL supports unit literals and a limited `as` coercion operator used only in specific contexts. The following clarifies the grammar and common use cases.
+
+- Quantity literal (canonical literal form): write a number followed by a quoted unit for numerical quantities (e.g., `100 "USD"`, `1_500 "USD"`, `100.5 "kg"`). This is accepted where a quantity literal appears in the grammar.
+- Annotation durations and windows: use the numeric literal followed by a quoted unit for annotation time values (e.g., `@refresh_interval 60 "seconds"`, `@window 1 "hour"`). This is not expressed with `as`.
+- Aggregation/comprehension coercion: `as` is accepted as a trailing coercion suffix for aggregation comprehensions and applies to the comprehension expression. For example:
+
+```sea
+sum(f in flows where f.resource = "Money": f.quantity as "USD")
+```
+
+In the grammar this is written as:
+
+```sea
+... : expression [as "Unit"]
+```
+
+for the comprehension form — the `as` form is *not* a general-purpose postfix operator in arbitrary expressions.
+
+- Declaration `as:` introducer: The `as` keyword is also used in `Policy` and `Metric` declarations to introduce expression bodies, e.g. `Policy name as:` and `Metric "name" as:`. This is a different usage of the `as` keyword and is not a unit conversion operator.
+
+Note: A general postfix `as` operator for arbitrary expressions or annotations is not available; `@refresh_interval 60 as "seconds"` is not valid. Use the grammar forms described above for durations and quantity literals, and use the `as` coercion only in the aggregation comprehension context where explicitly supported.
+
 ## Workflow for grammar changes
 
 1. Update `sea-core/grammar/sea.pest`.
