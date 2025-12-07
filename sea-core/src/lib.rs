@@ -27,9 +27,8 @@
 
 pub const VERSION: &str = "0.1.0";
 
-// Use a compact allocator when building for WebAssembly to reduce binary size
-// `lol_alloc` is a small global allocator suitable for WASM, replacing the unmaintained `wee_alloc`.
-#[cfg(feature = "lol_alloc")]
+// Use a compact allocator only when compiling to wasm to avoid pulling wasm-only symbols on other targets.
+#[cfg(all(feature = "lol_alloc", target_arch = "wasm32"))]
 #[global_allocator]
 static ALLOC: lol_alloc::LockedAllocator<lol_alloc::FreeListAllocator> =
     lol_alloc::LockedAllocator::new(lol_alloc::FreeListAllocator::new());
