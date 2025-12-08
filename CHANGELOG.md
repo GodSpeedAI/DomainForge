@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Module import/export correctness: wildcard imports require aliases, trailing commas allowed
+- Parser keyword ambiguity resolved (fixed `Resource ... units` parsing)
 - Cross-language binding stability: `ReferenceType` serialization fixes
 - Parser entry options handle missing registry gracefully
 - CI/CD optimizations with smarter caching strategies

@@ -59,8 +59,16 @@ resource_decl = {
     ^"resource" ~ name ~ (
         (identifier ~ in_keyword ~ identifier) |  // "units in domain" - most specific first
         (in_keyword ~ identifier) |                             // "in domain" - next most specific
-        identifier                              // "units" only - least specific last
+        ( !declaration_keyword ~ identifier )     // "units" only - least specific last. Must not be a keyword.
     )?
+}
+
+declaration_keyword = @{
+    (
+        ^"entity" | ^"resource" | ^"flow" | ^"pattern" | ^"role" | ^"relation" |
+        ^"instance" | ^"policy" | ^"conceptchange" | ^"metric" | ^"mapping" |
+        ^"projection" | ^"dimension" | ^"unit" | ^"import" | ^"export"
+    ) ~ !(LETTER | NUMBER | "_")
 }
 
 // Flow Declaration
