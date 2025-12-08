@@ -14,6 +14,7 @@ Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (
    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
    ```
 3. **wasm-opt** (optional, for size optimization):
+
    ```bash
    # macOS
    brew install binaryen
@@ -57,11 +58,13 @@ wasm-pack test --headless --firefox --features wasm
 ### Browser Testing
 
 1. Build the package:
+
    ```bash
    ./scripts/build-wasm.sh
    ```
 
 2. Start a local server:
+
    ```bash
    python3 -m http.server 8000
    ```
@@ -87,44 +90,56 @@ The WASM bindings expose the same API as the Rust core:
 - `Entity` - Business actors, locations, organizational units
 - `Resource` - Quantifiable subjects of value
 - `Flow` - Transfers of resources between entities
-- `Instance` - Physical instances of resources at locations
+- `Instance` - Entity type instances with named fields
 - `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
 
-### Constructor Patterns (November 2025)
+### Constructor Patterns (December 2025)
 
 **Entities:**
+
 ```javascript
 // Default namespace
-const entity = Entity.new("Warehouse");  // namespace() returns "default"
+const entity = new Entity("Warehouse"); // namespace() returns null
 
 // Explicit namespace
-const entity = Entity.newWithNamespace("Warehouse", "logistics");
+const entity = new Entity("Warehouse", "logistics"); // namespace() returns "logistics"
 ```
 
 **Resources:**
+
 ```javascript
-const resource = Resource.new("Cameras", "units");  // Default namespace
-const resource = Resource.newWithNamespace("Cameras", "units", "inventory");
+const resource = new Resource("Cameras", "units"); // Default namespace
+const resource = new Resource("Cameras", "units", "inventory"); // Explicit namespace
 ```
 
 **Flows:**
+
 ```javascript
-// Takes ConceptId values - clone before passing
-const flow = Flow.new(
-  resourceId.clone(),
-  fromId.clone(),
-  toId.clone(),
-  100
+// Takes string IDs and quantity as string (for precision)
+const flow = new Flow(
+  resourceId,
+  fromId,
+  toId,
+  "100", // quantity as string
+  null // optional namespace
 );
 ```
 
+**Instances:**
+
+```javascript
+// Instance - represents an instance of an entity type
+const instance = new Instance("order_123", "Order"); // name, entityType
+instance.setField("status", "pending");
+console.log(instance.getField("status")); // "pending"
+```
 
 ## Usage Examples
 
 ### Parse from DSL
 
 ```javascript
-import { Graph } from '@domainforge/sea-wasm';
+import { Graph } from "@domainforge/sea-wasm";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -135,39 +150,34 @@ const source = `
   Flow "Cameras" from "Warehouse" to "Multi-line\\nFactory Name" quantity 100
 `;
 
-const graph = await Graph.parse(source);
-console.log('Entities:', graph.entityCount());
-console.log('Flows:', graph.flowCount());
+const graph = Graph.parse(source);
+console.log("Entities:", graph.entityCount());
+console.log("Flows:", graph.flowCount());
 ```
 
 ### Build Programmatically
 
 ```javascript
-import { Graph, Entity, Resource, Flow } from '@domainforge/sea-wasm';
+import { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
 
 const graph = new Graph();
 
-// Use new() for default namespace, newWithNamespace() for explicit
-const warehouse = Entity.new('Warehouse');
-const factory = Entity.newWithNamespace('Factory', 'manufacturing');
-const cameras = Resource.new('Cameras', 'units');
+// Use standard constructors
+const warehouse = new Entity("Warehouse");
+const factory = new Entity("Factory", "manufacturing");
+const cameras = new Resource("Cameras", "units");
 
-await graph.addEntity(warehouse);
-await graph.addEntity(factory);
-await graph.addResource(cameras);
+graph.addEntity(warehouse);
+graph.addEntity(factory);
+graph.addResource(cameras);
 
-// Flow constructor takes ConceptId values - clone before passing
-const flow = Flow.new(
-  cameras.id().clone(),
-  warehouse.id().clone(),
-  factory.id().clone(),
-  100
-);
-await graph.addFlow(flow);
+// Flow constructor takes string IDs
+const flow = new Flow(cameras.id(), warehouse.id(), factory.id(), "100");
+graph.addFlow(flow);
 
-// Namespace is always a string (not null)
-console.log(warehouse.namespace());  // "default"
-console.log(factory.namespace());    // "manufacturing"
+// Namespace can be null when not specified
+console.log(warehouse.namespace()); // null
+console.log(factory.namespace()); // "manufacturing"
 ```
 
 ## Size Optimization
@@ -175,6 +185,7 @@ console.log(factory.namespace());    // "manufacturing"
 The WASM module is optimized for size:
 
 1. **Cargo.toml** optimizations:
+
    ```toml
    [profile.release]
    opt-level = "z"        # Optimize for size
@@ -185,6 +196,7 @@ The WASM module is optimized for size:
    ```
 
 2. **wasm-opt** post-processing:
+
    ```bash
    wasm-opt -Oz pkg/sea_core_bg.wasm
    ```
@@ -238,15 +250,15 @@ Rust Core (primitives, graph, parser)
 
 ### Type Conversions
 
-| Rust Type | WASM Boundary | JavaScript Type |
-|-----------|---------------|-----------------|
-| `String` | `String` | `string` |
-| `Uuid` | `String` | `string` |
-| `Decimal` | `String` | `string` |
-| `Option<T>` | `nullable T` | `T \| null` |
-| `Result<T, E>` | `throws E` | `Promise<T>` |
-| `Vec<T>` | `Array<T>` | `T[]` |
-| `HashMap<K, V>` | `Object` | `object` |
+| Rust Type       | WASM Boundary | JavaScript Type |
+| --------------- | ------------- | --------------- |
+| `String`        | `String`      | `string`        |
+| `Uuid`          | `String`      | `string`        |
+| `Decimal`       | `String`      | `string`        |
+| `Option<T>`     | `nullable T`  | `T \| null`     |
+| `Result<T, E>`  | `throws E`    | `Promise<T>`    |
+| `Vec<T>`        | `Array<T>`    | `T[]`           |
+| `HashMap<K, V>` | `Object`      | `object`        |
 
 ## Performance
 
@@ -261,18 +273,18 @@ Rust Core (primitives, graph, parser)
 Export/import graphs to/from FINOS CALM format:
 
 ```javascript
-import { Graph } from '@domainforge/sea-wasm';
+import { Graph } from "@domainforge/sea-wasm";
 
 // Build your model
 const graph = new Graph();
 // ... add entities, resources, flows ...
 
 // Export to CALM JSON
-const calmJson = await graph.exportCalm();
-console.log(calmJson);  // CALM JSON string
+const calmJson = graph.exportCalm();
+console.log(calmJson); // CALM JSON string
 
 // Import from CALM
-const importedGraph = await Graph.importCalm(calmJson);
+const importedGraph = Graph.importCalm(calmJson);
 ```
 
 ## Related Documentation

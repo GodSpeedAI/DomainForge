@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
 [![License](https://img.shields.io/badge/License-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-623%20passing-brightgreen.svg)](sea-core/tests/)
+[![Tests](https://img.shields.io/badge/tests-544%2B%20passing-brightgreen.svg)](sea-core/tests/)
 
 ---
 
@@ -252,26 +252,26 @@ print(u.symbol, u.base_unit)  # USD USD
 TypeScript (napi-rs):
 
 ```typescript
-import { Dimension, Unit } from '@domainforge/sea'
+import { Dimension, Unit } from "@domainforge/sea";
 
-const d1 = Dimension.parse('currency')
-console.log(d1.name) // 'Currency'
+const d1 = Dimension.parse("currency");
+console.log(d1.name); // 'Currency'
 
-const u = new Unit('USD', 'US Dollar', 'Currency', 1.0, 'USD')
-console.log(u.symbol, u.baseUnit)
+const u = new Unit("USD", "US Dollar", "Currency", 1.0, "USD");
+console.log(u.symbol, u.baseUnit);
 ```
 
 WASM (wasm-bindgen in web context):
 
 ```js
-import init, { Dimension, Unit } from './sea_core.js'
-await init()
+import init, { Dimension, Unit } from "./sea_core.js";
+await init();
 
-const d = new Dimension('currency')
-console.log(d.toString()) // 'Currency'
+const d = new Dimension("currency");
+console.log(d.toString()); // 'Currency'
 
-const u = new Unit('USD', 'US Dollar', 'Currency', 1.0, 'USD')
-console.log(u.symbol())
+const u = new Unit("USD", "US Dollar", "Currency", 1.0, "USD");
+console.log(u.symbol());
 ```
 
 These examples demonstrate the cross-language parity for `Dimension` and `Unit` constructs backed by the Rust core.
@@ -380,7 +380,7 @@ Models separate concerns cleanly:
 
    - All bindings wrap Rust core (never duplicate logic)
    - Extensive parity testing ensures equivalence
-   - 623+ tests maintaining cross-language consistency (523 Rust, 43 Python, 57 TypeScript)
+   - 544+ Rust tests across 69 test files maintaining cross-language consistency
 
 5. **📊 Standards Compliance**:
 
@@ -972,18 +972,18 @@ RUST_TEST_NAME=entity_tests just prepare-rust-debug
 <details>
 <summary><h2>📖 Documentation & Resources</h2></summary>
 
-| Resource                                                                  | Description                                                 |
-| ------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| 📘 [**Copilot Instructions**](.github/copilot-instructions.md)            | **⭐ Essential guide for AI coding agents**                 |
-| 🔗 [**API Specification**](docs/reference/specs/api_specification.md)     | Complete API reference for all languages                    |
-| 📙 [**Product Requirements**](docs/reference/specs/prd.md)                | PRD with success metrics and requirements                   |
-| 📕 [**System Design**](docs/reference/specs/sds.md)                       | Technical specifications and component design               |
-| 🏛️ [**Architecture Decisions**](docs/reference/specs/adr.md)              | 8 ADRs documenting key architectural choices                |
-| 📋 [**Implementation Plans**](docs/plans/)                                | Phase-by-phase TDD implementation guides                    |
-| 🗺️ [**CALM Mapping**](docs/reference/specs/calm-mapping.md)               | SEA ↔ CALM conversion specification                         |
-| 🎓 [**Examples**](sea-core/examples/)                                     | DSL examples and parser demos                               |
-| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)               | Configure `.sea-registry.toml` and workspace glob patterns  |
-| 📖 [**Error Code Catalog**](docs/specs/error_codes.md)                    | Complete list of validation error codes and fixes           |
+| Resource                                                              | Description                                                |
+| --------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 📘 [**Copilot Instructions**](.github/copilot-instructions.md)        | **⭐ Essential guide for AI coding agents**                |
+| 🔗 [**API Specification**](docs/reference/specs/api_specification.md) | Complete API reference for all languages                   |
+| 📙 [**Product Requirements**](docs/reference/specs/prd.md)            | PRD with success metrics and requirements                  |
+| 📕 [**System Design**](docs/reference/specs/sds.md)                   | Technical specifications and component design              |
+| 🏛️ [**Architecture Decisions**](docs/reference/specs/adr.md)          | 8 ADRs documenting key architectural choices               |
+| 📋 [**Implementation Plans**](docs/plans/)                            | Phase-by-phase TDD implementation guides                   |
+| 🗺️ [**CALM Mapping**](docs/reference/specs/calm-mapping.md)           | SEA ↔ CALM conversion specification                        |
+| 🎓 [**Examples**](sea-core/examples/)                                 | DSL examples and parser demos                              |
+| 🗂️ [**Namespace Registry**](docs/reference/sea-registry.md)           | Configure `.sea-registry.toml` and workspace glob patterns |
+| 📖 [**Error Code Catalog**](docs/specs/error_codes.md)                | Complete list of validation error codes and fixes          |
 
 <details>
 <summary><h2>✏️ Contributing</h2></summary>
@@ -1015,9 +1015,9 @@ factory = sea_dsl.Entity('Factory B', 'logistics')
 cameras = sea_dsl.Resource('Cameras', 'units', 'products')
 
 # Create a flow between entities
-flow = sea_dsl.Flow(cameras.id, factory.id, warehouse.id, 1000.0)
+flow = sea_dsl.Flow(cameras.id(), factory.id(), warehouse.id(), 1000.0)
 
-print(f'Flow: {flow.quantity} {cameras.name} from {factory.name} to {warehouse.name}')
+print(f'Flow: {flow.quantity()} {cameras.name()} from {factory.name()} to {warehouse.name()}')
 "
 ```
 

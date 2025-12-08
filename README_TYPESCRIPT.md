@@ -1,4 +1,4 @@
-# @domainforge/sea
+# @sprime01/sea
 
 TypeScript/Node.js bindings for the SEA (Semantic Enterprise Architecture) DSL.
 
@@ -17,32 +17,27 @@ npm run build
 ## Quick Start
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from '@domainforge/sea';
+import { Graph, Entity, Resource, Flow } from "@sprime01/sea";
 
 // Create a graph programmatically
 const graph = new Graph();
 
-// Constructor patterns - new() for default namespace, newWithNamespace() for explicit
-const warehouse = Entity.new('Warehouse');  // Default namespace
-const factory = Entity.newWithNamespace('Factory', 'manufacturing');
+// Constructor patterns - use new ClassName(args) syntax
+const warehouse = new Entity("Warehouse"); // Default namespace
+const factory = new Entity("Factory", "manufacturing"); // Explicit namespace
 
-// Namespace is always a string (not undefined), defaults to "default"
-console.log(warehouse.namespace());  // "default"
-console.log(factory.namespace());    // "manufacturing"
+// Namespace can be null if not specified
+console.log(warehouse.namespace); // null (default)
+console.log(factory.namespace); // "manufacturing"
 
-const cameras = Resource.new('Cameras', 'units');
+const cameras = new Resource("Cameras", "units");
 
 graph.addEntity(warehouse);
 graph.addEntity(factory);
 graph.addResource(cameras);
 
-// Flow constructor takes ConceptId values - clone before passing
-const flow = Flow.new(
-  cameras.id().clone(),
-  warehouse.id().clone(),
-  factory.id().clone(),
-  100
-);
+// Flow constructor takes string IDs
+const flow = new Flow(cameras.id, warehouse.id, factory.id, 100);
 graph.addFlow(flow);
 
 console.log(`Graph has ${graph.entityCount()} entities`);
@@ -52,7 +47,7 @@ console.log(`Graph has ${graph.flowCount()} flows`);
 ## Parsing SEA DSL
 
 ```typescript
-import { Graph } from '@domainforge/sea';
+import { Graph } from "@sprime01/sea";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -75,15 +70,15 @@ console.log(`Parsed ${graph.flowCount()} flows`);
 
 ```typescript
 class Entity {
-  // Constructor patterns (November 2025)
-  static new(name: string): Entity;  // Default namespace
-  static newWithNamespace(name: string, namespace: string): Entity;  // Explicit namespace
+  // Constructor (December 2025)
+  constructor(name: string, namespace?: string | null);
 
-  id(): ConceptId;
-  name(): string;
-  namespace(): string;  // Always returns string, never undefined (defaults to "default")
-  setAttribute(key: string, value: any): void;
-  getAttribute(key: string): any;
+  get id(): string;
+  get name(): string;
+  get namespace(): string | null; // null if not specified
+  setAttribute(key: string, valueJson: string): void;
+  getAttribute(key: string): string | null;
+  toString(): string;
 }
 ```
 
@@ -91,16 +86,16 @@ class Entity {
 
 ```typescript
 class Resource {
-  // Constructor patterns (November 2025)
-  static new(name: string, unit: string): Resource;  // Default namespace
-  static newWithNamespace(name: string, unit: string, namespace: string): Resource;
+  // Constructor (December 2025)
+  constructor(name: string, unit: string, namespace?: string | null);
 
-  id(): ConceptId;
-  name(): string;
-  unit(): string;
-  namespace(): string;  // Always returns string (defaults to "default")
-  setAttribute(key: string, value: any): void;
-  getAttribute(key: string): any;
+  get id(): string;
+  get name(): string;
+  get unit(): string;
+  get namespace(): string | null; // null if not specified
+  setAttribute(key: string, valueJson: string): void;
+  getAttribute(key: string): string | null;
+  toString(): string;
 }
 ```
 
@@ -108,33 +103,53 @@ class Resource {
 
 ```typescript
 class Flow {
-  // Constructor takes ConceptId values (not references) - clone before passing
-  static new(resourceId: ConceptId, fromId: ConceptId, toId: ConceptId, quantity: number): Flow;
+  // Constructor takes string IDs (December 2025)
+  constructor(
+    resourceId: string,
+    fromId: string,
+    toId: string,
+    quantity: number
+  );
 
-  id(): ConceptId;
-  resourceId(): ConceptId;
-  fromId(): ConceptId;
-  toId(): ConceptId;
-  quantity(): number;
-  namespace(): string;
-  setAttribute(key: string, value: any): void;
-  getAttribute(key: string): any;
+  get id(): string;
+  get resourceId(): string;
+  get fromId(): string;
+  get toId(): string;
+  get quantity(): number;
+  get namespace(): string | null;
+  setAttribute(key: string, valueJson: string): void;
+  getAttribute(key: string): string | null;
+  toString(): string;
 }
 ```
 
 ### Instance
 
 ```typescript
-class Instance {
-  static new(resourceId: ConceptId, entityId: ConceptId): Instance;  // Default namespace
-  static newWithNamespace(resourceId: ConceptId, entityId: ConceptId, namespace: string): Instance;
+// ResourceInstance - represents a physical instance of a resource at an entity location
+class ResourceInstance {
+  constructor(resourceId: string, entityId: string, namespace?: string | null);
 
-  id(): ConceptId;
-  resourceId(): ConceptId;
-  entityId(): ConceptId;
-  namespace(): string;  // Always returns string (defaults to "default")
-  setAttribute(key: string, value: any): void;
-  getAttribute(key: string): any;
+  get id(): string;
+  get resourceId(): string;
+  get entityId(): string;
+  get namespace(): string | null;
+  setAttribute(key: string, valueJson: string): void;
+  getAttribute(key: string): string | null;
+  toString(): string;
+}
+
+// Instance - represents an instance of an entity type with named fields
+class Instance {
+  constructor(name: string, entityType: string, namespace?: string | null);
+
+  get id(): string;
+  get name(): string;
+  get entityType(): string;
+  get namespace(): string | null;
+  setField(key: string, valueJson: string): void;
+  getField(key: string): string | null;
+  toString(): string;
 }
 ```
 
@@ -147,80 +162,95 @@ class Graph {
   // Add primitives (validates referential integrity)
   addEntity(entity: Entity): void;
   addResource(resource: Resource): void;
-  addFlow(flow: Flow): void;  // Throws if Entity/Resource references invalid
-  addInstance(instance: Instance): void;
+  addFlow(flow: Flow): void; // Throws if Entity/Resource references invalid
+  addInstance(instance: ResourceInstance): void;
+  addRole(role: Role): void;
+  addRelation(relation: Relation): void;
 
   // Counts
   entityCount(): number;
   resourceCount(): number;
   flowCount(): number;
   instanceCount(): number;
+  roleCount(): number;
+  relationCount(): number;
 
-  // Lookup by ID
-  hasEntity(id: ConceptId): boolean;
-  getEntity(id: ConceptId): Entity | null;
-  getResource(id: ConceptId): Resource | null;
-  getFlow(id: ConceptId): Flow | null;
-  getInstance(id: ConceptId): Instance | null;
+  // Lookup by ID (IDs are strings)
+  hasEntity(id: string): boolean;
+  getEntity(id: string): Entity | null;
+  getResource(id: string): Resource | null;
+  getFlow(id: string): Flow | null;
+  getInstance(id: string): ResourceInstance | null;
 
-  // Lookup by name
-  findEntityByName(name: string): ConceptId | null;
-  findResourceByName(name: string): ConceptId | null;
+  // Lookup by name (returns string ID or null)
+  findEntityByName(name: string): string | null;
+  findResourceByName(name: string): string | null;
+  findRoleByName(name: string): string | null;
 
   // Flow queries
-  flowsFrom(entityId: ConceptId): Flow[];
-  flowsTo(entityId: ConceptId): Flow[];
+  flowsFrom(entityId: string): Flow[];
+  flowsTo(entityId: string): Flow[];
 
   // Get all (IndexMap ensures deterministic iteration order)
   allEntities(): Entity[];
   allResources(): Resource[];
   allFlows(): Flow[];
-  allInstances(): Instance[];
+  allInstances(): ResourceInstance[];
+  allRoles(): Role[];
+  allRelations(): Relation[];
 
   // Parsing (supports multiline strings with """)
   static parse(source: string): Graph;
 
   // CALM integration (architecture-as-code)
-  exportCalm(): string;  // Returns CALM JSON string
-  static importCalm(json: string): Graph;  // Import from CALM JSON
+  exportCalm(): string; // Returns CALM JSON string
+  static importCalm(calmJson: string): Graph; // Import from CALM JSON
+
+  // Policy evaluation
+  addPolicy(policyJson: string): void;
+  addAssociation(owner: string, owned: string, relType: string): void;
+  evaluatePolicy(policyJson: string): EvaluationResult;
+  setEvaluationMode(useThreeValuedLogic: boolean): void;
+  useThreeValuedLogic(): boolean;
+
+  toString(): string;
 }
 ```
 
 ### NamespaceRegistry (Workspace)
 
 ```typescript
-import { NamespaceRegistry } from '@domainforge/sea';
+import { NamespaceRegistry } from "@sprime01/sea";
 
 // Load a registry by path to the file
-const reg = NamespaceRegistry.from_file('./.sea-registry.toml');
+const reg = NamespaceRegistry.fromFile("./.sea-registry.toml");
 
 // Expand files and get bindings
-const files = reg.resolve_files(); // or reg.resolve_files(true) to fail on ambiguity via the failOnAmbiguity flag
+const files = reg.resolveFiles(); // or reg.resolveFiles(true) to fail on ambiguity
 for (const f of files) {
-  console.log(f.path, '=>', f.namespace);
+  console.log(f.path, "=>", f.namespace);
 }
 
 // Query namespace for a single file
-const ns = reg.namespace_for('/path/to/file.sea'); // or pass true as the failOnAmbiguity flag to error on ambiguous matches
-console.log('Namespace:', ns);
+const ns = reg.namespaceFor("/path/to/file.sea"); // or pass true to error on ambiguous matches
+console.log("Namespace:", ns);
 ```
-
 
 ## Advanced Usage
 
 ### Working with Attributes
 
 ```typescript
-// Use new() for default namespace
-const entity = Entity.new('Warehouse');
-entity.setAttribute('capacity', JSON.stringify(10000));
-entity.setAttribute('location', JSON.stringify({ lat: 40.7128, lng: -74.0060 }));
+// Use constructor for creating entities
+const entity = new Entity("Warehouse");
+entity.setAttribute("capacity", JSON.stringify(10000));
+entity.setAttribute("location", JSON.stringify({ lat: 40.7128, lng: -74.006 }));
 
-const capacity = JSON.parse(entity.getAttribute('capacity')!); // 10000
-const location = JSON.parse(entity.getAttribute('location')!); // { lat: 40.7128, lng: -74.0060 }
+const capacity = JSON.parse(entity.getAttribute("capacity")!); // 10000
+const location = JSON.parse(entity.getAttribute("location")!); // { lat: 40.7128, lng: -74.0060 }
 
-// Namespace is always present (not undefined)
-console.log(entity.namespace());  // "default"
+// Namespace is null when not specified
+console.log(entity.namespace); // null
 ```
 
 ### Querying Flow Networks
@@ -235,7 +265,7 @@ const graph = Graph.parse(`
   Flow "Products" from "Warehouse" to "Retailer" quantity 800
 `);
 
-const warehouseId = graph.findEntityByName('Warehouse');
+const warehouseId = graph.findEntityByName("Warehouse");
 const inboundFlows = graph.flowsTo(warehouseId!);
 const outboundFlows = graph.flowsFrom(warehouseId!);
 
@@ -256,10 +286,10 @@ npm run build
 npm test
 ```
 
-
 ## Platform Support
 
 Pre-built binaries are available for:
+
 - Linux x64
 - macOS ARM64 (Apple Silicon)
 - Windows x64
