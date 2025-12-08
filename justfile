@@ -150,6 +150,26 @@ ci-check-package-size ARCHIVE_PATH MAX_BYTES="73400320":
     @echo "Checking package size: {{ARCHIVE_PATH}}"
     python3 scripts/ci_tasks.py check-size --file "{{ARCHIVE_PATH}}" --max-bytes {{MAX_BYTES}} --label "Packaged artifact"
 
+# Run full local CI pipeline (test, build release, check size, package)
+ci-pipeline:
+    @echo "🚀 Running full local CI pipeline..."
+    just ci-test-rust
+    just ci-test-python
+    just ci-test-ts
+    @echo "📦 Building release binary..."
+    cargo build -p sea-core --release
+    just ci-verify-binary target/release/sea
+    just ci-check-binary-size target/release/sea
+    just ci-package-binary target/release/sea sea.tar.gz
+    just ci-verify-package sea.tar.gz sea
+    just ci-check-package-size sea.tar.gz
+    @echo "✅ CI pipeline passed!"
+
+# Check debug binary size (with higher limit)
+ci-check-debug-size BINARY_PATH="target/debug/sea" MAX_BYTES="104857600":
+    @echo "Checking debug binary size (limit: 100MB)..."
+    just ci-check-binary-size {{BINARY_PATH}} {{MAX_BYTES}}
+
 # ============================================================================
 # Merge Automation Recipes
 # ============================================================================

@@ -1,0 +1,27 @@
+@namespace "std"
+@version "1.0.0"
+
+Entity "HTTP Service"
+// The HTTP Service entity exposes builders and executors so models can describe real HTTP traffic.
+// Operations:
+// - `create_request(method, url, headers?, body?)` produces an `HTTP Request` that captures typed method, URL, optional headers, and body bytes/strings.
+// - `set_header(request, name, value)` and `set_body(request, payload)` allow staged mutation while keeping immutability at the DSL level.
+// - `execute(request)` performs a synchronous HTTP call and returns an `HTTP Response` or a `Result`/`Violation` when networking fails.
+// - `execute_async(request)` mirrors the sync operation but exposes promise-like/async semantics for event-driven deployments.
+// - `serialize_request`/`deserialize_response` helpers convert between the SEA AST objects and wire formats (JSON, HTTP/1.1, etc.), surface parse errors, and attach provenance metadata.
+// - Errors propagate through `Result`-style objects so policies can distinguish transport failures from HTTP status-based violations.
+
+Resource "HTTP Request"
+// Fields:
+// - `method`: string or enum ("GET", "POST", etc.) describing the HTTP verb.
+// - `url`: the target endpoint (string).
+// - `headers`: a map from header name to value for metadata propagation.
+// - `body`: bytes/string payload that flows across the network.
+// Helper workflows take an `HTTP Service` and produce concrete requests while ensuring headers/body are copied safely.
+
+Resource "HTTP Response"
+// Fields:
+// - `status_code`: integer HTTP status describing success/failure semantics.
+// - `headers`: metadata from the response.
+// - `body`: bytes/string content returned by the peer.
+// Responses also expose helper operations for translating into DomainForge quantities, policy violations, or `Result` unions.

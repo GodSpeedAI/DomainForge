@@ -1,8 +1,11 @@
+#[cfg(feature = "formatting")]
 use icu_locid::locale;
+#[cfg(feature = "formatting")]
 use sea_core::primitives::quantity::QuantityFormatter;
 use sea_core::primitives::Quantity;
 use sea_core::units::Dimension;
 
+#[cfg(feature = "formatting")]
 #[test]
 fn test_quantity_formatting_en_us() {
     let quantity = Quantity::new(1500.0, "USD".to_string(), Dimension::Currency).unwrap();
@@ -10,6 +13,7 @@ fn test_quantity_formatting_en_us() {
     assert_eq!(formatter.format(&quantity).unwrap(), "1,500 \"USD\"");
 }
 
+#[cfg(feature = "formatting")]
 #[test]
 fn test_quantity_formatting_de_de() {
     let quantity = Quantity::new(1500.0, "EUR".to_string(), Dimension::Currency).unwrap();
@@ -17,6 +21,7 @@ fn test_quantity_formatting_de_de() {
     assert_eq!(formatter.format(&quantity).unwrap(), "1.500 \"EUR\"");
 }
 
+#[cfg(feature = "formatting")]
 #[test]
 fn test_quantity_formatting_fr_fr() {
     let quantity = Quantity::new(1500.0, "EUR".to_string(), Dimension::Currency).unwrap();

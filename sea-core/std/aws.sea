@@ -1,0 +1,6 @@
+@namespace "std"
+@version "1.0.0"
+
+Entity "AWS Lambda Function"
+Entity "AWS S3 Bucket"
+Entity "AWS DynamoDB Table"

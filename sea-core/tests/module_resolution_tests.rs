@@ -1,3 +1,4 @@
+#![cfg(not(target_arch = "wasm32"))]
 use sea_core::module::resolver::ModuleResolver;
 use sea_core::registry::NamespaceRegistry;
 use std::fs;

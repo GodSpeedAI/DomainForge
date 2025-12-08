@@ -25,6 +25,7 @@ pub struct FileMetadata {
     pub namespace: Option<String>,
     pub version: Option<String>,
     pub owner: Option<String>,
+    pub profile: Option<String>,
     pub imports: Vec<ImportDecl>,
 }
 
@@ -284,6 +285,7 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
                     "namespace" => metadata.namespace = Some(value_str),
                     "version" => metadata.version = Some(value_str),
                     "owner" => metadata.owner = Some(value_str),
+                    "profile" => metadata.profile = Some(value_str),
                     _ => {
                         return Err(ParseError::GrammarError(format!(
                             "Unknown annotation: {}",
@@ -961,6 +963,7 @@ fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
         Rule::additive_expr => parse_additive_expr(pair),
         Rule::multiplicative_expr => parse_multiplicative_expr(pair),
         Rule::unary_expr => parse_unary_expr(pair),
+        Rule::cast_expr => parse_cast_expr(pair),
         Rule::primary_expr => parse_primary_expr(pair),
         _ => Err(ParseError::InvalidExpression(format!(
             "Unexpected expression rule: {:?}",
@@ -1154,6 +1157,21 @@ fn parse_multiplicative_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
     }
 
     Ok(left)
+}
+
+/// Parse cast expression
+fn parse_cast_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let mut inner = pair.into_inner();
+    let primary = parse_expression(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected primary expression in cast".to_string())
+    })?)?;
+
+    if let Some(as_pair) = inner.next() {
+        let target_type = parse_string_literal(as_pair)?;
+        Ok(Expression::cast(primary, target_type))
+    } else {
+        Ok(primary)
+    }
 }
 
 /// Parse unary expression
@@ -1709,6 +1727,7 @@ fn expression_kind(expr: &Expression) -> &'static str {
         Expression::GroupBy { .. } => "group_by",
         Expression::Binary { .. } => "binary",
         Expression::Unary { .. } => "unary",
+        Expression::Cast { .. } => "cast",
         Expression::Quantifier { .. } => "quantifier",
         Expression::MemberAccess { .. } => "member_access",
         Expression::Aggregation { .. } => "aggregation",
@@ -1985,7 +2004,30 @@ pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     ast_to_graph_with_options(ast, &ParseOptions::default())
 }
 
-pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
+pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
+    use crate::parser::profiles::ProfileRegistry;
+    let registry = ProfileRegistry::global();
+    let active_profile = ast
+        .metadata
+        .profile
+        .clone()
+        .or_else(|| options.active_profile.clone())
+        .unwrap_or_else(|| "default".to_string());
+    ast.metadata.profile.get_or_insert(active_profile.clone());
+
+    if registry.get(&active_profile).is_none() {
+        let available = registry.list_names().join(", ");
+        let message = format!(
+            "Unknown profile: '{}'. Available profiles: {}",
+            active_profile, available
+        );
+        if options.tolerate_profile_warnings {
+            log::warn!("{}", message);
+        } else {
+            return Err(ParseError::Validation(message));
+        }
+    }
+
     let mut graph = Graph::new();
     let mut entity_map = HashMap::new();
     let mut role_map = HashMap::new();
@@ -2000,34 +2042,64 @@ pub fn ast_to_graph_with_options(ast: Ast, options: &ParseOptions) -> ParseResul
         .unwrap_or_else(|| "default".to_string());
 
     // First pass: Register dimensions and units
-    for node in &ast.declarations {
-        let node = unwrap_export(node);
-        match node {
-            AstNode::Dimension { name } => {
-                use crate::units::{Dimension, UnitRegistry};
-                let dim = Dimension::parse(name);
-                UnitRegistry::global().register_dimension(dim);
+    {
+        use crate::units::{Dimension, Unit, UnitError, UnitRegistry};
+        let registry = UnitRegistry::global();
+        let mut registry = registry.write().map_err(|e| {
+            ParseError::GrammarError(format!("Failed to lock unit registry: {}", e))
+        })?;
+
+        for node in &ast.declarations {
+            let node = unwrap_export(node);
+            match node {
+                AstNode::Dimension { name } => {
+                    let dim = Dimension::parse(name);
+                    registry.register_dimension(dim);
+                }
+                AstNode::UnitDeclaration {
+                    symbol,
+                    dimension,
+                    factor,
+                    base_unit,
+                } => {
+                    let dim = Dimension::parse(dimension);
+                    let unit = Unit::new(
+                        symbol.clone(),
+                        symbol.clone(),
+                        dim,
+                        *factor,
+                        base_unit.clone(),
+                    );
+                    match registry.get_unit(symbol) {
+                        Ok(existing) => {
+                            if existing != &unit {
+                                return Err(ParseError::GrammarError(format!(
+                                    "Conflicting unit '{}' already registered (existing: dimension={}, base_factor={}, base_unit={}; new: dimension={}, base_factor={}, base_unit={})",
+                                    symbol,
+                                    existing.dimension(),
+                                    existing.base_factor(),
+                                    existing.base_unit(),
+                                    unit.dimension(),
+                                    unit.base_factor(),
+                                    unit.base_unit(),
+                                )));
+                            }
+                        }
+                        Err(UnitError::UnitNotFound(_)) => {
+                            registry.register(unit).map_err(|e| {
+                                ParseError::GrammarError(format!("Failed to register unit: {}", e))
+                            })?;
+                        }
+                        Err(err) => {
+                            return Err(ParseError::GrammarError(format!(
+                                "Failed to inspect unit '{}': {}",
+                                symbol, err
+                            )));
+                        }
+                    }
+                }
+                _ => {}
             }
-            AstNode::UnitDeclaration {
-                symbol,
-                dimension,
-                factor,
-                base_unit,
-            } => {
-                use crate::units::{Dimension, Unit, UnitRegistry};
-                let dim = Dimension::parse(dimension);
-                let unit = Unit::new(
-                    symbol.clone(),
-                    symbol.clone(),
-                    dim,
-                    *factor,
-                    base_unit.clone(),
-                );
-                UnitRegistry::global().register(unit).map_err(|e| {
-                    ParseError::GrammarError(format!("Failed to register unit: {}", e))
-                })?;
-            }
-            _ => {}
         }
     }
 

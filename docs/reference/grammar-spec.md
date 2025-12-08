@@ -9,15 +9,17 @@ program = { SOI ~ file_header? ~ declaration* ~ EOI }
 file_header = { annotation* ~ import_decl* }
 ```
 
-- **Annotations**: `@namespace`, `@version`, `@owner` with string values.
-- **Imports**: `Import {Foo, Bar as Baz} from "path/to/file.sea"` or `Import * as alias from "module"`.
+- **Annotations**: `@namespace`, `@version`, `@owner`, `@profile` with string values.
+- **Imports**: `Import {Foo, Bar as Baz} from "path/to/file.sea"`, `Import * as alias from "module"`, or `Import { Service } from "std:core"`.
 
 Example header:
 
 ```sea
 @namespace "finance.payments"
 @owner "platform-team"
+@profile "cloud"
 Import {Ledger as L} from "../common/ledger.sea"
+Import { Service } from "std:core"
 ```
 
 ## Names, identifiers, literals
@@ -185,7 +187,8 @@ comparison_expr = additive_expr (comparison_op additive_expr)?
 comparison_op   = >= | <= | != | = | > | < | contains | startswith | endswith | matches | before | after | during | has_role
 additive_expr   = multiplicative_expr ((+|-) multiplicative_expr)*
 multiplicative_expr = unary_expr ((*|/) unary_expr)*
-unary_expr      = "-" unary_expr | primary_expr
+unary_expr      = ("-" | "!")* cast_expr
+cast_expr       = primary_expr ("as" string_literal)*
 primary_expr    = (expression) | group_by_expr | member_access | aggregation_expr | quantified_expr | instance_reference | literal | identifier
 ```
 
@@ -195,15 +198,44 @@ Additional forms:
 - **Aggregation**: `sum(f in flows where f.resource = "Money": f.quantity as "USD")`.
 - **Group by**: `group_by(f in flows: f.to) { sum(f.quantity) > 10 }`.
 - **Member access**: `flow.quantity`, `entity.name`.
+- **Casting**: `100 "ms" as "s"`, `f.quantity as "USD"`.
 - **Literals**: strings, multiline strings, numbers, booleans, quantities (`100 "USD"`), time literals (`"2025-12-31T23:59:59Z"`), interval literals (`interval("09:00","17:00")`).
 
 ## Validation highlights
 
 - Duplicate declarations in the same namespace are rejected.
 - Unknown references (entities, resources, roles, units) fail validation.
-- Unit conversions must align with declared dimensions.
+- Unit conversions must align with declared dimensions or documented built-in units (see Time units below).
 - ConceptChange annotations must include valid semantic versions.
 - Policies and metrics use three-valued logic; undefined data may yield `Unknown`.
+
+### Unit conversions & "as" usage
+
+The SEA DSL supports unit literals and a general-purpose `as` coercion operator.
+
+- **Quantity literal**: Write a number followed by a quoted unit (e.g., `100 "USD"`, `1_500 "USD"`, `100.5 "kg"`).
+- **Explicit Casting**: Use the `as` operator to convert between compatible units in any expression.
+    ```sea
+    1000 "ms" as "s"          // Evaluates to 1 "s"
+    f.quantity as "USD"       // Converts flow quantity to USD
+    ```
+- **Aggregation**: The `as` operator is commonly used in aggregations to normalize units before summing.
+    ```sea
+    sum(f in flows where f.resource = "Money": f.quantity as "USD")
+    ```
+
+- **Declaration `as:` introducer**: The `as` keyword is also used in `Policy` and `Metric` declarations to introduce expression bodies (e.g. `Policy name as:`). This is a distinct syntactic usage.
+
+### Built-in Time units
+
+Common time units are available without explicit declarations. The compiler preloads the `Time` dimension with the following units:
+
+- `s` (base, seconds)
+- `ms` (milliseconds, factor `0.001` to `s`)
+- `us` (microseconds, factor `0.000001` to `s`)
+- `ns` (nanoseconds, factor `0.000000001` to `s`)
+
+Examples such as `1000 "ms" as "s"` rely on these built-ins. Projects can still declare additional time units, and all conversions must remain dimensionally compatible.
 
 ## Workflow for grammar changes
 

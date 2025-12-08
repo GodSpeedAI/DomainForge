@@ -13,8 +13,8 @@ fn test_ast_to_graph_registers_unit_with_case_insensitive_dimension() {
     // Parse to graph; this will register units using UnitRegistry::global()
     let _graph = parse_to_graph(source).expect("Failed to parse to graph");
     // After parsing, the registry should contain the unit
-    let unit = UnitRegistry::global()
-        .get_unit("NCASE")
-        .expect("Unit not found");
+    let registry = UnitRegistry::global();
+    let registry = registry.read().expect("Failed to lock registry");
+    let unit = registry.get_unit("NCASE").expect("Unit not found");
     assert_eq!(unit.dimension(), &Dimension::Currency);
 }

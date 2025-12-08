@@ -156,3 +156,9 @@ Run `just all-tests` to verify all bindings remain in sync.
 - Update Developer Commands if `justfile` recipes change
 
 **Self-check**: Before submitting code, ask: "Did I make a mistake that future AI agents might repeat?" If yes, document it here.
+
+## General Guidance
+- prioritize clarity and maintainability in code
+- follow existing project conventions unless there's a strong reason to deviate
+- ensure all changes are well-tested across all language bindings
+- adhere strictly to the change workflow to maintain cross-language parity

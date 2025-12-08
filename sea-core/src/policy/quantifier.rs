@@ -776,6 +776,9 @@ impl Expression {
         if let Some(target_unit) = target_unit {
             if let Some(unit) = source_unit.clone() {
                 let registry = UnitRegistry::global();
+                let registry = registry
+                    .read()
+                    .map_err(|e| format!("Failed to lock unit registry: {}", e))?;
                 let from = registry
                     .get_unit(&unit)
                     .map_err(|e| format!("{}", e))?

@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-623%20passing-brightgreen.svg)](sea-core/tests/)
 
 ---
@@ -80,6 +80,14 @@ model.policy(
     severity="error"
 )
 
+# Unit Conversion (New!)
+# Automatically convert units using the 'as' operator
+model.policy(
+    "Latency Check",
+    expression="1000 'ms' as 's' == 1 's'",
+    severity="info"
+)
+
 # Validate the model
 results = model.validate()
 print(f"✅ Model valid: {results.is_valid}")
@@ -91,6 +99,12 @@ print(f"✅ Model valid: {results.is_valid}")
 - Works identically in Python, TypeScript, Rust
 - Exports to FINOS CALM for architecture governance
 - Provides a single source of truth for your business logic
+
+### New Features (v0.2.0)
+
+- **Unit Conversion**: Use the `as` operator for type-safe unit conversions (e.g., `1000 'ms' as 's'`).
+- **Profiles**: Define DSL dialects with `@profile "cloud"` or `@profile "data"`.
+- **Standard Library**: Import built-in types from `std:core`, `std:http`, and `std:aws`.
 
 ### Install & Run
 
@@ -734,6 +748,24 @@ try {
 
 ### 📦 Installation
 
+**From Package Registries (Recommended)**
+
+```bash
+# Python
+pip install sea-dsl
+
+# Rust
+cargo add sea-core
+
+# TypeScript / Node.js
+npm install @domainforge/sea
+
+# WebAssembly
+npm install @domainforge/sea-wasm
+```
+
+**Build from Source**
+
 Choose your language:
 
 ```bash
@@ -993,7 +1025,7 @@ print(f'Flow: {flow.quantity} {cameras.name} from {factory.name} to {warehouse.n
 
 ## 📄 License
 
-SEA DSL is open source under the [MIT License](LICENSE).
+SEA DSL is open source under the [MIT OR Apache-2.0 License](LICENSE) (see also [LICENSE-MIT](LICENSE-MIT)).
 
 ---
 
@@ -1009,5 +1041,3 @@ Built on the shoulders of giants:
 ---
 
 > **Build enterprise models that business analysts can read and machines can execute**
-
-

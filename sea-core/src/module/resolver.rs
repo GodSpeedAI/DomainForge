@@ -60,7 +60,12 @@ impl<'a> ModuleResolver<'a> {
     }
 
     fn visit(&mut self, path: &Path, ast: &Ast) -> ParseResult<()> {
-        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let canonical = if path.to_string_lossy().starts_with("__std__") {
+            path.to_path_buf()
+        } else {
+            path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+        };
+
         if self.visiting.contains(&canonical) {
             return Err(ParseError::GrammarError(
                 "Circular dependency detected".to_string(),
@@ -99,6 +104,23 @@ impl<'a> ModuleResolver<'a> {
     }
 
     fn parse_file(&self, path: &Path) -> ParseResult<Ast> {
+        let path_str = path.to_string_lossy();
+        if path_str.starts_with("__std__") {
+            let namespace = path_str.strip_prefix("__std__").unwrap();
+            let content = match namespace {
+                "std" | "std:core" => include_str!("../../std/core.sea"),
+                "std:http" => include_str!("../../std/http.sea"),
+                "std:aws" => include_str!("../../std/aws.sea"),
+                _ => {
+                    return Err(ParseError::GrammarError(format!(
+                        "Unknown std module: {}",
+                        namespace
+                    )))
+                }
+            };
+            return parse_source(content);
+        }
+
         let content = fs::read_to_string(path).map_err(|e| {
             ParseError::GrammarError(format!("Failed to read module {}: {}", path.display(), e))
         })?;
@@ -106,6 +128,10 @@ impl<'a> ModuleResolver<'a> {
     }
 
     fn resolve_module_path(&self, namespace: &str) -> ParseResult<PathBuf> {
+        if namespace == "std" || namespace.starts_with("std:") {
+            return Ok(PathBuf::from(format!("__std__{}", namespace)));
+        }
+
         self.bindings
             .iter()
             .find(|binding| binding.namespace == namespace)
@@ -116,9 +142,13 @@ impl<'a> ModuleResolver<'a> {
     }
 
     fn validate_import_targets(&self, import: &ImportDecl, dep_path: &Path) -> ParseResult<()> {
-        let canonical = dep_path
-            .canonicalize()
-            .unwrap_or_else(|_| dep_path.to_path_buf());
+        let canonical = if dep_path.to_string_lossy().starts_with("__std__") {
+            dep_path.to_path_buf()
+        } else {
+            dep_path
+                .canonicalize()
+                .unwrap_or_else(|_| dep_path.to_path_buf())
+        };
         let module = self.loaded_modules.get(&canonical).ok_or_else(|| {
             ParseError::GrammarError(format!(
                 "Expected module '{}' to be loaded before validating imports",

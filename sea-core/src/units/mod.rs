@@ -2,7 +2,7 @@ use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Dimension {
@@ -297,6 +297,27 @@ impl Default for UnitRegistry {
             Decimal::from(3600),
             "s",
         ));
+        registry.register_builtin(Unit::new(
+            "ms",
+            "millisecond",
+            Dimension::Time,
+            Decimal::new(1, 3),
+            "s",
+        ));
+        registry.register_builtin(Unit::new(
+            "us",
+            "microsecond",
+            Dimension::Time,
+            Decimal::new(1, 6),
+            "s",
+        ));
+        registry.register_builtin(Unit::new(
+            "ns",
+            "nanosecond",
+            Dimension::Time,
+            Decimal::new(1, 9),
+            "s",
+        ));
 
         // Count (dimensionless)
         registry.register_base(Dimension::Count, "units");
@@ -382,15 +403,9 @@ impl UnitRegistry {
         Ok(in_target)
     }
 
-    pub fn global() -> &'static mut UnitRegistry {
-        use std::sync::Mutex;
-        static GLOBAL_REGISTRY: OnceLock<Mutex<UnitRegistry>> = OnceLock::new();
-
-        let mutex = GLOBAL_REGISTRY.get_or_init(|| Mutex::new(UnitRegistry::default()));
-        unsafe {
-            let ptr = mutex as *const Mutex<UnitRegistry> as *mut Mutex<UnitRegistry>;
-            (*ptr).get_mut().unwrap()
-        }
+    pub fn global() -> &'static RwLock<UnitRegistry> {
+        static GLOBAL_REGISTRY: OnceLock<RwLock<UnitRegistry>> = OnceLock::new();
+        GLOBAL_REGISTRY.get_or_init(|| RwLock::new(UnitRegistry::default()))
     }
 
     /// Register units defined in a JSON string of the form:
@@ -423,13 +438,16 @@ impl UnitRegistry {
     }
 }
 
-static DEFAULT_UNIT_REGISTRY: OnceLock<UnitRegistry> = OnceLock::new();
+pub fn get_default_registry() -> &'static RwLock<UnitRegistry> {
+    UnitRegistry::global()
+}
 
 /// Helper function to get a Unit from a string symbol, using the default registry
 /// Returns a Count-based unit if the symbol is not found
 pub fn unit_from_string(symbol: impl Into<String>) -> Unit {
     let symbol = symbol.into();
-    let registry = DEFAULT_UNIT_REGISTRY.get_or_init(UnitRegistry::default);
+    let registry = get_default_registry();
+    let registry = registry.read().unwrap_or_else(|e| e.into_inner());
 
     registry.get_unit(&symbol).cloned().unwrap_or_else(|_| {
         // Default to Count dimension for unknown units

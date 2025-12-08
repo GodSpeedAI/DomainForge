@@ -53,6 +53,7 @@ fn validate_file(
         default_namespace,
         namespace_registry: registry.clone(),
         entry_path: Some(path.to_path_buf()),
+        ..Default::default()
     };
     let graph = parse_to_graph_with_options(&source, &options)
         .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", path.display(), e))?;
@@ -93,6 +94,7 @@ fn validate_directory(
             default_namespace: Some(binding.namespace.clone()),
             namespace_registry: Some(registry.clone()),
             entry_path: Some(binding.path.clone()),
+            ..Default::default()
         };
         let file_graph = parse_to_graph_with_options(&source, &options)
             .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", binding.path.display(), e))?;

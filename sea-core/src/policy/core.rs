@@ -2,7 +2,10 @@ use super::expression::{BinaryOp, Expression, UnaryOp};
 use super::violation::{Severity, Violation};
 use crate::graph::Graph;
 use crate::policy::ThreeValuedBool;
+use crate::units::get_default_registry;
 use crate::{ConceptId, SemanticVersion};
+use rust_decimal::prelude::{FromPrimitive, FromStr};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -260,6 +263,11 @@ impl Policy {
             Expression::Variable(name) => {
                 Err(format!("Cannot evaluate unexpanded variable: {}", name))
             }
+            Expression::Cast { .. } => {
+                let val = Self::get_runtime_value(expr, graph)?;
+                val.as_bool()
+                    .ok_or_else(|| format!("Expected boolean from cast, got: {}", val))
+            }
             Expression::Binary { op, left, right } => match op {
                 BinaryOp::And | BinaryOp::Or => {
                     let left_val = self.evaluate_expression_boolean(left, graph)?;
@@ -340,7 +348,7 @@ impl Policy {
                 Err("Cannot evaluate non-expanded quantifier".to_string())
             }
             Expression::MemberAccess { object, member } => {
-                let value = self.get_runtime_value(expr, graph)?;
+                let value = Self::get_runtime_value(expr, graph)?;
                 match value {
                     serde_json::Value::Bool(v) => Ok(v),
                     serde_json::Value::Null => Ok(false),
@@ -379,6 +387,10 @@ impl Policy {
         match expr {
             Expression::Literal(v) => Ok(T::from_option_bool(v.as_bool())),
             Expression::Variable(name) => Err(format!("Cannot evaluate unexpanded variable: {}", name)),
+            Expression::Cast { .. } => {
+                let val = Self::get_runtime_value(expr, graph)?;
+                Ok(T::from_option_bool(val.as_bool()))
+            }
             Expression::Binary { op, left, right } => match op {
                 BinaryOp::And | BinaryOp::Or => {
                     let l = self.evaluate_expression_three_valued(left, graph)?;
@@ -390,19 +402,42 @@ impl Policy {
                     })
                 }
                 BinaryOp::Equal | BinaryOp::NotEqual => {
-                    let left_val = self.get_runtime_value(left, graph);
-                    let right_val = self.get_runtime_value(right, graph);
+                    let left_val = Self::get_runtime_value(left, graph);
+                    let right_val = Self::get_runtime_value(right, graph);
                     match (left_val, right_val) {
                         (Ok(lv), Ok(rv)) => {
                             // If either operand is JSON Null, the comparison yields Null.
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
                             } else {
-                                let eq = match op {
-                                    BinaryOp::Equal => lv == rv,
-                                    BinaryOp::NotEqual => lv != rv,
+                                let numeric_eq = match (
+                                    Self::parse_numeric_with_unit_value(&lv),
+                                    Self::parse_numeric_with_unit_value(&rv),
+                                ) {
+                                    (Ok(ln), Ok(rn)) => {
+                                        self.normalize_units_nullable(ln, rn)?
+                                            .map(|(l, r)| l == r)
+                                    }
+                                    _ => None,
+                                };
+
+                                let equality = if let Some(eq) = numeric_eq {
+                                    Some(eq)
+                                } else if lv.is_number() || rv.is_number() {
+                                    None
+                                } else {
+                                    Some(lv == rv)
+                                };
+
+                                let eq = match (op, equality) {
+                                    (_, None) => return Ok(T::Null),
+                                    (BinaryOp::Equal, Some(true)) => true,
+                                    (BinaryOp::Equal, Some(false)) => false,
+                                    (BinaryOp::NotEqual, Some(true)) => false,
+                                    (BinaryOp::NotEqual, Some(false)) => true,
                                     _ => unreachable!(),
                                 };
+
                                 Ok(T::from_option_bool(Some(eq)))
                             }
                         }
@@ -413,24 +448,31 @@ impl Policy {
                 | BinaryOp::LessThan
                 | BinaryOp::GreaterThanOrEqual
                 | BinaryOp::LessThanOrEqual => {
-                    // Use runtime retrieval which may yield serialization Null.
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
-                            } else if let (Some(l), Some(r)) = (lv.as_f64(), rv.as_f64()) {
-                                let res = match op {
-                                    BinaryOp::GreaterThan => l > r,
-                                    BinaryOp::LessThan => l < r,
-                                    BinaryOp::GreaterThanOrEqual => l >= r,
-                                    BinaryOp::LessThanOrEqual => l <= r,
-                                    _ => unreachable!(),
-                                };
-                                Ok(T::from_option_bool(Some(res)))
                             } else {
-                                Ok(T::Null)
+                                let numeric = self
+                                    .normalize_units_nullable(
+                                        Self::parse_numeric_with_unit_value(&lv)
+                                            .ok()
+                                            .flatten(),
+                                        Self::parse_numeric_with_unit_value(&rv)
+                                            .ok()
+                                            .flatten(),
+                                    )?
+                                    .map(|(l, r)| match op {
+                                        BinaryOp::GreaterThan => l > r,
+                                        BinaryOp::LessThan => l < r,
+                                        BinaryOp::GreaterThanOrEqual => l >= r,
+                                        BinaryOp::LessThanOrEqual => l <= r,
+                                        _ => unreachable!(),
+                                    });
+
+                                Ok(T::from_option_bool(numeric))
                             }
                         }
                         _ => Ok(T::Null),
@@ -440,8 +482,8 @@ impl Policy {
                     Err("Arithmetic operations not supported in boolean context".to_string())
                 }
                 BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => {
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
@@ -466,8 +508,8 @@ impl Policy {
                     Ok(T::from_option_bool(Some(role_check)))
                 }
                 BinaryOp::Matches => {
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
 
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
@@ -505,8 +547,8 @@ impl Policy {
                     }
 
                     // Parse and compare ISO 8601 timestamps
-                    let left_v = self.get_runtime_value(left, graph);
-                    let right_v = self.get_runtime_value(right, graph);
+                    let left_v = Self::get_runtime_value(left, graph);
+                    let right_v = Self::get_runtime_value(right, graph);
                     match (left_v, right_v) {
                         (Ok(lv), Ok(rv)) => {
                             if lv.is_null() || rv.is_null() {
@@ -584,7 +626,7 @@ impl Policy {
             }
             Expression::MemberAccess { object: _, member: _ } => {
                 // Resolve object/member to a runtime value and convert to bool
-                let value = self.get_runtime_value(expr, graph)?;
+                let value = Self::get_runtime_value(expr, graph)?;
                 Ok(T::from_option_bool(value.as_bool()))
             }
             Expression::Aggregation { .. } => Err("Aggregation in boolean context requires explicit comparison (e.g., COUNT(...) > 0)".to_string()),
@@ -608,10 +650,10 @@ impl Policy {
     {
         let left_val = self
             .get_literal_value(left)
-            .or_else(|_| self.get_runtime_value(left, graph))?;
+            .or_else(|_| Self::get_runtime_value(left, graph))?;
         let right_val = self
             .get_literal_value(right)
-            .or_else(|_| self.get_runtime_value(right, graph))?;
+            .or_else(|_| Self::get_runtime_value(right, graph))?;
         Ok(op(&left_val, &right_val))
     }
 
@@ -623,11 +665,12 @@ impl Policy {
         op: F,
     ) -> Result<bool, String>
     where
-        F: Fn(f64, f64) -> bool,
+        F: Fn(Decimal, Decimal) -> bool,
     {
-        let left_val = self.get_numeric_value(left, graph)?;
-        let right_val = self.get_numeric_value(right, graph)?;
-        Ok(op(left_val, right_val))
+        let left_val = self.resolve_numeric_with_unit(left, graph)?;
+        let right_val = self.resolve_numeric_with_unit(right, graph)?;
+        let (left_aligned, right_aligned) = self.normalize_units_strict(left_val, right_val)?;
+        Ok(op(left_aligned, right_aligned))
     }
 
     fn compare_strings<F>(
@@ -683,7 +726,7 @@ impl Policy {
     }
 
     fn collect_roles(&self, expr: &Expression, graph: &Graph) -> Result<Vec<String>, String> {
-        let value = self.get_runtime_value(expr, graph)?;
+        let value = Self::get_runtime_value(expr, graph)?;
 
         if let Some(arr) = value.as_array() {
             return Ok(arr
@@ -729,29 +772,150 @@ impl Policy {
         }
     }
 
-    fn get_numeric_value(&self, expr: &Expression, graph: &Graph) -> Result<f64, String> {
-        let v = self
+    fn parse_decimal_value(value: &serde_json::Value) -> Result<Decimal, String> {
+        if let Some(s) = value.as_str() {
+            Decimal::from_str(s).map_err(|e| e.to_string())
+        } else if let Some(f) = value.as_f64() {
+            Decimal::from_f64(f).ok_or_else(|| format!("Unable to represent {} as Decimal", f))
+        } else if let Some(i) = value.as_i64() {
+            Ok(Decimal::from(i))
+        } else if let Some(u) = value.as_u64() {
+            Decimal::from_u64(u).ok_or_else(|| format!("Unable to represent {} as Decimal", u))
+        } else {
+            Err(format!("Expected numeric value, got: {}", value))
+        }
+    }
+
+    fn parse_numeric_with_unit_value(
+        value: &serde_json::Value,
+    ) -> Result<Option<(Decimal, Option<String>)>, String> {
+        if let Some(obj) = value.as_object() {
+            match (obj.get("__quantity_value"), obj.get("__quantity_unit")) {
+                (Some(q_val), Some(q_unit)) => {
+                    let unit_str = q_unit
+                        .as_str()
+                        .ok_or_else(|| {
+                            format!("Expected __quantity_unit to be string, got: {}", q_unit)
+                        })?
+                        .to_string();
+                    let value_dec = Self::parse_decimal_value(q_val)
+                        .map_err(|e| format!("Invalid __quantity_value: {}", e))?;
+                    return Ok(Some((value_dec, Some(unit_str))));
+                }
+                (Some(_), None) | (None, Some(_)) => {
+                    return Err(
+                        "Quantity object must include both __quantity_value and __quantity_unit"
+                            .to_string(),
+                    )
+                }
+                _ => {}
+            }
+        }
+
+        if value.is_number() || value.is_string() {
+            return Ok(Some((Self::parse_decimal_value(value)?, None)));
+        }
+
+        Ok(None)
+    }
+
+    fn resolve_numeric_with_unit(
+        &self,
+        expr: &Expression,
+        graph: &Graph,
+    ) -> Result<(Decimal, Option<String>), String> {
+        let value = self
             .get_literal_value(expr)
-            .or_else(|_| self.get_runtime_value(expr, graph))?;
-        v.as_f64()
-            .or_else(|| v.as_i64().map(|i| i as f64))
-            .ok_or_else(|| "Expected numeric value".to_string())
+            .or_else(|_| Self::get_runtime_value(expr, graph))?;
+        Self::parse_numeric_with_unit_value(&value)?
+            .ok_or_else(|| format!("Expected numeric value, got: {}", value))
+    }
+
+    fn normalize_units_strict(
+        &self,
+        left: (Decimal, Option<String>),
+        right: (Decimal, Option<String>),
+    ) -> Result<(Decimal, Decimal), String> {
+        match (left.1, right.1) {
+            (Some(l_unit), Some(r_unit)) => {
+                let registry = get_default_registry();
+                let registry = registry
+                    .read()
+                    .map_err(|e| format!("Failed to lock unit registry: {}", e))?;
+
+                if l_unit == r_unit {
+                    Ok((left.0, right.0))
+                } else {
+                    let from = registry
+                        .get_unit(&r_unit)
+                        .map_err(|e| format!("Invalid unit '{}': {}", r_unit, e))?;
+                    let to = registry
+                        .get_unit(&l_unit)
+                        .map_err(|e| format!("Invalid unit '{}': {}", l_unit, e))?;
+                    let converted = registry
+                        .convert(right.0, from, to)
+                        .map_err(|e| format!("Unit conversion failed: {}", e))?;
+                    Ok((left.0, converted))
+                }
+            }
+            (None, None) => Ok((left.0, right.0)),
+            (Some(l_unit), None) => Err(format!(
+                "Cannot compare quantity with unit '{}' to unitless value",
+                l_unit
+            )),
+            (None, Some(r_unit)) => Err(format!(
+                "Cannot compare unitless value to quantity with unit '{}'",
+                r_unit
+            )),
+        }
+    }
+
+    fn normalize_units_nullable(
+        &self,
+        left: Option<(Decimal, Option<String>)>,
+        right: Option<(Decimal, Option<String>)>,
+    ) -> Result<Option<(Decimal, Decimal)>, String> {
+        let (left, right) = match (left, right) {
+            (Some(l), Some(r)) => (l, r),
+            _ => return Ok(None),
+        };
+
+        match (left.1.clone(), right.1.clone()) {
+            (Some(l_unit), Some(r_unit)) => {
+                let registry = get_default_registry();
+                let registry = registry
+                    .read()
+                    .map_err(|e| format!("Failed to lock unit registry: {}", e))?;
+                if l_unit == r_unit {
+                    Ok(Some((left.0, right.0)))
+                } else {
+                    let from = registry.get_unit(&r_unit);
+                    let to = registry.get_unit(&l_unit);
+                    if let (Ok(from), Ok(to)) = (from, to) {
+                        match registry.convert(right.0, from, to) {
+                            Ok(converted) => Ok(Some((left.0, converted))),
+                            Err(_) => Ok(None),
+                        }
+                    } else {
+                        Ok(None)
+                    }
+                }
+            }
+            (None, None) => Ok(Some((left.0, right.0))),
+            _ => Ok(None),
+        }
     }
 
     fn get_string_value(&self, expr: &Expression, graph: &Graph) -> Result<String, String> {
         let v = self
             .get_literal_value(expr)
-            .or_else(|_| self.get_runtime_value(expr, graph))?;
+            .or_else(|_| Self::get_runtime_value(expr, graph))?;
         v.as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| "Expected string value".to_string())
     }
 
-    fn get_runtime_value(
-        &self,
-        expr: &Expression,
-        graph: &Graph,
-    ) -> Result<serde_json::Value, String> {
+    fn get_runtime_value(expr: &Expression, graph: &Graph) -> Result<serde_json::Value, String> {
         match expr {
             Expression::Literal(v) => Ok(v.clone()),
             Expression::MemberAccess { object, member } => {
@@ -873,6 +1037,50 @@ impl Policy {
                     graph,
                 )?;
                 Ok(v)
+            }
+            Expression::Cast {
+                operand,
+                target_type,
+            } => {
+                let val = Self::get_runtime_value(operand, graph)?;
+                let (value_dec, source_unit) = Self::parse_numeric_with_unit_value(&val)
+                    .map_err(|e| format!("Invalid cast operand: {}", e))?
+                    .ok_or_else(|| {
+                        format!("Cannot cast non-numeric value {} to {}", val, target_type)
+                    })?;
+
+                let registry = get_default_registry();
+                let registry = registry
+                    .read()
+                    .map_err(|e| format!("Failed to lock unit registry: {}", e))?;
+                let target_unit = registry
+                    .get_unit(target_type)
+                    .map_err(|e| format!("Unknown target unit '{}': {}", target_type, e))?;
+
+                let converted_value = if let Some(from_unit_symbol) = source_unit {
+                    let from_unit = registry
+                        .get_unit(&from_unit_symbol)
+                        .map_err(|e| format!("Unknown unit '{}': {}", from_unit_symbol, e))?;
+                    if from_unit.dimension() != target_unit.dimension() {
+                        return Err(format!(
+                            "Cannot cast from '{}' ({:?}) to '{}' ({:?})",
+                            from_unit_symbol,
+                            from_unit.dimension(),
+                            target_type,
+                            target_unit.dimension()
+                        ));
+                    }
+                    registry
+                        .convert(value_dec, from_unit, target_unit)
+                        .map_err(|e| format!("Unit conversion failed: {}", e))?
+                } else {
+                    value_dec
+                };
+
+                Ok(serde_json::json!({
+                    "__quantity_value": converted_value.to_string(),
+                    "__quantity_unit": target_type
+                }))
             }
             Expression::QuantityLiteral { value, unit } => Ok(
                 serde_json::json!({"__quantity_value": value.to_string(), "__quantity_unit": unit}),

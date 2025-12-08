@@ -1,9 +1,9 @@
 use sea_core::parser::ast::{Ast, AstNode, FileMetadata};
+use sea_core::parser::ast::{MappingRule, PolicyKind, PolicyMetadata, PolicyModality};
 use sea_core::parser::printer::PrettyPrinter;
-use std::collections::HashMap;
-use serde_json::json;
-use sea_core::parser::ast::{PolicyMetadata, PolicyKind, PolicyModality, MappingRule};
 use sea_core::policy::Expression;
+use serde_json::json;
+use std::collections::HashMap;
 
 #[test]
 fn test_pretty_print_ast() {
@@ -77,10 +77,7 @@ fn test_pretty_print_policy_header() {
 #[test]
 fn test_pretty_print_mapping_nested_and_trailing_commas() {
     let mut fields = HashMap::new();
-    fields.insert(
-        "nested".to_string(),
-        json!({ "bar": 1, "baz": [1, 2] }),
-    );
+    fields.insert("nested".to_string(), json!({ "bar": 1, "baz": [1, 2] }));
     fields.insert("simple".to_string(), json!("ok"));
 
     let rule = MappingRule {
@@ -110,4 +107,88 @@ fn test_pretty_print_mapping_nested_and_trailing_commas() {
     let printer_comma = PrettyPrinter::new().with_trailing_commas(true);
     let output_comma = printer_comma.print(&mapping_ast);
     assert!(output_comma.contains("simple: \"ok\","));
+}
+
+#[test]
+fn test_pretty_print_projection_arrow_and_trailing_commas() {
+    use sea_core::parser::ast::ProjectionOverride;
+
+    let mut fields = HashMap::new();
+    fields.insert("nested".to_string(), json!({ "bar": 1, "baz": [1, 2] }));
+    fields.insert("simple".to_string(), json!("ok"));
+
+    let override_entry = ProjectionOverride {
+        primitive_type: "Resource".to_string(),
+        primitive_name: "Camera".to_string(),
+        fields,
+    };
+
+    let projection_ast = Ast {
+        metadata: FileMetadata::default(),
+        declarations: vec![AstNode::ProjectionDecl {
+            name: "p1".to_string(),
+            target: sea_core::parser::ast::TargetFormat::Calm,
+            overrides: vec![override_entry],
+        }],
+    };
+
+    let printer = PrettyPrinter::new();
+    let output_default = printer.print(&projection_ast);
+    assert!(output_default.contains("Projection \"p1\" for CALM"));
+    assert!(output_default.contains("Resource \"Camera\""));
+    // Arrow style separator should be used in nested object entries
+    assert!(output_default.contains("\"bar\" -> 1"));
+
+    let printer_comma = PrettyPrinter::new().with_trailing_commas(true);
+    let output_comma = printer_comma.print(&projection_ast);
+    // Trailing commas should appear on the simple field line
+    assert!(output_comma.contains("simple: \"ok\","));
+    // Arrow separators still present
+    assert!(output_comma.contains("\"baz\" -> [1, 2]"));
+}
+
+#[test]
+fn test_pretty_print_policy_kind_modality_display() {
+    let kinds = [
+        PolicyKind::Constraint,
+        PolicyKind::Derivation,
+        PolicyKind::Obligation,
+    ];
+    let modalities = [
+        PolicyModality::Obligation,
+        PolicyModality::Prohibition,
+        PolicyModality::Permission,
+    ];
+
+    for kind in kinds.iter() {
+        for modality in modalities.iter() {
+            let metadata = PolicyMetadata {
+                kind: Some(kind.clone()),
+                modality: Some(modality.clone()),
+                priority: Some(7),
+                rationale: None,
+                tags: vec![],
+            };
+            let ast = Ast {
+                metadata: FileMetadata::default(),
+                declarations: vec![AstNode::Policy {
+                    name: format!("{:?}-{:?}", kind, modality),
+                    version: None,
+                    metadata: metadata.clone(),
+                    expression: Expression::literal(true),
+                }],
+            };
+            let output = PrettyPrinter::new().print(&ast);
+            // The printed header must contain "per <Kind> <Modality>"
+            let expected_header = format!("per {} {}", kind, modality);
+            assert!(
+                output.contains(&expected_header),
+                "Missing header: {}\nGot: {}",
+                expected_header,
+                output
+            );
+            // Also contains priority
+            assert!(output.contains("priority 7"));
+        }
+    }
 }

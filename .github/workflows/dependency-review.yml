@@ -21,4 +21,7 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: critical # Only fail on critical severity to be conservative
-          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC
+          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, LGPL-3.0
+          # Allow dependencies with non-standard SPDX license expressions (e.g., Apache-2.0/MIT)
+          # These are typically dual-licensed and safe, but use non-standard separators
+          allow-dependencies-licenses: pkg:cargo/minicov
