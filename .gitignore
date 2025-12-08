@@ -12,6 +12,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Bun
+bun.lockb
+.bun/
+
 # napi / native module build outputs
 sea-core/target/
 target/

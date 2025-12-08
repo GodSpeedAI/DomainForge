@@ -34,10 +34,12 @@ typescript-tests/            # TypeScript/Vitest integration tests
 just all-tests              # Run Rust + Python + TypeScript tests (recommended)
 just rust-test              # Rust tests with CLI: cargo test -p sea-core --features cli
 just python-test            # Python tests (uses .venv if present)
-just ts-test                # TypeScript tests via Vitest
+just ts-test                # TypeScript tests via Vitest (uses Bun, falls back to npm)
+just bun-test               # TypeScript tests via Bun explicitly (faster)
 
 # Setup
-just setup                  # Install TypeScript + Python dependencies
+just setup                  # Install TypeScript (Bun) + Python dependencies
+just bun-install            # Install only TypeScript deps with Bun
 just python-setup           # Create .venv, install deps, build Python bindings via maturin
 
 # Debugging
@@ -46,6 +48,8 @@ just prepare-rust-debug     # Symlink test binary for codelldb debugging
 # Pre-PR checks
 cargo clippy -- -D warnings && cargo fmt
 ```
+
+> **Note**: This project uses [Bun](https://bun.sh/) as the primary JavaScript runtime and package manager for TypeScript tooling. Node.js is available as a fallback (use `npm run test:node`).
 
 ## Change Workflow (Non-Negotiable)
 
@@ -158,6 +162,7 @@ Run `just all-tests` to verify all bindings remain in sync.
 **Self-check**: Before submitting code, ask: "Did I make a mistake that future AI agents might repeat?" If yes, document it here.
 
 ## General Guidance
+
 - prioritize clarity and maintainability in code
 - follow existing project conventions unless there's a strong reason to deviate
 - ensure all changes are well-tested across all language bindings
