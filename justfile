@@ -36,7 +36,7 @@ python-test:
 
 ts-test:
     @echo "Running TypeScript tests (Vitest)..."
-    bun test || npm test --silent
+    if command -v bun >/dev/null 2>&1; then bun vitest run; else npm run test:node; fi
 
 # Run TypeScript tests with Bun explicitly (faster)
 bun-test:
@@ -130,10 +130,10 @@ ci-test-python:
         python3 -m pytest tests/ || python -m pytest tests/; \
     fi
 
-# Run TypeScript tests (CI variant)
+# Run TypeScript tests (CI variant, with Node.js fallback)
 ci-test-ts:
     @echo "Running TypeScript tests (CI)..."
-    bun test
+    if command -v bun >/dev/null 2>&1; then bun vitest run; else just ci-test-ts-node; fi
 
 # Run TypeScript tests with Node.js fallback (for Windows CI)
 ci-test-ts-node:

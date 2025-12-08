@@ -161,7 +161,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.1.42"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -203,7 +203,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.1.42"
 
       - name: Build Sea binary
         run: cargo build -p sea-core --bin sea --features cli
