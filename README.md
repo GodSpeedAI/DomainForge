@@ -1025,7 +1025,7 @@ print(f'Flow: {flow.quantity()} {cameras.name()} from {factory.name()} to {wareh
 
 ## 📄 License
 
-SEA DSL is open source under the [MIT OR Apache-2.0 License](LICENSE).
+SEA DSL is open source under the [Apache-2.0 License](LICENSE).
 
 ---
 
