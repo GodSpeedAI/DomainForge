@@ -36,7 +36,17 @@ python-test:
 
 ts-test:
     @echo "Running TypeScript tests (Vitest)..."
-    npm test --silent
+    if command -v bun >/dev/null 2>&1; then bun vitest run; else npm run test:node; fi
+
+# Run TypeScript tests with Bun explicitly (faster)
+bun-test:
+    @echo "Running TypeScript tests with Bun..."
+    bun vitest run
+
+# Install dependencies with Bun (faster than npm)
+bun-install:
+    @echo "Installing dependencies with Bun..."
+    bun install
 
 all-tests:
     @echo "Running all tests (Rust, Python, TypeScript)..."
@@ -93,7 +103,7 @@ install-just:
 
 setup:
     @echo "Installing TypeScript dependencies and Python dev dependencies..."
-    npm ci || npm install
+    bun install || npm ci || npm install
     # Prepare a Python virtualenv and install dev dependencies if possible
     just python-setup || true
 
@@ -120,10 +130,15 @@ ci-test-python:
         python3 -m pytest tests/ || python -m pytest tests/; \
     fi
 
-# Run TypeScript tests (CI variant)
+# Run TypeScript tests (CI variant, with Node.js fallback)
 ci-test-ts:
     @echo "Running TypeScript tests (CI)..."
-    npm test
+    if command -v bun >/dev/null 2>&1; then bun vitest run; else just ci-test-ts-node; fi
+
+# Run TypeScript tests with Node.js fallback (for Windows CI)
+ci-test-ts-node:
+    @echo "Running TypeScript tests with Node.js..."
+    npm run test:node
 
 # Verify CLI binary can execute
 ci-verify-binary BINARY_PATH:

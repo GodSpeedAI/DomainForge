@@ -1,0 +1,11 @@
+# Bun configuration for DomainForge
+# https://bun.sh/docs/runtime/bunfig
+
+[install]
+# Use hoisted linker for faster installs (hardlink not supported)
+linker = "hoisted"
+
+[test]
+# We use Vitest instead of Bun's built-in test runner
+# Vitest is more feature-complete for this project's needs
+coverage = false

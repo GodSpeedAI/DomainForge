@@ -158,11 +158,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: "npm"
+          bun-version: "1.1.42"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -177,10 +176,10 @@ jobs:
           workspaces: sea-core
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Build TypeScript bindings
-        run: npm run build
+        run: bun run build
 
       - name: Run TypeScript tests
         run: just ci-test-ts
@@ -201,18 +200,18 @@ jobs:
         with:
           prefix-key: ${{ env.CACHE_VERSION }}-integration
 
-      - name: Install Node
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
+          bun-version: "1.1.42"
 
       - name: Build Sea binary
         run: cargo build -p sea-core --bin sea --features cli
 
       - name: Build TypeScript bindings (minimal)
         run: |
-          npm ci
-          npm run build
+          bun install
+          bun run build
 
       - name: Verify Sea CLI and validate SEA file
         shell: bash
