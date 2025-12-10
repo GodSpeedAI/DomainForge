@@ -1,0 +1,727 @@
+# SEA-DSL (Semantic Enterprise Architecture DSL) - AI Coding Agent Cheatsheet
+# Purpose: Comprehensive reference for AI agents to understand and generate SEA-DSL code
+# Version: 1.0.0
+# Last Updated: 2025-12-10
+
+---
+meta:
+  dsl_name: SEA-DSL (Semantic Enterprise Architecture Domain-Specific Language)
+  purpose: Model enterprise systems as typed semantic graphs with entities, resources, flows, and policies
+  paradigm: Declarative, domain-driven, multi-target projection (CALM, RDF/KG, SBVR)
+  implementation:
+    core: Rust (canonical, in sea-core/)
+    bindings: [Python/PyO3, TypeScript/napi-rs, WASM/wasm-bindgen]
+    parser: PEG grammar via Pest (sea-core/grammar/sea.pest)
+  key_principle: Rust core is authoritative; bindings wrap types without duplicating logic
+
+---
+grammar:
+  file_structure:
+    pattern: "SOI ~ file_header? ~ declaration* ~ EOI"
+    components:
+      file_header:
+        annotations:
+          - "@namespace \"domain.subdomain\""
+          - "@version \"1.0.0\""
+          - "@owner \"team-name\""
+          - "@profile \"cloud\""
+        imports:
+          named: 'import {Foo, Bar as Baz} from "path/to/file.sea"'
+          wildcard: 'import * as alias from "module"'
+          stdlib: 'import { Service } from "std:core"'
+
+  keywords:
+    declaration: [Entity, Resource, Flow, Pattern, Role, Relation, Instance, Policy, Metric, Dimension, Unit, Mapping, Projection, ConceptChange, import, export]
+    expressions: [forall, exists, exists_unique, and, or, not, in, as, where, over, last, group_by]
+    operators: [">=", "<=", "!=", "=", ">", "<", contains, startswith, endswith, matches, before, after, during, has_role]
+    aggregates: [count, sum, min, max, avg]
+    collections: [flows, entities, resources, instances, relations]
+    modality: [Constraint, Derivation, Obligation, Prohibition, Permission]
+    case_sensitivity: case-insensitive (^"keyword" in grammar)
+
+  literals:
+    string: '"double-quoted with escapes"'
+    multiline: '"""triple-quoted\nmultiline"""'
+    number: "123, -456, 78.90 (no scientific notation)"
+    boolean: "true | false"
+    quantity: '100 "USD", 1_500 "kg"'
+    time: '"2025-12-31T23:59:59Z" (ISO 8601, timezone REQUIRED)'
+    interval: 'interval("09:00", "17:00")'
+
+  identifiers:
+    pattern: "[A-Za-z_][A-Za-z0-9_]*"
+    names: "double-quoted strings or triple-quoted multiline"
+    instance_reference: "@instance_name"
+
+  comments:
+    single_line: "// comment to end of line"
+    whitespace: "ignored outside strings"
+
+---
+primitives:
+  Entity:
+    purpose: "WHO - actors, systems, organizational units participating in flows"
+    syntax:
+      basic: 'Entity "Name"'
+      with_namespace: 'Entity "Name" in domain'
+      with_version: 'Entity "Name" v1.2.3 in domain'
+      with_evolution:
+        pattern: |
+          Entity "VendorV2" v2.0.0
+            @replaces "Vendor" v1.0.0
+            @changes ["added credit_limit", "added payment_terms"]
+            in procurement
+    fields:
+      id: "ConceptId (derived from namespace+name)"
+      name: "String"
+      namespace: "Option<String> (defaults to 'default')"
+      version: "Option<SemanticVersion>"
+      replaces: "Option<String> (entity name being replaced)"
+      changes: "Vec<String> (changelog entries)"
+      attributes: "IndexMap<String, AttributeValue>"
+    rust_constructor: "Entity::new_with_namespace(name, namespace)"
+    python_constructor: "Entity(name, namespace=None, attributes=None)"
+    typescript_constructor: "new Entity(name, namespace?, attributes?)"
+
+  Resource:
+    purpose: "WHAT - items transferred, measured, or tracked in flows"
+    syntax:
+      basic: 'Resource "Name"'
+      with_units: 'Resource "Name" units'
+      with_specific_unit: 'Resource "Money" USD'
+      with_namespace: 'Resource "Money" USD in finance'
+    fields:
+      id: "ConceptId"
+      name: "String"
+      namespace: "Option<String>"
+      unit: "Option<String> (concrete unit if bound)"
+      has_units: "bool (true if declared with 'units' keyword)"
+      attributes: "AttributeMap"
+    rust_constructor: "Resource::new(name, namespace, unit, has_units, attributes)"
+    validation:
+      - "unit must resolve to declared unit or fail validation"
+      - "if has_units=false, quantities with units cause validation error"
+
+  Flow:
+    purpose: "HOW - movement of resources between entities"
+    syntax:
+      basic: 'Flow "ResourceName" from "SourceEntity" to "DestEntity"'
+      with_quantity: 'Flow "Money" from "Customer" to "PaymentProcessor" quantity 1000'
+    fields:
+      id: "ConceptId"
+      resource_id: "ConceptId (MUST use ID, not reference)"
+      from_entity_id: "ConceptId"
+      to_entity_id: "ConceptId"
+      quantity: "Option<Quantity> {value: Decimal, unit: Option<String>}"
+      namespace: "Option<String>"
+      attributes: "AttributeMap"
+    rust_constructor: "Flow::new(resource_id, from_id, to_id, quantity, namespace, attributes)"
+    critical_anti_pattern:
+      wrong: "Flow::new(resource, from_entity, to_entity)  # Passing objects"
+      correct: "Flow::new(resource.concept_id(), from.concept_id(), to.concept_id())  # Pass IDs"
+    validation:
+      - "resource_id, from, to must exist in same namespace"
+      - "quantity units must match resource dimension or be convertible"
+
+  Role:
+    purpose: "Participant category labels for relations"
+    syntax:
+      basic: 'Role "Approver"'
+      with_namespace: 'Role "Approver" in governance'
+    fields:
+      id: "ConceptId"
+      name: "String"
+      namespace: "Option<String>"
+      attributes: "AttributeMap"
+    rust_constructor: "Role::new(name, namespace, attributes)"
+
+  Relation:
+    purpose: "Semantic predicates connecting roles, optionally tied to flows"
+    syntax:
+      pattern: |
+        Relation "Payment"
+          subject: "Payer"
+          predicate: "pays"
+          object: "Payee"
+          via: flow "Money"
+    fields:
+      id: "ConceptId"
+      name: "String"
+      subject_role_id: "ConceptId"
+      predicate: "String"
+      object_role_id: "ConceptId"
+      via_flow_id: "Option<ConceptId>"
+      namespace: "Option<String>"
+      attributes: "AttributeMap"
+    rust_constructor: "Relation::new(name, namespace, subject_role, predicate, object_role, via_flow)"
+    validation:
+      - "subject/object role IDs must exist"
+      - "via_flow_id must point to declared flow if present"
+
+  Instance:
+    purpose: "Concrete instantiation of an entity with field values"
+    syntax:
+      pattern: |
+        Instance order_123 of "Order" {
+            amount: 150,
+            currency: "USD"
+        }
+    fields:
+      id: "ConceptId"
+      name: "String (identifier, not quoted)"
+      entity_type: "String"
+      fields: "Map<String, Expression>"
+    note: "Instance names are identifiers (unquoted), not string literals"
+
+  Policy:
+    purpose: "Expressions evaluated against the graph for constraints and derivations"
+    syntax:
+      basic: 'Policy policy_name as: expression'
+      with_modality: 'Policy name per Constraint Obligation priority 5 as: expression'
+      with_annotations:
+        pattern: |
+          Policy payment_threshold per Constraint Obligation priority 5
+            @rationale "Limit single payments"
+            @tags ["finance", "compliance"]
+            v1.0.0
+            as: forall f in flows: (f.resource = "Money" and f.quantity <= 10000)
+    fields:
+      name: "identifier (unquoted)"
+      kind: "[Constraint, Derivation, Obligation]"
+      modality: "[Obligation, Prohibition, Permission]"
+      priority: "number"
+      annotations: "rationale, tags"
+      version: "Option<SemanticVersion>"
+      expression: "Expression tree"
+    evaluation:
+      modes: ["two-valued (True/False)", "three-valued (True/False/Unknown)"]
+      unknown_handling: "undefined data yields Unknown in three-valued mode"
+    rust_api: "Graph::evaluate_policy(policy) -> EvaluationResult"
+    python_api: "graph.evaluate_policy(policy_json) -> PolicyResult"
+    typescript_api: "graph.evaluatePolicy(policyJson): PolicyResult"
+
+  Metric:
+    purpose: "Observable measurements with refresh intervals and thresholds"
+    syntax:
+      pattern: |
+        Metric "total_payment_volume" as:
+          sum(f in flows where f.resource = "Money": f.quantity as "USD")
+          @refresh_interval 60 "seconds"
+          @unit "USD"
+          @threshold 100
+          @severity "warning"
+          @target 5000
+          @window 300 "seconds"
+    annotations:
+      refresh_interval: "number unit_string"
+      unit: "string"
+      threshold: "number"
+      severity: "string (e.g., warning, critical)"
+      target: "number"
+      window: "number unit_string"
+
+  Pattern:
+    purpose: "Named regex patterns for validation"
+    syntax: 'Pattern "Email" matches "^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$"'
+
+  ConceptChange:
+    purpose: "Track semantic version migrations"
+    syntax:
+      pattern: |
+        ConceptChange "Vendor_v2_migration"
+          @from_version v2.0.0
+          @to_version v2.1.0
+          @migration_policy mandatory
+          @breaking_change true
+    annotations:
+      from_version: "vX.Y.Z"
+      to_version: "vX.Y.Z"
+      migration_policy: "mandatory | optional"
+      breaking_change: "true | false"
+
+  Dimension:
+    purpose: "Define measurement dimensions for unit conversion"
+    syntax: 'Dimension "Currency"'
+
+  Unit:
+    purpose: "Define units within dimensions with conversion factors"
+    syntax: 'Unit "USD" of "Currency" factor 1 base "USD"'
+    example_set:
+      - 'Dimension "Currency"'
+      - 'Unit "USD" of "Currency" factor 1 base "USD"'
+      - 'Unit "EUR" of "Currency" factor 1.07 base "USD"'
+    builtin_time_units:
+      s: "seconds (base)"
+      ms: "milliseconds (factor 0.001)"
+      us: "microseconds (factor 0.000001)"
+      ns: "nanoseconds (factor 0.000000001)"
+
+  Mapping:
+    purpose: "Define how primitives map to external formats"
+    syntax:
+      pattern: |
+        Mapping "name" for calm {
+            Entity "Customer" -> Target { "id": "customer_id" }
+            Flow "Money" -> Target { "from": true }
+        }
+    target_formats: [calm, kg, sbvr]
+
+  Projection:
+    purpose: "Override default field projections for exports"
+    syntax:
+      pattern: |
+        Projection "name" for calm {
+            Entity "Customer" { "name": "customer_name" }
+        }
+
+---
+expressions:
+  precedence:
+    highest_to_lowest:
+      - "primary_expr (literals, identifiers, parenthesized)"
+      - "cast_expr (as)"
+      - "unary_expr (-, not)"
+      - "multiplicative_expr (*, /)"
+      - "additive_expr (+, -)"
+      - "comparison_expr (=, !=, <, >, <=, >=, contains, matches, etc.)"
+      - "not_expr"
+      - "and_expr"
+      - "or_expr"
+
+  primary_expressions:
+    literal: "42, true, \"string\", 100 \"USD\""
+    variable: "identifier referencing in-scope binding"
+    member_access: "entity.name, flow.quantity"
+    instance_reference: "@instance_name"
+    parenthesized: "(expression)"
+
+  comparison_operators:
+    equality: ["=", "!="]
+    relational: [">", "<", ">=", "<="]
+    string_ops: [contains, startswith, endswith, matches]
+    temporal_ops: [before, after, during]
+    role_check: "has_role"
+
+  logical_operators:
+    and: "expr1 and expr2"
+    or: "expr1 or expr2"
+    not: "not expr"
+
+  quantifiers:
+    forall:
+      syntax: 'forall x in collection: (condition)'
+      example: 'forall f in flows: (f.quantity > 0)'
+    exists:
+      syntax: 'exists x in collection: (condition)'
+      example: 'exists e in entities: (e.name = "Admin")'
+    exists_unique:
+      syntax: 'exists_unique x in collection: (condition)'
+      purpose: "exactly one element satisfies condition"
+
+  aggregations:
+    simple:
+      count: 'count(flows)'
+      sum: 'sum(flows.quantity)'
+    with_filter:
+      pattern: 'count(flows where resource = "Camera")'
+    comprehension:
+      pattern: 'sum(f in flows where f.resource = "Money": f.quantity as "USD")'
+      components:
+        variable: "f"
+        collection: "flows"
+        filter: 'f.resource = "Money"'
+        projection: "f.quantity as \"USD\""
+    with_window:
+      pattern: 'sum(f in flows over last 60 "seconds" where f.resource = "Money": f.quantity)'
+
+  group_by:
+    syntax: 'group_by(var in collection: group_key) { aggregate_expression }'
+    example: 'group_by(f in flows: f.to.name) { sum(f.quantity) > 10 }'
+
+  casting:
+    purpose: "Convert between compatible units"
+    syntax: 'expression as "target_unit"'
+    examples:
+      - '1000 "ms" as "s"  // -> 1 "s"'
+      - 'f.quantity as "USD"'
+    note: "Distinct from 'as:' keyword in Policy/Metric declarations"
+
+  collections:
+    available: [flows, entities, resources, instances, relations]
+    iteration: "Only accessible via quantifiers and aggregations"
+
+---
+graph_api:
+  construction:
+    rust: "Graph::new()"
+    python: "Graph()"
+    typescript: "new Graph()"
+
+  add_methods:
+    rust:
+      - "add_entity(&mut self, entity: Entity) -> Result<(), String>"
+      - "add_resource(&mut self, resource: Resource) -> Result<(), String>"
+      - "add_flow(&mut self, flow: Flow) -> Result<(), String>"
+      - "add_role(&mut self, role: Role) -> Result<(), String>"
+      - "add_relation_type(&mut self, relation: RelationType) -> Result<(), String>"
+      - "add_instance(&mut self, instance: Instance) -> Result<(), String>"
+      - "add_policy(&mut self, policy: Policy) -> Result<(), String>"
+      - "add_pattern(&mut self, pattern: Pattern) -> Result<(), String>"
+    python: "add_entity(), add_resource(), add_flow(), add_role(), add_relation(), add_instance()"
+    typescript: "addEntity(), addResource(), addFlow(), addRole(), addRelation(), addInstance()"
+
+  query_methods:
+    counts: "entity_count(), resource_count(), flow_count(), role_count(), relation_count(), instance_count(), policy_count(), pattern_count()"
+    get_by_id: "get_entity(id), get_resource(id), get_flow(id), get_role(id)"
+    find_by_name: "find_entity_by_name(name), find_resource_by_name(name), find_role_by_name(name)"
+    all_accessors: "all_entities(), all_resources(), all_flows(), all_instances(), all_roles(), all_relations(), all_patterns()"
+
+  policy_evaluation:
+    set_mode: "set_evaluation_mode(use_three_valued_logic: bool)"
+    check_mode: "use_three_valued_logic() -> bool"
+    evaluate: "evaluate_policy(policy) -> EvaluationResult"
+
+  parsing:
+    from_source:
+      rust: "Graph::parse(source: &str) -> Result<Graph, ParseError>"
+      python: "Graph.parse(source: str) -> Graph"
+      typescript: "Graph.parse(source: string): Graph"
+
+  critical_convention:
+    determinism: "Use IndexMap (not HashMap) for policy-relevant collections"
+    reason: "HashMap causes non-deterministic iteration order, breaking policy evaluation consistency"
+
+---
+types:
+  ConceptId:
+    purpose: "Unique identifier derived from namespace + name"
+    construction: "ConceptId::from_concept(namespace, name)"
+    legacy: "ConceptId::from_legacy_uuid(uuid)"
+
+  SemanticVersion:
+    format: "major.minor.patch (e.g., 1.2.3)"
+    usage: "Entity versions, policy versions, ConceptChange annotations"
+
+  Quantity:
+    fields:
+      value: "rust_decimal::Decimal (arbitrary precision)"
+      unit: "Option<String>"
+    json_serialization: "Decimal as string to preserve precision"
+    typescript_note: "Returns number for convenience; use string for round-tripping"
+
+  AttributeValue:
+    variants:
+      - "null"
+      - "boolean"
+      - "string"
+      - "Decimal (as string in JSON)"
+      - "bytes (base64 in JSON)"
+      - "array of AttributeValue"
+      - "object map (string -> AttributeValue)"
+
+  AttributeMap:
+    definition: "IndexMap<String, AttributeValue>"
+    note: "Uses IndexMap for deterministic iteration"
+
+---
+error_codes:
+  categories:
+    E001_E099: "Syntax and Parsing Errors"
+    E100_E199: "Type System Errors"
+    E200_E299: "Unit and Dimension Errors"
+    E300_E399: "Scope and Reference Errors"
+    E400_E499: "Policy Validation Errors"
+    E500_E599: "Namespace and Module Errors"
+
+  common_errors:
+    E001:
+      name: "Undefined Entity"
+      cause: "Reference to undeclared entity"
+      fix: "Define entity before referencing, check spelling, verify namespace"
+    E002:
+      name: "Undefined Resource"
+      cause: "Reference to undeclared resource"
+      fix: "Define resource before use, check spelling"
+    E005:
+      name: "Syntax Error"
+      cause: "Malformed DSL syntax"
+      fix: "Check for missing tokens, unclosed quotes/brackets"
+    E007:
+      name: "Duplicate Declaration"
+      cause: "Same name declared twice"
+      fix: "Use unique names or namespaces"
+    E100:
+      name: "Incompatible Types"
+      cause: "Type mismatch in expressions"
+      fix: "Ensure type compatibility, use conversions"
+    E200:
+      name: "Dimension Mismatch"
+      cause: "Operations on incompatible dimensions"
+      fix: "Use same dimension or add unit conversion"
+    E201:
+      name: "Invalid Unit"
+      cause: "Unrecognized unit name"
+      fix: "Declare unit or use standard names"
+    E300:
+      name: "Variable Not In Scope"
+      cause: "Variable used outside its binding scope"
+      fix: "Move reference inside scope or expand binding"
+    E400:
+      name: "Policy Evaluation Failed"
+      cause: "Policy expression could not evaluate"
+      fix: "Check expression syntax and input validity"
+
+  handling:
+    cli: "sea validate --format json file.sea"
+    python: |
+      try:
+          graph = Graph.parse(source)
+      except Exception as e:
+          print(f"Error {e.code}: {e}")
+    typescript: |
+      try {
+        const graph = Graph.parse(source);
+      } catch (e: any) {
+        const metadata = JSON.parse(e.message.split("__metadata__: ")[1]);
+        console.error(`Error ${metadata.code}: ${metadata.errorType}`);
+      }
+
+---
+standard_library:
+  core:
+    path: "std:core"
+    entities: [System, User, Service]
+    import: 'import { Service } from "std:core"'
+
+  aws:
+    path: "std:aws"
+    entities:
+      - "AWS Lambda Function"
+      - "AWS S3 Bucket"
+      - "AWS DynamoDB Table"
+
+  http:
+    path: "std:http"
+    note: "HTTP-related entities and resources"
+
+---
+projections:
+  calm:
+    purpose: "FINOS CALM (Common Architecture Language Model)"
+    mapping:
+      Entity: "models[n].entities"
+      Resource: "models[n].resources (with units preserved)"
+      Role: "typed facts with subjectRole/objectRole"
+      Flow: "facts with sea:id linking to DSL IDs"
+    export_command: "sea export --format calm file.sea"
+
+  kg:
+    purpose: "RDF/Turtle Knowledge Graph"
+    export: "sea export --format turtle file.sea"
+
+  sbvr:
+    purpose: "SBVR semantic business vocabulary"
+
+---
+development_workflow:
+  grammar_changes:
+    steps:
+      1: "Update sea-core/grammar/sea.pest"
+      2: "Update AST in sea-core/src/parser/ast.rs"
+      3: "Add parser tests in sea-core/tests/parser_*.rs"
+      4: "Update projections (CALM/KG) if affected"
+      5: "Refresh documentation"
+
+  primitive_changes:
+    mandatory_updates:
+      - "sea-core/src/primitives/*.rs (Rust core)"
+      - "sea-core/src/python/primitives.rs (PyO3 bindings)"
+      - "sea-core/src/typescript/primitives.rs (napi-rs bindings)"
+      - "sea-core/src/wasm/primitives.rs (if public API)"
+    test_suites:
+      - "tests/ (Python integration)"
+      - "typescript-tests/ (TypeScript/Vitest)"
+      - "sea-core/tests/ (Rust unit/integration)"
+
+  verification:
+    all_tests: "just all-tests"
+    rust_only: "just rust-test"
+    python_only: "just python-test"
+    typescript_only: "just ts-test"
+    lint: "cargo clippy -- -D warnings && cargo fmt"
+
+---
+anti_patterns:
+  hashmap_usage:
+    wrong: |
+      use std::collections::HashMap;
+      let entities: HashMap<String, Entity> = ...;
+    correct: |
+      use indexmap::IndexMap;
+      let entities: IndexMap<String, Entity> = ...;
+    reason: "HashMap causes non-deterministic policy evaluation"
+
+  flow_construction:
+    wrong: "Flow::new(resource, from_entity, to_entity)  // objects"
+    correct: "Flow::new(resource.concept_id(), from.concept_id(), to.concept_id())  // IDs"
+    reason: "Flows reference IDs, not objects"
+
+  parser_modification:
+    wrong: "Edit src/parser/ast.rs first"
+    correct: |
+      1. sea-core/grammar/sea.pest
+      2. src/parser/ast.rs
+      3. tests/parser_*.rs
+    reason: "Grammar is the source of truth for syntax"
+
+  binding_sync:
+    rule: "If touching sea-core/src/primitives/*.rs, MUST update all bindings"
+    files:
+      - "sea-core/src/python/primitives.rs"
+      - "sea-core/src/typescript/primitives.rs"
+      - "sea-core/src/wasm/primitives.rs"
+    verify: "just all-tests"
+
+---
+examples:
+  basic_model:
+    code: |
+      Entity "User" in auth
+      Resource "Token" units in auth
+      Flow "Token" from "User" to "User" quantity 1
+
+  logistics:
+    code: |
+      Entity "Warehouse"
+      Entity "Factory"
+      Resource "Camera" units
+      Flow "Camera" from "Warehouse" to "Factory" quantity 100
+
+      Policy logistics_flow as:
+          Entity.name != ""
+
+  finance_with_namespaces:
+    code: |
+      @namespace "com.example.finance"
+
+      Entity "Accounts Payable" in finance
+      Entity "Accounts Receivable" in finance
+      Entity "Customer" in finance
+      Resource "Invoice" units in finance
+      Flow "Invoice" from "Customer" to "Accounts Receivable" quantity 5
+
+  metrics_and_observability:
+    code: |
+      @namespace "com.example.payments"
+
+      Entity "PaymentProcessor" in com.example.payments
+      Entity "Customer" in com.example.payments
+      Resource "Money" USD in com.example.finance
+
+      Flow "Money" from "Customer" to "PaymentProcessor" quantity 1000
+
+      Metric "total_payment_volume" as:
+        sum(f in flows where f.resource = "Money": f.quantity as "USD")
+        @refresh_interval 60 "seconds"
+        @unit "USD"
+
+      Metric "payment_count" as:
+        count(f in flows where f.resource = "Money": f.quantity)
+        @threshold 100
+        @severity "warning"
+
+  evolution_and_versioning:
+    code: |
+      Entity "Vendor" v1.0.0 in procurement
+
+      Entity "VendorV2" v2.0.0
+        @replaces "Vendor" v1.0.0
+        @changes ["added credit_limit", "added payment_terms"]
+        in procurement
+
+      ConceptChange "Vendor_v2_migration"
+        @from_version v1.0.0
+        @to_version v2.0.0
+        @migration_policy mandatory
+        @breaking_change true
+
+  complex_policy:
+    code: |
+      Policy payment_limits per Constraint Obligation priority 10
+        @rationale "Prevent excessive single payments"
+        @tags ["compliance", "finance"]
+        v1.0.0
+        as: forall f in flows:
+              (f.resource = "Money" and f.quantity <= 100000 "USD")
+              or f.resource != "Money"
+
+  relation_example:
+    code: |
+      Entity "Buyer"
+      Entity "Seller"
+      Resource "Goods" units
+      Role "Purchaser"
+      Role "Vendor"
+      Flow "Goods" from "Seller" to "Buyer" quantity 10
+
+      Relation "Purchase"
+        subject: "Purchaser"
+        predicate: "buys from"
+        object: "Vendor"
+        via: flow "Goods"
+
+  unit_conversion:
+    code: |
+      Dimension "Currency"
+      Unit "USD" of "Currency" factor 1 base "USD"
+      Unit "EUR" of "Currency" factor 1.07 base "USD"
+
+      Resource "Payment" USD in finance
+
+      Policy currency_normalization as:
+        sum(f in flows where f.resource = "Payment": f.quantity as "USD") < 1000000
+
+---
+cli_commands:
+  validate:
+    usage: "sea validate [--format json|lsp] <file.sea>"
+    purpose: "Validate SEA file and report errors"
+
+  parse:
+    usage: "sea parse <file.sea>"
+    purpose: "Parse and output AST"
+
+  export:
+    calm: "sea export --format calm <file.sea>"
+    turtle: "sea export --format turtle <file.sea>"
+    purpose: "Project to external formats"
+
+  explain:
+    usage: "sea explain <error-code>"
+    purpose: "Get detailed info about error codes"
+
+---
+feature_flags:
+  build:
+    python: "cargo build --features python"
+    typescript: "cargo build --features typescript"
+    wasm: "cargo build --features wasm"
+    cli: "cargo build --features cli"
+
+---
+key_files:
+  grammar: "sea-core/grammar/sea.pest"
+  primitives: "sea-core/src/primitives/"
+  graph: "sea-core/src/graph/mod.rs"
+  policy: "sea-core/src/policy/expression.rs"
+  calm: "sea-core/src/calm/"
+  kg: "sea-core/src/kg.rs"
+  python_bindings: "sea-core/src/python/"
+  typescript_bindings: "sea-core/src/typescript/"
+  wasm_bindings: "sea-core/src/wasm/"
+  tests:
+    rust: "sea-core/tests/"
+    python: "tests/"
+    typescript: "typescript-tests/"
+  examples: "examples/, sea-core/examples/"
+  stdlib: "sea-core/std/"
