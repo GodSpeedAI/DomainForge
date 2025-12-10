@@ -1,23 +1,17 @@
-# @sprime01/sea
+# @domainforge/sea
 
 TypeScript/Node.js bindings for the SEA (Semantic Enterprise Architecture) DSL.
 
 ## Installation
 
 ```bash
-# From source (npm package coming soon)
-git clone https://github.com/GodSpeedAI/DomainForge.git
-cd DomainForge
-npm install
-npm run build
-
-# The build produces native .node bindings
+npm install @domainforge/sea
 ```
 
 ## Quick Start
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from "@sprime01/sea";
+import { Graph, Entity, Resource, Flow } from "@domainforge/sea";
 
 // Create a graph programmatically
 const graph = new Graph();
@@ -47,7 +41,7 @@ console.log(`Graph has ${graph.flowCount()} flows`);
 ## Parsing SEA DSL
 
 ```typescript
-import { Graph } from "@sprime01/sea";
+import { Graph } from "@domainforge/sea";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -220,7 +214,7 @@ class Graph {
 ### NamespaceRegistry (Workspace)
 
 ```typescript
-import { NamespaceRegistry } from "@sprime01/sea";
+import { NamespaceRegistry } from "@domainforge/sea";
 
 // Load a registry by path to the file
 const reg = NamespaceRegistry.fromFile("./.sea-registry.toml");

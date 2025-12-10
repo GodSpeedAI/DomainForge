@@ -5,15 +5,7 @@ Python bindings for the Semantic Enterprise Architecture (SEA) Domain Specific L
 ## Installation
 
 ```bash
-# From source (PyPI package coming soon)
-pip install maturin
-git clone https://github.com/GodSpeedAI/DomainForge.git
-cd DomainForge
-maturin develop
-
-# Or build wheel
-maturin build --release
-pip install target/wheels/sea_dsl-*.whl
+pip install sea-dsl
 ```
 
 ## Quick Start
