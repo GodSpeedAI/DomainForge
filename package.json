@@ -1,6 +1,6 @@
 {
-  "name": "@sprime01/sea",
-  "version": "0.2.0",
+  "name": "@domainforge/sea",
+  "version": "0.2.1",
   "description": "TypeScript bindings for the SEA (Semantic Enterprise Architecture) DSL",
   "main": "index.js",
   "types": "index.d.ts",

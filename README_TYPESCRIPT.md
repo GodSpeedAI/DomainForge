@@ -1,17 +1,11 @@
-# @sprime01/sea
+# @domainforge/sea
 
 TypeScript/Node.js bindings for the SEA (Semantic Enterprise Architecture) DSL.
 
 ## Installation
 
 ```bash
-# From source (npm package coming soon)
-git clone https://github.com/GodSpeedAI/DomainForge.git
-cd DomainForge
-npm install
-npm run build
-
-# The build produces native .node bindings
+npm install @domainforge/sea
 ```
 
 ## Quick Start

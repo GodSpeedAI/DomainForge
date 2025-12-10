@@ -109,11 +109,9 @@ print(f"✅ Model valid: {results.is_valid}")
 ### Install & Run
 
 ```bash
-# Python (build from source)
-git clone https://github.com/GodSpeedAI/DomainForge.git
-cd DomainForge
-pip install maturin
-maturin develop
+# Python
+pip install sea-dsl
+
 
 # Verify
 python -c "import sea_dsl; print(sea_dsl.__version__)"
