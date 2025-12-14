@@ -1,0 +1,257 @@
+project:
+  name: sea_projections_protobuf
+  goal: >
+    Add first-class Projection support to SEA-DSL and implement a Protobuf
+    projection engine that generates .proto files from the semantic graph.
+
+context:
+  repo_root: "."
+  core_crate: "sea-core"
+  grammar_file: "sea-core/grammar/sea.pest"
+  parser_module: "sea-core/src/parser/mod.rs"
+  ast_module: "sea-core/src/ast.rs"
+  graph_module: "sea-core/src/graph.rs"
+  projection_module: "sea-core/src/projection/mod.rs"
+  protobuf_module: "sea-core/src/projection/protobuf.rs"
+  tests_dir: "sea-core/tests"
+  examples_dir: "sea-core/examples"
+
+assumptions:
+  - Rust stable toolchain is installed
+  - Existing SEA-DSL parser, AST, and Graph are compiling
+  - Existing tests are green before changes
+  - Protobuf compiler (protoc) is available for later manual verification (optional)
+
+phases:
+  - id: 1_dsl_projection_construct
+    description: "Extend SEA-DSL with Projection construct (grammar + AST + examples)"
+    steps:
+      - id: 1_1_update_grammar
+        action: "Add Projection rules to sea.pest"
+        files:
+          - "sea-core/grammar/sea.pest"
+        changes:
+          - "Define tokens/rules for Projection declaration:"
+          - "ProjectionDecl = 'Projection' ~ string_literal ~ ProjectionBody"
+          - "ProjectionBody includes: from, to, include kinds, where tagged_with, metadata annotations"
+        acceptance_criteria:
+          - "Grammar compiles"
+          - "Projection rules do not break existing constructs"
+      - id: 1_2_update_ast
+        action: "Add Projection AST types"
+        files:
+          - "sea-core/src/ast.rs"
+        changes:
+          - "Define AstProjection struct with fields:"
+          - "  name: String"
+          - "  source_namespaces: Vec<String>"
+          - "  include_kinds: Vec<Kind>"
+          - "  exclude_kinds: Vec<Kind>"
+          - "  tagged_with: Vec<String>"
+          - "  profile: Option<String>"
+          - "  format: ProjectionFormat"
+          - "  metadata: ProjectionMetadata"
+          - "Add ProjectionFormat enum: Protobuf | DddManifest | JsonSchema | GraphQl | Other(String)"
+          - "Add ProjectionMetadata struct: stability, compatibility, audience, layer"
+          - "Extend root AstProgram/Module to store Vec<AstProjection>"
+        acceptance_criteria:
+          - "AST builds"
+          - "Unit tests for AST construction compile"
+      - id: 1_3_parser_to_ast
+        action: "Map grammar Projection rules into AstProjection"
+        files:
+          - "sea-core/src/parser/mod.rs"
+        changes:
+          - "Update parse function(s) to handle Projection rules"
+          - "Create helper to parse Projection and populate AstProjection"
+        acceptance_criteria:
+          - "Simple Projection example parses into expected AstProjection in a unit test"
+      - id: 1_4_examples_projection
+        action: "Add or update .sea examples using Projection"
+        files:
+          - "sea-core/examples/projection_finance.sea"
+          - "sea-core/examples/projection_risk.sea"
+        changes:
+          - "Create at least one Projection targeting protobuf, one targeting ddd-manifest"
+          - "Use: from namespace, to format, include kinds, tagged_with, metadata annotations"
+        acceptance_criteria:
+          - "Examples parse without error"
+          - "Projection nodes appear in AST inspection tests"
+
+  - id: 2_projection_spec_and_resolver
+    description: "Introduce ProjectionSpec model and resolver from AST + Graph"
+    steps:
+      - id: 2_1_projection_spec_model
+        action: "Create ProjectionSpec and related types"
+        files:
+          - "sea-core/src/projection/mod.rs"
+        changes:
+          - "Define ProjectionSpec struct:"
+          - "  name: String"
+          - "  format: ProjectionFormat"
+          - "  filters: ProjectionFilters"
+          - "  metadata: ProjectionMetadata"
+          - "Define ProjectionFilters:"
+          - "  include_kinds: Vec<Kind>"
+          - "  exclude_kinds: Vec<Kind>"
+          - "  tagged_with: Vec<String>"
+          - "  profile: Option<String>"
+          - "Define ProjectionFormat + ProjectionMetadata enums/structs consistent with AST"
+        acceptance_criteria:
+          - "ProjectionSpec compiles and is independent of concrete projection engines"
+      - id: 2_2_ast_to_projection_spec
+        action: "Implement conversion from AstProjection to ProjectionSpec"
+        files:
+          - "sea-core/src/projection/mod.rs"
+        changes:
+          - "Add from_ast_projection(ast: &AstProjection) -> ProjectionSpec"
+          - "Handle mapping of formats (e.g. 'protobuf' → ProjectionFormat::Protobuf)"
+          - "Handle default values for optional metadata"
+        acceptance_criteria:
+          - "Unit tests: given sample AstProjection, produced ProjectionSpec matches expectations"
+      - id: 2_3_projection_scope_resolver
+        action: "Implement resolver that selects graph nodes according to ProjectionSpec"
+        files:
+          - "sea-core/src/projection/mod.rs"
+          - "sea-core/src/graph.rs"
+        changes:
+          - "Add function: resolve_scope(graph: &Graph, spec: &ProjectionSpec) -> ResolvedScope"
+          - "ResolvedScope contains filtered nodes grouped by namespace and kind"
+          - "Filtering rules:"
+          - "  - node.namespace ∈ spec.source_namespaces"
+          - "  - node.kind ∈ include_kinds and not in exclude_kinds"
+          - "  - node.tags intersects tagged_with (if non-empty)"
+          - "  - node.profile matches if set"
+        acceptance_criteria:
+          - "Tests: given a small Graph fixture, resolver returns expected subsets for various ProjectionSpecs"
+
+  - id: 3_protobuf_ir_and_type_mapping
+    description: "Define a Protobuf IR and SEA→Protobuf type mapping"
+    steps:
+      - id: 3_1_protobuf_ir_model
+        action: "Create IR types to model .proto files"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Define:"
+          - "  struct ProtoFile { package: String, enums: Vec<ProtoEnum>, messages: Vec<ProtoMessage>, options: ProtoOptions }"
+          - "  struct ProtoEnum { name: String, values: Vec<ProtoEnumValue> }"
+          - "  struct ProtoEnumValue { name: String, number: i32 }"
+          - "  struct ProtoMessage { name: String, fields: Vec<ProtoField>, reserved_fields: Vec<u32>, options: ProtoMessageOptions }"
+          - "  struct ProtoField { name: String, number: u32, type_ref: ProtoTypeRef, repeated: bool }"
+          - "  enum ProtoTypeRef { Scalar(ScalarType), Message(String), Enum(String) }"
+        acceptance_criteria:
+          - "IR compiles and can be constructed in tests"
+      - id: 3_2_type_mapping_table
+        action: "Implement SEA type → Protobuf scalar mapping"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Define mapping function: map_sea_type_to_proto(sea_type: &SeaType) -> ProtoTypeRef"
+          - "Map core primitives: String, Int, Float, Boolean, UUID, Decimal, DateTime"
+          - "Use sensible defaults (e.g., UUID → string, DateTime → google.protobuf.Timestamp)"
+        acceptance_criteria:
+          - "Unit tests: mapping covers all core SEA primitive types"
+
+  - id: 4_protobuf_projection_engine
+    description: "Implement Protobuf projection engine based on ProjectionSpec + Graph"
+    steps:
+      - id: 4_1_engine_trait_and_impl
+        action: "Define generic ProjectionEngine trait and Protobuf implementation"
+        files:
+          - "sea-core/src/projection/mod.rs"
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Add trait ProjectionEngine { fn project(graph: &Graph, spec: &ProjectionSpec) -> ProjectionOutput; }"
+          - "Define ProjectionOutput for Protobuf as collection of ProtoFile"
+          - "Implement ProtobufProjectionEngine"
+        acceptance_criteria:
+          - "ProtobufProjectionEngine compiles and returns ProtoFile instances"
+      - id: 4_2_entities_resources_to_messages
+        action: "Map Entity/Resource nodes to ProtoMessage"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "For each Entity/Resource node in ResolvedScope:"
+          - "  - Create ProtoMessage with same name"
+          - "  - Map attributes to fields with stable ordering:"
+          - "      - sort attributes by name OR preserve declaration order consistently"
+          - "  - Assign field numbers starting from 1 sequentially"
+        acceptance_criteria:
+          - "Unit test: given small graph with two entities/resources, generated ProtoFile matches expected message definitions"
+      - id: 4_3_enums_to_proto
+        action: "Map SEA enums to ProtoEnum"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Create ProtoEnum for each SEA enum in scope"
+          - "Ensure first value is *_UNSPECIFIED = 0"
+          - "Assign sequential numbers to remaining variants"
+        acceptance_criteria:
+          - "Unit tests: SEA enum maps to proto enum with proper naming and numbering"
+      - id: 4_4_governance_messages
+        action: "Define standard governance/telemetry messages"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Define ProtoMessages for:"
+          - "  - PolicyViolation"
+          - "  - MetricReading"
+          - "  - ConceptChangeEvent"
+          - "Populate fields as specified in design (policy_name, entity_id, etc.)"
+        acceptance_criteria:
+          - "Unit tests: governance messages appear in output when enabled by ProjectionSpec"
+      - id: 4_5_compatibility_enforcement
+        action: "Enforce compatibility rules for repeated projections"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+          - "sea-core/src/projection/mod.rs"
+        changes:
+          - "Add storage or hook for previous ProtoFile schemas (initial version can assume no history and mark as TODO)"
+          - "Implement function: check_compatibility(old: &ProtoFile, new: &ProtoFile, metadata: &ProjectionMetadata) -> Result<(), Error>"
+          - "Rules:"
+          - "  - additive/backward: no field number reuse, only new fields with new numbers"
+          - "  - breaking: allow reassignments but require new semantic version (if available)"
+          - "  - emit reserved field numbers when removing fields under backward-compatible policies"
+        acceptance_criteria:
+          - "Unit tests: simulated old/new ProtoFile pairs pass/fail correctly under different compatibility settings"
+
+  - id: 5_codegen_and_cli_integration
+    description: "Wire projections into CLI/tools and provide tests + examples"
+    steps:
+      - id: 5_1_cli_command
+        action: "Add CLI command to trigger projections"
+        files:
+          - "sea-core/src/bin/sea_cli.rs" # or equivalent
+        changes:
+          - "Add subcommand: `sea project --format protobuf --output <dir>`"
+          - "Command loads .sea files, builds graph, resolves Projections, runs ProtobufProjectionEngine, writes .proto files"
+        acceptance_criteria:
+          - "Running CLI on example .sea files produces .proto files in specified output dir without panics"
+      - id: 5_2_integration_tests
+        action: "Add integration tests covering full pipeline"
+        files:
+          - "sea-core/tests/projection_protobuf_integration.rs"
+        changes:
+          - "Test scenario:"
+          - "  - Given example .sea with Entities, Resources, Enums, Projection"
+          - "  - Parse → Graph → ProjectionSpec → ProtobufProjectionEngine"
+          - "  - Assert on .proto text (or IR) for key messages, fields, and options"
+        acceptance_criteria:
+          - "All integration tests passing"
+      - id: 5_3_docs_and_examples
+        action: "Add minimal machine-consumable examples"
+        files:
+          - "sea-core/examples/projections/finance_proto.sea"
+          - "sea-core/examples/projections/risk_proto.sea"
+        changes:
+          - "Examples demonstrate use of Projection with Protobuf target"
+          - "Optional: store generated .proto snapshots for manual verification"
+        acceptance_criteria:
+          - "Examples parse and produce valid .proto artifacts (manually or via tests)"
+
+done_definition:
+  - "All phases completed"
+  - "All unit and integration tests passing"
+  - "CLI can generate .proto files from example .sea models"
+  - "ProjectionSpec and ProtobufProjectionEngine are stable and documented in-code"
