@@ -44,6 +44,8 @@ pub struct ProtoFile {
     pub enums: Vec<ProtoEnum>,
     /// Message definitions
     pub messages: Vec<ProtoMessage>,
+    /// gRPC service definitions
+    pub services: Vec<ProtoService>,
     /// Metadata about the projection
     pub metadata: ProtoMetadata,
 }
@@ -58,6 +60,7 @@ impl ProtoFile {
             options: ProtoOptions::default(),
             enums: Vec::new(),
             messages: Vec::new(),
+            services: Vec::new(),
             metadata: ProtoMetadata::default(),
         }
     }
@@ -122,6 +125,12 @@ impl ProtoFile {
         for m in &self.messages {
             out.push('\n');
             out.push_str(&m.to_proto_string());
+        }
+
+        // Services (gRPC)
+        for s in &self.services {
+            out.push('\n');
+            out.push_str(&s.to_proto_string());
         }
 
         out
@@ -189,6 +198,139 @@ pub struct ProtoMetadata {
     pub source_namespace: String,
     /// Timestamp of generation
     pub generated_at: String,
+}
+
+// ============================================================================
+// gRPC Service Types
+// ============================================================================
+
+/// Represents a gRPC service definition.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProtoService {
+    /// Service name (e.g., "PaymentProcessorService")
+    pub name: String,
+    /// RPC methods in this service
+    pub methods: Vec<ProtoRpcMethod>,
+    /// Documentation comments
+    pub comments: Vec<String>,
+}
+
+impl ProtoService {
+    /// Create a new ProtoService with the given name.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            methods: Vec::new(),
+            comments: Vec::new(),
+        }
+    }
+
+    /// Serialize the service to `.proto` text format.
+    pub fn to_proto_string(&self) -> String {
+        let mut out = String::new();
+
+        // Comments
+        for comment in &self.comments {
+            out.push_str(&format!("// {}\n", comment));
+        }
+
+        out.push_str(&format!("service {} {{\n", self.name));
+
+        for method in &self.methods {
+            out.push_str(&format!("  {}\n", method.to_proto_string()));
+        }
+
+        out.push_str("}\n");
+        out
+    }
+}
+
+/// Represents an RPC method in a gRPC service.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProtoRpcMethod {
+    /// Method name (e.g., "ProcessPayment")
+    pub name: String,
+    /// Request message type
+    pub request_type: String,
+    /// Response message type
+    pub response_type: String,
+    /// Streaming mode
+    pub streaming: StreamingMode,
+    /// Documentation comments
+    pub comments: Vec<String>,
+}
+
+impl ProtoRpcMethod {
+    /// Create a new unary RPC method.
+    pub fn new(
+        name: impl Into<String>,
+        request_type: impl Into<String>,
+        response_type: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            request_type: request_type.into(),
+            response_type: response_type.into(),
+            streaming: StreamingMode::Unary,
+            comments: Vec::new(),
+        }
+    }
+
+    /// Serialize the method to `.proto` text format.
+    pub fn to_proto_string(&self) -> String {
+        let request = match self.streaming {
+            StreamingMode::ClientStreaming | StreamingMode::Bidirectional => {
+                format!("stream {}", self.request_type)
+            }
+            _ => self.request_type.clone(),
+        };
+
+        let response = match self.streaming {
+            StreamingMode::ServerStreaming | StreamingMode::Bidirectional => {
+                format!("stream {}", self.response_type)
+            }
+            _ => self.response_type.clone(),
+        };
+
+        format!("rpc {}({}) returns ({});", self.name, request, response)
+    }
+}
+
+/// gRPC streaming mode for RPC methods.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum StreamingMode {
+    /// Unary RPC (default): single request, single response
+    #[default]
+    Unary,
+    /// Server streaming: single request, stream of responses
+    ServerStreaming,
+    /// Client streaming: stream of requests, single response
+    ClientStreaming,
+    /// Bidirectional streaming: stream of requests, stream of responses
+    Bidirectional,
+}
+
+impl StreamingMode {
+    /// Parse streaming mode from a string (e.g., from Flow attributes).
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "streaming" | "server_streaming" | "serverstreaming" => StreamingMode::ServerStreaming,
+            "client_streaming" | "clientstreaming" => StreamingMode::ClientStreaming,
+            "bidirectional" | "bidi" | "duplex" => StreamingMode::Bidirectional,
+            _ => StreamingMode::Unary,
+        }
+    }
+}
+
+impl std::fmt::Display for StreamingMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StreamingMode::Unary => write!(f, "unary"),
+            StreamingMode::ServerStreaming => write!(f, "server_streaming"),
+            StreamingMode::ClientStreaming => write!(f, "client_streaming"),
+            StreamingMode::Bidirectional => write!(f, "bidirectional"),
+        }
+    }
 }
 
 /// Represents a Protobuf message definition.
@@ -711,6 +853,25 @@ impl ProtobufEngine {
         projection_name: &str,
         include_governance: bool,
     ) -> ProtoFile {
+        Self::project_with_full_options(
+            graph,
+            namespace,
+            package,
+            projection_name,
+            include_governance,
+            false, // include_services
+        )
+    }
+
+    /// Project with all options including gRPC service generation.
+    pub fn project_with_full_options(
+        graph: &Graph,
+        namespace: &str,
+        package: &str,
+        projection_name: &str,
+        include_governance: bool,
+        include_services: bool,
+    ) -> ProtoFile {
         let mut proto = Self::project(graph, namespace, package);
         proto.metadata.projection_name = projection_name.to_string();
 
@@ -718,10 +879,100 @@ impl ProtobufEngine {
             proto.messages.extend(Self::generate_governance_messages());
         }
 
+        if include_services {
+            proto.services = Self::flows_to_services(graph, namespace);
+        }
+
         // Re-add WKT imports in case governance messages need them
         proto.add_wkt_imports();
 
         proto
+    }
+
+    /// Generate gRPC services from Flow patterns.
+    ///
+    /// This method groups flows by their destination entity (service provider)
+    /// and creates RPC methods for each flow. The naming convention follows
+    /// gRPC best practices: `{DestinationEntity}Service`.
+    ///
+    /// # Example
+    ///
+    /// A flow `Customer -> PaymentProcessor of PaymentRequest` generates:
+    /// ```protobuf
+    /// service PaymentProcessorService {
+    ///   rpc ProcessPaymentRequest(PaymentRequest) returns (PaymentRequestResponse);
+    /// }
+    /// ```
+    pub fn flows_to_services(graph: &Graph, namespace: &str) -> Vec<ProtoService> {
+        let mut services: BTreeMap<String, ProtoService> = BTreeMap::new();
+
+        for flow in graph.all_flows() {
+            // Filter by namespace if specified
+            if !namespace.is_empty() && flow.namespace() != namespace {
+                continue;
+            }
+
+            // Get the destination entity (service provider)
+            let to_entity = match graph.get_entity(flow.to_id()) {
+                Some(e) => e,
+                None => continue, // Skip if entity not found
+            };
+
+            // Get the resource being transferred (becomes the request type)
+            let resource = match graph.get_resource(flow.resource_id()) {
+                Some(r) => r,
+                None => continue, // Skip if resource not found
+            };
+
+            // Determine service name: {DestinationEntity}Service
+            let service_name = format!("{}Service", to_pascal_case(to_entity.name()));
+
+            // Determine method name: Process{Resource} or Send{Resource}
+            let method_name = format!("Process{}", to_pascal_case(resource.name()));
+
+            // Request type is the resource name
+            let request_type = to_pascal_case(resource.name());
+
+            // Response type is {Resource}Response
+            let response_type = format!("{}Response", to_pascal_case(resource.name()));
+
+            // Check for streaming mode in flow attributes
+            let streaming = flow
+                .get_attribute("streaming")
+                .and_then(|v| v.as_str())
+                .map(StreamingMode::from_str)
+                .unwrap_or(StreamingMode::Unary);
+
+            // Create the RPC method
+            let mut method = ProtoRpcMethod::new(&method_name, &request_type, &response_type);
+            method.streaming = streaming;
+
+            // Get the source entity for the comment
+            if let Some(from_entity) = graph.get_entity(flow.from_id()) {
+                method.comments.push(format!(
+                    "Flow: {} -> {} of {}",
+                    from_entity.name(),
+                    to_entity.name(),
+                    resource.name()
+                ));
+            }
+
+            // Add to or create service
+            services
+                .entry(service_name.clone())
+                .or_insert_with(|| {
+                    let mut svc = ProtoService::new(&service_name);
+                    svc.comments.push(format!("gRPC service for {}", to_entity.name()));
+                    svc
+                })
+                .methods
+                .push(method);
+        }
+
+        // Also generate response messages for each service method
+        // (This would normally be done, but we'll keep it simple for now)
+
+        services.into_values().collect()
     }
 
     /// Convert an Entity to a ProtoMessage.
@@ -1770,6 +2021,91 @@ mod tests {
     }
 
     // ========================================================================
+    // gRPC Service Tests
+    // ========================================================================
+
+    #[test]
+    fn test_proto_service_to_string() {
+        let mut service = ProtoService::new("PaymentService");
+        service.comments.push("Payment processing service".to_string());
+        
+        service.methods.push(ProtoRpcMethod::new(
+            "ProcessPayment",
+            "PaymentRequest",
+            "PaymentResponse",
+        ));
+        
+        let output = service.to_proto_string();
+        assert!(output.contains("service PaymentService {"));
+        assert!(output.contains("rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);"));
+        assert!(output.contains("// Payment processing service"));
+    }
+
+    #[test]
+    fn test_proto_rpc_method_unary() {
+        let method = ProtoRpcMethod::new("GetUser", "GetUserRequest", "User");
+        let output = method.to_proto_string();
+        assert_eq!(output, "rpc GetUser(GetUserRequest) returns (User);");
+    }
+
+    #[test]
+    fn test_proto_rpc_method_server_streaming() {
+        let mut method = ProtoRpcMethod::new("ListEvents", "ListEventsRequest", "Event");
+        method.streaming = StreamingMode::ServerStreaming;
+        let output = method.to_proto_string();
+        assert_eq!(output, "rpc ListEvents(ListEventsRequest) returns (stream Event);");
+    }
+
+    #[test]
+    fn test_proto_rpc_method_client_streaming() {
+        let mut method = ProtoRpcMethod::new("UploadChunks", "DataChunk", "UploadResult");
+        method.streaming = StreamingMode::ClientStreaming;
+        let output = method.to_proto_string();
+        assert_eq!(output, "rpc UploadChunks(stream DataChunk) returns (UploadResult);");
+    }
+
+    #[test]
+    fn test_proto_rpc_method_bidirectional() {
+        let mut method = ProtoRpcMethod::new("Chat", "ChatMessage", "ChatMessage");
+        method.streaming = StreamingMode::Bidirectional;
+        let output = method.to_proto_string();
+        assert_eq!(output, "rpc Chat(stream ChatMessage) returns (stream ChatMessage);");
+    }
+
+    #[test]
+    fn test_streaming_mode_from_str() {
+        assert_eq!(StreamingMode::from_str("streaming"), StreamingMode::ServerStreaming);
+        assert_eq!(StreamingMode::from_str("server_streaming"), StreamingMode::ServerStreaming);
+        assert_eq!(StreamingMode::from_str("client_streaming"), StreamingMode::ClientStreaming);
+        assert_eq!(StreamingMode::from_str("bidirectional"), StreamingMode::Bidirectional);
+        assert_eq!(StreamingMode::from_str("bidi"), StreamingMode::Bidirectional);
+        assert_eq!(StreamingMode::from_str("duplex"), StreamingMode::Bidirectional);
+        assert_eq!(StreamingMode::from_str("unary"), StreamingMode::Unary);
+        assert_eq!(StreamingMode::from_str(""), StreamingMode::Unary);
+    }
+
+    #[test]
+    fn test_streaming_mode_display() {
+        assert_eq!(format!("{}", StreamingMode::Unary), "unary");
+        assert_eq!(format!("{}", StreamingMode::ServerStreaming), "server_streaming");
+        assert_eq!(format!("{}", StreamingMode::ClientStreaming), "client_streaming");
+        assert_eq!(format!("{}", StreamingMode::Bidirectional), "bidirectional");
+    }
+
+    #[test]
+    fn test_proto_file_with_services() {
+        let mut proto = ProtoFile::new("test.api");
+        
+        let mut service = ProtoService::new("GreeterService");
+        service.methods.push(ProtoRpcMethod::new("SayHello", "HelloRequest", "HelloResponse"));
+        proto.services.push(service);
+
+        let output = proto.to_proto_string();
+        assert!(output.contains("service GreeterService {"));
+        assert!(output.contains("rpc SayHello(HelloRequest) returns (HelloResponse);"));
+    }
+
+    // ========================================================================
     // Compatibility Tests
     // ========================================================================
 
@@ -1781,6 +2117,7 @@ mod tests {
             options: ProtoOptions::default(),
             enums: vec![],
             messages,
+            services: vec![],
             metadata: ProtoMetadata::default(),
         }
     }

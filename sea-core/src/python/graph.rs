@@ -270,23 +270,26 @@ impl Graph {
     ///     namespace: Optional namespace filter (empty string = all namespaces)
     ///     projection_name: Optional name for the projection (used in comments)
     ///     include_governance: Whether to include governance messages (PolicyViolation, MetricEvent)
+    ///     include_services: Whether to generate gRPC service definitions from Flow patterns
     ///
     /// Returns:
     ///     The generated .proto file content as a string
-    #[pyo3(signature = (package, namespace = "", projection_name = "", include_governance = false))]
+    #[pyo3(signature = (package, namespace = "", projection_name = "", include_governance = false, include_services = false))]
     fn export_protobuf(
         &self,
         package: String,
         namespace: &str,
         projection_name: &str,
         include_governance: bool,
+        include_services: bool,
     ) -> String {
-        let proto = crate::projection::ProtobufEngine::project_with_options(
+        let proto = crate::projection::ProtobufEngine::project_with_full_options(
             &self.inner,
             namespace,
             &package,
             projection_name,
             include_governance,
+            include_services,
         );
         proto.to_proto_string()
     }

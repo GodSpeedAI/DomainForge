@@ -24,6 +24,10 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub include_governance: bool,
 
+    /// Generate gRPC service definitions from Flow patterns (protobuf only)
+    #[arg(long)]
+    pub include_services: bool,
+
     /// Schema compatibility mode: additive, backward, or breaking (protobuf only)
     #[arg(long, value_enum, default_value = "backward")]
     pub compatibility: CliCompatibilityMode,
@@ -126,12 +130,13 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                 .and_then(|s| s.to_str())
                 .unwrap_or("projection");
 
-            let mut proto_file = ProtobufEngine::project_with_options(
+            let mut proto_file = ProtobufEngine::project_with_full_options(
                 &graph,
                 namespace_filter,
                 &args.package,
                 projection_name,
                 args.include_governance,
+                args.include_services,
             );
 
             // Handle compatibility checking if schema history is provided
@@ -169,6 +174,12 @@ pub fn run(args: ProjectArgs) -> Result<()> {
             println!("Projected to Protobuf: {}", args.output.display());
             println!("  Package: {}", args.package);
             println!("  Messages: {}", proto_file.messages.len());
+            if !proto_file.services.is_empty() {
+                println!("  Services: {} ({} methods)", 
+                    proto_file.services.len(),
+                    proto_file.services.iter().map(|s| s.methods.len()).sum::<usize>()
+                );
+            }
         }
     }
 

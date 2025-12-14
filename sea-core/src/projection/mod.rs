@@ -7,7 +7,7 @@ pub use contracts::{find_mapping_rule, find_projection_override};
 pub use engine::ProjectionExporter;
 pub use protobuf::{
     CompatibilityChecker, CompatibilityMode, CompatibilityResult, CompatibilityViolation,
-    ProtobufEngine, ProtoFile, ProtoMessage, ProtoField, ProtoType, ScalarType,
-    SchemaHistory, ViolationType, WellKnownType,
+    ProtoField, ProtoFile, ProtoMessage, ProtoRpcMethod, ProtoService, ProtoType,
+    ProtobufEngine, ScalarType, SchemaHistory, StreamingMode, ViolationType, WellKnownType,
 };
 pub use registry::ProjectionRegistry;
