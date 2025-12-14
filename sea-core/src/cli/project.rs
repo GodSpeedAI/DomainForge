@@ -1,4 +1,5 @@
 use crate::parser::{parse_to_graph_with_options, ParseOptions};
+use crate::projection::ProtobufEngine;
 use crate::NamespaceRegistry;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
@@ -10,6 +11,18 @@ pub struct ProjectArgs {
     #[arg(long, value_enum)]
     pub format: ProjectFormat,
 
+    /// Optional namespace filter (project only entities from this namespace)
+    #[arg(long)]
+    pub namespace: Option<String>,
+
+    /// Protobuf package name (for protobuf format)
+    #[arg(long, default_value = "sea.generated")]
+    pub package: String,
+
+    /// Include governance messages (for protobuf format)
+    #[arg(long)]
+    pub include_governance: bool,
+
     pub input: PathBuf,
     pub output: PathBuf,
 }
@@ -18,6 +31,8 @@ pub struct ProjectArgs {
 pub enum ProjectFormat {
     Calm,
     Kg,
+    Protobuf,
+    Proto, // alias for protobuf
 }
 
 pub fn run(args: ProjectArgs) -> Result<()> {
@@ -31,7 +46,7 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         .as_ref()
         .and_then(|reg| reg.namespace_for(&args.input).map(|ns| ns.to_string()));
     let options = ParseOptions {
-        default_namespace,
+        default_namespace: default_namespace.clone(),
         namespace_registry: registry.clone(),
         entry_path: Some(args.input.clone()),
         ..Default::default()
@@ -69,7 +84,31 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                 .with_context(|| format!("Failed to write output to {}", args.output.display()))?;
             println!("Projected to KG: {}", args.output.display());
         }
+        ProjectFormat::Protobuf | ProjectFormat::Proto => {
+            let namespace_filter = args.namespace.as_deref().unwrap_or("");
+            let projection_name = args
+                .input
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("projection");
+
+            let proto_file = ProtobufEngine::project_with_options(
+                &graph,
+                namespace_filter,
+                &args.package,
+                projection_name,
+                args.include_governance,
+            );
+
+            let proto_string = proto_file.to_proto_string();
+            write(&args.output, &proto_string)
+                .with_context(|| format!("Failed to write output to {}", args.output.display()))?;
+            println!("Projected to Protobuf: {}", args.output.display());
+            println!("  Package: {}", args.package);
+            println!("  Messages: {}", proto_file.messages.len());
+        }
     }
 
     Ok(())
 }
+

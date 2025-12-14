@@ -353,7 +353,7 @@ mapping_decl = {
     ^"Mapping" ~ string_literal ~ ^"for" ~ target_format ~ "{" ~ mapping_rule* ~ "}"
 }
 
-target_format = { ^"calm" | ^"kg" | ^"sbvr" }
+target_format = { ^"calm" | ^"kg" | ^"sbvr" | ^"protobuf" | ^"proto" }
 
 mapping_rule = {
     primitive_type ~ string_literal ~ "->" ~ target_structure

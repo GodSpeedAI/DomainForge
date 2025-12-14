@@ -263,6 +263,34 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
+    /// Export the graph to Protobuf .proto text format.
+    ///
+    /// Args:
+    ///     package: The Protobuf package name (e.g., "com.example.api")
+    ///     namespace: Optional namespace filter (empty string = all namespaces)
+    ///     projection_name: Optional name for the projection (used in comments)
+    ///     include_governance: Whether to include governance messages (PolicyViolation, MetricEvent)
+    ///
+    /// Returns:
+    ///     The generated .proto file content as a string
+    #[pyo3(signature = (package, namespace = "", projection_name = "", include_governance = false))]
+    fn export_protobuf(
+        &self,
+        package: String,
+        namespace: &str,
+        projection_name: &str,
+        include_governance: bool,
+    ) -> String {
+        let proto = crate::projection::ProtobufEngine::project_with_options(
+            &self.inner,
+            namespace,
+            &package,
+            projection_name,
+            include_governance,
+        );
+        proto.to_proto_string()
+    }
+
     fn add_policy(&mut self, policy_json: String) -> PyResult<()> {
         let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
             .map_err(|e| PyValueError::new_err(format!("Invalid Policy JSON: {}", e)))?;
