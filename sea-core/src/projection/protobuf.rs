@@ -97,14 +97,57 @@ impl ProtoFile {
         out.push_str(&format!("package {};\n", self.package));
 
         // Options
-        if let Some(ref pkg) = self.options.java_package {
-            out.push_str(&format!("\noption java_package = \"{}\";\n", pkg));
+        let options = &self.options;
+        
+        if let Some(ref pkg) = options.java_package {
+            out.push_str(&format!("\noption java_package = \"{}\";", pkg));
         }
-        if self.options.java_multiple_files {
-            out.push_str("option java_multiple_files = true;\n");
+        if options.java_multiple_files {
+            out.push_str("\noption java_multiple_files = true;");
         }
-        if let Some(ref pkg) = self.options.go_package {
-            out.push_str(&format!("option go_package = \"{}\";\n", pkg));
+        if let Some(ref pkg) = options.go_package {
+            out.push_str(&format!("\noption go_package = \"{}\";", pkg));
+        }
+        if let Some(ref ns) = options.csharp_namespace {
+            out.push_str(&format!("\noption csharp_namespace = \"{}\";", ns));
+        }
+        if let Some(ref ns) = options.php_namespace {
+            out.push_str(&format!("\noption php_namespace = \"{}\";", ns));
+        }
+        if let Some(ref pkg) = options.ruby_package {
+            out.push_str(&format!("\noption ruby_package = \"{}\";", pkg));
+        }
+        if let Some(ref prefix) = options.swift_prefix {
+            out.push_str(&format!("\noption swift_prefix = \"{}\";", prefix));
+        }
+        if let Some(ref prefix) = options.objc_class_prefix {
+            out.push_str(&format!("\noption objc_class_prefix = \"{}\";", prefix));
+        }
+        if let Some(ref opt) = options.optimize_for {
+            out.push_str(&format!("\noption optimize_for = {};", opt));
+        }
+        if options.deprecated {
+            out.push_str("\noption deprecated = true;");
+        }
+        
+        // Custom options
+        for custom in &options.custom_options {
+            out.push_str(&format!("\n{}", custom.to_proto_string()));
+        }
+        
+        if options.java_package.is_some() 
+            || options.java_multiple_files 
+            || options.go_package.is_some()
+            || options.csharp_namespace.is_some()
+            || options.php_namespace.is_some()
+            || options.ruby_package.is_some()
+            || options.swift_prefix.is_some()
+            || options.objc_class_prefix.is_some()
+            || options.optimize_for.is_some()
+            || options.deprecated
+            || !options.custom_options.is_empty()
+        {
+            out.push('\n');
         }
 
         // Imports
@@ -185,6 +228,157 @@ pub struct ProtoOptions {
     pub java_multiple_files: bool,
     /// Go package path
     pub go_package: Option<String>,
+    /// C# namespace
+    pub csharp_namespace: Option<String>,
+    /// PHP namespace
+    pub php_namespace: Option<String>,
+    /// Ruby package
+    pub ruby_package: Option<String>,
+    /// Swift prefix
+    pub swift_prefix: Option<String>,
+    /// Objective-C class prefix
+    pub objc_class_prefix: Option<String>,
+    /// Optimize for: SPEED, CODE_SIZE, or LITE_RUNTIME
+    pub optimize_for: Option<String>,
+    /// Mark all messages as deprecated
+    pub deprecated: bool,
+    /// Custom options (user-defined or extension options)
+    pub custom_options: Vec<ProtoCustomOption>,
+}
+
+impl ProtoOptions {
+    /// Set a standard option by name.
+    pub fn set_option(&mut self, name: &str, value: ProtoOptionValue) {
+        match name {
+            "java_package" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.java_package = Some(s);
+                }
+            }
+            "java_multiple_files" => {
+                if let ProtoOptionValue::Bool(b) = value {
+                    self.java_multiple_files = b;
+                }
+            }
+            "go_package" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.go_package = Some(s);
+                }
+            }
+            "csharp_namespace" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.csharp_namespace = Some(s);
+                }
+            }
+            "php_namespace" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.php_namespace = Some(s);
+                }
+            }
+            "ruby_package" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.ruby_package = Some(s);
+                }
+            }
+            "swift_prefix" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.swift_prefix = Some(s);
+                }
+            }
+            "objc_class_prefix" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.objc_class_prefix = Some(s);
+                }
+            }
+            "optimize_for" => {
+                if let ProtoOptionValue::String(s) = value {
+                    self.optimize_for = Some(s);
+                }
+            }
+            "deprecated" => {
+                if let ProtoOptionValue::Bool(b) = value {
+                    self.deprecated = b;
+                }
+            }
+            _ => {
+                // Unknown option, add as custom
+                self.custom_options.push(ProtoCustomOption {
+                    name: name.to_string(),
+                    value,
+                });
+            }
+        }
+    }
+}
+
+/// A custom proto option (user-defined or extension).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProtoCustomOption {
+    /// Option name (e.g., "java_package" or "(myopt).field")
+    pub name: String,
+    /// Option value
+    pub value: ProtoOptionValue,
+}
+
+impl ProtoCustomOption {
+    /// Create a new custom option.
+    pub fn new(name: impl Into<String>, value: ProtoOptionValue) -> Self {
+        Self {
+            name: name.into(),
+            value,
+        }
+    }
+
+    /// Serialize to proto option string.
+    pub fn to_proto_string(&self) -> String {
+        format!("option {} = {};", self.name, self.value.to_proto_string())
+    }
+}
+
+/// Value for a proto option.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ProtoOptionValue {
+    /// String value
+    String(String),
+    /// Integer value
+    Int(i64),
+    /// Float value
+    Float(f64),
+    /// Boolean value
+    Bool(bool),
+    /// Identifier/enum value (unquoted)
+    Identifier(String),
+}
+
+impl ProtoOptionValue {
+    /// Parse option value from JSON Value.
+    pub fn from_json(value: &serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::String(s) => ProtoOptionValue::String(s.clone()),
+            serde_json::Value::Bool(b) => ProtoOptionValue::Bool(*b),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    ProtoOptionValue::Int(i)
+                } else if let Some(f) = n.as_f64() {
+                    ProtoOptionValue::Float(f)
+                } else {
+                    ProtoOptionValue::String(n.to_string())
+                }
+            }
+            _ => ProtoOptionValue::String(value.to_string()),
+        }
+    }
+
+    /// Serialize to proto option value string.
+    pub fn to_proto_string(&self) -> String {
+        match self {
+            ProtoOptionValue::String(s) => format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\"")),
+            ProtoOptionValue::Int(i) => i.to_string(),
+            ProtoOptionValue::Float(f) => f.to_string(),
+            ProtoOptionValue::Bool(b) => b.to_string(),
+            ProtoOptionValue::Identifier(s) => s.clone(),
+        }
+    }
 }
 
 /// Metadata about the projection source.
@@ -2018,6 +2212,142 @@ mod tests {
             .filter(|i| i.contains("timestamp"))
             .count();
         assert_eq!(timestamp_count, 1);
+    }
+
+    // ========================================================================
+    // Custom Options Tests
+    // ========================================================================
+
+    #[test]
+    fn test_proto_option_value_string() {
+        let val = ProtoOptionValue::String("com.example.api".to_string());
+        assert_eq!(val.to_proto_string(), "\"com.example.api\"");
+    }
+
+    #[test]
+    fn test_proto_option_value_string_escaping() {
+        let val = ProtoOptionValue::String("path\\to\\file".to_string());
+        assert_eq!(val.to_proto_string(), "\"path\\\\to\\\\file\"");
+        
+        let val2 = ProtoOptionValue::String("say \"hello\"".to_string());
+        assert_eq!(val2.to_proto_string(), "\"say \\\"hello\\\"\"");
+    }
+
+    #[test]
+    fn test_proto_option_value_int() {
+        let val = ProtoOptionValue::Int(42);
+        assert_eq!(val.to_proto_string(), "42");
+        
+        let neg = ProtoOptionValue::Int(-100);
+        assert_eq!(neg.to_proto_string(), "-100");
+    }
+
+    #[test]
+    fn test_proto_option_value_float() {
+        let val = ProtoOptionValue::Float(3.14);
+        assert_eq!(val.to_proto_string(), "3.14");
+    }
+
+    #[test]
+    fn test_proto_option_value_bool() {
+        assert_eq!(ProtoOptionValue::Bool(true).to_proto_string(), "true");
+        assert_eq!(ProtoOptionValue::Bool(false).to_proto_string(), "false");
+    }
+
+    #[test]
+    fn test_proto_option_value_identifier() {
+        let val = ProtoOptionValue::Identifier("SPEED".to_string());
+        assert_eq!(val.to_proto_string(), "SPEED");
+    }
+
+    #[test]
+    fn test_proto_custom_option_to_string() {
+        let opt = ProtoCustomOption::new(
+            "java_package",
+            ProtoOptionValue::String("com.example".to_string()),
+        );
+        assert_eq!(opt.to_proto_string(), "option java_package = \"com.example\";");
+    }
+
+    #[test]
+    fn test_proto_custom_option_extension() {
+        // Extension option with parentheses
+        let opt = ProtoCustomOption::new(
+            "(mycompany.api_version)",
+            ProtoOptionValue::Int(2),
+        );
+        assert_eq!(opt.to_proto_string(), "option (mycompany.api_version) = 2;");
+    }
+
+    #[test]
+    fn test_proto_options_set_standard_options() {
+        let mut opts = ProtoOptions::default();
+        
+        opts.set_option("java_package", ProtoOptionValue::String("com.example".to_string()));
+        opts.set_option("java_multiple_files", ProtoOptionValue::Bool(true));
+        opts.set_option("go_package", ProtoOptionValue::String("github.com/example".to_string()));
+        opts.set_option("csharp_namespace", ProtoOptionValue::String("Example.Api".to_string()));
+        opts.set_option("deprecated", ProtoOptionValue::Bool(true));
+        
+        assert_eq!(opts.java_package, Some("com.example".to_string()));
+        assert!(opts.java_multiple_files);
+        assert_eq!(opts.go_package, Some("github.com/example".to_string()));
+        assert_eq!(opts.csharp_namespace, Some("Example.Api".to_string()));
+        assert!(opts.deprecated);
+    }
+
+    #[test]
+    fn test_proto_options_set_custom_option() {
+        let mut opts = ProtoOptions::default();
+        
+        opts.set_option("my_custom_option", ProtoOptionValue::String("custom_value".to_string()));
+        
+        assert_eq!(opts.custom_options.len(), 1);
+        assert_eq!(opts.custom_options[0].name, "my_custom_option");
+    }
+
+    #[test]
+    fn test_proto_file_with_all_options() {
+        let mut proto = ProtoFile::new("test.api");
+        proto.options.java_package = Some("com.example.api".to_string());
+        proto.options.java_multiple_files = true;
+        proto.options.go_package = Some("github.com/example/api".to_string());
+        proto.options.csharp_namespace = Some("Example.Api".to_string());
+        proto.options.optimize_for = Some("SPEED".to_string());
+        proto.options.custom_options.push(ProtoCustomOption::new(
+            "(api.version)",
+            ProtoOptionValue::Int(1),
+        ));
+
+        let output = proto.to_proto_string();
+        assert!(output.contains("option java_package = \"com.example.api\";"));
+        assert!(output.contains("option java_multiple_files = true;"));
+        assert!(output.contains("option go_package = \"github.com/example/api\";"));
+        assert!(output.contains("option csharp_namespace = \"Example.Api\";"));
+        assert!(output.contains("option optimize_for = SPEED;"));
+        assert!(output.contains("option (api.version) = 1;"));
+    }
+
+    #[test]
+    fn test_proto_option_value_from_json() {
+        use serde_json::json;
+        
+        assert_eq!(
+            ProtoOptionValue::from_json(&json!("hello")),
+            ProtoOptionValue::String("hello".to_string())
+        );
+        assert_eq!(
+            ProtoOptionValue::from_json(&json!(true)),
+            ProtoOptionValue::Bool(true)
+        );
+        assert_eq!(
+            ProtoOptionValue::from_json(&json!(42)),
+            ProtoOptionValue::Int(42)
+        );
+        assert_eq!(
+            ProtoOptionValue::from_json(&json!(3.14)),
+            ProtoOptionValue::Float(3.14)
+        );
     }
 
     // ========================================================================
