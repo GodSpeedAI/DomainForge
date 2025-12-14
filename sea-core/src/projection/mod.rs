@@ -1,3 +1,4 @@
+pub mod buf;
 pub mod contracts;
 pub mod engine;
 pub mod protobuf;
