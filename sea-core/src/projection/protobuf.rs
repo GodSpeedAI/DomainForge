@@ -794,6 +794,426 @@ fn to_screaming_snake_case(s: &str) -> String {
 }
 
 // ============================================================================
+// Compatibility Enforcement
+// ============================================================================
+
+/// Compatibility mode for schema evolution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum CompatibilityMode {
+    /// Only additions allowed - strictest mode for public APIs
+    Additive,
+    /// Removals become reserved fields - default for internal APIs
+    #[default]
+    Backward,
+    /// All changes allowed - for breaking releases
+    Breaking,
+}
+
+impl std::fmt::Display for CompatibilityMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CompatibilityMode::Additive => write!(f, "additive"),
+            CompatibilityMode::Backward => write!(f, "backward"),
+            CompatibilityMode::Breaking => write!(f, "breaking"),
+        }
+    }
+}
+
+impl std::str::FromStr for CompatibilityMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "additive" | "strict" => Ok(CompatibilityMode::Additive),
+            "backward" | "backwards" | "default" => Ok(CompatibilityMode::Backward),
+            "breaking" | "none" => Ok(CompatibilityMode::Breaking),
+            _ => Err(format!("Unknown compatibility mode: {}", s)),
+        }
+    }
+}
+
+/// A compatibility violation found during schema comparison.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompatibilityViolation {
+    /// The message name where the violation occurred
+    pub message_name: String,
+    /// The field name involved (if applicable)
+    pub field_name: Option<String>,
+    /// The field number involved (if applicable)
+    pub field_number: Option<u32>,
+    /// Type of violation
+    pub violation_type: ViolationType,
+    /// Human-readable description
+    pub description: String,
+}
+
+/// Types of compatibility violations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ViolationType {
+    /// A field was removed
+    FieldRemoved,
+    /// A field number was reused with a different name/type
+    FieldNumberReused,
+    /// A field type was changed
+    FieldTypeChanged,
+    /// A field was renamed (same number, different name)
+    FieldRenamed,
+    /// A message was removed
+    MessageRemoved,
+    /// A required field was added (breaking in proto3)
+    RequiredFieldAdded,
+}
+
+impl std::fmt::Display for ViolationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ViolationType::FieldRemoved => write!(f, "field_removed"),
+            ViolationType::FieldNumberReused => write!(f, "field_number_reused"),
+            ViolationType::FieldTypeChanged => write!(f, "field_type_changed"),
+            ViolationType::FieldRenamed => write!(f, "field_renamed"),
+            ViolationType::MessageRemoved => write!(f, "message_removed"),
+            ViolationType::RequiredFieldAdded => write!(f, "required_field_added"),
+        }
+    }
+}
+
+/// Result of a compatibility check.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompatibilityResult {
+    /// Whether the schemas are compatible under the given mode
+    pub is_compatible: bool,
+    /// The mode used for checking
+    pub mode: CompatibilityMode,
+    /// List of violations found
+    pub violations: Vec<CompatibilityViolation>,
+    /// Suggested fixes (reserved fields to add)
+    pub suggested_reserved_numbers: BTreeMap<String, Vec<u32>>,
+    /// Suggested reserved names
+    pub suggested_reserved_names: BTreeMap<String, Vec<String>>,
+}
+
+impl CompatibilityResult {
+    /// Create a compatible (empty) result.
+    pub fn compatible(mode: CompatibilityMode) -> Self {
+        Self {
+            is_compatible: true,
+            mode,
+            violations: Vec::new(),
+            suggested_reserved_numbers: BTreeMap::new(),
+            suggested_reserved_names: BTreeMap::new(),
+        }
+    }
+
+    /// Check if there are any violations.
+    pub fn has_violations(&self) -> bool {
+        !self.violations.is_empty()
+    }
+
+    /// Format violations as a human-readable report.
+    pub fn to_report(&self) -> String {
+        let mut out = String::new();
+        out.push_str(&format!("Compatibility Check (mode: {})\n", self.mode));
+        out.push_str(&format!("Result: {}\n", if self.is_compatible { "PASS" } else { "FAIL" }));
+        
+        if !self.violations.is_empty() {
+            out.push_str(&format!("\nViolations ({}):\n", self.violations.len()));
+            for v in &self.violations {
+                out.push_str(&format!("  - [{}] {}: {}\n", v.violation_type, v.message_name, v.description));
+            }
+        }
+
+        if !self.suggested_reserved_numbers.is_empty() {
+            out.push_str("\nSuggested Reserved Fields:\n");
+            for (msg, nums) in &self.suggested_reserved_numbers {
+                let nums_str: Vec<String> = nums.iter().map(|n| n.to_string()).collect();
+                out.push_str(&format!("  message {}: reserved {};\n", msg, nums_str.join(", ")));
+            }
+        }
+
+        out
+    }
+}
+
+/// Schema compatibility checker.
+pub struct CompatibilityChecker;
+
+impl CompatibilityChecker {
+    /// Check compatibility between an old and new ProtoFile.
+    ///
+    /// # Arguments
+    /// * `old` - The previous schema version
+    /// * `new` - The new schema version  
+    /// * `mode` - The compatibility mode to enforce
+    ///
+    /// # Returns
+    /// A CompatibilityResult with violations and suggested fixes.
+    pub fn check(old: &ProtoFile, new: &ProtoFile, mode: CompatibilityMode) -> CompatibilityResult {
+        let mut result = CompatibilityResult::compatible(mode);
+
+        // Build lookup maps for old schema
+        let old_messages: BTreeMap<&str, &ProtoMessage> = old
+            .messages
+            .iter()
+            .map(|m| (m.name.as_str(), m))
+            .collect();
+
+        let new_messages: BTreeMap<&str, &ProtoMessage> = new
+            .messages
+            .iter()
+            .map(|m| (m.name.as_str(), m))
+            .collect();
+
+        // Check for removed messages
+        for (name, _old_msg) in &old_messages {
+            if !new_messages.contains_key(name) {
+                result.violations.push(CompatibilityViolation {
+                    message_name: name.to_string(),
+                    field_name: None,
+                    field_number: None,
+                    violation_type: ViolationType::MessageRemoved,
+                    description: format!("Message '{}' was removed", name),
+                });
+            }
+        }
+
+        // Check each message that exists in both
+        for (name, old_msg) in &old_messages {
+            if let Some(new_msg) = new_messages.get(name) {
+                Self::check_message(old_msg, new_msg, &mut result);
+            }
+        }
+
+        // Determine if compatible based on mode
+        result.is_compatible = match mode {
+            CompatibilityMode::Breaking => true, // Always compatible in breaking mode
+            CompatibilityMode::Backward => {
+                // Compatible if no field number reuse or type changes
+                !result.violations.iter().any(|v| {
+                    matches!(v.violation_type, ViolationType::FieldNumberReused | ViolationType::FieldTypeChanged)
+                })
+            }
+            CompatibilityMode::Additive => {
+                // Any removal or change is incompatible
+                result.violations.is_empty()
+            }
+        };
+
+        result
+    }
+
+    /// Check compatibility between two messages.
+    fn check_message(old: &ProtoMessage, new: &ProtoMessage, result: &mut CompatibilityResult) {
+        // Build field maps by number and by name
+        let old_by_number: BTreeMap<u32, &ProtoField> = old
+            .fields
+            .iter()
+            .map(|f| (f.number, f))
+            .collect();
+
+        let new_by_number: BTreeMap<u32, &ProtoField> = new
+            .fields
+            .iter()
+            .map(|f| (f.number, f))
+            .collect();
+
+        let old_by_name: BTreeMap<&str, &ProtoField> = old
+            .fields
+            .iter()
+            .map(|f| (f.name.as_str(), f))
+            .collect();
+
+        // Check for removed fields
+        for (number, old_field) in &old_by_number {
+            if !new_by_number.contains_key(number) {
+                result.violations.push(CompatibilityViolation {
+                    message_name: old.name.clone(),
+                    field_name: Some(old_field.name.clone()),
+                    field_number: Some(*number),
+                    violation_type: ViolationType::FieldRemoved,
+                    description: format!(
+                        "Field '{}' (number {}) was removed",
+                        old_field.name, number
+                    ),
+                });
+
+                // Suggest reserving this field number
+                result
+                    .suggested_reserved_numbers
+                    .entry(old.name.clone())
+                    .or_default()
+                    .push(*number);
+
+                result
+                    .suggested_reserved_names
+                    .entry(old.name.clone())
+                    .or_default()
+                    .push(old_field.name.clone());
+            }
+        }
+
+        // Check for field number reuse with different name/type
+        for (number, new_field) in &new_by_number {
+            if let Some(old_field) = old_by_number.get(number) {
+                // Check name change
+                if old_field.name != new_field.name {
+                    result.violations.push(CompatibilityViolation {
+                        message_name: old.name.clone(),
+                        field_name: Some(new_field.name.clone()),
+                        field_number: Some(*number),
+                        violation_type: ViolationType::FieldRenamed,
+                        description: format!(
+                            "Field number {} renamed from '{}' to '{}'",
+                            number, old_field.name, new_field.name
+                        ),
+                    });
+                }
+
+                // Check type change
+                if old_field.proto_type != new_field.proto_type {
+                    result.violations.push(CompatibilityViolation {
+                        message_name: old.name.clone(),
+                        field_name: Some(new_field.name.clone()),
+                        field_number: Some(*number),
+                        violation_type: ViolationType::FieldTypeChanged,
+                        description: format!(
+                            "Field '{}' type changed from {} to {}",
+                            new_field.name,
+                            old_field.proto_type.to_proto_string(),
+                            new_field.proto_type.to_proto_string()
+                        ),
+                    });
+                }
+            } else {
+                // New field - check if it reuses a previously removed name
+                if old_by_name.contains_key(new_field.name.as_str()) {
+                    let old_field = old_by_name[new_field.name.as_str()];
+                    if old_field.number != *number {
+                        result.violations.push(CompatibilityViolation {
+                            message_name: old.name.clone(),
+                            field_name: Some(new_field.name.clone()),
+                            field_number: Some(*number),
+                            violation_type: ViolationType::FieldNumberReused,
+                            description: format!(
+                                "Field '{}' changed number from {} to {}",
+                                new_field.name, old_field.number, number
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /// Apply compatibility fixes to a new ProtoFile based on an old one.
+    ///
+    /// This adds reserved field numbers and names for removed fields.
+    pub fn apply_backward_compatibility(old: &ProtoFile, new: &mut ProtoFile) {
+        let result = Self::check(old, new, CompatibilityMode::Backward);
+
+        // Apply suggested reserved numbers
+        for msg in &mut new.messages {
+            if let Some(reserved_nums) = result.suggested_reserved_numbers.get(&msg.name) {
+                for num in reserved_nums {
+                    if !msg.reserved_numbers.contains(num) {
+                        msg.reserved_numbers.push(*num);
+                    }
+                }
+                msg.reserved_numbers.sort();
+            }
+
+            if let Some(reserved_names) = result.suggested_reserved_names.get(&msg.name) {
+                for name in reserved_names {
+                    if !msg.reserved_names.contains(name) {
+                        msg.reserved_names.push(name.clone());
+                    }
+                }
+                msg.reserved_names.sort();
+            }
+        }
+    }
+}
+
+/// File-based schema history storage.
+pub struct SchemaHistory {
+    /// Directory where schema history is stored
+    history_dir: std::path::PathBuf,
+}
+
+impl SchemaHistory {
+    /// Create a new SchemaHistory with the given directory.
+    pub fn new(history_dir: impl Into<std::path::PathBuf>) -> Self {
+        Self {
+            history_dir: history_dir.into(),
+        }
+    }
+
+    /// Get the path for a schema file.
+    fn schema_path(&self, package: &str) -> std::path::PathBuf {
+        let filename = format!("{}.json", package.replace('.', "_"));
+        self.history_dir.join(filename)
+    }
+
+    /// Load the previous schema for a package.
+    pub fn load(&self, package: &str) -> Result<Option<ProtoFile>, String> {
+        let path = self.schema_path(package);
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| format!("Failed to read schema history: {}", e))?;
+
+        let proto: ProtoFile = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse schema history: {}", e))?;
+
+        Ok(Some(proto))
+    }
+
+    /// Save a schema to history.
+    pub fn save(&self, proto: &ProtoFile) -> Result<(), String> {
+        // Ensure directory exists
+        std::fs::create_dir_all(&self.history_dir)
+            .map_err(|e| format!("Failed to create history directory: {}", e))?;
+
+        let path = self.schema_path(&proto.package);
+        let content = serde_json::to_string_pretty(proto)
+            .map_err(|e| format!("Failed to serialize schema: {}", e))?;
+
+        std::fs::write(&path, content)
+            .map_err(|e| format!("Failed to write schema history: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Check compatibility and optionally apply fixes.
+    pub fn check_and_update(
+        &self,
+        new: &mut ProtoFile,
+        mode: CompatibilityMode,
+        apply_fixes: bool,
+    ) -> Result<CompatibilityResult, String> {
+        let old = self.load(&new.package)?;
+
+        let result = match old {
+            Some(ref old_proto) => {
+                if apply_fixes && mode == CompatibilityMode::Backward {
+                    CompatibilityChecker::apply_backward_compatibility(old_proto, new);
+                }
+                CompatibilityChecker::check(old_proto, new, mode)
+            }
+            None => CompatibilityResult::compatible(mode),
+        };
+
+        // Save the new schema if compatible (or in breaking mode)
+        if result.is_compatible || mode == CompatibilityMode::Breaking {
+            self.save(new)?;
+        }
+
+        Ok(result)
+    }
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -979,5 +1399,259 @@ mod tests {
 
         let metric = messages.iter().find(|m| m.name == "MetricEvent");
         assert!(metric.is_some());
+    }
+
+    // ========================================================================
+    // Compatibility Tests
+    // ========================================================================
+
+    fn make_test_proto(messages: Vec<ProtoMessage>) -> ProtoFile {
+        ProtoFile {
+            package: "test.package".to_string(),
+            syntax: "proto3".to_string(),
+            imports: vec![],
+            options: ProtoOptions::default(),
+            enums: vec![],
+            messages,
+            metadata: ProtoMetadata::default(),
+        }
+    }
+
+    fn make_test_message(name: &str, fields: Vec<ProtoField>) -> ProtoMessage {
+        ProtoMessage {
+            name: name.to_string(),
+            fields,
+            nested_messages: vec![],
+            nested_enums: vec![],
+            reserved_numbers: vec![],
+            reserved_names: vec![],
+            comments: vec![],
+        }
+    }
+
+    fn make_test_field(name: &str, number: u32, proto_type: ProtoType) -> ProtoField {
+        ProtoField {
+            name: name.to_string(),
+            number,
+            proto_type,
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        }
+    }
+
+    #[test]
+    fn test_compatibility_no_changes() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+                make_test_field("name", 2, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let new = old.clone();
+
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Additive);
+        assert!(result.is_compatible);
+        assert!(result.violations.is_empty());
+    }
+
+    #[test]
+    fn test_compatibility_field_added() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+                make_test_field("name", 2, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        // Adding fields is compatible in all modes
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Additive);
+        assert!(result.is_compatible);
+        assert!(result.violations.is_empty());
+    }
+
+    #[test]
+    fn test_compatibility_field_removed_additive() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+                make_test_field("name", 2, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        // Removing fields is NOT compatible in additive mode
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Additive);
+        assert!(!result.is_compatible);
+        assert_eq!(result.violations.len(), 1);
+        assert_eq!(result.violations[0].violation_type, ViolationType::FieldRemoved);
+    }
+
+    #[test]
+    fn test_compatibility_field_removed_backward() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+                make_test_field("name", 2, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        // Removing fields IS compatible in backward mode (with warnings)
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Backward);
+        assert!(result.is_compatible); // Still compatible, just has violations
+        assert!(!result.violations.is_empty());
+        
+        // Should suggest reserving the field
+        assert!(result.suggested_reserved_numbers.contains_key("Person"));
+        assert!(result.suggested_reserved_numbers["Person"].contains(&2));
+    }
+
+    #[test]
+    fn test_compatibility_type_change() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("age", 1, ProtoType::Scalar(ScalarType::Int32)),
+            ],
+        )]);
+
+        let new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("age", 1, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        // Type changes are NOT compatible in backward mode
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Backward);
+        assert!(!result.is_compatible);
+        assert!(result.violations.iter().any(|v| v.violation_type == ViolationType::FieldTypeChanged));
+    }
+
+    #[test]
+    fn test_compatibility_breaking_mode() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("uuid", 1, ProtoType::Scalar(ScalarType::Int64)),
+            ],
+        )]);
+
+        // Breaking mode allows everything
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Breaking);
+        assert!(result.is_compatible);
+        // Violations are still reported for informational purposes
+        assert!(!result.violations.is_empty());
+    }
+
+    #[test]
+    fn test_apply_backward_compatibility() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+                make_test_field("name", 2, ProtoType::Scalar(ScalarType::String)),
+                make_test_field("email", 3, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let mut new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("id", 1, ProtoType::Scalar(ScalarType::String)),
+                // name (2) removed
+                // email (3) removed
+                make_test_field("phone", 4, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        CompatibilityChecker::apply_backward_compatibility(&old, &mut new);
+
+        // Should have added reserved numbers
+        let person = &new.messages[0];
+        assert!(person.reserved_numbers.contains(&2));
+        assert!(person.reserved_numbers.contains(&3));
+        assert!(person.reserved_names.contains(&"name".to_string()));
+        assert!(person.reserved_names.contains(&"email".to_string()));
+    }
+
+    #[test]
+    fn test_compatibility_message_removed() {
+        let old = make_test_proto(vec![
+            make_test_message("Person", vec![]),
+            make_test_message("Address", vec![]),
+        ]);
+
+        let new = make_test_proto(vec![
+            make_test_message("Person", vec![]),
+        ]);
+
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Additive);
+        assert!(!result.is_compatible);
+        assert!(result.violations.iter().any(|v| {
+            v.violation_type == ViolationType::MessageRemoved && v.message_name == "Address"
+        }));
+    }
+
+    #[test]
+    fn test_compatibility_result_report() {
+        let old = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![
+                make_test_field("name", 1, ProtoType::Scalar(ScalarType::String)),
+            ],
+        )]);
+
+        let new = make_test_proto(vec![make_test_message(
+            "Person",
+            vec![],
+        )]);
+
+        let result = CompatibilityChecker::check(&old, &new, CompatibilityMode::Backward);
+        let report = result.to_report();
+
+        assert!(report.contains("Compatibility Check"));
+        assert!(report.contains("field_removed"));
+        assert!(report.contains("Person"));
+    }
+
+    #[test]
+    fn test_compatibility_mode_parsing() {
+        assert_eq!("additive".parse::<CompatibilityMode>().unwrap(), CompatibilityMode::Additive);
+        assert_eq!("backward".parse::<CompatibilityMode>().unwrap(), CompatibilityMode::Backward);
+        assert_eq!("breaking".parse::<CompatibilityMode>().unwrap(), CompatibilityMode::Breaking);
+        assert!("invalid".parse::<CompatibilityMode>().is_err());
     }
 }

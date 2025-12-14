@@ -1,4 +1,5 @@
 use crate::parser::{parse_to_graph_with_options, ParseOptions};
+use crate::projection::protobuf::{CompatibilityMode, SchemaHistory};
 use crate::projection::ProtobufEngine;
 use crate::NamespaceRegistry;
 use anyhow::{Context, Result};
@@ -23,6 +24,18 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub include_governance: bool,
 
+    /// Schema compatibility mode: additive, backward, or breaking (protobuf only)
+    #[arg(long, value_enum, default_value = "backward")]
+    pub compatibility: CliCompatibilityMode,
+
+    /// Directory to store schema history for compatibility checking (protobuf only)
+    #[arg(long)]
+    pub schema_history: Option<PathBuf>,
+
+    /// Automatically apply fixes (add reserved fields) for backward compatibility
+    #[arg(long)]
+    pub apply_fixes: bool,
+
     pub input: PathBuf,
     pub output: PathBuf,
 }
@@ -33,6 +46,27 @@ pub enum ProjectFormat {
     Kg,
     Protobuf,
     Proto, // alias for protobuf
+}
+
+#[derive(ValueEnum, Clone, Debug, Copy, Default)]
+pub enum CliCompatibilityMode {
+    /// Only additions allowed - strictest mode for public APIs
+    Additive,
+    /// Removals become reserved fields - default for internal APIs
+    #[default]
+    Backward,
+    /// All changes allowed - for breaking releases
+    Breaking,
+}
+
+impl From<CliCompatibilityMode> for CompatibilityMode {
+    fn from(mode: CliCompatibilityMode) -> Self {
+        match mode {
+            CliCompatibilityMode::Additive => CompatibilityMode::Additive,
+            CliCompatibilityMode::Backward => CompatibilityMode::Backward,
+            CliCompatibilityMode::Breaking => CompatibilityMode::Breaking,
+        }
+    }
 }
 
 pub fn run(args: ProjectArgs) -> Result<()> {
@@ -92,13 +126,42 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                 .and_then(|s| s.to_str())
                 .unwrap_or("projection");
 
-            let proto_file = ProtobufEngine::project_with_options(
+            let mut proto_file = ProtobufEngine::project_with_options(
                 &graph,
                 namespace_filter,
                 &args.package,
                 projection_name,
                 args.include_governance,
             );
+
+            // Handle compatibility checking if schema history is provided
+            if let Some(ref history_dir) = args.schema_history {
+                let history = SchemaHistory::new(history_dir);
+                let mode: CompatibilityMode = args.compatibility.into();
+
+                let result = history
+                    .check_and_update(&mut proto_file, mode, args.apply_fixes)
+                    .map_err(|e| anyhow::anyhow!("Compatibility check failed: {}", e))?;
+
+                // Print compatibility report
+                if result.has_violations() {
+                    eprintln!("\n{}", result.to_report());
+                }
+
+                // Fail if not compatible (unless in breaking mode)
+                if !result.is_compatible {
+                    return Err(anyhow::anyhow!(
+                        "Schema evolution is not compatible in {} mode. Use --compatibility breaking to force, or --apply-fixes to auto-fix.",
+                        mode
+                    ));
+                }
+
+                if result.has_violations() {
+                    println!("  Compatibility: {} (with {} warnings)", mode, result.violations.len());
+                } else {
+                    println!("  Compatibility: {} (clean)", mode);
+                }
+            }
 
             let proto_string = proto_file.to_proto_string();
             write(&args.output, &proto_string)
@@ -111,4 +174,3 @@ pub fn run(args: ProjectArgs) -> Result<()> {
 
     Ok(())
 }
-
