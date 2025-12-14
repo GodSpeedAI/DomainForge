@@ -126,6 +126,45 @@ impl ProtoFile {
 
         out
     }
+
+    /// Scan all messages and automatically add required Well-Known Type imports.
+    ///
+    /// This method should be called after all messages are added to ensure
+    /// proper imports are included for any WKT fields.
+    pub fn add_wkt_imports(&mut self) {
+        use std::collections::HashSet;
+        let mut required_imports: HashSet<&'static str> = HashSet::new();
+
+        // Scan all message fields for WKT references
+        for msg in &self.messages {
+            Self::collect_wkt_imports_from_message(msg, &mut required_imports);
+        }
+
+        // Add imports that aren't already present
+        for import in required_imports {
+            if !self.imports.contains(&import.to_string()) {
+                self.imports.push(import.to_string());
+            }
+        }
+
+        // Sort imports for deterministic output
+        self.imports.sort();
+    }
+
+    fn collect_wkt_imports_from_message(msg: &ProtoMessage, imports: &mut std::collections::HashSet<&'static str>) {
+        for field in &msg.fields {
+            if let ProtoType::Message(ref type_name) = field.proto_type {
+                if let Some(wkt) = WellKnownType::from_type_name(type_name) {
+                    imports.insert(wkt.import_path());
+                }
+            }
+        }
+
+        // Recurse into nested messages
+        for nested in &msg.nested_messages {
+            Self::collect_wkt_imports_from_message(nested, imports);
+        }
+    }
 }
 
 /// File-level Protobuf options.
@@ -422,24 +461,177 @@ pub struct ProtoEnumValue {
 }
 
 // ============================================================================
+// Well-Known Types
+// ============================================================================
+
+/// Google Protobuf Well-Known Types.
+///
+/// These are standard types provided by Google that have special handling
+/// in most Protobuf implementations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum WellKnownType {
+    /// google.protobuf.Timestamp - for date/time values
+    Timestamp,
+    /// google.protobuf.Duration - for time spans
+    Duration,
+    /// google.protobuf.Any - for dynamic typing
+    Any,
+    /// google.protobuf.Struct - for JSON-like structures
+    Struct,
+    /// google.protobuf.Value - for dynamic JSON values
+    Value,
+    /// google.protobuf.ListValue - for JSON arrays
+    ListValue,
+    /// google.protobuf.Empty - for empty messages
+    Empty,
+    /// Wrapper types for nullable primitives
+    Int32Value,
+    Int64Value,
+    UInt32Value,
+    UInt64Value,
+    FloatValue,
+    DoubleValue,
+    BoolValue,
+    StringValue,
+    BytesValue,
+}
+
+impl WellKnownType {
+    /// Get the fully qualified type name.
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            WellKnownType::Timestamp => "google.protobuf.Timestamp",
+            WellKnownType::Duration => "google.protobuf.Duration",
+            WellKnownType::Any => "google.protobuf.Any",
+            WellKnownType::Struct => "google.protobuf.Struct",
+            WellKnownType::Value => "google.protobuf.Value",
+            WellKnownType::ListValue => "google.protobuf.ListValue",
+            WellKnownType::Empty => "google.protobuf.Empty",
+            WellKnownType::Int32Value => "google.protobuf.Int32Value",
+            WellKnownType::Int64Value => "google.protobuf.Int64Value",
+            WellKnownType::UInt32Value => "google.protobuf.UInt32Value",
+            WellKnownType::UInt64Value => "google.protobuf.UInt64Value",
+            WellKnownType::FloatValue => "google.protobuf.FloatValue",
+            WellKnownType::DoubleValue => "google.protobuf.DoubleValue",
+            WellKnownType::BoolValue => "google.protobuf.BoolValue",
+            WellKnownType::StringValue => "google.protobuf.StringValue",
+            WellKnownType::BytesValue => "google.protobuf.BytesValue",
+        }
+    }
+
+    /// Get the import path for this type.
+    pub fn import_path(&self) -> &'static str {
+        match self {
+            WellKnownType::Timestamp => "google/protobuf/timestamp.proto",
+            WellKnownType::Duration => "google/protobuf/duration.proto",
+            WellKnownType::Any => "google/protobuf/any.proto",
+            WellKnownType::Struct | WellKnownType::Value | WellKnownType::ListValue => {
+                "google/protobuf/struct.proto"
+            }
+            WellKnownType::Empty => "google/protobuf/empty.proto",
+            WellKnownType::Int32Value
+            | WellKnownType::Int64Value
+            | WellKnownType::UInt32Value
+            | WellKnownType::UInt64Value
+            | WellKnownType::FloatValue
+            | WellKnownType::DoubleValue
+            | WellKnownType::BoolValue
+            | WellKnownType::StringValue
+            | WellKnownType::BytesValue => "google/protobuf/wrappers.proto",
+        }
+    }
+
+    /// Try to parse a type name into a WellKnownType.
+    pub fn from_type_name(name: &str) -> Option<Self> {
+        match name {
+            "google.protobuf.Timestamp" => Some(WellKnownType::Timestamp),
+            "google.protobuf.Duration" => Some(WellKnownType::Duration),
+            "google.protobuf.Any" => Some(WellKnownType::Any),
+            "google.protobuf.Struct" => Some(WellKnownType::Struct),
+            "google.protobuf.Value" => Some(WellKnownType::Value),
+            "google.protobuf.ListValue" => Some(WellKnownType::ListValue),
+            "google.protobuf.Empty" => Some(WellKnownType::Empty),
+            "google.protobuf.Int32Value" => Some(WellKnownType::Int32Value),
+            "google.protobuf.Int64Value" => Some(WellKnownType::Int64Value),
+            "google.protobuf.UInt32Value" => Some(WellKnownType::UInt32Value),
+            "google.protobuf.UInt64Value" => Some(WellKnownType::UInt64Value),
+            "google.protobuf.FloatValue" => Some(WellKnownType::FloatValue),
+            "google.protobuf.DoubleValue" => Some(WellKnownType::DoubleValue),
+            "google.protobuf.BoolValue" => Some(WellKnownType::BoolValue),
+            "google.protobuf.StringValue" => Some(WellKnownType::StringValue),
+            "google.protobuf.BytesValue" => Some(WellKnownType::BytesValue),
+            _ => None,
+        }
+    }
+}
+
+// ============================================================================
 // Type Mapping
 // ============================================================================
 
 /// Map SEA type strings to Protobuf types.
 ///
-/// This function handles the common type names used in SEA attributes.
+/// This function handles the common type names used in SEA attributes,
+/// including mapping to Google Well-Known Types where appropriate.
 pub fn map_sea_type_to_proto(sea_type: &str) -> ProtoType {
     match sea_type.to_lowercase().as_str() {
+        // Scalar types
         "string" | "text" | "varchar" => ProtoType::Scalar(ScalarType::String),
         "int" | "integer" | "int64" | "long" => ProtoType::Scalar(ScalarType::Int64),
         "int32" | "short" => ProtoType::Scalar(ScalarType::Int32),
+        "uint32" => ProtoType::Scalar(ScalarType::Uint32),
+        "uint64" | "ulong" => ProtoType::Scalar(ScalarType::Uint64),
         "float" | "double" | "decimal" | "number" => ProtoType::Scalar(ScalarType::Double),
         "float32" => ProtoType::Scalar(ScalarType::Float),
         "bool" | "boolean" => ProtoType::Scalar(ScalarType::Bool),
         "bytes" | "binary" | "blob" => ProtoType::Scalar(ScalarType::Bytes),
-        "uuid" | "guid" => ProtoType::Scalar(ScalarType::String), // UUIDs as strings
-        "date" | "datetime" | "timestamp" => ProtoType::Message("google.protobuf.Timestamp".to_string()),
-        _ => ProtoType::Message(to_pascal_case(sea_type)), // Custom types become messages
+        "uuid" | "guid" => ProtoType::Scalar(ScalarType::String),
+
+        // Well-Known Types
+        "date" | "datetime" | "timestamp" => {
+            ProtoType::Message(WellKnownType::Timestamp.type_name().to_string())
+        }
+        "duration" | "timespan" | "interval" => {
+            ProtoType::Message(WellKnownType::Duration.type_name().to_string())
+        }
+        "any" | "dynamic" | "object" => {
+            ProtoType::Message(WellKnownType::Any.type_name().to_string())
+        }
+        "struct" | "json" | "jsonobject" => {
+            ProtoType::Message(WellKnownType::Struct.type_name().to_string())
+        }
+        "value" | "jsonvalue" => {
+            ProtoType::Message(WellKnownType::Value.type_name().to_string())
+        }
+        "empty" | "void" | "unit" => {
+            ProtoType::Message(WellKnownType::Empty.type_name().to_string())
+        }
+
+        // Nullable wrapper types
+        "optional_int" | "nullable_int" | "int?" => {
+            ProtoType::Message(WellKnownType::Int64Value.type_name().to_string())
+        }
+        "optional_int32" | "nullable_int32" | "int32?" => {
+            ProtoType::Message(WellKnownType::Int32Value.type_name().to_string())
+        }
+        "optional_string" | "nullable_string" | "string?" => {
+            ProtoType::Message(WellKnownType::StringValue.type_name().to_string())
+        }
+        "optional_bool" | "nullable_bool" | "bool?" => {
+            ProtoType::Message(WellKnownType::BoolValue.type_name().to_string())
+        }
+        "optional_double" | "nullable_double" | "double?" => {
+            ProtoType::Message(WellKnownType::DoubleValue.type_name().to_string())
+        }
+        "optional_float" | "nullable_float" | "float?" => {
+            ProtoType::Message(WellKnownType::FloatValue.type_name().to_string())
+        }
+        "optional_bytes" | "nullable_bytes" | "bytes?" => {
+            ProtoType::Message(WellKnownType::BytesValue.type_name().to_string())
+        }
+
+        // Custom types become messages
+        _ => ProtoType::Message(to_pascal_case(sea_type)),
     }
 }
 
@@ -505,6 +697,9 @@ impl ProtobufEngine {
         // Sort messages by name for deterministic output
         proto.messages.sort_by(|a, b| a.name.cmp(&b.name));
 
+        // Auto-detect and add Well-Known Type imports
+        proto.add_wkt_imports();
+
         proto
     }
 
@@ -522,6 +717,9 @@ impl ProtobufEngine {
         if include_governance {
             proto.messages.extend(Self::generate_governance_messages());
         }
+
+        // Re-add WKT imports in case governance messages need them
+        proto.add_wkt_imports();
 
         proto
     }
@@ -1399,6 +1597,176 @@ mod tests {
 
         let metric = messages.iter().find(|m| m.name == "MetricEvent");
         assert!(metric.is_some());
+    }
+
+    // ========================================================================
+    // Well-Known Type Tests
+    // ========================================================================
+
+    #[test]
+    fn test_wkt_type_name() {
+        assert_eq!(WellKnownType::Timestamp.type_name(), "google.protobuf.Timestamp");
+        assert_eq!(WellKnownType::Duration.type_name(), "google.protobuf.Duration");
+        assert_eq!(WellKnownType::Any.type_name(), "google.protobuf.Any");
+        assert_eq!(WellKnownType::Struct.type_name(), "google.protobuf.Struct");
+        assert_eq!(WellKnownType::Empty.type_name(), "google.protobuf.Empty");
+        assert_eq!(WellKnownType::Int64Value.type_name(), "google.protobuf.Int64Value");
+    }
+
+    #[test]
+    fn test_wkt_import_path() {
+        assert_eq!(WellKnownType::Timestamp.import_path(), "google/protobuf/timestamp.proto");
+        assert_eq!(WellKnownType::Duration.import_path(), "google/protobuf/duration.proto");
+        assert_eq!(WellKnownType::Any.import_path(), "google/protobuf/any.proto");
+        assert_eq!(WellKnownType::Struct.import_path(), "google/protobuf/struct.proto");
+        assert_eq!(WellKnownType::Value.import_path(), "google/protobuf/struct.proto");
+        assert_eq!(WellKnownType::Empty.import_path(), "google/protobuf/empty.proto");
+        assert_eq!(WellKnownType::Int64Value.import_path(), "google/protobuf/wrappers.proto");
+        assert_eq!(WellKnownType::StringValue.import_path(), "google/protobuf/wrappers.proto");
+    }
+
+    #[test]
+    fn test_wkt_from_type_name() {
+        assert_eq!(WellKnownType::from_type_name("google.protobuf.Timestamp"), Some(WellKnownType::Timestamp));
+        assert_eq!(WellKnownType::from_type_name("google.protobuf.Duration"), Some(WellKnownType::Duration));
+        assert_eq!(WellKnownType::from_type_name("google.protobuf.Any"), Some(WellKnownType::Any));
+        assert_eq!(WellKnownType::from_type_name("google.protobuf.StringValue"), Some(WellKnownType::StringValue));
+        assert_eq!(WellKnownType::from_type_name("SomeOtherType"), None);
+    }
+
+    #[test]
+    fn test_map_sea_type_to_wkt() {
+        // Timestamp types
+        assert_eq!(
+            map_sea_type_to_proto("timestamp"),
+            ProtoType::Message("google.protobuf.Timestamp".to_string())
+        );
+        assert_eq!(
+            map_sea_type_to_proto("datetime"),
+            ProtoType::Message("google.protobuf.Timestamp".to_string())
+        );
+
+        // Duration types
+        assert_eq!(
+            map_sea_type_to_proto("duration"),
+            ProtoType::Message("google.protobuf.Duration".to_string())
+        );
+        assert_eq!(
+            map_sea_type_to_proto("timespan"),
+            ProtoType::Message("google.protobuf.Duration".to_string())
+        );
+
+        // Dynamic types
+        assert_eq!(
+            map_sea_type_to_proto("any"),
+            ProtoType::Message("google.protobuf.Any".to_string())
+        );
+        assert_eq!(
+            map_sea_type_to_proto("json"),
+            ProtoType::Message("google.protobuf.Struct".to_string())
+        );
+
+        // Empty type
+        assert_eq!(
+            map_sea_type_to_proto("void"),
+            ProtoType::Message("google.protobuf.Empty".to_string())
+        );
+
+        // Nullable/optional types
+        assert_eq!(
+            map_sea_type_to_proto("optional_string"),
+            ProtoType::Message("google.protobuf.StringValue".to_string())
+        );
+        assert_eq!(
+            map_sea_type_to_proto("nullable_int"),
+            ProtoType::Message("google.protobuf.Int64Value".to_string())
+        );
+    }
+
+    #[test]
+    fn test_add_wkt_imports() {
+        let mut proto = ProtoFile::new("test");
+
+        // Add a message with a Timestamp field
+        let mut msg = ProtoMessage::new("Event");
+        msg.fields.push(ProtoField {
+            name: "created_at".to_string(),
+            number: 1,
+            proto_type: ProtoType::Message("google.protobuf.Timestamp".to_string()),
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        });
+        msg.fields.push(ProtoField {
+            name: "duration".to_string(),
+            number: 2,
+            proto_type: ProtoType::Message("google.protobuf.Duration".to_string()),
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        });
+        proto.messages.push(msg);
+
+        proto.add_wkt_imports();
+
+        assert!(proto.imports.contains(&"google/protobuf/timestamp.proto".to_string()));
+        assert!(proto.imports.contains(&"google/protobuf/duration.proto".to_string()));
+    }
+
+    #[test]
+    fn test_wkt_imports_in_proto_string() {
+        let mut proto = ProtoFile::new("test.wkt");
+
+        let mut msg = ProtoMessage::new("AuditLog");
+        msg.fields.push(ProtoField {
+            name: "timestamp".to_string(),
+            number: 1,
+            proto_type: ProtoType::Message("google.protobuf.Timestamp".to_string()),
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        });
+        proto.messages.push(msg);
+        proto.add_wkt_imports();
+
+        let output = proto.to_proto_string();
+        assert!(output.contains("import \"google/protobuf/timestamp.proto\";"));
+    }
+
+    #[test]
+    fn test_wkt_no_duplicate_imports() {
+        let mut proto = ProtoFile::new("test");
+
+        // Add multiple messages using the same WKT
+        let mut msg1 = ProtoMessage::new("Event1");
+        msg1.fields.push(ProtoField {
+            name: "time1".to_string(),
+            number: 1,
+            proto_type: ProtoType::Message("google.protobuf.Timestamp".to_string()),
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        });
+
+        let mut msg2 = ProtoMessage::new("Event2");
+        msg2.fields.push(ProtoField {
+            name: "time2".to_string(),
+            number: 1,
+            proto_type: ProtoType::Message("google.protobuf.Timestamp".to_string()),
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        });
+
+        proto.messages.push(msg1);
+        proto.messages.push(msg2);
+        proto.add_wkt_imports();
+
+        // Should only have one timestamp import
+        let timestamp_count = proto.imports.iter()
+            .filter(|i| i.contains("timestamp"))
+            .count();
+        assert_eq!(timestamp_count, 1);
     }
 
     // ========================================================================
