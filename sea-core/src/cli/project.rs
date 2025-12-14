@@ -52,6 +52,10 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub buf_generate: bool,
 
+    /// Generate multiple files (one per namespace) instead of a single file
+    #[arg(long)]
+    pub multi_file: bool,
+
     pub input: PathBuf,
     pub output: PathBuf,
 }
@@ -142,62 +146,102 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                 .and_then(|s| s.to_str())
                 .unwrap_or("projection");
 
-            let mut proto_file = ProtobufEngine::project_with_full_options(
-                &graph,
-                namespace_filter,
-                &args.package,
-                projection_name,
-                args.include_governance,
-                args.include_services,
-            );
-
-            // Handle compatibility checking if schema history is provided
-            if let Some(ref history_dir) = args.schema_history {
-                let history = SchemaHistory::new(history_dir);
-                let mode: CompatibilityMode = args.compatibility.into();
-
-                let result = history
-                    .check_and_update(&mut proto_file, mode, args.apply_fixes)
-                    .map_err(|e| anyhow::anyhow!("Compatibility check failed: {}", e))?;
-
-                // Print compatibility report
-                if result.has_violations() {
-                    eprintln!("\n{}", result.to_report());
+            if args.multi_file {
+                if args.schema_history.is_some() {
+                    eprintln!("Warning: --schema-history is currently ignored in --multi-file mode.");
                 }
 
-                // Fail if not compatible (unless in breaking mode)
-                if !result.is_compatible {
-                    return Err(anyhow::anyhow!(
-                        "Schema evolution is not compatible in {} mode. Use --compatibility breaking to force, or --apply-fixes to auto-fix.",
-                        mode
-                    ));
+                if !args.output.exists() {
+                    std::fs::create_dir_all(&args.output)
+                        .with_context(|| format!("Failed to create output directory {}", args.output.display()))?;
+                } else if !args.output.is_dir() {
+                    return Err(anyhow::anyhow!("Output path must be a directory for --multi-file projection"));
                 }
 
-                if result.has_violations() {
-                    println!("  Compatibility: {} (with {} warnings)", mode, result.violations.len());
-                } else {
-                    println!("  Compatibility: {} (clean)", mode);
-                }
-            }
-
-            let proto_string = proto_file.to_proto_string();
-            write(&args.output, &proto_string)
-                .with_context(|| format!("Failed to write output to {}", args.output.display()))?;
-            println!("Projected to Protobuf: {}", args.output.display());
-            println!("  Package: {}", args.package);
-            println!("  Messages: {}", proto_file.messages.len());
-            if !proto_file.services.is_empty() {
-                println!("  Services: {} ({} methods)", 
-                    proto_file.services.len(),
-                    proto_file.services.iter().map(|s| s.methods.len()).sum::<usize>()
+                let files = ProtobufEngine::project_multi_file(
+                    &graph,
+                    &args.package,
+                    args.include_governance,
+                    args.include_services,
                 );
+
+                for (rel_path, proto) in &files {
+                    let abs_path = args.output.join(rel_path);
+                    if let Some(parent) = abs_path.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+
+                    let content = proto.to_proto_string();
+                    write(&abs_path, content)
+                        .with_context(|| format!("Failed to write {}", abs_path.display()))?;
+                }
+
+                println!("Projected to Protobuf (Multi-file): {}", args.output.display());
+                println!("  Files: {}", files.len());
+                println!("  Base Package: {}", args.package);
+                
+            } else {
+                let mut proto_file = ProtobufEngine::project_with_full_options(
+                    &graph,
+                    namespace_filter,
+                    &args.package,
+                    projection_name,
+                    args.include_governance,
+                    args.include_services,
+                );
+
+                // Handle compatibility checking if schema history is provided
+                if let Some(ref history_dir) = args.schema_history {
+                    let history = SchemaHistory::new(history_dir);
+                    let mode: CompatibilityMode = args.compatibility.into();
+
+                    let result = history
+                        .check_and_update(&mut proto_file, mode, args.apply_fixes)
+                        .map_err(|e| anyhow::anyhow!("Compatibility check failed: {}", e))?;
+
+                    // Print compatibility report
+                    if result.has_violations() {
+                        eprintln!("\n{}", result.to_report());
+                    }
+
+                    // Fail if not compatible (unless in breaking mode)
+                    if !result.is_compatible {
+                        return Err(anyhow::anyhow!(
+                            "Schema evolution is not compatible in {} mode. Use --compatibility breaking to force, or --apply-fixes to auto-fix.",
+                            mode
+                        ));
+                    }
+
+                    if result.has_violations() {
+                        println!("  Compatibility: {} (with {} warnings)", mode, result.violations.len());
+                    } else {
+                        println!("  Compatibility: {} (clean)", mode);
+                    }
+                }
+
+                let proto_string = proto_file.to_proto_string();
+                write(&args.output, &proto_string)
+                    .with_context(|| format!("Failed to write output to {}", args.output.display()))?;
+                println!("Projected to Protobuf: {}", args.output.display());
+                println!("  Package: {}", args.package);
+                println!("  Messages: {}", proto_file.messages.len());
+                if !proto_file.services.is_empty() {
+                    println!("  Services: {} ({} methods)", 
+                        proto_file.services.len(),
+                        proto_file.services.iter().map(|s| s.methods.len()).sum::<usize>()
+                    );
+                }
             }
 
             // Buf integration
             if args.buf_lint || args.buf_breaking || args.buf_generate {
                 use crate::projection::buf::BufIntegration;
                 let buf = BufIntegration::new();
-                let output_dir = args.output.parent().unwrap_or(Path::new("."));
+                let output_dir = if args.multi_file {
+                    &args.output
+                } else {
+                    args.output.parent().unwrap_or(Path::new("."))
+                };
 
                 if args.buf_lint {
                     print!("  Running buf lint... ");
@@ -215,20 +259,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                 }
 
                 if args.buf_breaking {
-                    // Requires user to specify against what, which is complex in CLI.
-                    // For now, we'll assume they want to check against the schema_history dir if provided
                     if let Some(history) = args.schema_history {
                         print!("  Running buf breaking check... ");
-                        // In a real scenario, we'd need to reconstruct the prev protobuf file 
-                        // into a dir for buf to compare against. This is a simplification.
-                        // For Phase 4 compliance, we'll mark this as needing precise 'against' target.
-                        // But since we implemented breaking check in Rust native code above (CompatibilityChecker),
-                        // this flag might be redundant unless checks strictly against 'git' or similar.
-                        // Let's defer strict implementation or just warn.
-                        
                         println!("(checking against {})", history.display());
-                    } else {
-                         // Fallback or warning
                     }
                 }
             }

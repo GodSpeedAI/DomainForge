@@ -23,7 +23,8 @@ use crate::graph::Graph;
 use crate::primitives::{Entity, Resource};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::path::PathBuf;
 
 // ============================================================================
 // Protobuf IR Types
@@ -1083,7 +1084,206 @@ impl ProtobufEngine {
         proto
     }
 
-    /// Generate gRPC services from Flow patterns.
+    /// Project a SEA Graph to multiple ProtoFiles (one per namespace).
+    ///
+    /// This method partitions the graph by namespace, creating a separate `.proto` file
+    /// for each. Cross-namespace references are automatically resolved by adding imports
+    /// and fully qualifying type names.
+    ///
+    /// # Arguments
+    ///
+    /// * `graph` - The semantic graph to project
+    /// * `base_package` - The root package name (e.g. "sea.generated")
+    /// * `include_governance` - Whether to include governance messages
+    /// * `include_services` - Whether to generate gRPC services
+    ///
+    /// # Returns
+    ///
+    /// A map of relative file paths to ProtoFile definitions.
+    pub fn project_multi_file(
+        graph: &Graph,
+        base_package: &str,
+        include_governance: bool,
+        include_services: bool,
+    ) -> BTreeMap<PathBuf, ProtoFile> {
+        let mut files: BTreeMap<String, ProtoFile> = BTreeMap::new();
+        // Index: TypeName -> (Namespace, FullPackage)
+        let mut type_index: HashMap<String, (String, String)> = HashMap::new();
+
+        // 1. Collect all namespaces and entities
+        for entity in graph.all_entities() {
+            let ns = entity.namespace();
+            let package = if ns.is_empty() {
+                base_package.to_string()
+            } else {
+                format!("{}.{}", base_package, ns)
+            };
+            
+            type_index.insert(
+                to_pascal_case(entity.name()), 
+                (ns.to_string(), package.clone())
+            );
+
+            files.entry(ns.to_string())
+                .or_insert_with(|| ProtoFile::new(package))
+                .messages.push(Self::entity_to_message(entity));
+        }
+
+        for resource in graph.all_resources() {
+             let ns = resource.namespace();
+             let package = if ns.is_empty() {
+                base_package.to_string()
+            } else {
+                format!("{}.{}", base_package, ns)
+            };
+            
+            type_index.insert(
+                to_pascal_case(resource.name()), 
+                (ns.to_string(), package.clone())
+            );
+
+            files.entry(ns.to_string())
+                .or_insert_with(|| ProtoFile::new(package))
+                .messages.push(Self::resource_to_message(resource));
+        }
+
+        // 2. Add Services
+        if include_services {
+             // Iterate all flows to capture services
+             let services = Self::flows_to_services(graph, "");
+             for service in services {
+                 // Try to find the namespace of the service based on the destination entity name
+                 // Service name is {DestEntity}Service
+                 let entity_name = service.name.strip_suffix("Service").unwrap_or(&service.name);
+                 
+                 // Look up entity namespace in type_index
+                 if let Some((ns, package)) = type_index.get(entity_name) {
+                      files.entry(ns.clone())
+                        .or_insert_with(|| ProtoFile::new(package.clone()))
+                        .services.push(service);
+                 } else {
+                     // Default to base package if not found (e.g. flow to unknown entity)
+                      let package = base_package.to_string();
+                      files.entry("".to_string())
+                        .or_insert_with(|| ProtoFile::new(package))
+                        .services.push(service);
+                 }
+             }
+        }
+
+        // 3. Add Governance (in root namespace usually)
+        if include_governance {
+             let root_file = files.entry("".to_string())
+                 .or_insert_with(|| ProtoFile::new(base_package.to_string()));
+             
+             let governance_msgs = Self::generate_governance_messages();
+             for msg in &governance_msgs {
+                 type_index.insert(msg.name.clone(), ("".to_string(), base_package.to_string()));
+             }
+             root_file.messages.extend(governance_msgs);
+        }
+
+        // 4. Resolve Imports and Finalize
+        for (ns, file) in files.iter_mut() {
+            let mut imports_to_add = HashSet::new();
+
+            // Check messages for cross-references
+            for msg in &mut file.messages {
+                Self::resolve_imports_in_message(msg, ns, &type_index, &mut imports_to_add);
+            }
+            
+             // Check services
+            for svc in &mut file.services {
+                 for method in &mut svc.methods {
+                     // Check request types
+                     if let Some((target_ns, target_pkg)) = type_index.get(&method.request_type) {
+                         if target_ns != ns {
+                             imports_to_add.insert(target_ns.clone());
+                             method.request_type = format!("{}.{}", target_pkg, method.request_type);
+                         }
+                     }
+                     // Check response types
+                     if let Some((target_ns, target_pkg)) = type_index.get(&method.response_type) {
+                         if target_ns != ns {
+                             imports_to_add.insert(target_ns.clone());
+                             method.response_type = format!("{}.{}", target_pkg, method.response_type);
+                         }
+                     }
+                 }
+            }
+            
+            // Add collected imports
+             for target_ns in imports_to_add {
+                 // self-import is prevented by check above
+                 // root namespace usually doesn't need path prefix if files in same dir, 
+                 // but assume we strictly follow directory structure.
+                 let import_path = if target_ns.is_empty() {
+                     "projection.proto".to_string()
+                 } else {
+                     format!("{}.proto", target_ns.replace('.', "/"))
+                 };
+                 file.imports.push(import_path);
+             }
+             
+             // Sort and deduplicate imports (including WKTs)
+             file.add_wkt_imports();
+        }
+        
+        // Convert map to PathBuf keys
+        let mut results = BTreeMap::new();
+        for (ns, file) in files {
+             let path = if ns.is_empty() {
+                 PathBuf::from("projection.proto")
+             } else {
+                 PathBuf::from(format!("{}.proto", ns.replace('.', "/")))
+             };
+             results.insert(path, file);
+        }
+        
+        results
+    }
+
+    /// Helper to resolve cross-namespace imports within a message.
+    fn resolve_imports_in_message(
+        msg: &mut ProtoMessage,
+        current_ns: &str,
+        index: &HashMap<String, (String, String)>,
+        imports: &mut HashSet<String>,
+    ) {
+         for field in &mut msg.fields {
+             match &mut field.proto_type {
+                 ProtoType::Message(name) | ProtoType::Enum(name) => {
+                     // Ignore WKTs
+                     if WellKnownType::from_type_name(name).is_some() { continue; }
+
+                     if let Some((target_ns, target_pkg)) = index.get(name.as_str()) {
+                         if target_ns != current_ns {
+                             imports.insert(target_ns.clone());
+                             *name = format!("{}.{}", target_pkg, name);
+                         }
+                     }
+                 }
+                 ProtoType::Map { key, value } => {
+                     // Check recursively (simplified for now assuming only value can be message)
+                     if let ProtoType::Message(name) = &mut **value {
+                         if WellKnownType::from_type_name(name).is_some() { continue; }
+                         if let Some((target_ns, target_pkg)) = index.get(name.as_str()) {
+                            if target_ns != current_ns {
+                                imports.insert(target_ns.clone());
+                                *name = format!("{}.{}", target_pkg, name);
+                            }
+                         }
+                     }
+                 }
+                 _ => {}
+             }
+         }
+         
+         // Recurse into nested messages
+         for nested in &mut msg.nested_messages {
+             Self::resolve_imports_in_message(nested, current_ns, index, imports);
+         }
+    }
     ///
     /// This method groups flows by their destination entity (service provider)
     /// and creates RPC methods for each flow. The naming convention follows
@@ -2156,6 +2356,78 @@ mod tests {
 
         assert!(proto.imports.contains(&"google/protobuf/timestamp.proto".to_string()));
         assert!(proto.imports.contains(&"google/protobuf/duration.proto".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_imports_in_message() {
+        // Setup index with a target message
+        let mut index = HashMap::new();
+        index.insert(
+            "TargetType".to_string(), 
+            ("other.ns".to_string(), "base.other.ns".to_string())
+        );
+
+        let mut msg = ProtoMessage::new("SourceMessage");
+        msg.fields.push(ProtoField {
+            name: "field1".to_string(),
+            number: 1,
+            proto_type: ProtoType::Message("TargetType".to_string()),
+            repeated: false,
+            optional: false,
+            comments: vec![],
+        });
+
+        let mut imports = HashSet::new();
+        
+        // Resolve imports
+        ProtobufEngine::resolve_imports_in_message(
+            &mut msg,
+            "current.ns",
+            &index,
+            &mut imports
+        );
+
+        // Should find import for other.ns
+        assert!(imports.contains("other.ns"));
+        
+        // Should update type name to fully qualified
+        let field_type = if let ProtoType::Message(ref name) = msg.fields[0].proto_type {
+            name.clone()
+        } else {
+            panic!("Wrong type");
+        };
+        assert_eq!(field_type, "base.other.ns.TargetType");
+    }
+
+    #[test]
+    fn test_resolve_imports_in_nested_message() {
+        let mut index = HashMap::new();
+        index.insert(
+            "NestedTarget".to_string(),
+            ("other.ns".to_string(), "base.other.ns".to_string())
+        );
+
+        let mut msg = ProtoMessage::new("Outer");
+        let mut inner = ProtoMessage::new("Inner");
+        inner.fields.push(ProtoField {
+             name: "field".to_string(),
+             number: 1,
+             proto_type: ProtoType::Message("NestedTarget".to_string()),
+             repeated: false,
+             optional: false,
+             comments: vec![],
+        });
+        msg.nested_messages.push(inner);
+
+        let mut imports = HashSet::new();
+        ProtobufEngine::resolve_imports_in_message(
+            &mut msg,
+            "current.ns",
+            &index,
+            &mut imports
+        );
+
+        assert!(imports.contains("other.ns"));
     }
 
     #[test]
