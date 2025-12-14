@@ -1263,7 +1263,7 @@ impl ProtobufEngine {
                          }
                      }
                  }
-                 ProtoType::Map { key, value } => {
+                 ProtoType::Map { key: _, value } => {
                      // Check recursively (simplified for now assuming only value can be message)
                      if let ProtoType::Message(name) = &mut **value {
                          if WellKnownType::from_type_name(name).is_some() { continue; }
