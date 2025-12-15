@@ -25,5 +25,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish sea-core to crates.io
-        run: cargo publish --manifest-path sea-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }} --allow-dirty || echo "Crate may already be published"
-        continue-on-error: true
+        run: |
+          set +e
+          OUTPUT=$(cargo publish --manifest-path sea-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }} 2>&1)
+          EXIT_CODE=$?
+          echo "$OUTPUT"
+          
+          # Check if already published (not an error)
+          if echo "$OUTPUT" | grep -q "already uploaded\|already exists\|is already published"; then
+            echo "::notice::Crate version already published, skipping"
+            exit 0
+          fi
+          
+          # Propagate actual errors
+          exit $EXIT_CODE

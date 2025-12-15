@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  publish-napi:
+  publish:
     name: Publish napi bindings to npm
     runs-on: ubuntu-latest
     steps:

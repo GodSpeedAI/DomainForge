@@ -114,8 +114,14 @@ cargo clippy --all-targets --all-features -- -D warnings
 1. Go to Actions → "Prepare Release" → Run workflow
 2. Select version bump type (patch/minor/major)
 3. Review and merge the created PR
-4. Create tag: `git tag v<version> && git push --tags`
-5. Publishing workflows trigger automatically on GitHub Release
+4. Create and push tag: `git tag v<version> && git push --tags`
+5. Create a GitHub Release from the tag:
+   - Go to Releases → Draft a new release
+   - Select the tag you just pushed
+   - Click "Publish release"
+6. Publishing workflows trigger automatically when the release is published
+
+> **Note**: Publishing workflows are triggered by the `release: published` event, not by tags alone. You must create and publish a GitHub Release for the npm, PyPI, and crates.io workflows to run.
 
 ### Manual
 
