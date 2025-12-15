@@ -251,18 +251,18 @@ Flow "Resource" from "A" to "B" quantity 100
 
 ## 6. Implementation Phases
 
-### Phase 1: Basic Formatting (MVP)
+### Phase 1: Basic Formatting (MVP) ✅ COMPLETE
 
-- [ ] Create formatter module structure
-- [ ] Implement `FormatConfig`
-- [ ] Implement basic `Formatter` with entity, resource, flow support
-- [ ] Wire up CLI
+- [x] Create formatter module structure
+- [x] Implement `FormatConfig`
+- [x] Implement basic `Formatter` with entity, resource, flow support
+- [x] Wire up CLI
 
-### Phase 2: Full Declaration Support
+### Phase 2: Full Declaration Support ✅ COMPLETE
 
-- [ ] Add all declaration types (14 total)
-- [ ] Add expression formatting
-- [ ] Handle complex nested expressions
+- [x] Add all declaration types (14 total)
+- [x] Add expression formatting
+- [x] Handle complex nested expressions
 
 ### Phase 3: Comment Preservation
 
@@ -270,12 +270,12 @@ Flow "Resource" from "A" to "B" quantity 100
 - [ ] Attach comments to AST nodes
 - [ ] Preserve comments in output
 
-### Phase 4: Polish
+### Phase 4: Polish ✅ COMPLETE
 
-- [ ] Add `--check` flag for CI
-- [ ] Add idempotency tests
-- [ ] Performance optimization
-- [ ] Editor integration docs
+- [x] Add `--check` flag for CI
+- [x] Add idempotency tests
+- [ ] Performance optimization (deferred - not needed currently)
+- [ ] Editor integration docs (deferred)
 
 ### Phase 5: Language Bindings (Future)
 
