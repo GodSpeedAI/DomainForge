@@ -132,5 +132,9 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::units::Dimension>()?;
     m.add_class::<python::units::Unit>()?;
 
+    // Formatter functions
+    m.add_function(pyo3::wrap_pyfunction!(python::formatter::format_source, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::formatter::check_format, m)?)?;
+
     Ok(())
 }
