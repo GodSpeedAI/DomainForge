@@ -277,6 +277,105 @@ Flow "Resource" from "A" to "B" quantity 100
 - [ ] Performance optimization
 - [ ] Editor integration docs
 
+### Phase 5: Language Bindings (Future)
+
+Expose formatter API to Python, TypeScript, and WASM for programmatic access.
+
+**Use Cases:**
+
+- VS Code extension format-on-save
+- Jupyter notebook cell formatting
+- Browser-based playground
+- CI/CD pipeline integration without shelling out
+
+#### [NEW] `sea-core/src/python/formatter.rs`
+
+```rust
+use crate::formatter::{format, FormatConfig};
+use pyo3::prelude::*;
+
+#[pyfunction]
+#[pyo3(signature = (source, indent_width=4, use_tabs=false))]
+pub fn format_source(source: &str, indent_width: usize, use_tabs: bool) -> PyResult<String> {
+    let config = FormatConfig {
+        indent_width,
+        indent_style: if use_tabs { IndentStyle::Tabs } else { IndentStyle::Spaces },
+        ..Default::default()
+    };
+    format(source, config).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
+}
+```
+
+**Python usage:**
+
+```python
+from sea_dsl import format_source
+
+formatted = format_source("""Entity   "Foo"  in    bar""")
+print(formatted)  # Entity "Foo" in bar
+```
+
+#### [NEW] `sea-core/src/typescript/formatter.rs`
+
+```rust
+use crate::formatter::{format, FormatConfig};
+use napi::bindgen_prelude::*;
+use napi_derive::napi;
+
+#[napi]
+pub fn format_source(source: String, indent_width: Option<u32>, use_tabs: Option<bool>) -> napi::Result<String> {
+    let config = FormatConfig {
+        indent_width: indent_width.unwrap_or(4) as usize,
+        indent_style: if use_tabs.unwrap_or(false) { IndentStyle::Tabs } else { IndentStyle::Spaces },
+        ..Default::default()
+    };
+    format(&source, config).map_err(|e| napi::Error::from_reason(e.to_string()))
+}
+```
+
+**TypeScript usage:**
+
+```typescript
+import { formatSource } from "@domainforge/sea";
+
+const formatted = formatSource(`Entity   "Foo"  in    bar`);
+console.log(formatted); // Entity "Foo" in bar
+```
+
+#### [NEW] `sea-core/src/wasm/formatter.rs`
+
+```rust
+use crate::formatter::{format, FormatConfig};
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub fn format_source(source: &str, indent_width: Option<usize>, use_tabs: Option<bool>) -> Result<String, JsValue> {
+    let config = FormatConfig {
+        indent_width: indent_width.unwrap_or(4),
+        indent_style: if use_tabs.unwrap_or(false) { IndentStyle::Tabs } else { IndentStyle::Spaces },
+        ..Default::default()
+    };
+    format(source, config).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+```
+
+**Browser usage:**
+
+```javascript
+import { formatSource } from "@domainforge/sea-wasm";
+
+const formatted = formatSource(`Entity   "Foo"  in    bar`);
+document.getElementById("output").textContent = formatted;
+```
+
+#### Phase 5 Tasks
+
+- [ ] Add `format_source` function to Python bindings
+- [ ] Add `formatSource` function to TypeScript bindings
+- [ ] Add `format_source` function to WASM bindings
+- [ ] Update binding documentation (python-api.md, typescript-api.md, wasm-api.md)
+- [ ] Add cross-language formatter tests
+
 ---
 
 ## 7. Verification Plan
@@ -328,6 +427,26 @@ sea validate /tmp/formatted.sea
 sea fmt --check examples/basic.sea
 ```
 
+### Binding Tests
+
+```python
+# tests/test_formatter.py
+def test_format_source():
+    from sea_dsl import format_source
+    result = format_source('Entity   "Foo"')
+    assert result == 'Entity "Foo"\n'
+```
+
+```typescript
+// typescript-tests/formatter.test.ts
+import { formatSource } from "@domainforge/sea";
+import { expect, test } from "vitest";
+
+test("formatSource normalizes whitespace", () => {
+  expect(formatSource('Entity   "Foo"')).toBe('Entity "Foo"\n');
+});
+```
+
 ### Manual Verification
 
 1. Format a complex model file
@@ -344,12 +463,13 @@ sea fmt --check examples/basic.sea
 
 ## 8. Risks and Mitigations
 
-| Risk                            | Mitigation                                        |
-| ------------------------------- | ------------------------------------------------- |
-| Comment preservation complexity | Start without comments in Phase 1, add in Phase 3 |
-| Breaking existing workflows     | Add `--check` mode for gradual adoption           |
-| Performance on large files      | Benchmark, optimize only if needed                |
-| Grammar changes break parser    | Extensive parser tests before modifying           |
+| Risk                            | Mitigation                                         |
+| ------------------------------- | -------------------------------------------------- |
+| Comment preservation complexity | Start without comments in Phase 1, add in Phase 3  |
+| Breaking existing workflows     | Add `--check` mode for gradual adoption            |
+| Performance on large files      | Benchmark, optimize only if needed                 |
+| Grammar changes break parser    | Extensive parser tests before modifying            |
+| Binding API divergence          | Share core `format()` function across all bindings |
 
 ---
 
@@ -358,6 +478,7 @@ sea fmt --check examples/basic.sea
 1. **Should imports be auto-sorted?** (Proposed: Yes, alphabetically by path)
 2. **Should declaration order be enforced?** (Proposed: No, preserve user order)
 3. **Configuration file support?** (Proposed: Future - `.seafmt.toml`)
+4. **Should bindings support config objects?** (Proposed: Start with simple args, add config object later)
 
 ---
 
@@ -366,10 +487,15 @@ sea fmt --check examples/basic.sea
 - [Grammar Spec](../reference/grammar-spec.md)
 - [CLI Commands](../reference/cli-commands.md)
 - [ADR-001: SEA-DSL as Semantic Source of Truth](../specs/ADR-001-sea-dsl-semantic-source-of-truth.md)
+- [Python API](../reference/python-api.md)
+- [TypeScript API](../reference/typescript-api.md)
+- [WASM API](../reference/wasm-api.md)
 
 ---
 
 ## 11. Acceptance Criteria
+
+### Core (Phases 1-4)
 
 - [ ] `sea fmt model.sea` outputs formatted code to stdout
 - [ ] `sea fmt model.sea --out formatted.sea` writes to file
@@ -378,3 +504,11 @@ sea fmt --check examples/basic.sea
 - [ ] All 14 declaration types are supported
 - [ ] Comments are preserved (Phase 3)
 - [ ] Unit tests achieve >80% coverage of formatter module
+
+### Bindings (Phase 5)
+
+- [ ] Python: `format_source()` function available in `sea_dsl` module
+- [ ] TypeScript: `formatSource()` function exported from `@domainforge/sea`
+- [ ] WASM: `format_source()` function available in browser bundle
+- [ ] All bindings produce identical output for same input
+- [ ] Cross-language formatter tests pass
