@@ -36,6 +36,7 @@ static ALLOC: lol_alloc::LockedAllocator<lol_alloc::FreeListAllocator> =
 pub mod calm;
 pub mod concept_id;
 pub mod error;
+pub mod formatter;
 pub mod graph;
 pub mod kg;
 pub mod kg_import;
