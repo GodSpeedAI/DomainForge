@@ -20,7 +20,7 @@ env:
   CARGO_INCREMENTAL: 0
   CACHE_VERSION: v3 # Increment to bust all caches
   CLI_MAX_BYTES: "52428800" # 50MB
-  WASM_MAX_BYTES: "2097152" # 2MB
+  WASM_MAX_BYTES: "2097152" # 2MB - harmonized with release.yml
 
 jobs:
   lint:

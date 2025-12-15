@@ -25,4 +25,5 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish sea-core to crates.io
-        run: cargo publish --manifest-path sea-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }}
+        run: cargo publish --manifest-path sea-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }} --allow-dirty || echo "Crate may already be published"
+        continue-on-error: true

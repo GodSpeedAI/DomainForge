@@ -2,7 +2,20 @@
 
 This directory contains the CI/CD workflows for the DomainForge project.
 
-## Workflows
+## Workflows Overview
+
+| Workflow                   | Trigger                  | Purpose                                   |
+| -------------------------- | ------------------------ | ----------------------------------------- |
+| `ci.yml`                   | Push to main/dev, PRs    | Continuous Integration                    |
+| `release.yml`              | Tag `v*.*.*`             | Build release artifacts for all platforms |
+| `release-npm.yml`          | GitHub Release published | Publish napi + WASM to npm                |
+| `release-pypi.yml`         | GitHub Release published | Publish Python wheels to PyPI             |
+| `release-crates.yml`       | GitHub Release published | Publish to crates.io                      |
+| `prepare-release.yml`      | Manual trigger           | Automate version bump and release PR      |
+| `dependabot-automerge.yml` | Dependabot PRs           | Auto-merge safe dependency updates        |
+| `dependency-review.yml`    | PRs                      | Review dependency changes for security    |
+
+## Workflow Details
 
 ### `ci.yml` - Continuous Integration
 
@@ -18,126 +31,100 @@ Main CI pipeline that runs on pushes to `main`, `dev`, and `release/**` branches
 - **test-wasm**: Builds and validates WASM bundle size
 - **security**: Runs `cargo audit` for security vulnerabilities
 
-**Requirements:**
-
-- Node.js: v22 (matches local development environment)
-- Python: 3.11+ (per `pyproject.toml`)
-- Rust: stable toolchain
-
-**Bundle Size Thresholds:**
-
-- WASM: 512KB (524,288 bytes)
-- CLI binary: 50MB (52,428,800 bytes)
-
 ### `release.yml` - Release Builds
 
 Triggered on version tags (`v*.*.*`). Builds release artifacts for all platforms.
 
+**Supported Targets:**
+
+| Target                      | OS Runner      | Notes                      |
+| --------------------------- | -------------- | -------------------------- |
+| `x86_64-unknown-linux-gnu`  | ubuntu-latest  | Standard Linux             |
+| `x86_64-apple-darwin`       | macos-13       | Intel Mac                  |
+| `x86_64-pc-windows-msvc`    | windows-latest | Windows                    |
+| `aarch64-apple-darwin`      | macos-14       | Apple Silicon              |
+| `aarch64-unknown-linux-gnu` | ubuntu-latest  | ARM Linux (cross-compiled) |
+
 **Jobs:**
 
-- **build-release**: Builds CLI binaries for Linux, macOS, Windows
-- **build-python-wheels**: Builds Python wheels for all platforms
+- **build-release**: Builds CLI binaries for all targets
+- **build-python-wheels**: Builds Python wheels for all targets
 - **build-wasm-release**: Builds optimized WASM bundle
 - **create-release**: Creates GitHub release with all artifacts
 
-**Artifact Size Limits:**
+### `prepare-release.yml` - Release Automation
 
-- CLI binary: 50MB
-- CLI packaged artifact: 70MB
-- WASM bundle: 512KB
+Manually triggered workflow to automate version bumping and release PR creation.
 
-### `publish-python.yml` - Python Package Publishing
+**Inputs:**
 
-Triggered on GitHub releases. Publishes Python wheels to PyPI.
+- `version_bump`: Choose `patch`, `minor`, or `major`
+- `prerelease`: Optional suffix like `alpha`, `beta`, or `rc1`
 
-**Requirements:**
+**What it does:**
 
-- Repository secret: `PYPI_API_TOKEN` (optional, publish skipped if not set)
-- Only runs on `release` events
+1. Calculates new version based on bump type
+2. Updates `sea-core/Cargo.toml` with new version
+3. Prepares CHANGELOG.md entry
+4. Creates a release PR with checklist
 
-### `dependency-review.yml` - Dependency Security
+### Publishing Workflows
 
-Runs on pull requests to review dependency changes for security issues.
+| Workflow             | Registry  | Notes                                            |
+| -------------------- | --------- | ------------------------------------------------ |
+| `release-npm.yml`    | npm       | Publishes both napi bindings AND WASM package    |
+| `release-pypi.yml`   | PyPI      | Publishes wheels for all platforms including ARM |
+| `release-crates.yml` | crates.io | Publishes `sea-core` crate                       |
+
+## Bundle Size Thresholds
+
+| Artifact     | Limit | Notes                                    |
+| ------------ | ----- | ---------------------------------------- |
+| WASM bundle  | 2MB   | Harmonized across ci.yml and release.yml |
+| CLI binary   | 50MB  | Per-platform binary                      |
+| CLI artifact | 70MB  | Packaged archive (tar.gz/zip)            |
 
 ## Local Testing to Match CI
 
-To ensure your local tests match the CI environment:
-
-### 1. Node.js Version
-
 ```bash
-# Check your Node version
-node --version  # Should be v22.x.x
-
-# If using nvm, switch to Node 22
-nvm use 22
-```
-
-### 2. Run All Tests
-
-```bash
-# Using justfile (recommended)
+# Run all tests
 just all-tests
 
 # Or individually
 just rust-test
 just python-test
 just ts-test
-```
 
-### 3. WASM Build and Size Check
-
-```bash
+# WASM build and size check
 cd sea-core
 wasm-pack build --target web --features wasm
-
-# Check bundle size (should be < 512KB)
 SIZE=$(python3 -c "import os; print(os.path.getsize('pkg/sea_core_bg.wasm'))")
-echo "WASM bundle size: $SIZE bytes (threshold: 524288)"
-[ "$SIZE" -lt 524288 ] && echo "✅ PASS" || echo "❌ FAIL"
-```
+echo "WASM bundle size: $SIZE bytes (threshold: 2097152)"
+[ "$SIZE" -lt 2097152 ] && echo "✅ PASS" || echo "❌ FAIL"
 
-### 4. Lint Checks
-
-```bash
-# Rust formatting
+# Lint checks
 cargo fmt --all --check
-
-# Rust linting
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 
-## Troubleshooting
+## Release Process
 
-### WASM Bundle Size Failure
+### Automated (Recommended)
 
-If the WASM bundle exceeds 512KB:
+1. Go to Actions → "Prepare Release" → Run workflow
+2. Select version bump type (patch/minor/major)
+3. Review and merge the created PR
+4. Create tag: `git tag v<version> && git push --tags`
+5. Publishing workflows trigger automatically on GitHub Release
 
-1. Check what changed in the Rust code that increased bundle size
-2. Consider using `wasm-opt` for additional optimization
-3. Review dependencies added to the WASM feature
-4. If the increase is justified, update the threshold in both `ci.yml` and `release.yml`
+### Manual
 
-### Publish Job Failures
-
-The `publish-python.yml` workflow will skip publishing if:
-
-- `PYPI_API_TOKEN` secret is not configured (expected behavior)
-- The workflow is not triggered by a release event
-
-To configure publishing:
-
-1. Generate a PyPI API token at https://pypi.org/manage/account/token/
-2. Add it as a repository secret named `PYPI_API_TOKEN`
-3. Create a GitHub release to trigger the workflow
-
-### Node Version Mismatch
-
-If you see different behavior locally vs CI:
-
-1. Ensure you're using Node v22 locally
-2. Run `npm ci` (not `npm install`) to match CI's dependency resolution
-3. Check `package-lock.json` is committed and up-to-date
+1. Bump version in `sea-core/Cargo.toml`
+2. Update `CHANGELOG.md`
+3. Commit and push
+4. Create and push tag: `git tag v<version> && git push --tags`
+5. Create GitHub Release from the tag
+6. Publishing workflows trigger automatically
 
 ## Cache Management
 
@@ -145,3 +132,30 @@ All workflows use GitHub Actions cache (v4) with a `CACHE_VERSION` environment v
 
 1. Increment `CACHE_VERSION` in the workflow file
 2. This is useful when dependencies are corrupted or need a fresh start
+
+## Secrets Required
+
+| Secret           | Used By               | Purpose                       |
+| ---------------- | --------------------- | ----------------------------- |
+| `SOPS_AGE_KEY`   | All publish workflows | Decrypt encrypted secrets     |
+| `PYPI_API_TOKEN` | release-pypi.yml      | PyPI publishing (fallback)    |
+| `GITHUB_TOKEN`   | All workflows         | GitHub API access (automatic) |
+
+## Troubleshooting
+
+### ARM Linux Cross-Compilation
+
+ARM Linux targets use either `cross` (for CLI) or `zig` (for Python wheels) for cross-compilation. If builds fail:
+
+1. Check that the target toolchain is installed
+2. Verify cross/zig are working correctly
+3. ARM Linux builds cannot be verified locally on x86 runners
+
+### Publish Failures
+
+All publish workflows have `continue-on-error: true` or `--skip-existing` to handle:
+
+- Package already published (re-runs)
+- Network issues (will fail but won't block other jobs)
+
+To check if a publish actually succeeded, verify the package on the respective registry.

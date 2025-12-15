@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  publish-napi:
+    name: Publish napi bindings to npm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +37,46 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public || echo "Package may already be published"
+        continue-on-error: true
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}
+
+  publish-wasm:
+    name: Publish WASM package to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decrypt secrets
+        id: secrets
+        uses: ./.github/actions/decrypt-secrets
+        with:
+          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - name: Build WASM package
+        run: |
+          cd sea-core
+          wasm-pack build --target web --release --features wasm --scope domainforge
+
+      - name: Publish WASM to npm
+        run: |
+          cd sea-core/pkg
+          npm publish --access public || echo "WASM package may already be published"
+        continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}
