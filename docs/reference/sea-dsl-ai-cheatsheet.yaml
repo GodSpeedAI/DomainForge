@@ -748,18 +748,30 @@ examples:
 ---
 cli_commands:
   validate:
-    usage: "sea validate [--format json|lsp] <file.sea>"
+    usage: "sea validate [--format json|human|lsp] <file.sea>"
     purpose: "Validate SEA file and report errors"
+    json_output: "sea validate --format json model.sea"
+    note: "JSON format outputs structured error/warning objects"
 
   parse:
-    usage: "sea parse <file.sea>"
-    purpose: "Parse and output AST"
+    usage: "sea parse [--format human|json] <file.sea>"
+    purpose: "Parse and output graph summary or structure"
+    json_output: "sea parse --format json model.sea"
+    note: "JSON format outputs full parsed graph structure"
 
-  export:
-    calm: "sea project --format calm <file.sea> output.json"
-    turtle: "sea project --format rdf <file.sea> output.ttl"
-    protobuf: "sea project --format protobuf <file.sea> output.proto"
-    purpose: "Project to external formats"
+  project:
+    purpose: "Project/export graph to external formats"
+    formats:
+      calm: 
+        command: "sea project --format calm model.sea output.json"
+        output: "FINOS CALM JSON"
+        note: "Architecture-as-code format, outputs JSON"
+      rdf:
+        command: "sea project --format rdf model.sea output.ttl"
+        output: "RDF/Turtle (or RDF/XML with .rdf extension)"
+      protobuf:
+        command: "sea project --format protobuf model.sea output.proto"
+        output: "Protocol Buffer .proto file"
 
   project_protobuf:
     basic: "sea project --format protobuf model.sea output.proto"
@@ -770,6 +782,24 @@ cli_commands:
     compatibility: "sea project --format protobuf --compatibility additive --against ./previous output.proto"
     buf_lint: "sea project --format protobuf --buf-lint model.sea output.proto"
     buf_breaking: "sea project --format protobuf --buf-breaking --against ./previous model.sea"
+
+  import:
+    purpose: "Import from external formats"
+    formats:
+      calm: "sea import --format calm input.json > model.sea"
+      sbvr: "sea import --format sbvr vocabulary.xmi > model.sea"
+
+  json_output_summary:
+    note: "Multiple commands support JSON output for tooling integration"
+    commands:
+      validate: "--format json outputs validation results as JSON"
+      parse: "--format json outputs parsed graph structure as JSON"
+      project_calm: "CALM export is inherently JSON format"
+    programmatic:
+      rust: "serde_json::to_string(&graph)"
+      python: "graph.export_calm() returns JSON string"
+      typescript: "graph.exportCalm() returns JSON string"
+      wasm: "graph.toJson() returns JSON object"
 
   explain:
     usage: "sea explain <error-code>"
