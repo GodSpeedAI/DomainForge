@@ -32,6 +32,7 @@ pub enum Commands {
     /// Project/Export to other formats
     Project(project::ProjectArgs),
     /// Format SEA files
+    #[command(name = "format", alias = "fmt")]
     Format(format::FormatArgs),
     /// Run tests
     Test(test::TestArgs),
