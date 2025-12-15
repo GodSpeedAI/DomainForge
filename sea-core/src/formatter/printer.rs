@@ -171,15 +171,14 @@ impl Formatter {
             self.newline();
         }
 
-        // Blank line after annotations if any
-        if meta.namespace.is_some()
+        // Blank line after annotations if any and before imports
+        if (meta.namespace.is_some()
             || meta.version.is_some()
             || meta.owner.is_some()
-            || meta.profile.is_some()
+            || meta.profile.is_some())
+            && !meta.imports.is_empty()
         {
-            if !meta.imports.is_empty() {
-                self.newline();
-            }
+            self.newline();
         }
 
         // Imports (sorted if configured)
@@ -816,8 +815,10 @@ Entity "Foo"
         let input = r#"// Comment
 Entity "Foo"
 "#;
-        let mut config = FormatConfig::default();
-        config.preserve_comments = false;
+        let config = FormatConfig {
+            preserve_comments: false,
+            ..Default::default()
+        };
         let result = format(input, config).unwrap();
         // Comments should not be preserved when disabled
         assert!(!result.contains("// Comment"));

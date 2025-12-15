@@ -58,6 +58,6 @@ fn test_format_check() {
     cmd.arg("format")
         .arg(file.path())
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("Formatting not yet implemented"));
+        .success()
+        .stdout(predicate::str::contains("Entity \"Test\" in domain"));
 }
