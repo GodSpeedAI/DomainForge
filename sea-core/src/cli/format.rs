@@ -69,7 +69,11 @@ pub fn run(args: FormatArgs) -> Result<()> {
         // Write to specified output file
         write(&out_path, &formatted)
             .with_context(|| format!("Failed to write to {}", out_path.display()))?;
-        println!("Formatted {} -> {}", args.file.display(), out_path.display());
+        println!(
+            "Formatted {} -> {}",
+            args.file.display(),
+            out_path.display()
+        );
     } else {
         // Write to stdout
         io::stdout()

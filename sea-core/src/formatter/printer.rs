@@ -1,7 +1,9 @@
 //! Core formatter implementation.
 
 use crate::formatter::config::FormatConfig;
-use crate::parser::ast::{parse_source, Ast, AstNode, FileMetadata, ImportDecl, ImportItem, ImportSpecifier};
+use crate::parser::ast::{
+    parse_source, Ast, AstNode, FileMetadata, ImportDecl, ImportItem, ImportSpecifier,
+};
 use crate::policy::Expression;
 use std::fmt;
 
@@ -72,9 +74,12 @@ fn format_without_comments(source: &str, config: FormatConfig) -> Result<String,
 /// 1. Extracts all comments from the source with their positions
 /// 2. Parses and formats the code
 /// 3. Re-inserts comments at appropriate positions
-pub fn format_preserving_comments(source: &str, config: FormatConfig) -> Result<String, FormatError> {
+pub fn format_preserving_comments(
+    source: &str,
+    config: FormatConfig,
+) -> Result<String, FormatError> {
     use crate::formatter::comments::CommentedSource;
-    
+
     let commented = CommentedSource::new(source);
     let ast = parse_source(source).map_err(|e| FormatError::ParseError(e.to_string()))?;
 
@@ -94,7 +99,10 @@ struct Formatter {
 }
 
 impl Formatter {
-    fn new(config: FormatConfig, commented_source: Option<crate::formatter::comments::CommentedSource>) -> Self {
+    fn new(
+        config: FormatConfig,
+        commented_source: Option<crate::formatter::comments::CommentedSource>,
+    ) -> Self {
         Self {
             config,
             output: String::new(),
@@ -107,11 +115,12 @@ impl Formatter {
     fn format_ast(&mut self, ast: &Ast) {
         // Output file header comments if we have them
         // Clone to avoid borrow conflict with self.write()
-        let header_comments: Vec<_> = self.commented_source
+        let header_comments: Vec<_> = self
+            .commented_source
             .as_ref()
             .map(|cs| cs.file_header_comments.clone())
             .unwrap_or_default();
-        
+
         for comment in &header_comments {
             self.write("// ");
             self.write(&comment.text);
@@ -120,7 +129,7 @@ impl Formatter {
         if !header_comments.is_empty() {
             self.newline();
         }
-        
+
         // Format file header
         self.format_file_metadata(&ast.metadata);
 
@@ -633,7 +642,7 @@ impl Formatter {
     }
 
     /// Format an expression using the Expression's Display implementation.
-    /// 
+    ///
     /// The Expression type has a proper Display that outputs SEA-compatible syntax.
     fn format_expression(&mut self, expr: &Expression) {
         self.write(&format!("{}", expr));

@@ -107,7 +107,7 @@ mod tests {
         let config = FormatConfig::new()
             .with_indent_style(IndentStyle::Tabs)
             .with_indent_width(8);
-        
+
         assert_eq!(config.indent_style, IndentStyle::Tabs);
         assert_eq!(config.indent_width, 8);
     }

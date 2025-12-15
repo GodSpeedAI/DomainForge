@@ -22,18 +22,18 @@ pub struct Comment {
 /// indicates where the comment appears in the source.
 pub fn extract_comments(source: &str) -> BTreeMap<usize, Vec<Comment>> {
     let mut comments: BTreeMap<usize, Vec<Comment>> = BTreeMap::new();
-    
+
     for (line_idx, line) in source.lines().enumerate() {
         let line_num = line_idx + 1;
         let trimmed = line.trim();
-        
+
         // Check for line comment
         if let Some(comment_start) = trimmed.find("//") {
             let before_comment = &line[..line.find("//").unwrap_or(0)];
             let is_trailing = !before_comment.trim().is_empty();
-            
+
             let comment_text = trimmed[comment_start + 2..].trim();
-            
+
             comments.entry(line_num).or_default().push(Comment {
                 text: comment_text.to_string(),
                 line: line_num,
@@ -41,7 +41,7 @@ pub fn extract_comments(source: &str) -> BTreeMap<usize, Vec<Comment>> {
             });
         }
     }
-    
+
     comments
 }
 
@@ -54,15 +54,15 @@ pub fn associate_comments_with_lines(
     declaration_lines: &[usize],
 ) -> BTreeMap<usize, Vec<Comment>> {
     let mut associated: BTreeMap<usize, Vec<Comment>> = BTreeMap::new();
-    
+
     // Sort declaration lines
     let mut decl_lines = declaration_lines.to_vec();
     decl_lines.sort();
-    
+
     // For each declaration, find leading comments
     for &decl_line in &decl_lines {
         let mut leading_comments = Vec::new();
-        
+
         // Look backwards from the declaration for comment lines
         let mut check_line = decl_line.saturating_sub(1);
         while check_line > 0 {
@@ -73,11 +73,11 @@ pub fn associate_comments_with_lines(
                     .filter(|c| !c.is_trailing)
                     .cloned()
                     .collect();
-                
+
                 if non_trailing.is_empty() {
                     break;
                 }
-                
+
                 // Insert at beginning to maintain order
                 for c in non_trailing.into_iter().rev() {
                     leading_comments.insert(0, c);
@@ -87,12 +87,12 @@ pub fn associate_comments_with_lines(
                 break;
             }
         }
-        
+
         if !leading_comments.is_empty() {
             associated.insert(decl_line, leading_comments);
         }
     }
-    
+
     associated
 }
 
@@ -111,17 +111,17 @@ impl CommentedSource {
     /// Parse source code and extract comments.
     pub fn new(source: &str) -> Self {
         let comments = extract_comments(source);
-        
+
         // Find the first non-comment, non-empty line for header comments
         let mut file_header_comments = Vec::new();
         for (line_idx, line) in source.lines().enumerate() {
             let line_num = line_idx + 1;
             let trimmed = line.trim();
-            
+
             if trimmed.is_empty() {
                 continue;
             }
-            
+
             if trimmed.starts_with("//") {
                 if let Some(line_comments) = comments.get(&line_num) {
                     file_header_comments.extend(line_comments.iter().cloned());
@@ -131,31 +131,28 @@ impl CommentedSource {
                 break;
             }
         }
-        
+
         Self {
             source: source.to_string(),
             comments,
             file_header_comments,
         }
     }
-    
+
     /// Get leading comments for a specific line.
     pub fn leading_comments_for(&self, line: usize) -> Vec<&Comment> {
         // Look at previous lines for consecutive comments
         let mut result = Vec::new();
         let mut check_line = line.saturating_sub(1);
-        
+
         while check_line > 0 {
             if let Some(comments) = self.comments.get(&check_line) {
-                let non_trailing: Vec<_> = comments
-                    .iter()
-                    .filter(|c| !c.is_trailing)
-                    .collect();
-                
+                let non_trailing: Vec<_> = comments.iter().filter(|c| !c.is_trailing).collect();
+
                 if non_trailing.is_empty() {
                     break;
                 }
-                
+
                 for c in non_trailing.into_iter().rev() {
                     result.insert(0, c);
                 }
@@ -164,10 +161,10 @@ impl CommentedSource {
                 break;
             }
         }
-        
+
         result
     }
-    
+
     /// Check if there are any comments in the source.
     pub fn has_comments(&self) -> bool {
         !self.comments.is_empty()
