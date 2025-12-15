@@ -92,8 +92,7 @@ impl BufIntegration {
         let buf_yaml = proto_dir.join("buf.yaml");
         let temp_config = if !buf_yaml.exists() {
             let config = Self::generate_buf_yaml();
-            std::fs::write(&buf_yaml, &config)
-                .map_err(|e| BufError::IoError(e.to_string()))?;
+            std::fs::write(&buf_yaml, &config).map_err(|e| BufError::IoError(e.to_string()))?;
             Some(buf_yaml.clone())
         } else {
             None
@@ -184,16 +183,13 @@ plugins:
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| "buf".to_string());
 
-        let output = Command::new(&buf_cmd)
-            .args(args)
-            .output()
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    BufError::NotInstalled
-                } else {
-                    BufError::IoError(e.to_string())
-                }
-            })?;
+        let output = Command::new(&buf_cmd).args(args).output().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                BufError::NotInstalled
+            } else {
+                BufError::IoError(e.to_string())
+            }
+        })?;
 
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -397,7 +393,7 @@ mod tests {
         // Test that it handles missing binary
         let buf = BufIntegration::with_path("non_existent_binary");
         assert!(!buf.is_available());
-        
+
         // Should return NotInstalled error
         let result = buf.get_version();
         match result {

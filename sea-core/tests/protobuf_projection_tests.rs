@@ -2,8 +2,8 @@
 //!
 //! Tests the full pipeline: parse SEA -> Graph -> ProtoFile -> .proto text
 
-use sea_core::parser::parse_source;
 use sea_core::parser::ast::ast_to_graph;
+use sea_core::parser::parse_source;
 use sea_core::projection::protobuf::ProtobufEngine;
 
 #[test]
@@ -165,11 +165,11 @@ fn test_deterministic_field_ordering() {
 
     // Messages should be identical (same count, same names, same fields)
     assert_eq!(proto1.messages.len(), proto2.messages.len());
-    
+
     for (m1, m2) in proto1.messages.iter().zip(proto2.messages.iter()) {
         assert_eq!(m1.name, m2.name);
         assert_eq!(m1.fields.len(), m2.fields.len());
-        
+
         for (f1, f2) in m1.fields.iter().zip(m2.fields.iter()) {
             assert_eq!(f1.name, f2.name);
             assert_eq!(f1.number, f2.number);

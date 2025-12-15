@@ -148,14 +148,22 @@ pub fn run(args: ProjectArgs) -> Result<()> {
 
             if args.multi_file {
                 if args.schema_history.is_some() {
-                    eprintln!("Warning: --schema-history is currently ignored in --multi-file mode.");
+                    eprintln!(
+                        "Warning: --schema-history is currently ignored in --multi-file mode."
+                    );
                 }
 
                 if !args.output.exists() {
-                    std::fs::create_dir_all(&args.output)
-                        .with_context(|| format!("Failed to create output directory {}", args.output.display()))?;
+                    std::fs::create_dir_all(&args.output).with_context(|| {
+                        format!(
+                            "Failed to create output directory {}",
+                            args.output.display()
+                        )
+                    })?;
                 } else if !args.output.is_dir() {
-                    return Err(anyhow::anyhow!("Output path must be a directory for --multi-file projection"));
+                    return Err(anyhow::anyhow!(
+                        "Output path must be a directory for --multi-file projection"
+                    ));
                 }
 
                 let files = ProtobufEngine::project_multi_file(
@@ -176,10 +184,12 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                         .with_context(|| format!("Failed to write {}", abs_path.display()))?;
                 }
 
-                println!("Projected to Protobuf (Multi-file): {}", args.output.display());
+                println!(
+                    "Projected to Protobuf (Multi-file): {}",
+                    args.output.display()
+                );
                 println!("  Files: {}", files.len());
                 println!("  Base Package: {}", args.package);
-                
             } else {
                 let mut proto_file = ProtobufEngine::project_with_full_options(
                     &graph,
@@ -213,22 +223,32 @@ pub fn run(args: ProjectArgs) -> Result<()> {
                     }
 
                     if result.has_violations() {
-                        println!("  Compatibility: {} (with {} warnings)", mode, result.violations.len());
+                        println!(
+                            "  Compatibility: {} (with {} warnings)",
+                            mode,
+                            result.violations.len()
+                        );
                     } else {
                         println!("  Compatibility: {} (clean)", mode);
                     }
                 }
 
                 let proto_string = proto_file.to_proto_string();
-                write(&args.output, &proto_string)
-                    .with_context(|| format!("Failed to write output to {}", args.output.display()))?;
+                write(&args.output, &proto_string).with_context(|| {
+                    format!("Failed to write output to {}", args.output.display())
+                })?;
                 println!("Projected to Protobuf: {}", args.output.display());
                 println!("  Package: {}", args.package);
                 println!("  Messages: {}", proto_file.messages.len());
                 if !proto_file.services.is_empty() {
-                    println!("  Services: {} ({} methods)", 
+                    println!(
+                        "  Services: {} ({} methods)",
                         proto_file.services.len(),
-                        proto_file.services.iter().map(|s| s.methods.len()).sum::<usize>()
+                        proto_file
+                            .services
+                            .iter()
+                            .map(|s| s.methods.len())
+                            .sum::<usize>()
                     );
                 }
             }
