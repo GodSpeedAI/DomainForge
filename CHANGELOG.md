@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-12-15
+
+### Added
+
+- **ARM Platform Support**: Native binaries for Apple Silicon and ARM Linux
+
+  - `aarch64-apple-darwin` (Apple Silicon Macs)
+  - `aarch64-unknown-linux-gnu` (ARM Linux servers)
+  - Cross-compilation using `cross` and `zig` for CI builds
+
+- **WASM npm Package**: `@domainforge/sea-core-wasm` now published to npm
+
+  - Enables browser-based SEA DSL parsing and formatting
+  - Published alongside existing napi bindings
+
+- **Release Automation Workflow**: New `prepare-release.yml` for streamlined releases
+
+  - Automatic version bumping (major/minor/patch)
+  - CHANGELOG.md template generation
+  - PR creation with checklist
+
+- **VS Code Multi-Root Workspace**: Configuration for monorepo development
+  - Unified workspace for domainforge, domainforge-lsp, and domainforge-vsc-extension
+
+### Changed
+
+- **CI/CD Improvements**:
+
+  - Harmonized WASM bundle size threshold to 2MB across CI and release workflows
+  - Better error handling in crates.io publishing (explicit "already published" detection)
+  - GitHub Release creation explicitly required for publishing workflows
+
+- **Documentation**:
+  - Updated workflows README with comprehensive release process guide
+  - Added notes about `release: published` trigger requirement
+
+### Fixed
+
+- **Clippy Errors**: Resolved `field_reassign_with_default` and `collapsible_if` warnings
+- **Test Expectations**: Updated `test_format_check` to expect success (format now implemented)
+- **CodeRabbit Review Issues**: Addressed all 4 issues from automated review
+  - Fixed README release instructions
+  - Removed unsafe `--allow-dirty` from crates publish
+  - Fixed fragile sed patterns in CHANGELOG update
+  - Preserved backward-compatible job IDs
+
 ## [0.3.0] - 2025-12-14
 
 ### Added
