@@ -48,9 +48,37 @@ impl std::error::Error for FormatError {}
 /// assert_eq!(formatted, "Entity \"Foo\" in bar\n");
 /// ```
 pub fn format(source: &str, config: FormatConfig) -> Result<String, FormatError> {
+    // Check if we should preserve comments
+    if config.preserve_comments {
+        format_preserving_comments(source, config)
+    } else {
+        format_without_comments(source, config)
+    }
+}
+
+/// Format SEA source code without preserving comments.
+fn format_without_comments(source: &str, config: FormatConfig) -> Result<String, FormatError> {
     let ast = parse_source(source).map_err(|e| FormatError::ParseError(e.to_string()))?;
 
-    let mut formatter = Formatter::new(config);
+    let mut formatter = Formatter::new(config, None);
+    formatter.format_ast(&ast);
+
+    Ok(formatter.output)
+}
+
+/// Format SEA source code while preserving comments.
+///
+/// This function:
+/// 1. Extracts all comments from the source with their positions
+/// 2. Parses and formats the code
+/// 3. Re-inserts comments at appropriate positions
+pub fn format_preserving_comments(source: &str, config: FormatConfig) -> Result<String, FormatError> {
+    use crate::formatter::comments::CommentedSource;
+    
+    let commented = CommentedSource::new(source);
+    let ast = parse_source(source).map_err(|e| FormatError::ParseError(e.to_string()))?;
+
+    let mut formatter = Formatter::new(config, Some(commented));
     formatter.format_ast(&ast);
 
     Ok(formatter.output)
@@ -61,19 +89,38 @@ struct Formatter {
     config: FormatConfig,
     output: String,
     indent_level: usize,
+    /// Optional source with comments for preservation
+    commented_source: Option<crate::formatter::comments::CommentedSource>,
 }
 
 impl Formatter {
-    fn new(config: FormatConfig) -> Self {
+    fn new(config: FormatConfig, commented_source: Option<crate::formatter::comments::CommentedSource>) -> Self {
         Self {
             config,
             output: String::new(),
             indent_level: 0,
+            commented_source,
         }
     }
 
     /// Format the entire AST.
     fn format_ast(&mut self, ast: &Ast) {
+        // Output file header comments if we have them
+        // Clone to avoid borrow conflict with self.write()
+        let header_comments: Vec<_> = self.commented_source
+            .as_ref()
+            .map(|cs| cs.file_header_comments.clone())
+            .unwrap_or_default();
+        
+        for comment in &header_comments {
+            self.write("// ");
+            self.write(&comment.text);
+            self.newline();
+        }
+        if !header_comments.is_empty() {
+            self.newline();
+        }
+        
         // Format file header
         self.format_file_metadata(&ast.metadata);
 
@@ -741,5 +788,30 @@ Instance test_user of "User" {
         assert!(result.contains("Instance test_user of \"User\""));
         assert!(result.contains("name:"));
         assert!(result.contains("age:"));
+    }
+
+    #[test]
+    fn test_format_preserves_header_comments() {
+        let input = r#"// This is a header comment
+// Second line
+Entity "Foo"
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(result.contains("// This is a header comment"));
+        assert!(result.contains("// Second line"));
+        assert!(result.contains("Entity \"Foo\""));
+    }
+
+    #[test]
+    fn test_format_without_comments() {
+        let input = r#"// Comment
+Entity "Foo"
+"#;
+        let mut config = FormatConfig::default();
+        config.preserve_comments = false;
+        let result = format(input, config).unwrap();
+        // Comments should not be preserved when disabled
+        assert!(!result.contains("// Comment"));
+        assert!(result.contains("Entity \"Foo\""));
     }
 }
