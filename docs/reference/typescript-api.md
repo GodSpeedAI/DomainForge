@@ -17,20 +17,20 @@ npm run build
 ## Quick Start
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from '@domainforge/sea';
+import { Graph, Entity, Resource, Flow } from "@domainforge/sea";
 
 // Create a graph programmatically
 const graph = new Graph();
 
 // Constructor patterns - new() for default namespace, newWithNamespace() for explicit
-const warehouse = Entity.new('Warehouse');  // Default namespace
-const factory = Entity.newWithNamespace('Factory', 'manufacturing');
+const warehouse = Entity.new("Warehouse"); // Default namespace
+const factory = Entity.newWithNamespace("Factory", "manufacturing");
 
 // Namespace is always a string (not undefined), defaults to "default"
-console.log(warehouse.namespace());  // "default"
-console.log(factory.namespace());    // "manufacturing"
+console.log(warehouse.namespace()); // "default"
+console.log(factory.namespace()); // "manufacturing"
 
-const cameras = Resource.new('Cameras', 'units');
+const cameras = Resource.new("Cameras", "units");
 
 graph.addEntity(warehouse);
 graph.addEntity(factory);
@@ -52,7 +52,7 @@ console.log(`Graph has ${graph.flowCount()} flows`);
 ## Parsing SEA DSL
 
 ```typescript
-import { Graph } from '@domainforge/sea';
+import { Graph } from "@domainforge/sea";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -78,23 +78,66 @@ try {
   const g = Graph.parse(source);
 } catch (e) {
   // `e` typically includes a message and a line/column in the text
-  console.error('Failed to parse', e);
+  console.error("Failed to parse", e);
 }
 ```
 
+## Formatting Source Code
+
+```typescript
+import { formatSource, checkFormat } from "@domainforge/sea";
+
+// Format SEA-DSL source with default settings
+const source = 'Entity   "Foo"  in    bar';
+const formatted = formatSource(source);
+console.log(formatted); // Entity "Foo" in bar
+
+// Format with custom options
+const formatted2 = formatSource(source, {
+  indentWidth: 2,
+  useTabs: false,
+  preserveComments: true,
+  sortImports: true,
+});
+
+// Check if source is already formatted
+const isFormatted = checkFormat(source);
+console.log(isFormatted); // false
+
+// Check with formatted content
+const isFormatted2 = checkFormat('Entity "Foo" in bar\n');
+console.log(isFormatted2); // true
+```
+
 ## API Reference
+
+### Formatter Functions
+
+```typescript
+// Format SEA-DSL source code
+function formatSource(source: string, options?: FormatOptions): string;
+
+// Check if source is already formatted
+function checkFormat(source: string, options?: FormatOptions): boolean;
+
+interface FormatOptions {
+  indentWidth?: number; // Default: 4
+  useTabs?: boolean; // Default: false
+  preserveComments?: boolean; // Default: true
+  sortImports?: boolean; // Default: true
+}
+```
 
 ### Entity
 
 ```typescript
 class Entity {
-  // Constructor patterns (November 2025)
-  static new(name: string): Entity;  // Default namespace
-  static newWithNamespace(name: string, namespace: string): Entity;  // Explicit namespace
+  static new(name: string): Entity; // Default namespace
+  static newWithNamespace(name: string, namespace: string): Entity; // Explicit namespace
 
   id(): ConceptId;
   name(): string;
-  namespace(): string;  // Always returns string, never undefined (defaults to "default")
+  namespace(): string; // Always returns string, never undefined (defaults to "default")
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -105,13 +148,17 @@ class Entity {
 ```typescript
 class Resource {
   // Constructor patterns (November 2025)
-  static new(name: string, unit: string): Resource;  // Default namespace
-  static newWithNamespace(name: string, unit: string, namespace: string): Resource;
+  static new(name: string, unit: string): Resource; // Default namespace
+  static newWithNamespace(
+    name: string,
+    unit: string,
+    namespace: string
+  ): Resource;
 
   id(): ConceptId;
   name(): string;
   unit(): string;
-  namespace(): string;  // Always returns string (defaults to "default")
+  namespace(): string; // Always returns string (defaults to "default")
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -122,7 +169,12 @@ class Resource {
 ```typescript
 class Flow {
   // Constructor takes ConceptId values (not references) - clone before passing
-  static new(resourceId: ConceptId, fromId: ConceptId, toId: ConceptId, quantity: number): Flow;
+  static new(
+    resourceId: ConceptId,
+    fromId: ConceptId,
+    toId: ConceptId,
+    quantity: number
+  ): Flow;
 
   id(): ConceptId;
   resourceId(): ConceptId;
@@ -139,13 +191,17 @@ class Flow {
 
 ```typescript
 class Instance {
-  static new(resourceId: ConceptId, entityId: ConceptId): Instance;  // Default namespace
-  static newWithNamespace(resourceId: ConceptId, entityId: ConceptId, namespace: string): Instance;
+  static new(resourceId: ConceptId, entityId: ConceptId): Instance; // Default namespace
+  static newWithNamespace(
+    resourceId: ConceptId,
+    entityId: ConceptId,
+    namespace: string
+  ): Instance;
 
   id(): ConceptId;
   resourceId(): ConceptId;
   entityId(): ConceptId;
-  namespace(): string;  // Always returns string (defaults to "default")
+  namespace(): string; // Always returns string (defaults to "default")
   setAttribute(key: string, value: any): void;
   getAttribute(key: string): any;
 }
@@ -204,22 +260,21 @@ class Graph {
 ### NamespaceRegistry (Workspace)
 
 ```typescript
-import { NamespaceRegistry } from '@domainforge/sea';
+import { NamespaceRegistry } from "@domainforge/sea";
 
 // Load a registry by path to the file
-const reg = NamespaceRegistry.from_file('./.sea-registry.toml');
+const reg = NamespaceRegistry.from_file("./.sea-registry.toml");
 
 // Expand files and get bindings
 const files = reg.resolve_files(); // or reg.resolve_files(true) to fail on ambiguity via the failOnAmbiguity flag
 for (const f of files) {
-  console.log(f.path, '=>', f.namespace);
+  console.log(f.path, "=>", f.namespace);
 }
 
 // Query namespace for a single file
-const ns = reg.namespace_for('/path/to/file.sea'); // or pass true as the failOnAmbiguity flag to error on ambiguous matches
-console.log('Namespace:', ns);
+const ns = reg.namespace_for("/path/to/file.sea"); // or pass true as the failOnAmbiguity flag to error on ambiguous matches
+console.log("Namespace:", ns);
 ```
-
 
 ## Advanced Usage
 
@@ -227,15 +282,15 @@ console.log('Namespace:', ns);
 
 ```typescript
 // Use new() for default namespace
-const entity = Entity.new('Warehouse');
-entity.setAttribute('capacity', JSON.stringify(10000));
-entity.setAttribute('location', JSON.stringify({ lat: 40.7128, lng: -74.0060 }));
+const entity = Entity.new("Warehouse");
+entity.setAttribute("capacity", JSON.stringify(10000));
+entity.setAttribute("location", JSON.stringify({ lat: 40.7128, lng: -74.006 }));
 
-const capacity = JSON.parse(entity.getAttribute('capacity')!); // 10000
-const location = JSON.parse(entity.getAttribute('location')!); // { lat: 40.7128, lng: -74.0060 }
+const capacity = JSON.parse(entity.getAttribute("capacity")!); // 10000
+const location = JSON.parse(entity.getAttribute("location")!); // { lat: 40.7128, lng: -74.0060 }
 
 // Namespace is always present (not undefined)
-console.log(entity.namespace());  // "default"
+console.log(entity.namespace()); // "default"
 ```
 
 ### Querying Flow Networks
@@ -250,7 +305,7 @@ const graph = Graph.parse(`
   Flow "Products" from "Warehouse" to "Retailer" quantity 800
 `);
 
-const warehouseId = graph.findEntityByName('Warehouse');
+const warehouseId = graph.findEntityByName("Warehouse");
 const inboundFlows = graph.flowsTo(warehouseId!);
 const outboundFlows = graph.flowsFrom(warehouseId!);
 
@@ -271,10 +326,10 @@ npm run build
 npm test
 ```
 
-
 ## Platform Support
 
 Pre-built binaries are available for:
+
 - Linux x64
 - macOS ARM64 (Apple Silicon)
 - Windows x64
