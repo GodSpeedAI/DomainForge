@@ -188,16 +188,49 @@ Policy JSON schema matches `sea-core::policy::Policy`. See [`primitives-api`](./
 
 ## fmt
 
-Pretty-print a SEA file.
+Format SEA-DSL source files with consistent styling.
 
 ```
-sea fmt model.sea --out formatted.sea
+sea fmt model.sea                           # Output to stdout
+sea fmt model.sea --out formatted.sea       # Write to file
+sea fmt --check model.sea                   # CI mode: exit 1 if changes needed
 ```
 
-> **Note:** Formatting is not yet fully implemented. Currently only verifies syntax is valid.
+### Options
 
-- Future: Will standardize indentation and ordering of sections.
-- Does not change semantics.
+| Option               | Default | Description                                |
+| -------------------- | ------- | ------------------------------------------ |
+| `--out <path>`       | stdout  | Write formatted output to file             |
+| `--check`            | false   | Check if file is formatted (exit 1 if not) |
+| `--indent-width <n>` | 4       | Number of spaces per indent level          |
+| `--use-tabs`         | false   | Use tabs instead of spaces                 |
+| `--sort-imports`     | true    | Sort imports alphabetically                |
+
+### Examples
+
+```bash
+# Format and display
+sea fmt model.sea
+
+# Format in-place
+sea fmt model.sea --out model.sea
+
+# Check in CI (fails if formatting needed)
+sea fmt --check model.sea
+
+# Use tabs with 2-space equivalent
+sea fmt model.sea --use-tabs
+
+# Custom indent width
+sea fmt model.sea --indent-width 2
+```
+
+### Features
+
+- **14 declaration types supported**: Entity, Resource, Flow, Pattern, Role, Relation, Instance, Policy, Metric, Dimension, Unit, ConceptChange, Mapping, Projection
+- **Comment preservation**: File header comments are preserved
+- **Idempotent**: Formatting twice produces the same result as formatting once
+- **Import sorting**: Organizes imports alphabetically by module path
 
 ## units
 

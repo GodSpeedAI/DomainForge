@@ -14,6 +14,7 @@ Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (
    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
    ```
 3. **wasm-opt** (optional, for size optimization):
+
    ```bash
    # macOS
    brew install binaryen
@@ -57,11 +58,13 @@ wasm-pack test --headless --firefox --features wasm
 ### Browser Testing
 
 1. Build the package:
+
    ```bash
    ./scripts/build-wasm.sh
    ```
 
 2. Start a local server:
+
    ```bash
    python3 -m http.server 8000
    ```
@@ -88,49 +91,48 @@ The WASM bindings expose the same API as the Rust core:
 - `Resource` - Quantifiable subjects of value
 - `Flow` - Transfers of resources between entities
 - `Instance` - Physical instances of resources at locations
- - `ResourceInstance` - Physical instances of resources at locations (use `ResourceInstance.new(name, resourceId, quantity?, namespace?, attributes?)`)
- - `Role` - A role label used to classify entities and to define relations (construct via `Role.new(name, namespace?)`)
- - `Relation` - A relation connecting roles, optionally tied to a flow (`Relation.new(name, subjectRoleId, predicate, objectRoleId, viaFlowId?, namespace?, attributes?)`)
- - `Metric` - Observability metrics collected for flows and resources (created via `Metric.new(name, unit?, namespace?)`)
- - `Mapping` - Used for data projections and mapping definitions across models (mapping constructor: `Mapping.new(...)` - refer to mapping docs for details)
- - `Projection` - Projections allow building derived views (e.g., CALM projections) from the Graph
+- `ResourceInstance` - Physical instances of resources at locations (use `ResourceInstance.new(name, resourceId, quantity?, namespace?, attributes?)`)
+- `Role` - A role label used to classify entities and to define relations (construct via `Role.new(name, namespace?)`)
+- `Relation` - A relation connecting roles, optionally tied to a flow (`Relation.new(name, subjectRoleId, predicate, objectRoleId, viaFlowId?, namespace?, attributes?)`)
+- `Metric` - Observability metrics collected for flows and resources (created via `Metric.new(name, unit?, namespace?)`)
+- `Mapping` - Used for data projections and mapping definitions across models (mapping constructor: `Mapping.new(...)` - refer to mapping docs for details)
+- `Projection` - Projections allow building derived views (e.g., CALM projections) from the Graph
 - `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
+- `formatSource` - Format SEA-DSL source code
+- `checkFormat` - Check if source is already formatted
 
 ### Constructor Patterns (November 2025)
 
 **Entities:**
+
 ```javascript
 // Default namespace
-const entity = Entity.new("Warehouse");  // namespace() returns "default"
+const entity = Entity.new("Warehouse"); // namespace() returns "default"
 
 // Explicit namespace
 const entity = Entity.newWithNamespace("Warehouse", "logistics");
 ```
 
 **Resources:**
+
 ```javascript
-const resource = Resource.new("Cameras", "units");  // Default namespace
+const resource = Resource.new("Cameras", "units"); // Default namespace
 const resource = Resource.newWithNamespace("Cameras", "units", "inventory");
 ```
 
 **Flows:**
+
 ```javascript
 // Takes ConceptId values - clone before passing
-const flow = Flow.new(
-  resourceId.clone(),
-  fromId.clone(),
-  toId.clone(),
-  100
-);
+const flow = Flow.new(resourceId.clone(), fromId.clone(), toId.clone(), 100);
 ```
-
 
 ## Usage Examples
 
 ### Parse from DSL
 
 ```javascript
-import { Graph } from '@domainforge/sea-wasm';
+import { Graph } from "@domainforge/sea-wasm";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -142,21 +144,21 @@ const source = `
 `;
 
 const graph = await Graph.parse(source);
-console.log('Entities:', graph.entityCount());
-console.log('Flows:', graph.flowCount());
+console.log("Entities:", graph.entityCount());
+console.log("Flows:", graph.flowCount());
 ```
 
 ### Build Programmatically
 
 ```javascript
-import { Graph, Entity, Resource, Flow } from '@domainforge/sea-wasm';
+import { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
 
 const graph = new Graph();
 
 // Use new() for default namespace, newWithNamespace() for explicit
-const warehouse = Entity.new('Warehouse');
-const factory = Entity.newWithNamespace('Factory', 'manufacturing');
-const cameras = Resource.new('Cameras', 'units');
+const warehouse = Entity.new("Warehouse");
+const factory = Entity.newWithNamespace("Factory", "manufacturing");
+const cameras = Resource.new("Cameras", "units");
 
 await graph.addEntity(warehouse);
 await graph.addEntity(factory);
@@ -172,8 +174,28 @@ const flow = Flow.new(
 await graph.addFlow(flow);
 
 // Namespace is always a string (not null)
-console.log(warehouse.namespace());  // "default"
-console.log(factory.namespace());    // "manufacturing"
+console.log(warehouse.namespace()); // "default"
+console.log(factory.namespace()); // "manufacturing"
+```
+
+### Formatting Source Code
+
+```javascript
+import { formatSource, checkFormat } from "@domainforge/sea-wasm";
+
+const source = 'Entity   "Foo"  in    bar';
+
+// Format with defaults
+const formatted = formatSource(source);
+console.log(formatted); // Entity "Foo" in bar
+
+// Format with custom options
+const formatted2 = formatSource(source, 2, false, true, true);
+// args: source, indentWidth, useTabs, preserveComments, sortImports
+
+// Check if formatted
+const isFormatted = checkFormat(source);
+console.log(isFormatted); // false
 ```
 
 ## Size Optimization
@@ -181,6 +203,7 @@ console.log(factory.namespace());    // "manufacturing"
 The WASM module is optimized for size:
 
 1. **Cargo.toml** optimizations:
+
    ```toml
    [profile.release]
    opt-level = "z"        # Optimize for size
@@ -191,6 +214,7 @@ The WASM module is optimized for size:
    ```
 
 2. **wasm-opt** post-processing:
+
    ```bash
    wasm-opt -Oz pkg/sea_core_bg.wasm
    ```
@@ -244,15 +268,15 @@ Rust Core (primitives, graph, parser)
 
 ### Type Conversions
 
-| Rust Type | WASM Boundary | JavaScript Type |
-|-----------|---------------|-----------------|
-| `String` | `String` | `string` |
-| `Uuid` | `String` | `string` |
-| `Decimal` | `String` | `string` |
-| `Option<T>` | `nullable T` | `T \| null` |
-| `Result<T, E>` | `throws E` | `Promise<T>` |
-| `Vec<T>` | `Array<T>` | `T[]` |
-| `HashMap<K, V>` | `Object` | `object` |
+| Rust Type       | WASM Boundary | JavaScript Type |
+| --------------- | ------------- | --------------- |
+| `String`        | `String`      | `string`        |
+| `Uuid`          | `String`      | `string`        |
+| `Decimal`       | `String`      | `string`        |
+| `Option<T>`     | `nullable T`  | `T \| null`     |
+| `Result<T, E>`  | `throws E`    | `Promise<T>`    |
+| `Vec<T>`        | `Array<T>`    | `T[]`           |
+| `HashMap<K, V>` | `Object`      | `object`        |
 
 ## Performance
 
@@ -267,7 +291,7 @@ Rust Core (primitives, graph, parser)
 Export/import graphs to/from FINOS CALM format:
 
 ```javascript
-import { Graph } from '@domainforge/sea-wasm';
+import { Graph } from "@domainforge/sea-wasm";
 
 // Build your model
 const graph = new Graph();
@@ -275,7 +299,7 @@ const graph = new Graph();
 
 // Export to CALM JSON
 const calmJson = await graph.exportCalm();
-console.log(calmJson);  // CALM JSON string
+console.log(calmJson); // CALM JSON string
 
 // Import from CALM
 const importedGraph = await Graph.importCalm(calmJson);

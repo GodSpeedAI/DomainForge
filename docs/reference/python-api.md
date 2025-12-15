@@ -118,7 +118,40 @@ print(entity.get_attribute("location"))  # "New York"
 print(entity.namespace())  # "default"
 ```
 
+### Formatting Source Code
+
+```python
+import sea_dsl
+
+# Format SEA-DSL source with default settings
+source = '''Entity   "Foo"  in    bar'''
+formatted = sea_dsl.format_source(source)
+print(formatted)  # Entity "Foo" in bar
+
+# Format with custom options
+formatted = sea_dsl.format_source(
+    source,
+    indent_width=2,
+    use_tabs=False,
+    preserve_comments=True,
+    sort_imports=True
+)
+
+# Check if source is already formatted
+is_formatted = sea_dsl.check_format(source)
+print(is_formatted)  # False
+
+# Check with formatted content
+is_formatted = sea_dsl.check_format('Entity "Foo" in bar\n')
+print(is_formatted)  # True
+```
+
 ## API Reference
+
+### Formatter Functions
+
+- `format_source(source, indent_width=4, use_tabs=False, preserve_comments=True, sort_imports=True)`: Format SEA-DSL source code
+- `check_format(source, indent_width=4, use_tabs=False)`: Check if source is already formatted
 
 ### Classes
 
@@ -183,8 +216,8 @@ flow = Flow.new(
 - `add_policy(policy)`: Add a policy to the graph
 - `add_association(owner_id, owned_id, rel_type)`: Add ownership/association relation between two entities (owner/owned)
 
-
 **Breaking Changes:**
+
 ### NamespaceRegistry (Workspace)
 
 ```python
@@ -205,13 +238,10 @@ except Exception as e:
     print('Ambiguity detected:', e)
 ```
 
-
 - `namespace()` now returns `str` instead of `Optional[str]` (always returns "default" if unspecified)
 - Constructors split: `new()` for default namespace, `new_with_namespace()` for explicit
 - `Resource.new(name, unit)` now routes through `new_with_namespace(..., "default")` so `namespace()` never returns `None` even when a namespace is not supplied
 - Flow constructor takes `ConceptId` values (not references) - must clone before passing
-
-
 
 - Multiline string support in parser: `Entity """Multi-line\nName"""`
 - ValidationError helpers: `undefined_entity()`, `unit_mismatch()`, etc.
@@ -279,3 +309,4 @@ rm -rf .venv
 Apache-2.0
 
 
+```
