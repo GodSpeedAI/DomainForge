@@ -122,6 +122,44 @@ sea import --format calm calm.json
 - Outputs SEA DSL to stdout by default; redirect to a file to persist.
 - Use `--out` to write directly: `sea import --format calm calm.json --out restored.sea`.
 
+### Import from Knowledge Graph (RDF)
+
+Import RDF/Turtle or RDF/XML into SEA Graph.
+
+```
+sea import --format kg graph.ttl
+sea import --format kg graph.rdf
+```
+
+- Auto-detects Turtle vs RDF/XML based on content.
+- RDF/XML import requires building with `--features cli,shacl`.
+
+### Import from SBVR
+
+Import SBVR XMI vocabulary into SEA.
+
+```
+sea import --format sbvr vocabulary.xmi
+```
+
+- Converts noun concepts to entities.
+- Converts verb concepts to relations.
+- Converts business rules to policies.
+- See [Import from SBVR](../how-tos/import-from-sbvr.md) for details.
+
+## validate-kg
+
+Validate RDF/Turtle or RDF/XML files against SHACL shapes.
+
+```
+sea validate-kg graph.ttl
+sea validate-kg graph.rdf
+```
+
+- Requires building with `--features cli,shacl`.
+- Validates structure conforms to SEA SHACL shapes.
+- Reports SHACL violations with severity and message.
+
 ## graph
 
 Display a normalized view of the graph for debugging.
@@ -156,7 +194,9 @@ Pretty-print a SEA file.
 sea fmt model.sea --out formatted.sea
 ```
 
-- Standardizes indentation and ordering of sections.
+> **Note:** Formatting is not yet fully implemented. Currently only verifies syntax is valid.
+
+- Future: Will standardize indentation and ordering of sections.
 - Does not change semantics.
 
 ## units

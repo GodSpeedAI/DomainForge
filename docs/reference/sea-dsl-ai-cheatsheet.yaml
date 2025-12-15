@@ -805,6 +805,17 @@ cli_commands:
     usage: "sea explain <error-code>"
     purpose: "Get detailed info about error codes"
 
+  validate_kg:
+    usage: "sea validate-kg <file.ttl|file.rdf>"
+    purpose: "Validate RDF/Turtle or RDF/XML against SHACL shapes"
+    requires: "Build with --features cli,shacl"
+    note: "Validates KG structure conforms to SEA SHACL shapes"
+
+  format:
+    usage: "sea fmt <file.sea> [--out <output.sea>]"
+    purpose: "Pretty-print SEA files (syntax validation only - formatting not yet implemented)"
+    status: "Partially implemented - validates syntax but doesn't reformat"
+
 ---
 feature_flags:
   build:
@@ -812,6 +823,10 @@ feature_flags:
     typescript: "cargo build --features typescript"
     wasm: "cargo build --features wasm"
     cli: "cargo build --features cli"
+    shacl: "cargo build --features cli,shacl"
+  notes:
+    shacl: "Required for validate-kg command and RDF/XML import"
+    lol_alloc: "Used automatically for WASM builds to reduce binary size"
 
 ---
 key_files:
