@@ -381,6 +381,39 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
+    /// Export the graph to Protobuf .proto text format.
+    ///
+    /// @param package - The Protobuf package name (e.g., "com.example.api")
+    /// @param namespace - Optional namespace filter (undefined/null = all namespaces)
+    /// @param projectionName - Optional name for the projection (used in comments)
+    /// @param includeGovernance - Whether to include governance messages
+    /// @param includeServices - Whether to generate gRPC service definitions from Flow patterns
+    /// @returns The generated .proto file content as a string
+    #[wasm_bindgen(js_name = exportProtobuf)]
+    pub fn export_protobuf(
+        &self,
+        package: String,
+        namespace: Option<String>,
+        projection_name: Option<String>,
+        include_governance: Option<bool>,
+        include_services: Option<bool>,
+    ) -> String {
+        let ns = namespace.as_deref().unwrap_or("");
+        let proj_name = projection_name.as_deref().unwrap_or("");
+        let include_gov = include_governance.unwrap_or(false);
+        let include_svc = include_services.unwrap_or(false);
+
+        let proto = crate::projection::ProtobufEngine::project_with_full_options(
+            &self.inner,
+            ns,
+            &package,
+            proj_name,
+            include_gov,
+            include_svc,
+        );
+        proto.to_proto_string()
+    }
+
     #[wasm_bindgen(js_name = evaluatePolicy)]
     pub fn evaluate_policy(
         &self,

@@ -63,7 +63,7 @@ Exit codes:
 Export a model to other formats.
 
 ```
-sea project --format <calm|rdf|sbvr|dsl> input.sea output.json
+sea project --format <calm|rdf|sbvr|dsl|protobuf> input.sea output.json
 ```
 
 Formats:
@@ -72,11 +72,44 @@ Formats:
 - `rdf`: RDF/Turtle
 - `sbvr`: SBVR fact types
 - `dsl`: reformat the DSL (pretty-print)
+- `protobuf`: Protocol Buffer `.proto` files
+
+### Protobuf-specific options
+
+```bash
+sea project --format protobuf [OPTIONS] input.sea output.proto
+```
+
+| Option                   | Description                                               |
+| ------------------------ | --------------------------------------------------------- |
+| `--package <name>`       | Override the proto package name                           |
+| `--include-services`     | Generate gRPC service definitions from Flows              |
+| `--multi-file`           | Output separate `.proto` files per namespace              |
+| `--output-dir <path>`    | Directory for multi-file output                           |
+| `--compatibility <mode>` | Compatibility mode: `additive`, `backward`, or `breaking` |
+| `--against <path>`       | Previous schema for compatibility checking                |
+| `--buf-lint`             | Run buf lint on generated output (requires buf CLI)       |
+| `--buf-breaking`         | Run buf breaking change detection (requires buf CLI)      |
+| `--option <key>=<value>` | Set proto options (e.g., `java_package=com.example`)      |
+
+Example:
+
+```bash
+# Basic export
+sea project --format protobuf model.sea output.proto
+
+# With gRPC services and custom package
+sea project --format protobuf --include-services --package "com.example.api" model.sea api.proto
+
+# Multi-file with buf validation
+sea project --format protobuf --multi-file --buf-lint --output-dir ./proto model.sea
+```
 
 Use cases:
 
 - `sea project --format calm model.sea calm.json` to feed downstream systems.
 - `sea project --format rdf model.sea graph.ttl` to load into triple stores.
+- `sea project --format protobuf model.sea schema.proto` for gRPC/binary serialization.
 
 ## import
 
@@ -88,6 +121,44 @@ sea import --format calm calm.json
 
 - Outputs SEA DSL to stdout by default; redirect to a file to persist.
 - Use `--out` to write directly: `sea import --format calm calm.json --out restored.sea`.
+
+### Import from Knowledge Graph (RDF)
+
+Import RDF/Turtle or RDF/XML into SEA Graph.
+
+```
+sea import --format kg graph.ttl
+sea import --format kg graph.rdf
+```
+
+- Auto-detects Turtle vs RDF/XML based on content.
+- RDF/XML import requires building with `--features cli,shacl`.
+
+### Import from SBVR
+
+Import SBVR XMI vocabulary into SEA.
+
+```
+sea import --format sbvr vocabulary.xmi
+```
+
+- Converts noun concepts to entities.
+- Converts verb concepts to relations.
+- Converts business rules to policies.
+- See [Import from SBVR](../how-tos/import-from-sbvr.md) for details.
+
+## validate-kg
+
+Validate RDF/Turtle or RDF/XML files against SHACL shapes.
+
+```
+sea validate-kg graph.ttl
+sea validate-kg graph.rdf
+```
+
+- Requires building with `--features cli,shacl`.
+- Validates structure conforms to SEA SHACL shapes.
+- Reports SHACL violations with severity and message.
 
 ## graph
 
@@ -123,7 +194,9 @@ Pretty-print a SEA file.
 sea fmt model.sea --out formatted.sea
 ```
 
-- Standardizes indentation and ordering of sections.
+> **Note:** Formatting is not yet fully implemented. Currently only verifies syntax is valid.
+
+- Future: Will standardize indentation and ordering of sections.
 - Does not change semantics.
 
 ## units

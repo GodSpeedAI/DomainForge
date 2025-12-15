@@ -108,6 +108,7 @@ pub enum TargetFormat {
     Calm,
     Kg,
     Sbvr,
+    Protobuf,
 }
 
 impl std::fmt::Display for TargetFormat {
@@ -116,6 +117,7 @@ impl std::fmt::Display for TargetFormat {
             TargetFormat::Calm => write!(f, "CALM"),
             TargetFormat::Kg => write!(f, "KG"),
             TargetFormat::Sbvr => write!(f, "SBVR"),
+            TargetFormat::Protobuf => write!(f, "Protobuf"),
         }
     }
 }
@@ -1787,6 +1789,7 @@ fn parse_target_format(pair: Pair<Rule>) -> ParseResult<TargetFormat> {
         "calm" => Ok(TargetFormat::Calm),
         "kg" => Ok(TargetFormat::Kg),
         "sbvr" => Ok(TargetFormat::Sbvr),
+        "protobuf" | "proto" => Ok(TargetFormat::Protobuf),
         _ => Err(ParseError::GrammarError(format!(
             "Unknown target format: {}",
             pair.as_str()

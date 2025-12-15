@@ -167,3 +167,4 @@ Run `just all-tests` to verify all bindings remain in sync.
 - follow existing project conventions unless there's a strong reason to deviate
 - ensure all changes are well-tested across all language bindings
 - adhere strictly to the change workflow to maintain cross-language parity
+- Ensure all changes are well-documented in the project's documentation and specs

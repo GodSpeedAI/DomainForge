@@ -1,0 +1,525 @@
+# =============================================================================
+# SEA Protobuf Projection Implementation Plan
+# =============================================================================
+# Status: Ready for Implementation
+# Last Updated: 2025-12-14
+# Related Specs: ADR-001 through ADR-004, PRD-001, SDS-001
+# =============================================================================
+
+project:
+  name: sea_projections_protobuf
+  goal: >
+    Extend SEA-DSL's existing Projection infrastructure to support Protobuf as
+    a first-class projection target, generating .proto files from the semantic graph.
+
+# =============================================================================
+# CURRENT STATE ANALYSIS
+# =============================================================================
+current_state:
+  grammar:
+    status: COMPLETE
+    details:
+      - "projection_decl rule exists in sea.pest"
+      - "Supports: Projection 'name' target <format> { overrides }"
+  
+  ast:
+    status: COMPLETE
+    details:
+      - "AstNode::ProjectionDecl { name, target, overrides }"
+      - "TargetFormat enum: Calm | Kg | Sbvr (NEEDS: Protobuf)"
+      - "ProjectionOverride struct with fields HashMap"
+  
+  primitives:
+    status: COMPLETE
+    details:
+      - "ProjectionContract in primitives/projection_contract.rs"
+      - "MappingContract in primitives/mapping_contract.rs"
+  
+  projection_module:
+    status: PARTIAL
+    location: "sea-core/src/projection/"
+    existing_files:
+      - "mod.rs: re-exports"
+      - "engine.rs: ProjectionExporter trait (entity/flow only)"
+      - "contracts.rs: find_mapping_rule, find_projection_override helpers"
+      - "registry.rs: ProjectionRegistry for finding mappings/projections by target"
+    missing:
+      - "protobuf.rs: Protobuf-specific IR and engine"
+      - "ProjectionSpec with filters (namespace, kinds, tags)"
+      - "Compatibility checking logic"
+  
+  cli:
+    status: PARTIAL
+    details:
+      - "sea project command exists in cli/project.rs"
+      - "Supports --format with json, ddd, yaml, calm"
+      - "NEEDS: --format protobuf option"
+
+# =============================================================================
+# FILE PATHS (Corrected for current codebase)
+# =============================================================================
+context:
+  repo_root: "."
+  core_crate: "sea-core"
+  grammar_file: "sea-core/src/grammar/sea.pest"
+  ast_module: "sea-core/src/parser/ast.rs"
+  graph_module: "sea-core/src/graph/mod.rs"
+  projection_dir: "sea-core/src/projection"
+  cli_project: "sea-core/src/cli/project.rs"
+  tests_dir: "sea-core/tests"
+  examples_dir: "examples"
+
+# =============================================================================
+# ASSUMPTIONS
+# =============================================================================
+assumptions:
+  - Rust stable toolchain 1.77+ is installed
+  - Existing parser, AST, and Graph are compiling (verified)
+  - Existing tests are green before changes
+  - Protobuf compiler (protoc) is optional for validation
+
+# =============================================================================
+# IMPLEMENTATION PHASES
+# =============================================================================
+phases:
+
+  # ---------------------------------------------------------------------------
+  # PHASE 1: Extend TargetFormat for Protobuf
+  # ---------------------------------------------------------------------------
+  - id: 1_extend_target_format
+    description: "Add Protobuf variant to TargetFormat enum"
+    estimated_effort: "30 minutes"
+    steps:
+      - id: 1_1_update_target_format_enum
+        action: "Add Protobuf variant to TargetFormat"
+        files:
+          - "sea-core/src/parser/ast.rs"
+        changes:
+          - "Add 'Protobuf' to TargetFormat enum (line ~108)"
+          - "Update Display impl to add 'Protobuf' case"
+          - "Update parse_target_format to handle 'protobuf' string"
+        code_snippet: |
+          pub enum TargetFormat {
+              Calm,
+              Kg,
+              Sbvr,
+              Protobuf,  // NEW
+          }
+        acceptance_criteria:
+          - "cargo build succeeds"
+          - "Projection 'Test' target protobuf {} parses without error"
+
+      - id: 1_2_update_grammar_if_needed
+        action: "Ensure grammar accepts 'protobuf' as target"
+        files:
+          - "sea-core/src/grammar/sea.pest"
+        changes:
+          - "Verify target_format rule includes 'protobuf' (case-insensitive)"
+        acceptance_criteria:
+          - "cargo test passes with protobuf target"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 2: Protobuf IR Model
+  # ---------------------------------------------------------------------------
+  - id: 2_protobuf_ir_model
+    description: "Create intermediate representation for .proto files"
+    estimated_effort: "2 hours"
+    depends_on: [1_extend_target_format]
+    steps:
+      - id: 2_1_create_protobuf_module
+        action: "Create sea-core/src/projection/protobuf.rs"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+          - "sea-core/src/projection/mod.rs"
+        changes:
+          - "Define ProtoFile struct"
+          - "Define ProtoMessage, ProtoField, ProtoEnum"
+          - "Define ProtoTypeRef enum for type references"
+          - "Add mod protobuf to projection/mod.rs"
+        code_sketch: |
+          // sea-core/src/projection/protobuf.rs
+          use serde::{Serialize, Deserialize};
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub struct ProtoFile {
+              pub package: String,
+              pub syntax: String,  // "proto3"
+              pub imports: Vec<String>,
+              pub options: ProtoOptions,
+              pub enums: Vec<ProtoEnum>,
+              pub messages: Vec<ProtoMessage>,
+              pub metadata: ProtoMetadata,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub struct ProtoMessage {
+              pub name: String,
+              pub fields: Vec<ProtoField>,
+              pub nested_messages: Vec<ProtoMessage>,
+              pub nested_enums: Vec<ProtoEnum>,
+              pub reserved_fields: Vec<u32>,
+              pub reserved_names: Vec<String>,
+              pub comments: Vec<String>,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub struct ProtoField {
+              pub name: String,
+              pub number: u32,
+              pub proto_type: ProtoType,
+              pub repeated: bool,
+              pub optional: bool,
+              pub comments: Vec<String>,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub enum ProtoType {
+              Scalar(ScalarType),
+              Message(String),
+              Enum(String),
+              Map { key: Box<ProtoType>, value: Box<ProtoType> },
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub enum ScalarType {
+              Double, Float, Int32, Int64, Uint32, Uint64,
+              Sint32, Sint64, Fixed32, Fixed64, Sfixed32, Sfixed64,
+              Bool, String, Bytes,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub struct ProtoEnum {
+              pub name: String,
+              pub values: Vec<ProtoEnumValue>,
+              pub comments: Vec<String>,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub struct ProtoEnumValue {
+              pub name: String,
+              pub number: i32,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+          pub struct ProtoOptions {
+              pub java_package: Option<String>,
+              pub java_multiple_files: bool,
+              pub go_package: Option<String>,
+          }
+          
+          #[derive(Debug, Clone, Serialize, Deserialize)]
+          pub struct ProtoMetadata {
+              pub projection_name: String,
+              pub semantic_version: Option<String>,
+              pub source_namespace: String,
+              pub generated_at: String,
+          }
+        acceptance_criteria:
+          - "ProtoFile can be constructed in unit tests"
+          - "cargo build succeeds"
+
+      - id: 2_2_type_mapping
+        action: "Implement SEA type to Proto type mapping"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Add fn map_sea_type_to_proto(sea_type: &str) -> ProtoType"
+          - "Map String -> string, Int -> int64, Float -> double, etc."
+          - "Map UUID -> string, DateTime -> google.protobuf.Timestamp"
+          - "Map Money -> custom Money message"
+        code_sketch: |
+          pub fn map_sea_type_to_proto(sea_type: &str) -> ProtoType {
+              match sea_type.to_lowercase().as_str() {
+                  "string" | "text" => ProtoType::Scalar(ScalarType::String),
+                  "int" | "integer" => ProtoType::Scalar(ScalarType::Int64),
+                  "float" | "double" | "decimal" => ProtoType::Scalar(ScalarType::Double),
+                  "bool" | "boolean" => ProtoType::Scalar(ScalarType::Bool),
+                  "uuid" => ProtoType::Scalar(ScalarType::String),
+                  "date" | "datetime" | "timestamp" => ProtoType::Message("google.protobuf.Timestamp".to_string()),
+                  "bytes" | "binary" => ProtoType::Scalar(ScalarType::Bytes),
+                  other => ProtoType::Message(other.to_string()),  // Custom types
+              }
+          }
+        acceptance_criteria:
+          - "All core SEA types map to appropriate proto types"
+          - "Unit tests cover all mappings"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 3: Protobuf Projection Engine
+  # ---------------------------------------------------------------------------
+  - id: 3_protobuf_engine
+    description: "Implement the Protobuf projection engine"
+    estimated_effort: "4 hours"
+    depends_on: [2_protobuf_ir_model]
+    steps:
+      - id: 3_1_engine_struct
+        action: "Create ProtobufEngine implementing projection logic"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Define ProtobufEngine struct"
+          - "Implement fn project(graph: &Graph, namespace: &str) -> ProtoFile"
+          - "Walk graph entities/resources/enums and build ProtoFile"
+        code_sketch: |
+          pub struct ProtobufEngine;
+          
+          impl ProtobufEngine {
+              pub fn project(graph: &Graph, namespace: &str) -> ProtoFile {
+                  let mut proto = ProtoFile::new(namespace);
+                  
+                  // Convert entities to messages
+                  for entity in graph.all_entities() {
+                      if entity.namespace() == namespace {
+                          proto.messages.push(Self::entity_to_message(entity));
+                      }
+                  }
+                  
+                  // Convert resources to messages
+                  for resource in graph.all_resources() {
+                      if resource.namespace() == namespace {
+                          proto.messages.push(Self::resource_to_message(resource));
+                      }
+                  }
+                  
+                  proto
+              }
+              
+              fn entity_to_message(entity: &Entity) -> ProtoMessage {
+                  let mut msg = ProtoMessage::new(entity.name());
+                  let mut field_number = 1u32;
+                  
+                  // Sort attributes alphabetically for deterministic ordering
+                  let mut attrs: Vec<_> = entity.attributes().iter().collect();
+                  attrs.sort_by_key(|(k, _)| *k);
+                  
+                  for (name, value) in attrs {
+                      msg.fields.push(ProtoField {
+                          name: to_snake_case(name),
+                          number: field_number,
+                          proto_type: infer_proto_type(value),
+                          repeated: false,
+                          optional: true,
+                          comments: vec![],
+                      });
+                      field_number += 1;
+                  }
+                  
+                  msg
+              }
+          }
+        acceptance_criteria:
+          - "Given a Graph with entities, project() returns valid ProtoFile"
+          - "Field numbers are sequential and stable"
+
+      - id: 3_2_proto_serializer
+        action: "Implement serialization to .proto text format"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Add impl ProtoFile { pub fn to_proto_string(&self) -> String }"
+          - "Format messages, fields, enums according to proto3 syntax"
+          - "Include header comments with metadata"
+        code_sketch: |
+          impl ProtoFile {
+              pub fn to_proto_string(&self) -> String {
+                  let mut out = String::new();
+                  
+                  // Header
+                  out.push_str(&format!("// Generated from Projection: {}\n", self.metadata.projection_name));
+                  out.push_str(&format!("// Source Namespace: {}\n", self.metadata.source_namespace));
+                  out.push_str(&format!("// Generated At: {}\n", self.metadata.generated_at));
+                  out.push_str("// DO NOT EDIT - Generated by SEA Projection Framework\n\n");
+                  
+                  // Syntax
+                  out.push_str(&format!("syntax = \"{}\";\n\n", self.syntax));
+                  
+                  // Package
+                  out.push_str(&format!("package {};\n\n", self.package));
+                  
+                  // Options
+                  if let Some(ref pkg) = self.options.java_package {
+                      out.push_str(&format!("option java_package = \"{}\";\n", pkg));
+                  }
+                  if self.options.java_multiple_files {
+                      out.push_str("option java_multiple_files = true;\n");
+                  }
+                  if let Some(ref pkg) = self.options.go_package {
+                      out.push_str(&format!("option go_package = \"{}\";\n", pkg));
+                  }
+                  
+                  // Imports
+                  for import in &self.imports {
+                      out.push_str(&format!("import \"{}\";\n", import));
+                  }
+                  if !self.imports.is_empty() {
+                      out.push('\n');
+                  }
+                  
+                  // Enums
+                  for e in &self.enums {
+                      out.push_str(&e.to_proto_string());
+                      out.push('\n');
+                  }
+                  
+                  // Messages
+                  for m in &self.messages {
+                      out.push_str(&m.to_proto_string());
+                      out.push('\n');
+                  }
+                  
+                  out
+              }
+          }
+        acceptance_criteria:
+          - "Generated .proto text is syntactically valid"
+          - "Output is deterministic (same input → same output)"
+
+      - id: 3_3_governance_messages
+        action: "Add standard governance message generation"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Add fn generate_governance_messages() -> Vec<ProtoMessage>"
+          - "Include PolicyViolation, MetricEvent, GovernanceEvent messages"
+        acceptance_criteria:
+          - "Governance messages appear in output when requested"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 4: CLI Integration
+  # ---------------------------------------------------------------------------
+  - id: 4_cli_integration
+    description: "Wire Protobuf projection into CLI"
+    estimated_effort: "1 hour"
+    depends_on: [3_protobuf_engine]
+    steps:
+      - id: 4_1_extend_project_command
+        action: "Add --format protobuf to sea project command"
+        files:
+          - "sea-core/src/cli/project.rs"
+        changes:
+          - "Add 'protobuf' to format enum/match"
+          - "Call ProtobufEngine::project when format is protobuf"
+          - "Write .proto files to output directory"
+        acceptance_criteria:
+          - "sea project --format protobuf model.sea produces .proto file"
+          - "Output directory structure matches package hierarchy"
+
+      - id: 4_2_output_options
+        action: "Add output path and namespace options"
+        files:
+          - "sea-core/src/cli/project.rs"
+        changes:
+          - "Add --namespace flag to filter which namespaces to project"
+          - "Add --output-dir flag for proto file destination"
+        acceptance_criteria:
+          - "Can specify output directory"
+          - "Can filter by namespace"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 5: Compatibility Enforcement (Future)
+  # ---------------------------------------------------------------------------
+  - id: 5_compatibility_enforcement
+    description: "Implement schema compatibility checking"
+    estimated_effort: "3 hours"
+    depends_on: [4_cli_integration]
+    priority: LOW
+    steps:
+      - id: 5_1_schema_history
+        action: "Add mechanism to store/load previous schemas"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Add SchemaHistoryStore trait"
+          - "Implement file-based storage of previous ProtoFile"
+        acceptance_criteria:
+          - "Previous schema can be loaded for comparison"
+
+      - id: 5_2_compatibility_checker
+        action: "Implement compatibility rules"
+        files:
+          - "sea-core/src/projection/protobuf.rs"
+        changes:
+          - "Add CompatibilityChecker struct"
+          - "Implement check() method with additive/backward/breaking rules"
+          - "Emit reserved fields when fields are removed"
+        acceptance_criteria:
+          - "Additive mode: only new fields allowed"
+          - "Backward mode: removals become reserved"
+          - "Breaking mode: all changes allowed"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 6: Tests and Examples
+  # ---------------------------------------------------------------------------
+  - id: 6_tests_and_examples
+    description: "Add comprehensive tests and examples"
+    estimated_effort: "2 hours"
+    depends_on: [4_cli_integration]
+    steps:
+      - id: 6_1_unit_tests
+        action: "Add unit tests for Protobuf projection"
+        files:
+          - "sea-core/tests/protobuf_projection_tests.rs"
+        changes:
+          - "Test type mapping"
+          - "Test entity → message conversion"
+          - "Test field numbering stability"
+          - "Test proto string serialization"
+        acceptance_criteria:
+          - "All unit tests pass"
+
+      - id: 6_2_integration_test
+        action: "Add end-to-end integration test"
+        files:
+          - "sea-core/tests/protobuf_projection_integration.rs"
+        changes:
+          - "Parse .sea file → Graph → ProtoFile → .proto text"
+          - "Verify output contains expected messages and fields"
+        acceptance_criteria:
+          - "Integration test passes"
+
+      - id: 6_3_example_files
+        action: "Add example .sea files with Protobuf projections"
+        files:
+          - "examples/protobuf/finance.sea"
+          - "examples/protobuf/expected/finance.proto"
+        changes:
+          - "Create example demonstrating Protobuf projection"
+          - "Store expected output for golden testing"
+        acceptance_criteria:
+          - "Examples parse and produce expected output"
+
+# =============================================================================
+# DEFINITION OF DONE
+# =============================================================================
+done_definition:
+  - "TargetFormat::Protobuf variant added and parsing works"
+  - "Protobuf IR model (ProtoFile, ProtoMessage, etc.) implemented"
+  - "ProtobufEngine projects Graph to ProtoFile"
+  - "ProtoFile serializes to valid .proto text"
+  - "CLI sea project --format protobuf works"
+  - "Unit tests and integration tests pass"
+  - "At least one example with expected output"
+  - "Documentation in docs/specs/SDS-001 is accurate"
+
+# =============================================================================
+# RISK MITIGATION
+# =============================================================================
+risks:
+  - risk: "Entity attributes lack type information"
+    mitigation: "Infer types from JSON values or default to 'any' message type"
+    
+  - risk: "Field numbering instability across runs"
+    mitigation: "Sort attributes deterministically (alphabetically by key)"
+    
+  - risk: "Complex nested structures"
+    mitigation: "Start with flat messages; add nesting in future iteration"
+
+# =============================================================================
+# FUTURE ENHANCEMENTS (OUT OF SCOPE)
+# =============================================================================
+future:
+  - "gRPC service definitions from Flow patterns"
+  - "Protobuf well-known types (Timestamp, Duration, Any)"
+  - "Custom proto options"
+  - "Buf.build integration for linting"
+  - "Multiple file output per namespace"

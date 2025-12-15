@@ -18,6 +18,7 @@ MECE checklist:
 - Binding-specific references (`python-api.md`, `typescript-api.md`, `wasm-api.md`) describe constructors, methods, and platform notes.
 - `error-codes.md` provides remediation steps for validation output.
 - `calm-mapping.md` documents integration with FINOS CALM.
+- `protobuf-api.md` documents the Protobuf projection engine API.
 - `configuration.md` centralizes environment variables and registry options.
 - `registry.md` documents workspace namespace mappings (`.sea-registry.toml`).
 
@@ -114,14 +115,15 @@ MECE checklist:
 
 ## Example table of common references
 
-| Topic | Primary file | Secondary references |
-| --- | --- | --- |
-| Syntax | grammar-spec.md | explanations/architecture-overview.md |
-| API structs | primitives-api.md | python-api.md, typescript-api.md |
-| CLI usage | cli-commands.md | how-tos/install-cli.md |
-| Errors | error-codes.md | how-tos/debugging-parser-failures.md |
-| CALM integration | calm-mapping.md | how-tos/export-to-calm.md, how-tos/import-from-calm.md |
-| Configuration | configuration.md | how-tos/run-cross-language-tests.md |
+| Topic               | Primary file      | Secondary references                                   |
+| ------------------- | ----------------- | ------------------------------------------------------ |
+| Syntax              | grammar-spec.md   | explanations/architecture-overview.md                  |
+| API structs         | primitives-api.md | python-api.md, typescript-api.md                       |
+| CLI usage           | cli-commands.md   | how-tos/install-cli.md                                 |
+| Errors              | error-codes.md    | how-tos/debugging-parser-failures.md                   |
+| CALM integration    | calm-mapping.md   | how-tos/export-to-calm.md, how-tos/import-from-calm.md |
+| Protobuf projection | protobuf-api.md   | how-tos/export-to-protobuf.md                          |
+| Configuration       | configuration.md  | how-tos/run-cross-language-tests.md                    |
 
 ## See also
 
@@ -138,13 +140,13 @@ MECE checklist:
 
 ## Review checklist
 
-1. Are grammar changes mirrored in `grammar-spec.md` with examples? 
-2. Are new fields or methods documented in `primitives-api.md` and binding references? 
-3. Do CLI flag additions include exit code expectations? 
-4. Are new error codes documented with example inputs and fixes? 
-5. Do CALM/RDF projection changes mention compatibility considerations? 
-6. Are configuration defaults and environment variables updated? 
-7. Are cross-references updated so tutorials/how-tos remain accurate? 
+1. Are grammar changes mirrored in `grammar-spec.md` with examples?
+2. Are new fields or methods documented in `primitives-api.md` and binding references?
+3. Do CLI flag additions include exit code expectations?
+4. Are new error codes documented with example inputs and fixes?
+5. Do CALM/RDF projection changes mention compatibility considerations?
+6. Are configuration defaults and environment variables updated?
+7. Are cross-references updated so tutorials/how-tos remain accurate?
 
 ## Updating this directory
 
@@ -183,7 +185,6 @@ just all-tests
 - Primary maintainers: see `CODEOWNERS` and `docs/plans/` for domain leads.
 - File issues with documentation bugs referencing the file path and version.
 
-
 ## Release alignment
 
 - Align documentation updates with version bumps recorded in `CHANGELOG.md`.
@@ -194,6 +195,5 @@ just all-tests
 
 - Each reference file should include: summary, API or schema details, examples with expected outputs, troubleshooting notes, and cross-references.
 - Run link checkers (e.g., `markdown-link-check`) before merging large doc updates.
-
 
 (End of reference overview)
