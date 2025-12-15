@@ -585,11 +585,11 @@ impl Formatter {
         }
     }
 
-    /// Format an expression (simplified for now).
+    /// Format an expression using the Expression's Display implementation.
+    /// 
+    /// The Expression type has a proper Display that outputs SEA-compatible syntax.
     fn format_expression(&mut self, expr: &Expression) {
-        // For now, use the Debug representation
-        // TODO: Implement proper expression formatting
-        self.write(&format!("{:?}", expr));
+        self.write(&format!("{}", expr));
     }
 
     // Helper methods
@@ -716,5 +716,30 @@ Entity "Test"
         let a_pos = result.find("a.sea").unwrap();
         let z_pos = result.find("z.sea").unwrap();
         assert!(a_pos < z_pos, "Imports should be sorted alphabetically");
+    }
+
+    #[test]
+    fn test_format_policy_with_expression() {
+        let input = r#"Policy test as: x = 5"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        // Should contain the expression, not Debug format
+        assert!(result.contains("Policy test"));
+        assert!(result.contains("as:"));
+        // Expression should use Display format, not Debug
+        assert!(!result.contains("Binary {"), "Should not use Debug format");
+    }
+
+    #[test]
+    fn test_format_instance_with_fields() {
+        let input = r#"
+Instance test_user of "User" {
+    name: "Alice",
+    age: 30
+}
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(result.contains("Instance test_user of \"User\""));
+        assert!(result.contains("name:"));
+        assert!(result.contains("age:"));
     }
 }
