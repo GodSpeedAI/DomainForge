@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-12-14
+
+### Added
+
+- **Protobuf Projection Engine**: Full Protocol Buffers export support for SEA models
+
+  - Entity and Resource projection to Protobuf messages
+  - Type mapping from SEA types to proto scalar types
+  - Deterministic field numbering for schema stability
+  - CLI command: `sea project --format protobuf model.sea output.proto`
+
+- **gRPC Service Generation**: Generate gRPC services from Flow patterns (Phase 2)
+
+  - Flows automatically become RPC methods
+  - Streaming support: `@streaming`, `@client_streaming`, `@bidirectional` attributes
+  - Service naming convention: `{DestinationEntity}Service`
+
+- **Well-Known Types Support**: Automatic mapping to Google's WKT (Phase 1)
+
+  - `DateTime` → `google.protobuf.Timestamp`
+  - `Duration` → `google.protobuf.Duration`
+  - `Any` → `google.protobuf.Any`
+  - Auto-import generation for used WKT types
+
+- **Custom Proto Options**: Per-file and per-message options (Phase 3)
+
+  - `--option java_package=com.example` CLI flag
+  - Support for `java_multiple_files`, `go_package`, `csharp_namespace`, etc.
+  - Custom option values in generated output
+
+- **Schema Compatibility Checking**: Prevent breaking changes
+
+  - Three modes: `Additive`, `Backward`, `Breaking`
+  - Validates field additions, removals, renames, and type changes
+  - `--compatibility` and `--against` CLI flags
+
+- **Buf.build Integration**: Optional CLI integration (Phase 4)
+
+  - `--buf-lint` for proto linting
+  - `--buf-breaking` for breaking change detection
+  - Graceful degradation when buf CLI not installed
+  - Auto-generation of `buf.yaml` and `buf.gen.yaml`
+
+- **Multi-File Output**: Separate `.proto` files per namespace (Phase 5)
+  - `--multi-file --output-dir ./proto` CLI flags
+  - Fully qualified imports for cross-namespace references
+  - Directory structure mirrors package hierarchy
+
+### Documentation
+
+- New how-to guide: `docs/how-tos/export-to-protobuf.md`
+- New API reference: `docs/reference/protobuf-api.md`
+- Updated CLI reference with protobuf options
+- Updated SDS-001 status to Implemented
+
 ## [0.2.0] - 2025-12-07
 
 ### Added
