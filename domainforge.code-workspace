@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../domainforge-lsp"
+		},
+		{
+			"path": "../domainforge-vsc-extension"
+		}
+	],
+	"settings": {}
+}
