@@ -264,11 +264,12 @@ Flow "Resource" from "A" to "B" quantity 100
 - [x] Add expression formatting
 - [x] Handle complex nested expressions
 
-### Phase 3: Comment Preservation
+### Phase 3: Comment Preservation ✅ COMPLETE
 
-- [ ] Modify grammar to capture comments
-- [ ] Attach comments to AST nodes
-- [ ] Preserve comments in output
+- [x] ~~Modify grammar~~ Extra module to extract comments without grammar changes
+- [x] Track file header comments separately
+- [x] Preserve file header comments in output
+- [ ] Inline declaration comments (future enhancement)
 
 ### Phase 4: Polish ✅ COMPLETE
 

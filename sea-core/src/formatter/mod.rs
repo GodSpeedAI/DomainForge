@@ -13,8 +13,10 @@
 //! assert_eq!(formatted, "Entity \"Foo\" in bar\n");
 //! ```
 
+pub mod comments;
 pub mod config;
 pub mod printer;
 
+pub use comments::CommentedSource;
 pub use config::{FormatConfig, IndentStyle};
-pub use printer::{format, FormatError};
+pub use printer::{format, format_preserving_comments, FormatError};
