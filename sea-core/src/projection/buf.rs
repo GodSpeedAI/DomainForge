@@ -322,7 +322,7 @@ impl BufLanguage {
     }
 
     /// Parse from string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "go" | "golang" => Some(BufLanguage::Go),
             "rust" | "rs" => Some(BufLanguage::Rust),
@@ -361,11 +361,11 @@ mod tests {
 
     #[test]
     fn test_buf_language_from_str() {
-        assert_eq!(BufLanguage::from_str("go"), Some(BufLanguage::Go));
-        assert_eq!(BufLanguage::from_str("rust"), Some(BufLanguage::Rust));
-        assert_eq!(BufLanguage::from_str("py"), Some(BufLanguage::Python));
-        assert_eq!(BufLanguage::from_str("ts"), Some(BufLanguage::TypeScript));
-        assert_eq!(BufLanguage::from_str("invalid"), None);
+        assert_eq!(BufLanguage::parse("go"), Some(BufLanguage::Go));
+        assert_eq!(BufLanguage::parse("rust"), Some(BufLanguage::Rust));
+        assert_eq!(BufLanguage::parse("py"), Some(BufLanguage::Python));
+        assert_eq!(BufLanguage::parse("ts"), Some(BufLanguage::TypeScript));
+        assert_eq!(BufLanguage::parse("invalid"), None);
     }
 
     #[test]
