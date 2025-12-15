@@ -63,7 +63,7 @@ Exit codes:
 Export a model to other formats.
 
 ```
-sea project --format <calm|rdf|sbvr|dsl> input.sea output.json
+sea project --format <calm|rdf|sbvr|dsl|protobuf> input.sea output.json
 ```
 
 Formats:
@@ -72,11 +72,44 @@ Formats:
 - `rdf`: RDF/Turtle
 - `sbvr`: SBVR fact types
 - `dsl`: reformat the DSL (pretty-print)
+- `protobuf`: Protocol Buffer `.proto` files
+
+### Protobuf-specific options
+
+```bash
+sea project --format protobuf [OPTIONS] input.sea output.proto
+```
+
+| Option                   | Description                                               |
+| ------------------------ | --------------------------------------------------------- |
+| `--package <name>`       | Override the proto package name                           |
+| `--include-services`     | Generate gRPC service definitions from Flows              |
+| `--multi-file`           | Output separate `.proto` files per namespace              |
+| `--output-dir <path>`    | Directory for multi-file output                           |
+| `--compatibility <mode>` | Compatibility mode: `additive`, `backward`, or `breaking` |
+| `--against <path>`       | Previous schema for compatibility checking                |
+| `--buf-lint`             | Run buf lint on generated output (requires buf CLI)       |
+| `--buf-breaking`         | Run buf breaking change detection (requires buf CLI)      |
+| `--option <key>=<value>` | Set proto options (e.g., `java_package=com.example`)      |
+
+Example:
+
+```bash
+# Basic export
+sea project --format protobuf model.sea output.proto
+
+# With gRPC services and custom package
+sea project --format protobuf --include-services --package "com.example.api" model.sea api.proto
+
+# Multi-file with buf validation
+sea project --format protobuf --multi-file --buf-lint --output-dir ./proto model.sea
+```
 
 Use cases:
 
 - `sea project --format calm model.sea calm.json` to feed downstream systems.
 - `sea project --format rdf model.sea graph.ttl` to load into triple stores.
+- `sea project --format protobuf model.sea schema.proto` for gRPC/binary serialization.
 
 ## import
 
