@@ -79,6 +79,7 @@ jobs:
             --features python \
             --target ${{ matrix.target }} \
             --skip-existing \
-            --zig
+            --zig \
+            -i python3.11
         env:
           MATURIN_PYPI_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}

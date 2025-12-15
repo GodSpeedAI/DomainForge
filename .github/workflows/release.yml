@@ -157,7 +157,7 @@ jobs:
 
       - name: Build wheels (cross-compile with Zig)
         if: matrix.use_zig == true
-        run: maturin build --release --features python --target ${{ matrix.target }} --out dist --zig
+        run: maturin build --release --features python --target ${{ matrix.target }} --out dist --zig -i python3.11
         working-directory: sea-core
 
       - name: Upload wheels
