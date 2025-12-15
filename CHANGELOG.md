@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-14
+
+### Added
+
+- **SEA Formatter (`sea fmt`)**: New CLI command to format SEA source code
+
+  - Supports 14 declaration types (Entity, Resource, Flow, etc.)
+  - Indentation and spacing standardization
+  - Comment preservation (file headers)
+  - Sorting of imports
+  - `--check` flag for CI validation
+
+- **Formatter Bindings**: Programmatic access to the formatter
+
+  - **Python**: `sea_dsl.format_source()`, `sea_dsl.check_format()`
+  - **TypeScript**: `formatSource()`, `checkFormat()` from `@domainforge/sea`
+  - **WASM**: `formatSource()`, `checkFormat()` for browser environments
+
+- **Documentation**:
+  - Comprehensive CLI reference for `fmt`
+  - Updated language binding APIs with formatter documentation
+  - Usage examples for all platforms
+
+### Changed
+
+- Updated dependencies to align with new features
+- Enhanced documentation for all supported bindings
+
 ## [0.2.1] - 2025-12-14
 
 ### Added
