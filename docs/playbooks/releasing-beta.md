@@ -12,7 +12,9 @@ This playbook describes the process for releasing a new beta version of DomainFo
 
 1. **Version Bump**:
 
-> **Automated**: Use the `prepare-release.yml` workflow (Actions → Prepare Release → Run workflow) to bump all versions automatically.
+> **Recommended**: Use `just release-preview minor` to preview changes first, then `just prepare-release minor` to apply them. See [Local Release Preparation](./local-release-preparation.md) for details.
+
+> **Automated (GitHub)**: Use the `prepare-release.yml` workflow (Actions → Prepare Release → Run workflow) to bump all versions and create a PR automatically.
 
 If bumping manually, update version in all files (they must stay in sync):
 
