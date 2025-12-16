@@ -115,12 +115,13 @@ jobs:
           
           # Create updated changelog atomically
           if [ -f CHANGELOG.md ]; then
-            # Find the first version heading and insert before it
-            if grep -n "^## \[" CHANGELOG.md | head -1 | cut -d: -f1 | read FIRST_VERSION_LINE; then
-              # Has existing version entries - insert after header
+            # Find the first version heading line number
+            FIRST_VERSION_LINE=$(grep -n "^## \[" CHANGELOG.md | head -1 | cut -d: -f1)
+            if [ -n "$FIRST_VERSION_LINE" ]; then
+              # Has existing version entries - insert before it
               head -n $((FIRST_VERSION_LINE - 1)) CHANGELOG.md > /tmp/changelog_new.md
               echo "$ENTRY" >> /tmp/changelog_new.md
-              tail -n +$FIRST_VERSION_LINE CHANGELOG.md >> /tmp/changelog_new.md
+              tail -n "+$FIRST_VERSION_LINE" CHANGELOG.md >> /tmp/changelog_new.md
             else
               # No version entries yet - append to file
               cat CHANGELOG.md > /tmp/changelog_new.md
