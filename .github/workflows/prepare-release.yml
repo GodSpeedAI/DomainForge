@@ -98,19 +98,20 @@ jobs:
           NEW_VERSION="${{ steps.newversion.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
           
-          # Build the new changelog entry
-          ENTRY="## [${NEW_VERSION}] - ${DATE}
-
-### Added
-- (Add new features here)
-
-### Changed
-- (Add changes here)
-
-### Fixed
-- (Add bug fixes here)
-
-"
+          # Build the new changelog entry (use printf to avoid YAML comment issues with #)
+          H="###"
+          ENTRY=$(printf '%s\n' \
+            "## [${NEW_VERSION}] - ${DATE}" \
+            "" \
+            "${H} Added" \
+            "- (Add new features here)" \
+            "" \
+            "${H} Changed" \
+            "- (Add changes here)" \
+            "" \
+            "${H} Fixed" \
+            "- (Add bug fixes here)" \
+            "")
           
           # Create updated changelog atomically
           if [ -f CHANGELOG.md ]; then
