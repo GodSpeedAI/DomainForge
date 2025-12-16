@@ -81,6 +81,18 @@ jobs:
         run: |
           cargo set-version --manifest-path sea-core/Cargo.toml "${{ steps.newversion.outputs.version }}"
 
+      - name: Sync Python version (pyproject.toml)
+        run: |
+          NEW_VERSION="${{ steps.newversion.outputs.version }}"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+          echo "Updated pyproject.toml to version $NEW_VERSION"
+
+      - name: Sync NPM version (package.json)
+        run: |
+          NEW_VERSION="${{ steps.newversion.outputs.version }}"
+          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+          echo "Updated package.json to version $NEW_VERSION"
+
       - name: Update CHANGELOG.md
         run: |
           NEW_VERSION="${{ steps.newversion.outputs.version }}"
