@@ -25,7 +25,7 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-14  # macos-13 retired Dec 2024
           - target: x86_64-pc-windows-msvc
             os: windows-latest
           # ARM targets
@@ -118,7 +118,7 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-14  # macos-13 retired Dec 2024
           - target: x86_64-pc-windows-msvc
             os: windows-latest
           # ARM targets
