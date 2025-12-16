@@ -12,12 +12,15 @@ This playbook describes the process for releasing a new beta version of DomainFo
 
 1. **Version Bump**:
 
-Update version in:
+> **Automated**: Use the `prepare-release.yml` workflow (Actions → Prepare Release → Run workflow) to bump all versions automatically.
 
-- `Cargo.toml` (workspace members)
+If bumping manually, update version in all files (they must stay in sync):
+
+- `sea-core/Cargo.toml` (source of truth)
 - `pyproject.toml`
 - `package.json`
-- `sea-core/Cargo.toml`
+
+> Note: WASM `pkg/package.json` is auto-generated from `sea-core/Cargo.toml` during build.
 
 1. **Changelog**:
 
