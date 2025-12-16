@@ -124,3 +124,6 @@ secrets/*.unencrypted.yaml
 # Ignore CodeRabbit review output and docs archives
 /tmp/coderabbit_results.md
 /docs/archives/
+
+# Generated release scripts (from just release-preview)
+release-*.sh
