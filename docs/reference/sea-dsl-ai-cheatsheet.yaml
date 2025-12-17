@@ -1,7 +1,7 @@
 # SEA-DSL (Semantic Enterprise Architecture DSL) - AI Coding Agent Cheatsheet
 # Purpose: Comprehensive reference for AI agents to understand and generate SEA-DSL code
-# Version: 1.1.0
-# Last Updated: 2025-12-14
+# Version: 1.2.0
+# Last Updated: 2025-12-16
 
 ---
 meta:
@@ -264,7 +264,7 @@ primitives:
             Entity "Customer" -> Target { "id": "customer_id" }
             Flow "Money" -> Target { "from": true }
         }
-    target_formats: [calm, kg, sbvr]
+    target_formats: [calm, kg, sbvr, protobuf, proto]
 
   Projection:
     purpose: "Override default field projections for exports"
@@ -812,9 +812,27 @@ cli_commands:
     note: "Validates KG structure conforms to SEA SHACL shapes"
 
   format:
-    usage: "sea fmt <file.sea> [--out <output.sea>]"
-    purpose: "Pretty-print SEA files (syntax validation only - formatting not yet implemented)"
-    status: "Partially implemented - validates syntax but doesn't reformat"
+    usage: "sea fmt <file.sea> [--out <output.sea>] [--check]"
+    purpose: "Format SEA source code with consistent whitespace, indentation, and styling"
+    status: "Fully implemented"
+    features:
+      - "Supports 14 declaration types (Entity, Resource, Flow, etc.)"
+      - "Indentation and spacing standardization"
+      - "Comment preservation (file headers)"
+      - "Sorted imports"
+      - "--check flag for CI validation (returns non-zero if changes needed)"
+    rust_api:
+      format: "sea_core::formatter::format(source, config) -> Result<String, FormatError>"
+      config: "FormatConfig { indent_style: IndentStyle, indent_size: usize }"
+    python_api:
+      format: "sea_dsl.format_source(source: str) -> str"
+      check: "sea_dsl.check_format(source: str) -> bool"
+    typescript_api:
+      format: "formatSource(source: string): string"
+      check: "checkFormat(source: string): boolean"
+    wasm_api:
+      format: "formatSource(source: string): string"
+      check: "checkFormat(source: string): boolean"
 
 ---
 feature_flags:
