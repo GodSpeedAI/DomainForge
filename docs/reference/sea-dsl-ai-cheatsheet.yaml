@@ -292,6 +292,7 @@ primitives:
         Python: "hex string (0x...)"
         TypeScript: "hex string (0x...)"
         WASM: "hex string (0x...)"
+        note: "Hash values are consistent across bindings but representation differs (Rust: u64, others: hex string)"
 
 ---
 expressions:
@@ -837,7 +838,7 @@ cli_commands:
     requires: "Build with --features cli,shacl"
     note: "Validates KG structure conforms to SEA SHACL shapes"
 
-  format:
+  fmt:
     usage: "sea fmt <file.sea> [--out <output.sea>] [--check]"
     purpose: "Format SEA source code with consistent whitespace, indentation, and styling"
     status: "Fully implemented"

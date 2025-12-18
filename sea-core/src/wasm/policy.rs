@@ -226,12 +226,21 @@ impl From<WindowSpec> for RustWindowSpec {
     }
 }
 
-impl From<RustWindowSpec> for WindowSpec {
-    fn from(rust_ws: RustWindowSpec) -> Self {
-        WindowSpec {
-            duration: rust_ws.duration.try_into().unwrap_or(u32::MAX),
+impl TryFrom<RustWindowSpec> for WindowSpec {
+    type Error = String;
+
+    fn try_from(rust_ws: RustWindowSpec) -> Result<Self, Self::Error> {
+        let duration = rust_ws.duration.try_into().map_err(|_| {
+            format!(
+                "Window duration {} exceeds maximum allowed value (u32::MAX)",
+                rust_ws.duration
+            )
+        })?;
+
+        Ok(WindowSpec {
+            duration,
             unit: rust_ws.unit,
-        }
+        })
     }
 }
 

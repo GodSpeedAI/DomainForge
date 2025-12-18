@@ -40,6 +40,14 @@ struct NormalizeResult {
 
 /// Run the normalize command.
 pub fn run(args: NormalizeArgs) -> anyhow::Result<()> {
+    run_with_writer(args, &mut std::io::stdout())
+}
+
+/// Run the normalize command with a specific writer for output capture.
+pub fn run_with_writer<W: std::io::Write>(
+    args: NormalizeArgs,
+    mut writer: W,
+) -> anyhow::Result<()> {
     // Parse the first expression
     let expr1 = parse_expression_from_str(&args.expression)
         .map_err(|e| anyhow::anyhow!("Failed to parse expression: {}", e))?;
@@ -74,18 +82,22 @@ pub fn run(args: NormalizeArgs) -> anyhow::Result<()> {
             other_normalized,
             other_hash,
         };
-        println!("{}", serde_json::to_string_pretty(&result)?);
+        writeln!(writer, "{}", serde_json::to_string_pretty(&result)?)?;
     } else {
         // Human-readable output
-        println!("{}", normalized1);
+        writeln!(writer, "{}", normalized1)?;
 
         if let (Some(is_equiv), Some(other_norm), _) = (equivalent, other_normalized, other_hash) {
             if is_equiv {
-                println!("Equivalent (hash: {:#018x})", normalized1.stable_hash());
+                writeln!(
+                    writer,
+                    "Equivalent (hash: {:#018x})",
+                    normalized1.stable_hash()
+                )?;
             } else {
-                println!("NOT Equivalent");
-                println!("  First:  {}", normalized1);
-                println!("  Second: {}", other_norm);
+                writeln!(writer, "NOT Equivalent")?;
+                writeln!(writer, "  First:  {}", normalized1)?;
+                writeln!(writer, "  Second: {}", other_norm)?;
             }
         }
     }
@@ -98,32 +110,71 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_normalize_simple() {
+    fn test_normalize_output() {
         let args = NormalizeArgs {
             expression: "b AND a".to_string(),
             check_equiv: None,
             json: false,
         };
-        assert!(run(args).is_ok());
+        let mut buffer = Vec::new();
+        run_with_writer(args, &mut buffer).unwrap();
+        let output = String::from_utf8(buffer).unwrap();
+        assert_eq!(output.trim(), "(a AND b)");
     }
 
     #[test]
-    fn test_normalize_equivalence() {
+    fn test_normalize_equivalence_check_true() {
         let args = NormalizeArgs {
             expression: "a AND b".to_string(),
             check_equiv: Some("b AND a".to_string()),
             json: false,
         };
-        assert!(run(args).is_ok());
+        let mut buffer = Vec::new();
+        run_with_writer(args, &mut buffer).unwrap();
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("Equivalent"));
+        assert!(output.contains("(a AND b)"));
     }
 
     #[test]
-    fn test_normalize_json() {
+    fn test_normalize_equivalence_check_false() {
+        let args = NormalizeArgs {
+            expression: "a AND b".to_string(),
+            check_equiv: Some("a OR b".to_string()),
+            json: false,
+        };
+        let mut buffer = Vec::new();
+        run_with_writer(args, &mut buffer).unwrap();
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("NOT Equivalent"));
+    }
+
+    #[test]
+    fn test_normalize_json_output() {
         let args = NormalizeArgs {
             expression: "true AND x".to_string(),
-            check_equiv: None,
+            check_equiv: Some("x".to_string()),
             json: true,
         };
-        assert!(run(args).is_ok());
+        let mut buffer = Vec::new();
+        run_with_writer(args, &mut buffer).unwrap();
+        let output = String::from_utf8(buffer).unwrap();
+
+        let json_val: serde_json::Value = serde_json::from_str(&output).expect("Invalid JSON");
+        assert_eq!(json_val["normalized"], "x");
+        assert_eq!(json_val["equivalent"], true);
+    }
+
+    #[test]
+    fn test_invalid_expression() {
+        let args = NormalizeArgs {
+            expression: "NOT (a".to_string(),
+            check_equiv: None,
+            json: false,
+        };
+        let mut buffer = Vec::new();
+        let result = run_with_writer(args, &mut buffer);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Failed to parse"));
     }
 }

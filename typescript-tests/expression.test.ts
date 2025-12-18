@@ -20,7 +20,7 @@ describe('Expression Factory Methods', () => {
 
   it('creates number literal expressions', () => {
     const expr = Expression.literalNumber(42);
-    expect(exprToStringRepr()).toContain('42');
+    expect(expr.toStringRepr()).toContain('42');
   });
 
   it('creates string literal expressions', () => {

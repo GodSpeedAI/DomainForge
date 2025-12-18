@@ -3,6 +3,7 @@ use crate::policy::{
     Expression as RustExpression, NormalizedExpression as RustNormalizedExpression,
     Quantifier as RustQuantifier, UnaryOp as RustUnaryOp, WindowSpec as RustWindowSpec,
 };
+use chrono::DateTime;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rust_decimal::Decimal;
@@ -292,21 +293,34 @@ impl Expression {
 
     /// Create a time literal expression (ISO 8601 timestamp).
     #[staticmethod]
-    fn time(timestamp: &str) -> Self {
-        Self {
+    fn time(timestamp: &str) -> PyResult<Self> {
+        DateTime::parse_from_rfc3339(timestamp)
+            .map_err(|e| PyValueError::new_err(format!("Invalid timestamp: {}", e)))?;
+        Ok(Self {
             inner: RustExpression::TimeLiteral(timestamp.to_string()),
-        }
+        })
     }
 
     /// Create an interval literal expression.
     #[staticmethod]
-    fn interval(start: &str, end: &str) -> Self {
-        Self {
+    fn interval(start: &str, end: &str) -> PyResult<Self> {
+        let start_dt = DateTime::parse_from_rfc3339(start)
+            .map_err(|e| PyValueError::new_err(format!("Invalid start timestamp: {}", e)))?;
+        let end_dt = DateTime::parse_from_rfc3339(end)
+            .map_err(|e| PyValueError::new_err(format!("Invalid end timestamp: {}", e)))?;
+
+        if start_dt > end_dt {
+            return Err(PyValueError::new_err(
+                "Start time must be before or equal to end time",
+            ));
+        }
+
+        Ok(Self {
             inner: RustExpression::IntervalLiteral {
                 start: start.to_string(),
                 end: end.to_string(),
             },
-        }
+        })
     }
 
     /// Create a binary expression (e.g., left AND right).
@@ -617,6 +631,9 @@ fn python_to_json(value: &Bound<'_, pyo3::types::PyAny>) -> PyResult<serde_json:
         Ok(serde_json::Value::String(s))
     } else if let Ok(list) = value.downcast::<pyo3::types::PyList>() {
         let arr: Result<Vec<_>, _> = list.iter().map(|v| python_to_json(&v)).collect();
+        Ok(serde_json::Value::Array(arr?))
+    } else if let Ok(tuple) = value.downcast::<pyo3::types::PyTuple>() {
+        let arr: Result<Vec<_>, _> = tuple.iter().map(|v| python_to_json(&v)).collect();
         Ok(serde_json::Value::Array(arr?))
     } else if let Ok(dict) = value.downcast::<pyo3::types::PyDict>() {
         let mut map = serde_json::Map::new();

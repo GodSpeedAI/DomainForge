@@ -382,6 +382,52 @@ fn normalize_binary(op: BinaryOp, left: Expression, right: Expression) -> Expres
         operands.sort_by_key(expr_cmp_key);
         operands.dedup();
 
+        // Re-apply absorption across the flattened chain
+        // e.g. (A) AND (A OR B) -> A
+        let partner_op = match op {
+            BinaryOp::Or => Some(BinaryOp::And),
+            BinaryOp::And => Some(BinaryOp::Or),
+            _ => None,
+        };
+
+        if let Some(partner) = partner_op {
+            let mut indices_to_remove = std::collections::HashSet::new();
+            for i in 0..operands.len() {
+                if indices_to_remove.contains(&i) {
+                    continue;
+                }
+                for j in (i + 1)..operands.len() {
+                    if indices_to_remove.contains(&j) {
+                        continue;
+                    }
+
+                    // Check if i absorbs j
+                    if try_absorb(&operands[i], &operands[j], partner.clone()).is_some() {
+                        indices_to_remove.insert(j);
+                        continue;
+                    }
+
+                    // Check if j absorbs i
+                    if try_absorb(&operands[j], &operands[i], partner.clone()).is_some() {
+                        indices_to_remove.insert(i);
+                        break; // i is removed, move to next i
+                    }
+                }
+            }
+
+            if !indices_to_remove.is_empty() {
+                let mut new_operands = Vec::with_capacity(operands.len() - indices_to_remove.len());
+                for (i, op) in operands.into_iter().enumerate() {
+                    if !indices_to_remove.contains(&i) {
+                        new_operands.push(op);
+                    }
+                }
+                operands = new_operands;
+                // Re-sort/dedup not strictly necessary if order preserved and absorption is clean,
+                // but good for safety if absorption produced duplicates (unlikely here).
+            }
+        }
+
         // Rebuild balanced tree
         return build_balanced_tree(op, operands);
     }
