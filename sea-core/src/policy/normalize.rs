@@ -636,10 +636,7 @@ fn canonical_serialize(expr: &Expression) -> String {
                 .as_ref()
                 .map(|w| format!("{:?}", w))
                 .unwrap_or_else(|| "None".into());
-            let tu_str = target_unit
-                .as_ref()
-                .map(|u| u.clone())
-                .unwrap_or_else(|| "None".into());
+            let tu_str = target_unit.clone().unwrap_or_else(|| "None".into());
             write!(
                 out,
                 "AggComp({:?}, {}, {}, {}, {}, {}, {})",
