@@ -38,6 +38,8 @@ pub struct Policy {
     pub priority: i32,
     pub rationale: Option<String>,
     pub tags: Vec<String>,
+    #[serde(skip)]
+    cached_normalized_expr: std::sync::OnceLock<super::NormalizedExpression>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +53,15 @@ pub struct EvaluationResult {
 }
 
 impl Policy {
+    /// Returns the normalized canonical form of this policy's expression.
+    ///
+    /// Useful for caching, equivalence checking, and deterministic display.
+    #[must_use]
+    pub fn normalized_expression(&self) -> &super::NormalizedExpression {
+        self.cached_normalized_expr
+            .get_or_init(|| self.expression.normalize())
+    }
+
     pub fn new(name: impl Into<String>, expression: Expression) -> Self {
         let name = name.into();
         Self {
@@ -64,6 +75,7 @@ impl Policy {
             priority: 0,
             rationale: None,
             tags: Vec::new(),
+            cached_normalized_expr: std::sync::OnceLock::new(),
         }
     }
 
@@ -87,6 +99,7 @@ impl Policy {
             priority: 0,
             rationale: None,
             tags: Vec::new(),
+            cached_normalized_expr: std::sync::OnceLock::new(),
         }
     }
 

@@ -264,7 +264,7 @@ primitives:
             Entity "Customer" -> Target { "id": "customer_id" }
             Flow "Money" -> Target { "from": true }
         }
-    target_formats: [calm, kg, sbvr, protobuf, proto]
+    target_formats: [calm, kg, sbvr, protobuf]
 
   Projection:
     purpose: "Override default field projections for exports"
