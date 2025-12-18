@@ -1,5 +1,5 @@
 {
-  "name": "sea-core",
+  "name": "@sprime01/sea-wasm",
   "type": "module",
   "collaborators": [
     "DomainForge Contributors"
