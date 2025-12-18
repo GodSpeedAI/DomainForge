@@ -22,7 +22,7 @@ Error codes follow the format `EXXX` where:
 
 ## E001-E099: Syntax and Parsing Errors
 
-*Note:* Codes in the range **E011–E099** are currently reserved for future syntax/parse error additions and will be documented as the project expands. For now, E001–E010 cover the commonly used parsing diagnostics.
+_Note:_ Codes in the range **E011–E099** are currently reserved for future syntax/parse error additions and will be documented as the project expands. For now, E001–E010 cover the commonly used parsing diagnostics.
 
 ### E001: Undefined Entity
 
@@ -72,7 +72,7 @@ Flow "Steel" from "Supplier" to "Factory" quantity 100
 
 ---
 
-*Note:* The old `E004: Type Mismatch` entry has been moved into the Type System section (E100–E199). See `E100: Incompatible Types` for details and suggested fixes.
+_Note:_ The old `E004: Type Mismatch` entry has been moved into the Type System section (E100–E199). See `E100: Incompatible Types` for details and suggested fixes.
 
 ---
 
@@ -299,7 +299,7 @@ Policy dimension_collision as:
 
 ---
 
-*Note*: `E003: Unit Mismatch` was historically listed in the Syntax/Parsing category (E003) and has been consolidated under the Unit/Dimension category. Consult `E200`/`E203` for dimension/unit mismatches.
+_Note_: `E003: Unit Mismatch` was historically listed in the Syntax/Parsing category (E003) and has been consolidated under the Unit/Dimension category. Consult `E200`/`E203` for dimension/unit mismatches.
 
 ### E201: Invalid Unit
 
@@ -503,13 +503,61 @@ Flow "Data" from "B" to "A" quantity 1
 
 **Description**: A referenced module cannot be found.
 
+**Example**:
+
+```sea
+import "missing_module"
+// Error: Module 'missing_module' could not be found
+```
+
 **Common Fixes**:
 
 - Check module path
-- Verify module exists
+- Verify module file exists
 - Review import statements
 
 ---
+
+### E504: Symbol Not Exported
+
+**Description**: A symbol is imported from a module but is not exported by that module.
+
+**Example**:
+
+```sea
+import { Secret } from "utils"
+// Error: Symbol 'Secret' is not exported by module 'utils'. Available exports: PublicHelper
+```
+
+**Common Fixes**:
+
+- Check symbol name spelling
+- Verify the symbol is exported (`export Entity X`) in the source module
+- Use `import * as alias` to inspect available exports
+- Check available exports listed in the error message
+
+---
+
+### E505: Circular Dependency
+
+**Description**: A circular dependency exists between modules (e.g., A imports B, and B imports A).
+
+**Example**:
+
+```sea
+// In a.sea:
+import "b"
+
+// In b.sea:
+import "a"
+// Error: Circular dependency detected: a -> b -> a
+```
+
+**Common Fixes**:
+
+- Refactor code to extract shared dependencies to a third module
+- Remove unnecessary imports
+- Merge tightly coupled modules
 
 ## Using Error Codes
 
@@ -567,7 +615,9 @@ try {
   // Node/NAPI wrappers commonly use "__metadata__: " while WASM/json errors may use
   // "__SEA_DSL_ERROR_METADATA__: ". Try both when extracting metadata.
   const raw = e.message || e.toString();
-  const token = raw.includes("__SEA_DSL_ERROR_METADATA__:") ? "__SEA_DSL_ERROR_METADATA__: " : "__metadata__: ";
+  const token = raw.includes("__SEA_DSL_ERROR_METADATA__:")
+    ? "__SEA_DSL_ERROR_METADATA__: "
+    : "__metadata__: ";
   const [msg, meta] = raw.split(token);
   const metadata = JSON.parse(meta);
   console.error(`Error ${metadata.code}: ${msg}`);
