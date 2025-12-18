@@ -307,8 +307,9 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
 }
 
 /// Parse a single declaration
-fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
-    match pair.as_rule() {
+fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
+    let (line, column) = pair.line_col();
+    let node = match pair.as_rule() {
         Rule::export_decl => {
             let mut inner = pair.into_inner();
             let wrapped = inner.next().ok_or_else(|| {
@@ -322,7 +323,10 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
                 .into_inner()
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Empty declaration".to_string()))?;
-            parse_declaration(inner)
+            // Recursively call parse_declaration, but we need to unwrap the result if we want to avoid double spanning?
+            // Actually declaration_inner is just a wrapper. The inner parse_declaration returns Spanned<AstNode>.
+            // We should just return that directly.
+            return parse_declaration(inner);
         }
         Rule::dimension_decl => parse_dimension(pair),
         Rule::unit_decl => parse_unit_declaration(pair),
@@ -342,7 +346,13 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
             "Unexpected rule: {:?}",
             pair.as_rule()
         ))),
-    }
+    }?;
+
+    Ok(Spanned {
+        node,
+        line,
+        column,
+    })
 }
 
 fn parse_import_decl(pair: Pair<Rule>) -> ParseResult<ImportDecl> {
