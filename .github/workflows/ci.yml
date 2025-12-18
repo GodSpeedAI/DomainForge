@@ -34,6 +34,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -68,6 +70,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
@@ -128,6 +132,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
@@ -165,6 +171,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
@@ -194,6 +202,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -235,6 +245,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
@@ -293,6 +305,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        env:
+          RUSTUP_MAX_RETRIES: 10
 
       - name: Run cargo audit
         uses: rustsec/audit-check@v1
