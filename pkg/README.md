@@ -4,7 +4,7 @@ Rust core library implementing the SEA DSL primitives and validation engine.
 
 ## Status
 
-⚠️ **Phase 0: Foundation Bootstrap** - Workspace infrastructure only
+✅ **Phase 1: Core DSL Architecture** - Profiles, Standard Library, and Unit Conversions implemented.
 
 ## Building
 

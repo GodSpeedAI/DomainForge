@@ -133,6 +133,28 @@ pub enum AggregateFunction {
 }
 
 impl Expression {
+    /// Returns a canonical normalized form of this expression.
+    ///
+    /// The normalized form applies various simplification rules:
+    /// - Identity elimination (`true AND x` → `x`)
+    /// - Domination (`false AND x` → `false`)
+    /// - Idempotence (`a AND a` → `a`)
+    /// - Absorption (`a OR (a AND b)` → `a`)
+    /// - Double negation (`NOT NOT x` → `x`)
+    /// - Commutative sorting (operands sorted lexicographically)
+    #[must_use]
+    pub fn normalize(&self) -> super::NormalizedExpression {
+        super::NormalizedExpression::new(self)
+    }
+
+    /// Returns true if two expressions are semantically equivalent.
+    ///
+    /// Two expressions are equivalent if their normalized forms are identical.
+    #[must_use]
+    pub fn is_equivalent(&self, other: &Expression) -> bool {
+        self.normalize() == other.normalize()
+    }
+
     pub fn literal(value: impl Into<serde_json::Value>) -> Self {
         Expression::Literal(value.into())
     }
