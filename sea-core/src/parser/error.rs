@@ -75,12 +75,22 @@ impl ParseError {
         }
     }
 
+    /// Creates an UndefinedEntity error without location information (uses 0:0)
+    pub fn undefined_entity_no_loc(name: impl Into<String>) -> Self {
+        Self::undefined_entity(name, 0, 0)
+    }
+
     pub fn undefined_resource(name: impl Into<String>, line: usize, column: usize) -> Self {
         ParseError::UndefinedResource {
             name: name.into(),
             line,
             column,
         }
+    }
+
+    /// Creates an UndefinedResource error without location information (uses 0:0)
+    pub fn undefined_resource_no_loc(name: impl Into<String>) -> Self {
+        Self::undefined_resource(name, 0, 0)
     }
 
     pub fn undefined_variable(name: impl Into<String>, line: usize, column: usize) -> Self {
@@ -97,6 +107,11 @@ impl ParseError {
             line,
             column,
         }
+    }
+
+    /// Creates a DuplicateDeclaration error without location information (uses 0:0)
+    pub fn duplicate_declaration_no_loc(name: impl Into<String>) -> Self {
+        Self::duplicate_declaration(name, 0, 0)
     }
 
     pub fn type_error(message: impl Into<String>, location: impl Into<String>) -> Self {

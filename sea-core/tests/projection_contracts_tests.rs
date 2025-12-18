@@ -29,7 +29,7 @@ fn test_parse_mapping_and_projection() {
     let ast = parse_source(source).expect("Failed to parse source");
     assert_eq!(ast.declarations.len(), 2);
 
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::MappingDecl {
             name,
             target,
@@ -48,7 +48,7 @@ fn test_parse_mapping_and_projection() {
         _ => panic!("Expected MappingDecl"),
     }
 
-    match &ast.declarations[1] {
+    match &ast.declarations[1].node {
         AstNode::ProjectionDecl {
             name,
             target,

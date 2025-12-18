@@ -78,7 +78,7 @@ fn test_parse_policy_with_colon() {
     let ast = parse(source).unwrap();
 
     assert_eq!(ast.declarations.len(), 1);
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::Policy { name, version, .. } => {
             assert_eq!(name, "check_qty");
             assert!(version.is_none());

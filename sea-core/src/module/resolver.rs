@@ -176,8 +176,8 @@ impl<'a> ModuleResolver<'a> {
 fn collect_exports(ast: &Ast) -> HashSet<String> {
     let mut exports = HashSet::new();
     for node in &ast.declarations {
-        if let AstNode::Export(inner) = node {
-            if let Some(name) = declaration_name(inner.as_ref()) {
+        if let AstNode::Export(inner) = &node.node {
+            if let Some(name) = declaration_name(&inner.node) {
                 exports.insert(name.to_string());
             }
         }
@@ -204,7 +204,7 @@ fn declaration_name(node: &AstNode) -> Option<&str> {
         | AstNode::Metric { name, .. }
         | AstNode::MappingDecl { name, .. }
         | AstNode::ProjectionDecl { name, .. } => Some(name),
-        AstNode::Export(inner) => declaration_name(inner.as_ref()),
+        AstNode::Export(inner) => declaration_name(&inner.node),
     }
 }
 

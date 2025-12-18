@@ -50,7 +50,7 @@ impl PrettyPrinter {
         }
 
         for decl in &ast.declarations {
-            sections.push(self.format_node(decl, 0));
+            sections.push(self.format_node(&decl.node, 0));
         }
 
         let mut output = sections.join("\n\n");
@@ -121,7 +121,7 @@ impl PrettyPrinter {
 
     fn format_node(&self, node: &AstNode, indent_level: usize) -> String {
         match node {
-            AstNode::Export(inner) => self.format_export(inner, indent_level),
+            AstNode::Export(inner) => self.format_export(&inner.node, indent_level),
             AstNode::Entity {
                 name,
                 version,

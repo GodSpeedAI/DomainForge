@@ -17,7 +17,7 @@ fn parses_imports_and_exports() {
     let exported = ast
         .declarations
         .iter()
-        .filter(|node| matches!(node, AstNode::Export(_)))
+        .filter(|node| matches!(node.node, AstNode::Export(_)))
         .count();
     assert_eq!(exported, 1, "only one declaration is explicitly exported");
 }

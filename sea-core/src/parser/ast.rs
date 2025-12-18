@@ -138,16 +138,24 @@ pub struct ProjectionOverride {
 }
 
 /// Abstract Syntax Tree for SEA DSL
+/// Abstract Syntax Tree for SEA DSL
+#[derive(Debug, Clone, PartialEq)]
+pub struct Spanned<T> {
+    pub node: T,
+    pub line: usize,
+    pub column: usize,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ast {
     pub metadata: FileMetadata,
-    pub declarations: Vec<AstNode>,
+    pub declarations: Vec<Spanned<AstNode>>,
 }
 
 /// AST Node types
 #[derive(Debug, Clone, PartialEq)]
 pub enum AstNode {
-    Export(Box<AstNode>),
+    Export(Box<Spanned<AstNode>>),
     Entity {
         name: String,
         version: Option<String>,
@@ -348,11 +356,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
         ))),
     }?;
 
-    Ok(Spanned {
-        node,
-        line,
-        column,
-    })
+    Ok(Spanned { node, line, column })
 }
 
 fn parse_import_decl(pair: Pair<Rule>) -> ParseResult<ImportDecl> {
@@ -2016,9 +2020,9 @@ fn parse_property_mapping(pair: Pair<Rule>) -> ParseResult<JsonValue> {
     Ok(JsonValue::Object(map))
 }
 
-fn unwrap_export(node: &AstNode) -> &AstNode {
-    match node {
-        AstNode::Export(inner) => inner.as_ref(),
+fn unwrap_export(spanned: &Spanned<AstNode>) -> &AstNode {
+    match &spanned.node {
+        AstNode::Export(inner) => &inner.node,
         other => other,
     }
 }
@@ -2171,7 +2175,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         match node {
             AstNode::Role { name, domain } => {
                 if role_map.contains_key(name) {
-                    return Err(ParseError::duplicate_declaration(format!(
+                    return Err(ParseError::duplicate_declaration_no_loc(format!(
                         "Role '{}' already declared",
                         name
                     )));
@@ -2192,7 +2196,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 annotations,
             } => {
                 if entity_map.contains_key(name) {
-                    return Err(ParseError::duplicate_declaration(format!(
+                    return Err(ParseError::duplicate_declaration_no_loc(format!(
                         "Entity '{}' already declared",
                         name
                     )));
@@ -2239,7 +2243,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 domain,
             } => {
                 if resource_map.contains_key(name) {
-                    return Err(ParseError::duplicate_declaration(format!(
+                    return Err(ParseError::duplicate_declaration_no_loc(format!(
                         "Resource '{}' already declared",
                         name
                     )));
@@ -2270,15 +2274,15 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         {
             let from_id = entity_map
                 .get(from_entity)
-                .ok_or_else(|| ParseError::undefined_entity(from_entity))?;
+                .ok_or_else(|| ParseError::undefined_entity_no_loc(from_entity))?;
 
             let to_id = entity_map
                 .get(to_entity)
-                .ok_or_else(|| ParseError::undefined_entity(to_entity))?;
+                .ok_or_else(|| ParseError::undefined_entity_no_loc(to_entity))?;
 
             let resource_id = resource_map
                 .get(resource_name)
-                .ok_or_else(|| ParseError::undefined_resource(resource_name))?;
+                .ok_or_else(|| ParseError::undefined_resource_no_loc(resource_name))?;
 
             let qty = quantity.map(Decimal::from).unwrap_or(Decimal::ZERO);
             let flow = Flow::new(resource_id.clone(), from_id.clone(), to_id.clone(), qty);
@@ -2301,7 +2305,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         } = node
         {
             if relation_map.contains_key(name) {
-                return Err(ParseError::duplicate_declaration(format!(
+                return Err(ParseError::duplicate_declaration_no_loc(format!(
                     "Relation '{}' already declared",
                     name
                 )));
@@ -2320,7 +2324,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                     resource_map
                         .get(flow_name)
                         .cloned()
-                        .ok_or_else(|| ParseError::undefined_resource(flow_name))?,
+                        .ok_or_else(|| ParseError::undefined_resource_no_loc(flow_name))?,
                 )
             } else {
                 None

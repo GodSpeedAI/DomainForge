@@ -138,7 +138,7 @@ impl Formatter {
             if i > 0 || !ast.metadata.imports.is_empty() || ast.metadata.namespace.is_some() {
                 self.newline();
             }
-            self.format_declaration(decl);
+            self.format_declaration(&decl.node);
         }
 
         // Ensure trailing newline
@@ -230,7 +230,7 @@ impl Formatter {
         match node {
             AstNode::Export(inner) => {
                 self.write("export ");
-                self.format_declaration(inner);
+                self.format_declaration(&inner.node);
             }
             AstNode::Entity {
                 name,

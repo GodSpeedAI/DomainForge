@@ -12,7 +12,7 @@ fn test_parse_entity_with_version_and_annotations() {
     let ast = parse(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
 
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::Entity {
             name,
             version,
@@ -40,7 +40,7 @@ fn test_parse_concept_change() {
     let ast = parse(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
 
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::ConceptChange {
             name,
             from_version,

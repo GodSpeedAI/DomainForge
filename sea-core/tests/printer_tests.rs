@@ -1,9 +1,17 @@
-use sea_core::parser::ast::{Ast, AstNode, FileMetadata};
+use sea_core::parser::ast::{Ast, AstNode, FileMetadata, Spanned};
 use sea_core::parser::ast::{MappingRule, PolicyKind, PolicyMetadata, PolicyModality};
 use sea_core::parser::printer::PrettyPrinter;
 use sea_core::policy::Expression;
 use serde_json::json;
 use std::collections::HashMap;
+
+fn spanned<T>(node: T) -> Spanned<T> {
+    Spanned {
+        node,
+        line: 0,
+        column: 0,
+    }
+}
 
 #[test]
 fn test_pretty_print_ast() {
@@ -13,23 +21,23 @@ fn test_pretty_print_ast() {
             ..Default::default()
         },
         declarations: vec![
-            AstNode::Entity {
+            spanned(AstNode::Entity {
                 name: "Factory".to_string(),
                 version: None,
                 annotations: HashMap::new(),
                 domain: None,
-            },
-            AstNode::Resource {
+            }),
+            spanned(AstNode::Resource {
                 name: "Widget".to_string(),
                 unit_name: Some("units".to_string()),
                 domain: None,
-            },
-            AstNode::Flow {
+            }),
+            spanned(AstNode::Flow {
                 resource_name: "Widget".to_string(),
                 from_entity: "Warehouse".to_string(),
                 to_entity: "Factory".to_string(),
                 quantity: Some(100),
-            },
+            }),
         ],
     };
 
@@ -60,12 +68,12 @@ fn test_pretty_print_policy_header() {
 
     let ast = Ast {
         metadata: FileMetadata::default(),
-        declarations: vec![AstNode::Policy {
+        declarations: vec![spanned(AstNode::Policy {
             name: "Limit".to_string(),
             version: None,
             metadata,
             expression: Expression::literal(true),
-        }],
+        })],
     };
 
     let printer = PrettyPrinter::new();
@@ -89,11 +97,11 @@ fn test_pretty_print_mapping_nested_and_trailing_commas() {
 
     let mapping_ast = Ast {
         metadata: FileMetadata::default(),
-        declarations: vec![AstNode::MappingDecl {
+        declarations: vec![spanned(AstNode::MappingDecl {
             name: "m1".to_string(),
             target: sea_core::parser::ast::TargetFormat::Calm,
             rules: vec![rule],
-        }],
+        })],
     };
 
     // Default: no trailing commas
@@ -125,11 +133,11 @@ fn test_pretty_print_projection_arrow_and_trailing_commas() {
 
     let projection_ast = Ast {
         metadata: FileMetadata::default(),
-        declarations: vec![AstNode::ProjectionDecl {
+        declarations: vec![spanned(AstNode::ProjectionDecl {
             name: "p1".to_string(),
             target: sea_core::parser::ast::TargetFormat::Calm,
             overrides: vec![override_entry],
-        }],
+        })],
     };
 
     let printer = PrettyPrinter::new();
@@ -171,12 +179,12 @@ fn test_pretty_print_policy_kind_modality_display() {
             };
             let ast = Ast {
                 metadata: FileMetadata::default(),
-                declarations: vec![AstNode::Policy {
+                declarations: vec![spanned(AstNode::Policy {
                     name: format!("{:?}-{:?}", kind, modality),
                     version: None,
                     metadata: metadata.clone(),
                     expression: Expression::literal(true),
-                }],
+                })],
             };
             let output = PrettyPrinter::new().print(&ast);
             // The printed header must contain "per <Kind> <Modality>"

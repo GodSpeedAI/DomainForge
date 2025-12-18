@@ -10,7 +10,7 @@ fn test_parse_dimension() {
     "#;
     let ast = parse_source(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::Dimension { name } => {
             assert_eq!(name, "Currency");
         }
@@ -24,7 +24,7 @@ fn test_parse_unit() {
     "#;
     let ast = parse_source(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::UnitDeclaration {
             symbol,
             dimension,
@@ -46,7 +46,7 @@ fn test_parse_unit_with_decimal_factor() {
     "#;
     let ast = parse_source(source).unwrap();
     assert_eq!(ast.declarations.len(), 1);
-    match &ast.declarations[0] {
+    match &ast.declarations[0].node {
         AstNode::UnitDeclaration { ref factor, .. } => {
             assert_eq!(*factor, dec!(1.07));
         }
