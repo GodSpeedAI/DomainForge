@@ -16,10 +16,26 @@ pub enum ParseError {
         span: Option<String>,
     },
     GrammarError(String),
-    UndefinedEntity(String),
-    UndefinedResource(String),
-    UndefinedVariable(String),
-    DuplicateDeclaration(String),
+    UndefinedEntity {
+        name: String,
+        line: usize,
+        column: usize,
+    },
+    UndefinedResource {
+        name: String,
+        line: usize,
+        column: usize,
+    },
+    UndefinedVariable {
+        name: String,
+        line: usize,
+        column: usize,
+    },
+    DuplicateDeclaration {
+        name: String,
+        line: usize,
+        column: usize,
+    },
     TypeError {
         message: String,
         location: String,
@@ -51,20 +67,36 @@ impl ParseError {
         }
     }
 
-    pub fn undefined_entity(name: impl Into<String>) -> Self {
-        ParseError::UndefinedEntity(name.into())
+    pub fn undefined_entity(name: impl Into<String>, line: usize, column: usize) -> Self {
+        ParseError::UndefinedEntity {
+            name: name.into(),
+            line,
+            column,
+        }
     }
 
-    pub fn undefined_resource(name: impl Into<String>) -> Self {
-        ParseError::UndefinedResource(name.into())
+    pub fn undefined_resource(name: impl Into<String>, line: usize, column: usize) -> Self {
+        ParseError::UndefinedResource {
+            name: name.into(),
+            line,
+            column,
+        }
     }
 
-    pub fn undefined_variable(name: impl Into<String>) -> Self {
-        ParseError::UndefinedVariable(name.into())
+    pub fn undefined_variable(name: impl Into<String>, line: usize, column: usize) -> Self {
+        ParseError::UndefinedVariable {
+            name: name.into(),
+            line,
+            column,
+        }
     }
 
-    pub fn duplicate_declaration(name: impl Into<String>) -> Self {
-        ParseError::DuplicateDeclaration(name.into())
+    pub fn duplicate_declaration(name: impl Into<String>, line: usize, column: usize) -> Self {
+        ParseError::DuplicateDeclaration {
+            name: name.into(),
+            line,
+            column,
+        }
     }
 
     pub fn type_error(message: impl Into<String>, location: impl Into<String>) -> Self {
@@ -93,17 +125,17 @@ impl fmt::Display for ParseError {
                 }
             }
             ParseError::GrammarError(msg) => write!(f, "Grammar error: {}", msg),
-            ParseError::UndefinedEntity(name) => {
-                write!(f, "Undefined entity: {}", name)
+            ParseError::UndefinedEntity { name, line, column } => {
+                write!(f, "Undefined entity: {} at {}:{}", name, line, column)
             }
-            ParseError::UndefinedResource(name) => {
-                write!(f, "Undefined resource: {}", name)
+            ParseError::UndefinedResource { name, line, column } => {
+                write!(f, "Undefined resource: {} at {}:{}", name, line, column)
             }
-            ParseError::UndefinedVariable(name) => {
-                write!(f, "Undefined variable: {}", name)
+            ParseError::UndefinedVariable { name, line, column } => {
+                write!(f, "Undefined variable: {} at {}:{}", name, line, column)
             }
-            ParseError::DuplicateDeclaration(name) => {
-                write!(f, "Duplicate declaration: {}", name)
+            ParseError::DuplicateDeclaration { name, line, column } => {
+                write!(f, "Duplicate declaration: {} at {}:{}", name, line, column)
             }
             ParseError::TypeError { message, location } => {
                 write!(f, "Type error at {}: {}", location, message)
