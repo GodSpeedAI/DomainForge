@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-18
+
+### Added
+
+- **Expression Normalization Engine**: Canonical normalization for policy expressions
+  - Transforms expressions to canonical form for equivalence checking
+  - Implements boolean algebra simplifications (identity, idempotence, double negation)
+  - Commutative operand sorting for deterministic output
+  - Stable hashing via xxhash-rust for caching and comparison
+
+- **`sea normalize` CLI Command**: New command for expression normalization
+  - Normalize policy expressions: `sea normalize "a AND b"`
+  - Check equivalence: `sea normalize "a AND b" --check-equiv "b AND a"`
+  - JSON output mode: `--json` for programmatic use
+
+- **Expression Bindings**: Full Expression API across all language bindings
+  - **Python**: `Expression`, `NormalizedExpression`, `BinaryOp`, `UnaryOp`, `Quantifier`, `AggregateFunction`, `WindowSpec`
+  - **TypeScript**: Same APIs via napi-rs bindings
+  - **WASM**: Same APIs for browser environments
+  - Factory methods for all expression types (literals, variables, binary, unary, quantifiers, aggregations)
+  - `normalize()`, `is_equivalent()`, `stable_hash()` methods
+
+- **ADR-001**: Architectural Decision Record for canonical normalizer design
+
+### Changed
+
+- **License**: Standardized to Apache-2.0 across all package configurations
+- **macOS CI Runners**: Updated from macos-13 to macos-14 (macos-13 retired Dec 2024)
+- **Documentation**: Updated CLI reference and language binding docs with expression APIs
+
+### Fixed
+
+- **Parser Trailing Input Detection**: `parse_expression_from_str` now correctly rejects malformed expressions with unconsumed trailing input (e.g., `"NOT (a"` no longer parses as just `NOT`)
+- **SBVR Test Expression**: Fixed invalid quantifier syntax in test data
+- **CI Network Failures**: Added `RUSTUP_MAX_RETRIES: 10` to all Rust toolchain installations to handle transient network failures on macOS runners
+- **Dependency Review**: Added BSL-1.0 to allowed licenses for xxhash-rust dependency
+
 ## [0.4.0] - 2025-12-15
 
 ### Added
