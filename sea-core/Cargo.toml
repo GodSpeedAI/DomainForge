@@ -5,7 +5,7 @@ authors = ["DomainForge Contributors"]
 edition = "2021"
 rust-version = "1.77"
 description = "Rust core library implementing the SEA DSL primitives and validation engine."
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 homepage = "https://github.com/GodSpeedAI/DomainForge"
 repository = "https://github.com/GodSpeedAI/DomainForge"
 
