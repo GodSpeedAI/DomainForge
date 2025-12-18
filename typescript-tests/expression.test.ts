@@ -7,7 +7,7 @@ import {
   Quantifier,
   AggregateFunction,
   WindowSpec,
-} from '../pkg';
+} from '..';
 
 describe('Expression Factory Methods', () => {
   it('creates boolean literal expressions', () => {
@@ -46,10 +46,10 @@ describe('Expression Factory Methods', () => {
   });
 
   it('creates interval expressions', () => {
-    const expr = Expression.interval('09:00', '17:00');
+    const expr = Expression.interval('2025-01-01T09:00:00Z', '2025-01-01T17:00:00Z');
     const str = expr.toStringRepr();
-    expect(str).toContain('09:00');
-    expect(str).toContain('17:00');
+    expect(str).toContain('09:00:00');
+    expect(str).toContain('17:00:00');
   });
 
   it('creates binary expressions', () => {

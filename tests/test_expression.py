@@ -54,9 +54,9 @@ class TestExpressionFactoryMethods:
 
     def test_interval(self):
         """Test creating interval literal expressions."""
-        expr = Expression.interval("09:00", "17:00")
-        assert "09:00" in str(expr)
-        assert "17:00" in str(expr)
+        expr = Expression.interval("2025-01-01T09:00:00Z", "2025-01-01T17:00:00Z")
+        assert "09:00:00" in str(expr)
+        assert "17:00:00" in str(expr)
 
     def test_binary(self):
         """Test creating binary expressions."""
