@@ -302,7 +302,7 @@ fn export_policy(policy: &Policy) -> CalmNode {
     metadata.insert("sea:primitive".to_string(), json!("Policy"));
     metadata.insert(
         "sea:expression".to_string(),
-        json!(serialize_expression_for_export(&policy.expression)),
+        json!(serialize_expression_for_export(policy.expression())),
     );
     metadata.insert("sea:expression_type".to_string(), json!("SEA"));
     metadata.insert("sea:priority".to_string(), json!(policy.priority));

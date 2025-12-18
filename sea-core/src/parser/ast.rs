@@ -990,6 +990,17 @@ pub fn parse_expression_from_str(source: &str) -> ParseResult<Expression> {
     }
 
     let pair = parsed_pairs.into_iter().next().unwrap();
+
+    // Check that the entire input was consumed (no trailing characters)
+    let consumed = pair.as_span().end();
+    let trimmed_source = source.trim_end();
+    if consumed < trimmed_source.len() {
+        return Err(ParseError::GrammarError(format!(
+            "Trailing input after expression: '{}'",
+            &source[consumed..]
+        )));
+    }
+
     parse_expression(pair)
 }
 

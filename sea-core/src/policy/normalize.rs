@@ -19,9 +19,9 @@
 //! 8. Comparison negation: NOT (a == b) → a != b
 
 use super::{BinaryOp, Expression, UnaryOp};
-use rustc_hash::FxHasher;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use xxhash_rust::xxh64::Xxh64;
 
 /// A normalized expression with precomputed stable hash.
 ///
@@ -98,9 +98,10 @@ impl fmt::Debug for NormalizedExpression {
 // Stable Hashing
 // ============================================================================
 
-/// Compute a stable hash using FxHasher (deterministic across runs/platforms).
+/// Compute a stable hash using Xxh64 which is portable and deterministic.
 fn compute_stable_hash(expr: &Expression) -> u64 {
-    let mut hasher = FxHasher::default();
+    // Use a fixed seed (0) for stability across runs and updates
+    let mut hasher = Xxh64::new(0);
     hash_expression(expr, &mut hasher);
     hasher.finish()
 }
@@ -381,6 +382,52 @@ fn normalize_binary(op: BinaryOp, left: Expression, right: Expression) -> Expres
         operands.sort_by_key(expr_cmp_key);
         operands.dedup();
 
+        // Re-apply absorption across the flattened chain
+        // e.g. (A) AND (A OR B) -> A
+        let partner_op = match op {
+            BinaryOp::Or => Some(BinaryOp::And),
+            BinaryOp::And => Some(BinaryOp::Or),
+            _ => None,
+        };
+
+        if let Some(partner) = partner_op {
+            let mut indices_to_remove = std::collections::HashSet::new();
+            for i in 0..operands.len() {
+                if indices_to_remove.contains(&i) {
+                    continue;
+                }
+                for j in (i + 1)..operands.len() {
+                    if indices_to_remove.contains(&j) {
+                        continue;
+                    }
+
+                    // Check if i absorbs j
+                    if try_absorb(&operands[i], &operands[j], partner.clone()).is_some() {
+                        indices_to_remove.insert(j);
+                        continue;
+                    }
+
+                    // Check if j absorbs i
+                    if try_absorb(&operands[j], &operands[i], partner.clone()).is_some() {
+                        indices_to_remove.insert(i);
+                        break; // i is removed, move to next i
+                    }
+                }
+            }
+
+            if !indices_to_remove.is_empty() {
+                let mut new_operands = Vec::with_capacity(operands.len() - indices_to_remove.len());
+                for (i, op) in operands.into_iter().enumerate() {
+                    if !indices_to_remove.contains(&i) {
+                        new_operands.push(op);
+                    }
+                }
+                operands = new_operands;
+                // Re-sort/dedup not strictly necessary if order preserved and absorption is clean,
+                // but good for safety if absorption produced duplicates (unlikely here).
+            }
+        }
+
         // Rebuild balanced tree
         return build_balanced_tree(op, operands);
     }
@@ -636,7 +683,7 @@ fn canonical_serialize(expr: &Expression) -> String {
                 .as_ref()
                 .map(|w| format!("{:?}", w))
                 .unwrap_or_else(|| "None".into());
-            let tu_str = target_unit.clone().unwrap_or_else(|| "None".into());
+            let tu_str = target_unit.as_deref().unwrap_or("None");
             write!(
                 out,
                 "AggComp({:?}, {}, {}, {}, {}, {}, {})",

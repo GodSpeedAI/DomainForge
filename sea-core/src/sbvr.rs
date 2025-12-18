@@ -729,7 +729,7 @@ mod tests {
             id: "rule1".to_string(),
             name: "MustHavePositiveQuantity".to_string(),
             rule_type: RuleType::Obligation,
-            expression: "forall f in Flow where f.quantity > 0: true".to_string(),
+            expression: "forall f in flows: (f.quantity > 0)".to_string(),
             severity: "Info".to_string(),
             priority: None,
         });

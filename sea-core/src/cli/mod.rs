@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 pub mod format;
 pub mod import;
+pub mod normalize;
 pub mod project;
 pub mod test;
 pub mod validate;
@@ -39,6 +40,8 @@ pub enum Commands {
     /// Validate Knowledge Graph files
     #[command(name = "validate-kg")]
     ValidateKg(validate_kg::ValidateKgArgs),
+    /// Normalize a policy expression
+    Normalize(normalize::NormalizeArgs),
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy)]

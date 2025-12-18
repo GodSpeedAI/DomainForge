@@ -32,7 +32,7 @@ pub struct Policy {
     pub name: String,
     pub namespace: String,
     pub version: SemanticVersion,
-    pub expression: Expression,
+    expression: Expression,
     pub modality: PolicyModality,
     pub kind: PolicyKind,
     pub priority: i32,
@@ -60,6 +60,18 @@ impl Policy {
     pub fn normalized_expression(&self) -> &super::NormalizedExpression {
         self.cached_normalized_expr
             .get_or_init(|| self.expression.normalize())
+    }
+
+    /// Get the policy expression.
+    pub fn expression(&self) -> &Expression {
+        &self.expression
+    }
+
+    /// Set the policy expression and invalidate the normalized cache.
+    pub fn set_expression(&mut self, expr: Expression) {
+        self.expression = expr;
+        // Invalidate cache by creating a new empty lock
+        self.cached_normalized_expr = std::sync::OnceLock::new();
     }
 
     pub fn new(name: impl Into<String>, expression: Expression) -> Self {

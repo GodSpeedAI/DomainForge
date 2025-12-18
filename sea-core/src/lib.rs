@@ -129,6 +129,13 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::policy::Severity>()?;
     m.add_class::<python::policy::Violation>()?;
     m.add_class::<python::policy::EvaluationResult>()?;
+    m.add_class::<python::policy::UnaryOp>()?;
+    m.add_class::<python::policy::Quantifier>()?;
+    m.add_class::<python::policy::BinaryOp>()?;
+    m.add_class::<python::policy::AggregateFunction>()?;
+    m.add_class::<python::policy::WindowSpec>()?;
+    m.add_class::<python::policy::Expression>()?;
+    m.add_class::<python::policy::NormalizedExpression>()?;
     m.add_class::<python::units::Dimension>()?;
     m.add_class::<python::units::Unit>()?;
 

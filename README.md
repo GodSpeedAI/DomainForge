@@ -318,6 +318,14 @@ await init();
 
 const d = new Dimension("currency");
 const u = new Unit("USD", "US Dollar", "Currency", 1.0, "USD");
+
+// Programmatic Expression Building & Normalization
+const expr = Expression.binary(
+  BinaryOp.And,
+  Expression.variable("b"),
+  Expression.variable("a")
+);
+console.log(expr.normalize().toStringRepr()); // "(a AND b)"
 ```
 
 All bindings provide **identical semantics**—zero behavioral drift.
@@ -328,21 +336,23 @@ All bindings provide **identical semantics**—zero behavioral drift.
 <summary><strong>🏗️ Architecture</strong></summary>
 
 ```
+
 ┌───────────────────────────────────────────────────────┐
-│              Your Application                         │
+│ Your Application │
 ├───────────────────────────────────────────────────────┤
-│  Python API    │  TypeScript    │   WASM             │
-│  (PyO3)        │  (napi-rs)     │  (wasm-bindgen)    │
+│ Python API │ TypeScript │ WASM │
+│ (PyO3) │ (napi-rs) │ (wasm-bindgen) │
 ├───────────────────────────────────────────────────────┤
-│              Rust Core Engine (sea-core)              │
-│  ┌─────────────┬──────────────┬─────────────────┐    │
-│  │ Primitives  │ Graph Store  │ Policy Engine   │    │
-│  │ (5 types)   │ (IndexMap)   │ (SBVR logic)    │    │
-│  ├─────────────┼──────────────┼─────────────────┤    │
-│  │ Parser      │ Validator    │ CALM Integration│    │
-│  │ (Pest)      │ (Ref check)  │ (export/import) │    │
-│  └─────────────┴──────────────┴─────────────────┘    │
+│ Rust Core Engine (sea-core) │
+│ ┌─────────────┬──────────────┬─────────────────┐ │
+│ │ Primitives │ Graph Store │ Policy Engine │ │
+│ │ (5 types) │ (IndexMap) │ (SBVR logic) │ │
+│ ├─────────────┼──────────────┼─────────────────┤ │
+│ │ Parser │ Validator │ CALM Integration│ │
+│ │ (Pest) │ (Ref check) │ (export/import) │ │
+│ └─────────────┴──────────────┴─────────────────┘ │
 └───────────────────────────────────────────────────────┘
+
 ```
 
 **Design Principles:**
@@ -368,6 +378,9 @@ sea project --format calm model.sea architecture.json
 
 # Import from Knowledge Graph
 sea import --format kg model.ttl
+
+# Normalize Expressions
+sea normalize "b AND a"  # -> "(a AND b)"
 ```
 
 [Full CLI Reference →](docs/reference/cli.md)

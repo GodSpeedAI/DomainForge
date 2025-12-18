@@ -10,6 +10,13 @@ from .sea_dsl import (
     Severity,
     Violation,
     EvaluationResult,
+    Expression,
+    NormalizedExpression,
+    BinaryOp,
+    UnaryOp,
+    Quantifier,
+    AggregateFunction,
+    WindowSpec,
     __version__,
 )
 
@@ -25,5 +32,12 @@ __all__ = [
     "Severity",
     "Violation",
     "EvaluationResult",
+    "Expression",
+    "NormalizedExpression",
+    "BinaryOp",
+    "UnaryOp",
+    "Quantifier",
+    "AggregateFunction",
+    "WindowSpec",
     "__version__",
 ]

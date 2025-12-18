@@ -274,6 +274,26 @@ primitives:
             Entity "Customer" { "name": "customer_name" }
         }
 
+  Expression:
+    purpose: "Programmatic construction and normalization of policy expressions"
+    variants:
+      Basic: "Expression (AST wrapper)"
+      Normalized: "NormalizedExpression (canonical form with stable hash)"
+    factory_methods:
+      rust: "Expression::literal(), Expression::variable(), Expression::binary()..."
+      python: "Expression.literal(), Expression.variable(), Expression.binary()..."
+      typescript: "Expression.literal(), Expression.variable(), Expression.binary()..."
+      wasm: "Expression.literal(), Expression.variable(), Expression.binary()..."
+    normalization:
+      method: "expr.normalize() -> NormalizedExpression"
+      features: "Identity elimination, commutative sorting, idempotence, double negation"
+      hashing:
+        Rust: "u64 (raw integer)"
+        Python: "hex string (0x...)"
+        TypeScript: "hex string (0x...)"
+        WASM: "hex string (0x...)"
+        note: "Hash values are consistent across bindings but representation differs (Rust: u64, others: hex string)"
+
 ---
 expressions:
   precedence:
@@ -789,6 +809,13 @@ cli_commands:
       calm: "sea import --format calm input.json > model.sea"
       sbvr: "sea import --format sbvr vocabulary.xmi > model.sea"
 
+  normalize:
+    usage: "sea normalize [--check-equiv OTHER_EXPR] [--json] <expression>"
+    purpose: "Normalize expressions and check equivalence"
+    examples:
+      basic: "sea normalize 'b AND a'"
+      check: "sea normalize 'a AND b' --check-equiv 'b AND a'"
+      json: "sea normalize 'true AND x' --json"
   json_output_summary:
     note: "Multiple commands support JSON output for tooling integration"
     commands:
@@ -811,7 +838,7 @@ cli_commands:
     requires: "Build with --features cli,shacl"
     note: "Validates KG structure conforms to SEA SHACL shapes"
 
-  format:
+  fmt:
     usage: "sea fmt <file.sea> [--out <output.sea>] [--check]"
     purpose: "Format SEA source code with consistent whitespace, indentation, and styling"
     status: "Fully implemented"
