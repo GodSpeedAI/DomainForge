@@ -215,7 +215,7 @@ impl From<WindowSpec> for RustWindowSpec {
 impl From<RustWindowSpec> for WindowSpec {
     fn from(rust_ws: RustWindowSpec) -> Self {
         WindowSpec {
-            duration: rust_ws.duration as u32,
+            duration: rust_ws.duration.try_into().unwrap_or(u32::MAX),
             unit: rust_ws.unit,
         }
     }

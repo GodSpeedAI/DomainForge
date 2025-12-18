@@ -19,9 +19,9 @@
 //! 8. Comparison negation: NOT (a == b) → a != b
 
 use super::{BinaryOp, Expression, UnaryOp};
-use rustc_hash::FxHasher;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use xxhash_rust::xxh64::Xxh64;
 
 /// A normalized expression with precomputed stable hash.
 ///
@@ -98,9 +98,10 @@ impl fmt::Debug for NormalizedExpression {
 // Stable Hashing
 // ============================================================================
 
-/// Compute a stable hash using FxHasher (deterministic across runs/platforms).
+/// Compute a stable hash using Xxh64 which is portable and deterministic.
 fn compute_stable_hash(expr: &Expression) -> u64 {
-    let mut hasher = FxHasher::default();
+    // Use a fixed seed (0) for stability across runs and updates
+    let mut hasher = Xxh64::new(0);
     hash_expression(expr, &mut hasher);
     hasher.finish()
 }
@@ -636,7 +637,7 @@ fn canonical_serialize(expr: &Expression) -> String {
                 .as_ref()
                 .map(|w| format!("{:?}", w))
                 .unwrap_or_else(|| "None".into());
-            let tu_str = target_unit.clone().unwrap_or_else(|| "None".into());
+            let tu_str = target_unit.as_deref().unwrap_or("None");
             write!(
                 out,
                 "AggComp({:?}, {}, {}, {}, {}, {}, {})",

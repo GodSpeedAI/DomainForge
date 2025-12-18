@@ -287,7 +287,11 @@ primitives:
     normalization:
       method: "expr.normalize() -> NormalizedExpression"
       features: "Identity elimination, commutative sorting, idempotence, double negation"
-      hashing: "normalized.stable_hash() -> u64 (or hex string)"
+      hashing:
+        Rust: "u64 (raw integer)"
+        Python: "hex string (0x...)"
+        TypeScript: "hex string (0x...)"
+        WASM: "hex string (0x...)"
 
 ---
 expressions:

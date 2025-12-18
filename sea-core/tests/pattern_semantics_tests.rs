@@ -22,7 +22,7 @@ Policy valid_email as: "user@example.com" matches "EmailAddress"
     // Ensure expression parsing preserves matches operator
     let policies = graph.all_policies();
     let policy = policies.first().expect("policy should be present");
-    match &policy.expression {
+    match policy.expression() {
         Expression::Binary { op, .. } => {
             use sea_core::policy::BinaryOp;
             assert_eq!(*op, BinaryOp::Matches);

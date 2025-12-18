@@ -161,7 +161,14 @@ console.log("Flows:", graph.flowCount());
 ### Build Programmatically
 
 ```javascript
-import { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
+import {
+  Graph,
+  Entity,
+  Resource,
+  Flow,
+  Expression,
+  BinaryOp,
+} from "@domainforge/sea-wasm";
 
 const graph = new Graph();
 

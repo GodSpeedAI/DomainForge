@@ -229,7 +229,7 @@ impl From<WindowSpec> for RustWindowSpec {
 impl From<RustWindowSpec> for WindowSpec {
     fn from(rust_ws: RustWindowSpec) -> Self {
         WindowSpec {
-            duration: rust_ws.duration as u32,
+            duration: rust_ws.duration.try_into().unwrap_or(u32::MAX),
             unit: rust_ws.unit,
         }
     }
@@ -272,10 +272,13 @@ impl Expression {
 
     /// Create a literal number expression.
     #[wasm_bindgen(js_name = literalNumber)]
-    pub fn literal_number(value: f64) -> Expression {
-        Self {
-            inner: RustExpression::Literal(serde_json::json!(value)),
+    pub fn literal_number(value: f64) -> Result<Expression, JsError> {
+        if !value.is_finite() {
+            return Err(JsError::new("literalNumber: value must be a finite number"));
         }
+        Ok(Self {
+            inner: RustExpression::Literal(serde_json::json!(value)),
+        })
     }
 
     /// Create a literal string expression.

@@ -171,7 +171,7 @@ sea normalize [OPTIONS] <EXPRESSION>
 Options:
 
 - `--check-equiv <EXPR>`: Compare the input expression with another for semantic equivalence.
-- `--json`: Output result as JSON object (includes normalized string, hash, and equivalence result).
+- `--json`: Output result as JSON object (always includes normalized string and hash; includes equivalence result only if `--check-equiv` is used).
 
 Examples:
 
@@ -189,6 +189,10 @@ sea normalize "a AND b" --check-equiv "b AND a"
 # JSON output
 sea normalize "true AND x" --json
 # Output: { "normalized": "x", "hash": "0x..." }
+
+# JSON output with equivalence
+sea normalize "true AND x" --check-equiv "x" --json
+# Output: { "normalized": "x", "hash": "0x...", "equivalent": true }
 ```
 
 ## graph
