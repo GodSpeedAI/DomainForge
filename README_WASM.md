@@ -91,7 +91,10 @@ The WASM bindings expose the same API as the Rust core:
 - `Resource` - Quantifiable subjects of value
 - `Flow` - Transfers of resources between entities
 - `Instance` - Entity type instances with named fields
+- `Instance` - Entity type instances with named fields
 - `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
+- `Expression` - Programmatic policy expression builder and normalizer
+- `NormalizedExpression` - Canonical form for semantic equivalence checking
 
 ### Constructor Patterns (December 2025)
 
@@ -158,7 +161,14 @@ console.log("Flows:", graph.flowCount());
 ### Build Programmatically
 
 ```javascript
-import { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
+import {
+  Graph,
+  Entity,
+  Resource,
+  Flow,
+  Expression,
+  BinaryOp,
+} from "@domainforge/sea-wasm";
 
 const graph = new Graph();
 
@@ -178,6 +188,16 @@ graph.addFlow(flow);
 // Namespace can be null when not specified
 console.log(warehouse.namespace()); // null
 console.log(factory.namespace()); // "manufacturing"
+
+// Programmatic Expression Construction
+const expr = Expression.binary(
+  BinaryOp.And,
+  Expression.variable("a"),
+  Expression.variable("b")
+);
+const normalized = expr.normalize();
+console.log(normalized.toStringRepr()); // "(a AND b)" (commutative sorting)
+console.log(normalized.stableHashHex()); // Stable hash for equivalence checking
 ```
 
 ## Size Optimization
