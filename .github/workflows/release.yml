@@ -4,6 +4,17 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.4.1). Leave empty to use current version from Cargo.toml.'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run (build but do not publish)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
