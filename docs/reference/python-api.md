@@ -160,6 +160,8 @@ print(is_formatted)  # True
 - `Flow`: Represents resource movement between entities
 - `Instance`: Represents physical instances of resources
 - `Graph`: Container with validation and query capabilities (uses IndexMap for deterministic iteration)
+- `Expression`: Policy expression AST wrapper with normalization support
+- `NormalizedExpression`: Canonical form of an expression with stable hashing
 
 ### Constructor Patterns (November 2025)
 
@@ -215,6 +217,24 @@ flow = Flow.new(
 - `Graph.import_calm(json_str)`: Import graph from CALM JSON
 - `add_policy(policy)`: Add a policy to the graph
 - `add_association(owner_id, owned_id, rel_type)`: Add ownership/association relation between two entities (owner/owned)
+
+### Expression API (December 2025)
+
+```python
+from sea_dsl import Expression, BinaryOp
+
+# Factory methods
+expr = Expression.binary(
+    BinaryOp.And,
+    Expression.variable("b"),
+    Expression.variable("a")
+)
+
+# Normalization
+normalized = expr.normalize()
+print(str(normalized))  # "(a AND b)" (commutative sorting)
+print(normalized.stable_hash())  # Stable hash for caching
+```
 
 **Breaking Changes:**
 

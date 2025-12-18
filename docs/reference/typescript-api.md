@@ -257,6 +257,24 @@ class Graph {
 `Graph.importCalm` will throw if the JSON is invalid or violates schema constraints; callers should also wrap `importCalm` in try/catch and inspect error messages for details.
 ```
 
+### Expression API (December 2025)
+
+```typescript
+import { Expression, BinaryOp } from "@domainforge/sea";
+
+// Factory methods
+const expr = Expression.binary(
+  BinaryOp.And,
+  Expression.variable("b"),
+  Expression.variable("a")
+);
+
+// Normalization
+const normalized = expr.normalize();
+console.log(normalized.toStringRepr()); // "(a AND b)"
+console.log(normalized.stableHashHex()); // Stable hash
+```
+
 ### NamespaceRegistry (Workspace)
 
 ```typescript
