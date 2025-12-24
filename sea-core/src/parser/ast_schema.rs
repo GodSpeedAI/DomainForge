@@ -434,7 +434,7 @@ mod schema_gen {
             .parent()
             .unwrap()
             .join("schemas")
-            .join("ast-v2.schema.json");
+            .join("ast-v3.schema.json");
 
         std::fs::write(&schema_path, &json).expect("Failed to write schema file");
 

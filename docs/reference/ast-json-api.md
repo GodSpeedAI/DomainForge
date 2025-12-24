@@ -12,17 +12,18 @@ DomainForge provides multiple ways to work with parsed SEA DSL content as struct
 
 ## AST Schema
 
-The JSON schema for AST output is defined in `schemas/ast-v2.schema.json`. This schema is **programmatically generated** from the Rust type definitions to ensure accuracy.
+The JSON schema for AST output is defined in `schemas/ast-v3.schema.json`. This schema is **programmatically generated** from the Rust type definitions to ensure accuracy.
 
 > [!IMPORTANT]
-> The schema is auto-generated from Rust types using [`schemars`](https://docs.rs/schemars). Do not edit `ast-v2.schema.json` manually—regenerate it instead.
+> The schema is auto-generated from Rust types using [`schemars`](https://docs.rs/schemars). Do not edit `ast-v3.schema.json` manually—regenerate it instead.
 
 ### Schema Location
 
-| File                         | Description                                             |
-| ---------------------------- | ------------------------------------------------------- |
-| `schemas/ast-v2.schema.json` | Current programmatically-generated schema (recommended) |
-| `schemas/ast-v1.schema.json` | Legacy hand-written schema (deprecated)                 |
+| File                         | Description                                                    |
+| ---------------------------- | -------------------------------------------------------------- |
+| `schemas/ast-v3.schema.json` | Current programmatically-generated schema (recommended)        |
+| `schemas/ast-v2.schema.json` | Previous version (deprecated, lacks Resource/Flow annotations) |
+| `schemas/ast-v1.schema.json` | Legacy hand-written schema (deprecated)                        |
 
 ### Top-Level Structure
 
@@ -55,7 +56,7 @@ cargo test --lib generate_ast_schema -- --ignored --nocapture
 This runs the schema generation test which:
 
 1. Uses `schemars` to derive a JSON Schema from the Rust `Ast` type
-2. Writes the output to `schemas/ast-v2.schema.json`
+2. Writes the output to `schemas/ast-v3.schema.json`
 
 > [!TIP]
 > Run this command after modifying any AST-related types in `sea-core/src/parser/ast.rs` or `sea-core/src/policy/expression.rs`.
@@ -80,7 +81,7 @@ pub struct Ast {
 fn generate_ast_schema() {
     let schema = schema_for!(Ast);
     let json = serde_json::to_string_pretty(&schema).unwrap();
-    std::fs::write("../schemas/ast-v2.schema.json", &json).unwrap();
+    std::fs::write("../schemas/ast-v3.schema.json", &json).unwrap();
 }
 ```
 
@@ -392,10 +393,11 @@ JSON output from validation includes structured error information:
 
 ## Version Compatibility
 
-| Schema               | Version | Status                       |
-| -------------------- | ------- | ---------------------------- |
-| `ast-v2.schema.json` | 2.0.0   | **Current** (auto-generated) |
-| `ast-v1.schema.json` | 1.0.0   | Deprecated (hand-written)    |
+| Schema               | Version | Status                                                  |
+| -------------------- | ------- | ------------------------------------------------------- |
+| `ast-v3.schema.json` | 3.0.0   | **Current** (auto-generated, Resource/Flow annotations) |
+| `ast-v2.schema.json` | 2.0.0   | Deprecated (lacks Resource/Flow annotations)            |
+| `ast-v1.schema.json` | 1.0.0   | Deprecated (hand-written)                               |
 
 - Minimum sea-core version: `0.6.0`
 - JSON output is stable across minor versions
