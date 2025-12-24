@@ -113,7 +113,7 @@ ci-test-rust:
 # Run Python tests (CI variant)
 ci-test-python:
     @echo "Running Python tests (CI)..."
-    pytest tests/
+    .venv/bin/pytest tests/
 
 # Run TypeScript tests (CI variant)
 ci-test-ts:
