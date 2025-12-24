@@ -6,7 +6,7 @@
 [![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
 [![MSRV](https://img.shields.io/badge/MSRV-1.77-blue.svg)](https://blog.rust-lang.org/2024/03/21/Rust-1.77.0.html)
 
-Rust core library implementing the **SEA DSL** (Strategic Entity Architecture) primitives and validation engine. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
+Rust core library implementing the **SEA DSL** (Semantic Enterprise Architecture) primitives and validation engine. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
 
 ## Features
 
