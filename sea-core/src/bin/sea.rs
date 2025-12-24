@@ -1,6 +1,6 @@
 use clap::Parser;
 use sea_core::cli::{
-    format, import, normalize, project, test, validate, validate_kg, Cli, Commands,
+    format, import, normalize, project, registry, test, validate, validate_kg, Cli, Commands,
 };
 
 fn main() -> anyhow::Result<()> {
@@ -16,5 +16,6 @@ fn main() -> anyhow::Result<()> {
         Commands::Test(args) => test::run(args),
         Commands::ValidateKg(args) => validate_kg::run(args),
         Commands::Normalize(args) => normalize::run(args),
+        Commands::Registry(args) => registry::run(args),
     }
 }

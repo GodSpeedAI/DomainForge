@@ -4,6 +4,7 @@ pub mod format;
 pub mod import;
 pub mod normalize;
 pub mod project;
+pub mod registry;
 pub mod test;
 pub mod validate;
 pub mod validate_kg;
@@ -42,6 +43,8 @@ pub enum Commands {
     ValidateKg(validate_kg::ValidateKgArgs),
     /// Normalize a policy expression
     Normalize(normalize::NormalizeArgs),
+    /// Registry management commands
+    Registry(registry::RegistryArgs),
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy)]
