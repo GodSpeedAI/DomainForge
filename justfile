@@ -393,7 +393,7 @@ release-preview bump="patch" prerelease="":
         echo 'echo "✓ Updated pyproject.toml"'
         echo ''
         echo '# Update package.json'
-        echo 'npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version'
+        echo 'jq ".version = \"$NEW_VERSION\"" package.json > package.json.tmp && mv package.json.tmp package.json'
         echo 'echo "✓ Updated package.json"'
         echo ''
         echo '# Update CHANGELOG.md'
@@ -454,7 +454,7 @@ prepare-release bump="patch" prerelease="":
     
     # Update package.json
     echo "📝 Updating package.json..."
-    npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+    jq ".version = \"$NEW_VERSION\"" package.json > package.json.tmp && mv package.json.tmp package.json
     
     # Update CHANGELOG.md
     echo "📝 Updating CHANGELOG.md..."

@@ -21,7 +21,18 @@ Where `[bump]` is one of: `patch`, `minor`, `major`
 
 ## Workflow
 
-### 1. Preview Changes (Recommended First Step)
+### 1. Create a Release Branch
+
+Always create a dedicated branch for the release. This allows you to group the changelog updates, version bumps, and any other release-related changes (like updating this playbook!) into a single PR.
+
+```bash
+# From dev
+git checkout -b release/x.y.z dev
+# Example
+git checkout -b release/0.7.0 dev
+```
+
+### 2. Preview Changes (Recommended)
 
 ```bash
 just release-preview minor
@@ -39,14 +50,14 @@ This will:
 
 **No files are modified** - this is purely a preview.
 
-### 2. Apply Changes
+### 3. Apply Changes
 
 You have two options:
 
 **Option A: Run the generated script**
 
 ```bash
-./release-0.5.0.sh
+./release-0.7.0.sh
 ```
 
 **Option B: Use the just recipe directly**
@@ -57,7 +68,7 @@ just prepare-release minor
 
 Both approaches produce identical results.
 
-### 3. Review and Commit
+### 4. Review and Commit
 
 ```bash
 # Review the changes
@@ -71,7 +82,7 @@ git add -A
 git commit -m "chore: bump version to 0.5.0"
 ```
 
-### 4. Continue with Release
+### 5. Continue with Release
 
 After preparing locally, you can either:
 
