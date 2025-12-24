@@ -630,6 +630,7 @@ fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut annotations = HashMap::new();
     let mut unit_name = None;
     let mut domain = None;
+    let mut saw_in_keyword = false;
 
     for part in inner {
         match part.as_rule() {
@@ -677,16 +678,16 @@ fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
                 }
             }
             Rule::in_keyword => {
-                // Skip "in", next should be domain
+                // Mark that we've seen 'in', next identifier is domain
+                saw_in_keyword = true;
             }
             Rule::identifier => {
-                // Could be unit or domain depending on context
-                // If we haven't seen in_keyword yet, it's a unit
-                // If we just saw in_keyword, it's a domain
-                if domain.is_none() && unit_name.is_none() {
-                    unit_name = Some(parse_identifier(part)?);
-                } else {
+                // If we've seen 'in' keyword, this is domain; otherwise it's unit
+                if saw_in_keyword {
                     domain = Some(parse_identifier(part)?);
+                    saw_in_keyword = false; // Reset for safety
+                } else {
+                    unit_name = Some(parse_identifier(part)?);
                 }
             }
             _ => {}
