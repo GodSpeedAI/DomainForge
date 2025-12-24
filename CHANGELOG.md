@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2025-12-24
+## [0.7.1] - 2025-12-24
 
 ### Added
 - (Add new features here)
@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - (Add bug fixes here)
+## [0.7.0] - 2025-12-24
+
+### Added
+
+- **Release Branch Workflow**: Updated `docs/playbooks/local-release-preparation.md` to enforce creating a dedicated release branch before preparing releases
+
+### Changed
+
+- **Release Tooling**: Replaced `npm version` with `jq` in `justfile` release recipes, removing npm as a dependency for version bumps
+- **Documentation**: Renumbered workflow steps in release preparation playbook for clarity
+
+### Fixed
+
+- **Release Scripts**: Fixed `just prepare-release` failing on systems without npm installed
+
 ## [0.6.2] - 2025-12-18
 
 ### Fixed
