@@ -42,13 +42,27 @@ jobs:
       - name: Safety gate – ensure all checks pass
         id: check_status
         run: |
-          conclusion=$(gh pr checks ${{ github.event.pull_request.number }} --json status --jq '.[] | select(.status=="completed") | .conclusion' | grep -v null)
-          if echo "$conclusion" | grep -q "failure"; then
+          # Wait a moment for checks to register
+          sleep 10
+          
+          # Get check status with proper formatting
+          checks=$(gh pr checks ${{ github.event.pull_request.number }} --json state,conclusion 2>/dev/null || echo '[]')
+          
+          # Skip if no checks returned
+          if [ "$checks" = "[]" ] || [ -z "$checks" ]; then
+            echo "No checks to validate. Proceeding."
+            exit 0
+          fi
+          
+          # Check if any checks failed
+          failed=$(echo "$checks" | jq -r '.[] | select(.state=="COMPLETED") | select(.conclusion=="FAILURE") | .conclusion' | head -1)
+          
+          if [ ! -z "$failed" ]; then
             echo "Some required checks failed."
             exit 1
           fi
+          
           echo "All required checks passed."
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

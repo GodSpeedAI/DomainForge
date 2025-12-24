@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
-[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-544%2B%20passing-brightgreen.svg)](sea-core/tests/)
 
 ---
@@ -466,15 +466,6 @@ npm install && npm run build
 | 🗺️ [**CALM Mapping**](docs/reference/specs/calm-mapping.md)           | SEA ↔ CALM conversion                |
 | 📖 [**Error Codes**](docs/specs/error_codes.md)                       | Validation error reference           |
 
----
-
-## What's New in v0.2.0
-
-- **Unit Conversion**: Type-safe conversions with the `as` operator (`1000 'ms' as 's'`)
-- **Profiles**: Define DSL dialects with `@profile "cloud"` or `@profile "data"`
-- **Standard Library**: Import built-in types from `std:core`, `std:http`, `std:aws`
-
----
 
 ## Contributing
 
