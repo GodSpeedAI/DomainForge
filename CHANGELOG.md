@@ -7,28 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.1] - 2025-12-24
 
-### Added
-- (Add new features here)
-
 ### Changed
-- (Add changes here)
 
-### Fixed
-- (Add bug fixes here)
+- **CHANGELOG**: Added comprehensive release notes for v0.7.0
+
 ## [0.7.0] - 2025-12-24
 
 ### Added
 
-- **Release Branch Workflow**: Updated `docs/playbooks/local-release-preparation.md` to enforce creating a dedicated release branch before preparing releases
+- **AST v3 Schema**: New JSON Schema for AST with expanded node definitions and annotations support
+  - `schemas/ast-v2.schema.json` and `schemas/ast-v3.schema.json` for validation
+  - `ast_schema.rs` module for programmatic schema generation
+
+- **Resource/Flow Annotations**: `@replaces` and `@changes` annotations for evolution tracking
+  - Enables declaring replacement relationships between resources
+  - Tracks change history in flow declarations
+
+- **Parser Location Tracking**: Line and column information in AST nodes
+  - `Spanned<AstNode>` wrapper for precise source locations
+  - Enhanced `ParseError` with line/column for better diagnostics
+
+- **Structured Module Errors**: New error types for module resolution
+  - Circular dependency path tracking
+  - Namespace suggestions for typos
+  - Error codes E500, E504, E505 documented
+
+- **Release Automation Scripts**: New scripts in `scripts/` for release management
+  - `release.sh`, `build-release.sh`, `bump-version.sh`
+  - `create-tag.sh`, `create-github-release.sh`
+  - `generate-changelog.sh`, `generate-release-notes.sh`
+  - `pre-release-check.sh` for pre-flight validation
+
+- **Release Branch Workflow**: Updated playbook to enforce dedicated release branches
 
 ### Changed
 
-- **Release Tooling**: Replaced `npm version` with `jq` in `justfile` release recipes, removing npm as a dependency for version bumps
-- **Documentation**: Renumbered workflow steps in release preparation playbook for clarity
+- **Parser Grammar**: Extended `sea.pest` for annotation syntax and improved `in domain` parsing
+- **Formatter**: Enhanced `printer.rs` with annotation support
+- **Release Tooling**: Replaced `npm version` with `jq` in `justfile`, removing npm dependency
+- **Documentation**: Improved package READMEs for PyPI, npm, WASM, and crates.io
 
 ### Fixed
 
-- **Release Scripts**: Fixed `just prepare-release` failing on systems without npm installed
+- **Parser**: Correctly parse Resource `in domain` syntax
+- **CI**: Resolved Clippy lints in `printer.rs`
+- **CI**: Correct `gh pr checks` parsing in dependabot automerge
 
 ## [0.6.2] - 2025-12-18
 

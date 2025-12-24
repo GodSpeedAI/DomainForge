@@ -20,7 +20,7 @@ env:
   CARGO_INCREMENTAL: 0
   CACHE_VERSION: v3 # Increment to bust all caches
   CLI_MAX_BYTES: "52428800" # 50MB
-  WASM_MAX_BYTES: "2097152" # 2MB - harmonized with release.yml
+  WASM_MAX_BYTES: "1048576" # 1MB
 
 jobs:
   lint:
@@ -33,15 +33,24 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: rustfmt, clippy
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Cache cargo registry
+        uses: actions/cache@v4
         with:
-          prefix-key: ${{ env.CACHE_VERSION }}-lint
+          path: ~/.cargo/registry/index
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
 
       - name: Run rustfmt
         run: cargo fmt --all --check
@@ -70,19 +79,22 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: ${{ matrix.target }}
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
-          prefix-key: ${{ env.CACHE_VERSION }}-test
-          shared-key: ${{ matrix.os }}
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
 
       - name: Run unit tests
         run: just ci-test-rust
@@ -134,25 +146,22 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: ${{ env.CACHE_VERSION }}-python
-          shared-key: py${{ matrix.python-version }}
-
-      - name: Cache Python venv
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version }}-venv-${{ hashFiles('requirements*.txt') }}
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+            .venv
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock', 'requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
 
       - name: Setup Python environment
         run: just python-setup
@@ -168,32 +177,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: "1.1.42"
+          node-version: 22
+          cache: "npm"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
-          prefix-key: ${{ env.CACHE_VERSION }}-ts
-          workspaces: sea-core
+          path: |
+            ~/.cargo/registry/index
+            sea-core/target
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Build TypeScript bindings
-        run: bun run build
+        run: npm run build
 
       - name: Run TypeScript tests
         run: just ci-test-ts
@@ -208,38 +218,56 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v4
         with:
-          prefix-key: ${{ env.CACHE_VERSION }}-integration
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.1.42"
+          node-version: 22
 
       - name: Build Sea binary
         run: cargo build -p sea-core --bin sea --features cli
 
       - name: Build TypeScript bindings (minimal)
         run: |
-          bun install
-          bun run build
+          npm ci
+          npm run build
 
-      - name: Verify Sea CLI and validate SEA file
+      - name: Minimal registry ambiguity check
         shell: bash
         run: |
-          # Create a sample SEA file
           tmpdir=$(mktemp -d)
-          echo 'Entity "Warehouse"' > "$tmpdir/test.sea"
+          tee "$tmpdir/.sea-registry.toml" > /dev/null <<'EOF'
+          version = 1
+          default_namespace = "default"
 
-          # Verify CLI executes and validates the file
-          ./target/debug/sea validate "$tmpdir/test.sea" && echo "✓ SEA validation working correctly"
+          [[namespaces]]
+          namespace = "a"
+          patterns = ["domains/*/warehouse.sea"]
+
+          [[namespaces]]
+          namespace = "b"
+          patterns = ["domains/*/warehouse.sea"]
+          EOF
+          mkdir -p "$tmpdir/domains/logistics"
+          echo 'Entity "Warehouse"' > "$tmpdir/domains/logistics/warehouse.sea"
+
+          # Test that --fail-on-ambiguity properly detects ambiguous matches
+          # The command should fail and output an error message
+          set +e  # Temporarily disable exit on error
+          output=$(./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
+          exit_code=$?
+          set -e  # Re-enable exit on error
+
+          if [ $exit_code -ne 0 ] && echo "$output" | grep -q "multiple namespaces"; then
+            echo "✓ Ambiguity detection working correctly"
+            echo "Output: $output"
+            exit 0
+          else
+            echo "✗ Expected ambiguity error but got:"
+            echo "Exit code: $exit_code"
+            echo "Output: $output"
+            exit 1
+          fi
 
   test-wasm:
     name: Test WASM
@@ -252,52 +280,30 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: wasm32-unknown-unknown
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: ${{ env.CACHE_VERSION }}-wasm
-
-      - name: Cache WASM tools
+      - name: Cache dependencies
         uses: actions/cache@v4
-        id: wasm-tools-cache
         with:
           path: |
-            ~/.cargo/bin/wasm-pack
-            /usr/local/bin/wasm-opt
-          key: wasm-tools-v1-wasm-pack-0.13-binaryen-117
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
 
       - name: Install wasm-pack
-        if: steps.wasm-tools-cache.outputs.cache-hit != 'true'
         run: cargo install wasm-pack --locked
 
-      - name: Install wasm-opt (binaryen) for optimization
-        if: steps.wasm-tools-cache.outputs.cache-hit != 'true'
+      - name: Build WASM
         run: |
-          set -euo pipefail
-          echo "Downloading wasm-opt..."
-          wget -q https://github.com/WebAssembly/binaryen/releases/download/version_117/binaryen-version_117-x86_64-linux.tar.gz
-          tar -xzf binaryen-version_117-x86_64-linux.tar.gz
-          sudo cp binaryen-version_117/bin/wasm-opt /usr/local/bin/
-          wasm-opt --version
-
-      - name: Build WASM (release)
-        run: |
-          set -euo pipefail
           cd sea-core
-          wasm-pack build --target web --release --features wasm
-          # Optional: optimize with wasm-opt if installed (binaryen)
-          if command -v wasm-opt &> /dev/null; then
-            echo "🔧 Running wasm-opt..."
-            wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm && mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
-          fi
+          wasm-pack build --target web --features wasm
 
       - name: Check bundle size
         run: |
@@ -314,10 +320,6 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-        env:
-          RUSTUP_MAX_RETRIES: 10
 
       - name: Run cargo audit
         uses: rustsec/audit-check@v1
