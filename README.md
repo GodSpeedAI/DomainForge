@@ -163,9 +163,9 @@ python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
 
 ---
 
-## How It Works: Five Building Blocks
+## How It Works: Six Building Blocks
 
-DomainForge models any business domain using just **five universal concepts**:
+DomainForge models any business domain using just **six universal concepts**:
 
 | Concept         | What It Represents                  | Example                            |
 | --------------- | ----------------------------------- | ---------------------------------- |
@@ -173,9 +173,83 @@ DomainForge models any business domain using just **five universal concepts**:
 | **📦 Resource** | Things of value that move           | Products, Money, Information       |
 | **🔄 Flow**     | Movement between entities           | Shipments, Payments, Work Orders   |
 | **🔖 Instance** | Specific, trackable items           | Camera #SN12345, Invoice #INV-2024 |
-| **📜 Policy**   | Business rules and constraints      | "All shipments must be inspected"  |
+| **� Pattern**   | Reusable validation patterns        | Email format, SKU codes            |
+| **�📜 Policy**  | Business rules and constraints      | "All shipments must be inspected"  |
 
 That's the entire vocabulary. No magic syntax to learn. No framework lock-in.
+
+---
+
+## SEA DSL Syntax
+
+Write models directly in `.sea` files—human-readable, version-controllable, and parseable by all bindings.
+
+### Basic Example
+
+```sea
+// Define entities (who/where)
+Entity "Warehouse" in logistics
+Entity "Factory" in manufacturing
+
+// Define resources (what moves)
+Resource "Camera" units in inventory
+
+// Define flows (how things move)
+Flow "Camera" from "Warehouse" to "Factory" quantity 100
+
+// Define validation patterns
+Pattern "SKU" matches "^[A-Z]{3}-[0-9]{4}$"
+
+// Define business rules
+Policy min_shipment as: quantity >= 10
+```
+
+### Advanced Features
+
+```sea
+// Versioned entities with evolution tracking
+Entity "Vendor" v2.0.0
+  @replaces "Supplier" v1.0.0
+  @changes ["renamed", "added_fields"]
+
+// Roles and relations
+Role "Approver" in governance
+
+Relation "Payment"
+  subject: "Buyer"
+  predicate: "pays"
+  object: "Seller"
+  via: flow "Money"
+
+// Typed instances
+Instance acme_corp of "Vendor" {
+  name: "Acme Corporation",
+  credit_limit: 50000 "USD"
+}
+
+// Quantified policy expressions
+Policy all_shipments_inspected as:
+  forall s in flows: (s.inspected = true)
+```
+
+### All Declaration Types
+
+| Declaration   | Syntax                                                    |
+| ------------- | --------------------------------------------------------- |
+| Entity        | `Entity "Name" [vX.Y.Z] [in domain]`                      |
+| Resource      | `Resource "Name" [unit] [in domain]`                      |
+| Flow          | `Flow "Resource" from "A" to "B" [quantity N]`            |
+| Pattern       | `Pattern "Name" matches "regex"`                          |
+| Role          | `Role "Name" [in domain]`                                 |
+| Relation      | `Relation "Name" subject: ... predicate: ... object: ...` |
+| Instance      | `Instance id of "Entity" { field: value }`                |
+| Policy        | `Policy name as: expression`                              |
+| Dimension     | `Dimension "Name"`                                        |
+| Unit          | `Unit "Name" of "Dimension" factor N base "Base"`         |
+| Metric        | `Metric "Name" as: expression`                            |
+| Mapping       | `Mapping "Name" for format { ... }`                       |
+| Projection    | `Projection "Name" for format { ... }`                    |
+| ConceptChange | `ConceptChange "Name" @from_version ... @to_version ...`  |
 
 ---
 
@@ -465,7 +539,6 @@ npm install && npm run build
 | 🏛️ [**Architecture Decisions**](docs/reference/specs/adr.md)          | Key architectural choices            |
 | 🗺️ [**CALM Mapping**](docs/reference/specs/calm-mapping.md)           | SEA ↔ CALM conversion                |
 | 📖 [**Error Codes**](docs/specs/error_codes.md)                       | Validation error reference           |
-
 
 ## Contributing
 
