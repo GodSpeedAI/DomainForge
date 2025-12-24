@@ -309,6 +309,8 @@ mod schema_gen {
         /// Resource declaration
         Resource {
             name: String,
+            #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+            annotations: HashMap<String, serde_json::Value>,
             #[serde(skip_serializing_if = "Option::is_none")]
             unit_name: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -318,6 +320,8 @@ mod schema_gen {
         /// Flow declaration - resource transfer between entities
         Flow {
             resource_name: String,
+            #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+            annotations: HashMap<String, serde_json::Value>,
             from_entity: String,
             to_entity: String,
             #[serde(skip_serializing_if = "Option::is_none")]

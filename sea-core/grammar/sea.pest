@@ -56,11 +56,18 @@ ea_changes = { ^"changes" }
 // Syntax: Resource "Name" units
 // Syntax: Resource "Name"
 resource_decl = {
-    ^"resource" ~ name ~ (
+    ^"resource" ~ name ~ resource_annotation* ~ (
         (identifier ~ in_keyword ~ identifier) |  // "units in domain" - most specific first
-        (in_keyword ~ identifier) |                             // "in domain" - next most specific
+        (in_keyword ~ identifier) |               // "in domain" - next most specific
         ( !declaration_keyword ~ identifier )     // "units" only - least specific last. Must not be a keyword.
     )?
+}
+
+resource_annotation = {
+    "@" ~ (
+        (ea_replaces ~ name ~ (^"v" ~ version)?) |
+        (ea_changes ~ string_array)
+    )
 }
 
 declaration_keyword = @{
@@ -75,7 +82,14 @@ declaration_keyword = @{
 // Syntax: Flow "ResourceName" from "EntityA" to "EntityB" quantity 100
 // Syntax: Flow "ResourceName" from "EntityA" to "EntityB"
 flow_decl = {
-    ^"flow" ~ string_literal ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number)?
+    ^"flow" ~ string_literal ~ flow_annotation* ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ (^"quantity" ~ number)?
+}
+
+flow_annotation = {
+    "@" ~ (
+        (ea_replaces ~ name ~ (^"v" ~ version)?) |
+        (ea_changes ~ string_array)
+    )
 }
 
 // Pattern Declaration

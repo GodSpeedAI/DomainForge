@@ -29,11 +29,13 @@ fn test_pretty_print_ast() {
             }),
             spanned(AstNode::Resource {
                 name: "Widget".to_string(),
+                annotations: HashMap::new(),
                 unit_name: Some("units".to_string()),
                 domain: None,
             }),
             spanned(AstNode::Flow {
                 resource_name: "Widget".to_string(),
+                annotations: HashMap::new(),
                 from_entity: "Warehouse".to_string(),
                 to_entity: "Factory".to_string(),
                 quantity: Some(100),

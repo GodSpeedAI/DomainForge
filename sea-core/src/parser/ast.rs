@@ -164,11 +164,13 @@ pub enum AstNode {
     },
     Resource {
         name: String,
+        annotations: HashMap<String, JsonValue>,
         unit_name: Option<String>,
         domain: Option<String>,
     },
     Flow {
         resource_name: String,
+        annotations: HashMap<String, JsonValue>,
         from_entity: String,
         to_entity: String,
         quantity: Option<i32>,
@@ -625,49 +627,75 @@ fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
     )?;
 
+    let mut annotations = HashMap::new();
     let mut unit_name = None;
     let mut domain = None;
 
-    // The grammar produces these patterns (with in_keyword as a separate token):
-    // 1. string_literal + identifier + in_keyword + identifier = unit + domain
-    // 2. string_literal + in_keyword + identifier = domain only
-    // 3. string_literal + identifier = unit only
-    // 4. string_literal only = nothing
+    for part in inner {
+        match part.as_rule() {
+            Rule::resource_annotation => {
+                let mut annotation_inner = part.into_inner();
+                let key_pair = annotation_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Empty annotation".to_string()))?;
 
-    if let Some(first) = inner.next() {
-        match first.as_rule() {
+                match key_pair.as_rule() {
+                    Rule::ea_replaces => {
+                        let target_name =
+                            parse_name(annotation_inner.next().ok_or_else(|| {
+                                ParseError::GrammarError("Expected name in replaces".to_string())
+                            })?)?;
+                        // Check for optional version
+                        let mut target_version = None;
+                        if let Some(next) = annotation_inner.next() {
+                            if next.as_rule() == Rule::version {
+                                target_version = Some(next.as_str().to_string());
+                            }
+                        }
+
+                        let value = if let Some(v) = target_version {
+                            format!("{} v{}", target_name, v)
+                        } else {
+                            target_name
+                        };
+                        annotations.insert("replaces".to_string(), JsonValue::String(value));
+                    }
+                    Rule::ea_changes => {
+                        let array_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected string array in changes".to_string())
+                        })?;
+                        let mut changes = Vec::new();
+                        for item in array_pair.into_inner() {
+                            changes.push(parse_string_literal(item)?);
+                        }
+                        annotations.insert(
+                            "changes".to_string(),
+                            JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
+                        );
+                    }
+                    _ => {}
+                }
+            }
             Rule::in_keyword => {
-                // Case 2: in_keyword + identifier (domain only)
-                domain = Some(parse_identifier(inner.next().ok_or_else(|| {
-                    ParseError::GrammarError("Expected domain after 'in'".to_string())
-                })?)?);
+                // Skip "in", next should be domain
             }
             Rule::identifier => {
-                // Case 1 or 3: starts with identifier
-                unit_name = Some(parse_identifier(first)?);
-
-                // Check if followed by in_keyword + identifier
-                if let Some(second) = inner.next() {
-                    if second.as_rule() == Rule::in_keyword {
-                        // Case 1: identifier + in_keyword + identifier
-                        domain = Some(parse_identifier(inner.next().ok_or_else(|| {
-                            ParseError::GrammarError("Expected domain after 'in'".to_string())
-                        })?)?);
-                    }
-                    // If second is not in_keyword, it's unexpected (grammar shouldn't allow this)
+                // Could be unit or domain depending on context
+                // If we haven't seen in_keyword yet, it's a unit
+                // If we just saw in_keyword, it's a domain
+                if domain.is_none() && unit_name.is_none() {
+                    unit_name = Some(parse_identifier(part)?);
+                } else {
+                    domain = Some(parse_identifier(part)?);
                 }
-                // If no second token, it's case 3 (unit only)
             }
-            _ => {
-                return Err(ParseError::GrammarError(
-                    "Unexpected token in resource declaration".to_string(),
-                ));
-            }
+            _ => {}
         }
     }
 
     Ok(AstNode::Resource {
         name,
+        annotations,
         unit_name,
         domain,
     })
@@ -683,28 +711,79 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
     )?;
 
-    let from_entity = parse_string_literal(
-        inner
-            .next()
-            .ok_or_else(|| ParseError::GrammarError("Expected from entity".to_string()))?,
-    )?;
+    let mut annotations = HashMap::new();
+    let mut from_entity = None;
+    let mut to_entity = None;
+    let mut quantity = None;
 
-    let to_entity = parse_string_literal(
-        inner
-            .next()
-            .ok_or_else(|| ParseError::GrammarError("Expected to entity".to_string()))?,
-    )?;
+    for part in inner {
+        match part.as_rule() {
+            Rule::flow_annotation => {
+                let mut annotation_inner = part.into_inner();
+                let key_pair = annotation_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Empty annotation".to_string()))?;
 
-    let quantity = if let Some(qty_pair) = inner.next() {
-        Some(parse_number(qty_pair)?)
-    } else {
-        None
-    };
+                match key_pair.as_rule() {
+                    Rule::ea_replaces => {
+                        let target_name =
+                            parse_name(annotation_inner.next().ok_or_else(|| {
+                                ParseError::GrammarError("Expected name in replaces".to_string())
+                            })?)?;
+                        // Check for optional version
+                        let mut target_version = None;
+                        if let Some(next) = annotation_inner.next() {
+                            if next.as_rule() == Rule::version {
+                                target_version = Some(next.as_str().to_string());
+                            }
+                        }
+
+                        let value = if let Some(v) = target_version {
+                            format!("{} v{}", target_name, v)
+                        } else {
+                            target_name
+                        };
+                        annotations.insert("replaces".to_string(), JsonValue::String(value));
+                    }
+                    Rule::ea_changes => {
+                        let array_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected string array in changes".to_string())
+                        })?;
+                        let mut changes = Vec::new();
+                        for item in array_pair.into_inner() {
+                            changes.push(parse_string_literal(item)?);
+                        }
+                        annotations.insert(
+                            "changes".to_string(),
+                            JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            Rule::string_literal => {
+                // These are from_entity and to_entity in order
+                let parsed = parse_string_literal(part)?;
+                if from_entity.is_none() {
+                    from_entity = Some(parsed);
+                } else if to_entity.is_none() {
+                    to_entity = Some(parsed);
+                }
+            }
+            Rule::number => {
+                quantity = Some(parse_number(part)?);
+            }
+            _ => {}
+        }
+    }
 
     Ok(AstNode::Flow {
         resource_name,
-        from_entity,
-        to_entity,
+        annotations,
+        from_entity: from_entity
+            .ok_or_else(|| ParseError::GrammarError("Expected from entity".to_string()))?,
+        to_entity: to_entity
+            .ok_or_else(|| ParseError::GrammarError("Expected to entity".to_string()))?,
         quantity,
     })
 }
@@ -2241,6 +2320,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 name,
                 unit_name,
                 domain,
+                ..
             } => {
                 if resource_map.contains_key(name) {
                     return Err(ParseError::duplicate_declaration_no_loc(format!(
@@ -2270,6 +2350,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
             from_entity,
             to_entity,
             quantity,
+            ..
         } = node
         {
             let from_id = entity_map
