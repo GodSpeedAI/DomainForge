@@ -137,9 +137,9 @@ update_package_json() {
     if $DRY_RUN; then
         log_info "Would update package.json to: $new"
     else
-        # Use npm to update version (handles formatting correctly)
+        # Use jq to update version (avoids npm dependency issues)
         cd "$PROJECT_ROOT"
-        npm version "$new" --no-git-tag-version --allow-same-version > /dev/null 2>&1
+        jq --arg v "$new" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
         log_success "Updated package.json"
     fi
 }

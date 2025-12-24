@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2025-12-24
+
+### Changed
+
+- **Documentation**: Updated README with comprehensive SEA DSL syntax reference
+  - Added Pattern as 6th building block primitive
+  - New "SEA DSL Syntax" section with basic and advanced examples
+  - All 14 declaration types documented with syntax patterns
+  - Updated VS Code extension README with matching grammar examples
+
 ## [0.7.1] - 2025-12-24
 
 ### Changed
@@ -16,23 +26,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **AST v3 Schema**: New JSON Schema for AST with expanded node definitions and annotations support
+
   - `schemas/ast-v2.schema.json` and `schemas/ast-v3.schema.json` for validation
   - `ast_schema.rs` module for programmatic schema generation
 
 - **Resource/Flow Annotations**: `@replaces` and `@changes` annotations for evolution tracking
+
   - Enables declaring replacement relationships between resources
   - Tracks change history in flow declarations
 
 - **Parser Location Tracking**: Line and column information in AST nodes
+
   - `Spanned<AstNode>` wrapper for precise source locations
   - Enhanced `ParseError` with line/column for better diagnostics
 
 - **Structured Module Errors**: New error types for module resolution
+
   - Circular dependency path tracking
   - Namespace suggestions for typos
   - Error codes E500, E504, E505 documented
 
 - **Release Automation Scripts**: New scripts in `scripts/` for release management
+
   - `release.sh`, `build-release.sh`, `bump-version.sh`
   - `create-tag.sh`, `create-github-release.sh`
   - `generate-changelog.sh`, `generate-release-notes.sh`

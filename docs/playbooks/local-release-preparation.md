@@ -128,7 +128,7 @@ The local recipes mirror the logic in `.github/workflows/prepare-release.yml`:
 | Calculate new version | Same algorithm in `release-preview`/`prepare-release` |
 | Bump Cargo.toml       | `sed` replacement                                     |
 | Sync pyproject.toml   | `sed` replacement                                     |
-| Sync package.json     | `npm version`                                         |
+| Sync package.json     | `jq` replacement                                      |
 | Update CHANGELOG.md   | `just changelog-entry`                                |
 
 This ensures you can validate the release logic locally before triggering the workflow.
