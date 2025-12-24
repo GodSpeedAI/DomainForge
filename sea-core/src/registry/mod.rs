@@ -427,3 +427,6 @@ fn normalize_path(path: &Path) -> String {
     let repr = path.to_string_lossy().replace('\\', "/");
     repr.trim_start_matches("./").to_string()
 }
+
+#[cfg(test)]
+mod tests;
