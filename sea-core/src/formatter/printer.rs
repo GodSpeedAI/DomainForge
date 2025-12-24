@@ -291,11 +291,51 @@ impl Formatter {
             }
             AstNode::Resource {
                 name,
+                annotations,
                 unit_name,
                 domain,
             } => {
                 self.write("Resource ");
                 self.write_string_literal(name);
+                // Format annotations
+                if let Some(replaces) = annotations.get("replaces") {
+                    if let Some(s) = replaces.as_str() {
+                        self.newline();
+                        self.indent();
+                        self.write_indent();
+                        self.write("@replaces ");
+                        // Parse the replaces value which may include version
+                        if s.contains(" v") {
+                            let parts: Vec<&str> = s.splitn(2, " v").collect();
+                            self.write_string_literal(parts[0]);
+                            if parts.len() > 1 {
+                                self.write(" v");
+                                self.write(parts[1]);
+                            }
+                        } else {
+                            self.write_string_literal(s);
+                        }
+                        self.dedent();
+                    }
+                }
+                if let Some(changes) = annotations.get("changes") {
+                    if let Some(arr) = changes.as_array() {
+                        self.newline();
+                        self.indent();
+                        self.write_indent();
+                        self.write("@changes [");
+                        for (i, change) in arr.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            if let Some(s) = change.as_str() {
+                                self.write_string_literal(s);
+                            }
+                        }
+                        self.write("]");
+                        self.dedent();
+                    }
+                }
                 if let Some(u) = unit_name {
                     self.write(" ");
                     self.write(u);
@@ -308,12 +348,51 @@ impl Formatter {
             }
             AstNode::Flow {
                 resource_name,
+                annotations,
                 from_entity,
                 to_entity,
                 quantity,
             } => {
                 self.write("Flow ");
                 self.write_string_literal(resource_name);
+                // Format annotations
+                if let Some(replaces) = annotations.get("replaces") {
+                    if let Some(s) = replaces.as_str() {
+                        self.newline();
+                        self.indent();
+                        self.write_indent();
+                        self.write("@replaces ");
+                        if s.contains(" v") {
+                            let parts: Vec<&str> = s.splitn(2, " v").collect();
+                            self.write_string_literal(parts[0]);
+                            if parts.len() > 1 {
+                                self.write(" v");
+                                self.write(parts[1]);
+                            }
+                        } else {
+                            self.write_string_literal(s);
+                        }
+                        self.dedent();
+                    }
+                }
+                if let Some(changes) = annotations.get("changes") {
+                    if let Some(arr) = changes.as_array() {
+                        self.newline();
+                        self.indent();
+                        self.write_indent();
+                        self.write("@changes [");
+                        for (i, change) in arr.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            if let Some(s) = change.as_str() {
+                                self.write_string_literal(s);
+                            }
+                        }
+                        self.write("]");
+                        self.dedent();
+                    }
+                }
                 self.write(" from ");
                 self.write_string_literal(from_entity);
                 self.write(" to ");

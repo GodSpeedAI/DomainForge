@@ -54,6 +54,7 @@ wasm-bindgen-test = "0.3"
 jsonschema = { version = "0.18" }
 roxmltree = "0.21.1"
 rust_decimal_macros = "1.33"
+schemars = { version = "0.8", features = ["chrono", "rust_decimal", "indexmap2"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tempfile = "3.12"
 assert_cmd = "2.0"

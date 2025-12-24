@@ -130,15 +130,23 @@ impl PrettyPrinter {
             } => self.format_entity(name, version, annotations, domain),
             AstNode::Resource {
                 name,
+                annotations,
                 unit_name,
                 domain,
-            } => self.format_resource(name, unit_name.as_deref(), domain.as_deref()),
+            } => self.format_resource(name, annotations, unit_name.as_deref(), domain.as_deref()),
             AstNode::Flow {
                 resource_name,
+                annotations,
                 from_entity,
                 to_entity,
                 quantity,
-            } => self.format_flow(resource_name, from_entity, to_entity, *quantity),
+            } => self.format_flow(
+                resource_name,
+                annotations,
+                from_entity,
+                to_entity,
+                *quantity,
+            ),
             AstNode::Pattern { name, regex } => self.format_pattern(name, regex),
             AstNode::Role { name, domain } => self.format_role(name, domain),
             AstNode::Relation {
@@ -254,28 +262,109 @@ impl PrettyPrinter {
         }
     }
 
-    fn format_resource(&self, name: &str, unit: Option<&str>, domain: Option<&str>) -> String {
-        match (unit, domain) {
-            (Some(unit), Some(ns)) => {
-                format!("Resource {} {} in {}", self.quote(name), unit, ns)
-            }
-            (Some(unit), None) => format!("Resource {} {}", self.quote(name), unit),
-            (None, Some(ns)) => format!("Resource {} in {}", self.quote(name), ns),
-            (None, None) => format!("Resource {}", self.quote(name)),
+    fn format_resource(
+        &self,
+        name: &str,
+        annotations: &HashMap<String, JsonValue>,
+        unit: Option<&str>,
+        domain: Option<&str>,
+    ) -> String {
+        let mut lines = Vec::new();
+        let head = format!("Resource {}", self.quote(name));
+        lines.push(head);
+
+        if let Some(replaces) = annotations.get("replaces").and_then(JsonValue::as_str) {
+            lines.push(format!(
+                "{}@replaces {}",
+                self.indent(1),
+                self.format_replaces_annotation(replaces)
+            ));
         }
+        if let Some(changes) = annotations.get("changes").and_then(JsonValue::as_array) {
+            let rendered = changes
+                .iter()
+                .filter_map(JsonValue::as_str)
+                .map(|c| self.quote(c))
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!("{}@changes [{}]", self.indent(1), rendered));
+        }
+
+        // Add unit and domain to first line if present
+        if unit.is_some() || domain.is_some() {
+            if lines.len() == 1 {
+                // No annotations, put on single line
+                if let Some(u) = unit {
+                    lines[0].push_str(&format!(" {}", u));
+                }
+                if let Some(ns) = domain {
+                    lines[0].push_str(&format!(" in {}", ns));
+                }
+            } else {
+                // Has annotations, add unit/domain on separate line
+                let mut suffix = String::new();
+                if let Some(u) = unit {
+                    suffix.push_str(u);
+                }
+                if let Some(ns) = domain {
+                    if !suffix.is_empty() {
+                        suffix.push(' ');
+                    }
+                    suffix.push_str(&format!("in {}", ns));
+                }
+                if !suffix.is_empty() {
+                    lines.push(format!("{}{}", self.indent(1), suffix));
+                }
+            }
+        }
+
+        lines.join("\n")
     }
 
-    fn format_flow(&self, resource: &str, from: &str, to: &str, quantity: Option<i32>) -> String {
-        let mut line = format!(
-            "Flow {} from {} to {}",
-            self.quote(resource),
-            self.quote(from),
-            self.quote(to)
-        );
-        if let Some(qty) = quantity {
-            line.push_str(&format!(" quantity {}", qty));
+    fn format_flow(
+        &self,
+        resource: &str,
+        annotations: &HashMap<String, JsonValue>,
+        from: &str,
+        to: &str,
+        quantity: Option<i32>,
+    ) -> String {
+        let mut lines = Vec::new();
+        let head = format!("Flow {}", self.quote(resource));
+        lines.push(head);
+
+        if let Some(replaces) = annotations.get("replaces").and_then(JsonValue::as_str) {
+            lines.push(format!(
+                "{}@replaces {}",
+                self.indent(1),
+                self.format_replaces_annotation(replaces)
+            ));
         }
-        line
+        if let Some(changes) = annotations.get("changes").and_then(JsonValue::as_array) {
+            let rendered = changes
+                .iter()
+                .filter_map(JsonValue::as_str)
+                .map(|c| self.quote(c))
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!("{}@changes [{}]", self.indent(1), rendered));
+        }
+
+        // Add from/to/quantity
+        let mut suffix = format!("from {} to {}", self.quote(from), self.quote(to));
+        if let Some(qty) = quantity {
+            suffix.push_str(&format!(" quantity {}", qty));
+        }
+
+        if lines.len() == 1 {
+            // No annotations, put on single line
+            lines[0].push_str(&format!(" {}", suffix));
+        } else {
+            // Has annotations, add on separate line
+            lines.push(format!("{}{}", self.indent(1), suffix));
+        }
+
+        lines.join("\n")
     }
 
     fn format_pattern(&self, name: &str, regex: &str) -> String {

@@ -47,6 +47,7 @@ impl Graph {
         for resource in resources {
             let node = AstNode::Resource {
                 name: resource.name().to_string(),
+                annotations: Default::default(),
                 unit_name: None,
                 domain: map_domain(resource.namespace()),
             };
