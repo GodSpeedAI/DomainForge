@@ -304,11 +304,11 @@ impl PrettyPrinter {
                 // Has annotations, add unit/domain on separate line
                 let mut suffix = String::new();
                 if let Some(u) = unit {
-                    suffix.push_str(&format!("{}", u));
+                    suffix.push_str(u);
                 }
                 if let Some(ns) = domain {
                     if !suffix.is_empty() {
-                        suffix.push_str(" ");
+                        suffix.push(' ');
                     }
                     suffix.push_str(&format!("in {}", ns));
                 }
