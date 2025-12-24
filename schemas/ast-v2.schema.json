@@ -1,0 +1,1192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ast",
+  "description": "Abstract Syntax Tree for SEA DSL",
+  "type": "object",
+  "required": [
+    "declarations",
+    "metadata"
+  ],
+  "properties": {
+    "declarations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/SpannedAstNode"
+      }
+    },
+    "metadata": {
+      "$ref": "#/definitions/FileMetadata"
+    }
+  },
+  "definitions": {
+    "AggregateFunction": {
+      "type": "string",
+      "enum": [
+        "Count",
+        "Sum",
+        "Min",
+        "Max",
+        "Avg"
+      ]
+    },
+    "AstNode": {
+      "description": "AST Node types representing all SEA DSL declarations",
+      "oneOf": [
+        {
+          "description": "Export wrapper for public declarations",
+          "type": "object",
+          "required": [
+            "declaration",
+            "type"
+          ],
+          "properties": {
+            "declaration": {
+              "$ref": "#/definitions/SpannedAstNode"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Export"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Entity declaration",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "domain": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Entity"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Resource declaration",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "domain": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Resource"
+              ]
+            },
+            "unit_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Flow declaration - resource transfer between entities",
+          "type": "object",
+          "required": [
+            "from_entity",
+            "resource_name",
+            "to_entity",
+            "type"
+          ],
+          "properties": {
+            "from_entity": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32"
+            },
+            "resource_name": {
+              "type": "string"
+            },
+            "to_entity": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Flow"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Pattern declaration - named regex for string validation",
+          "type": "object",
+          "required": [
+            "name",
+            "regex",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "regex": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Pattern"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Role declaration - participant category",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "domain": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Role"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Relation declaration - predicate connecting roles",
+          "type": "object",
+          "required": [
+            "name",
+            "object_role",
+            "predicate",
+            "subject_role",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "object_role": {
+              "type": "string"
+            },
+            "predicate": {
+              "type": "string"
+            },
+            "subject_role": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Relation"
+              ]
+            },
+            "via_flow": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Dimension declaration for units",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Dimension"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Unit declaration - custom unit definition",
+          "type": "object",
+          "required": [
+            "base_unit",
+            "dimension",
+            "factor",
+            "symbol",
+            "type"
+          ],
+          "properties": {
+            "base_unit": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "string"
+            },
+            "factor": {
+              "description": "Decimal conversion factor as string",
+              "type": "string"
+            },
+            "symbol": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "UnitDeclaration"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Policy declaration - validation rule or constraint",
+          "type": "object",
+          "required": [
+            "expression",
+            "metadata",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "expression": {
+              "$ref": "#/definitions/Expression"
+            },
+            "metadata": {
+              "$ref": "#/definitions/PolicyMetadata"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Policy"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Instance declaration - entity instance with field values",
+          "type": "object",
+          "required": [
+            "entity_type",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "entity_type": {
+              "type": "string"
+            },
+            "fields": {
+              "default": {},
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/Expression"
+              }
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Instance"
+              ]
+            }
+          }
+        },
+        {
+          "description": "ConceptChange declaration - version migration",
+          "type": "object",
+          "required": [
+            "breaking_change",
+            "from_version",
+            "migration_policy",
+            "name",
+            "to_version",
+            "type"
+          ],
+          "properties": {
+            "breaking_change": {
+              "type": "boolean"
+            },
+            "from_version": {
+              "type": "string"
+            },
+            "migration_policy": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "to_version": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "ConceptChange"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Metric declaration - observable metric",
+          "type": "object",
+          "required": [
+            "expression",
+            "metadata",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "expression": {
+              "$ref": "#/definitions/Expression"
+            },
+            "metadata": {
+              "$ref": "#/definitions/MetricMetadata"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Metric"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Mapping declaration - format mapping rules",
+          "type": "object",
+          "required": [
+            "name",
+            "rules",
+            "target",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MappingRule"
+              }
+            },
+            "target": {
+              "$ref": "#/definitions/TargetFormat"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "MappingDecl"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Projection declaration - output configuration",
+          "type": "object",
+          "required": [
+            "name",
+            "overrides",
+            "target",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "overrides": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ProjectionOverride"
+              }
+            },
+            "target": {
+              "$ref": "#/definitions/TargetFormat"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "ProjectionDecl"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "BinaryOp": {
+      "type": "string",
+      "enum": [
+        "And",
+        "Or",
+        "Equal",
+        "NotEqual",
+        "GreaterThan",
+        "LessThan",
+        "GreaterThanOrEqual",
+        "LessThanOrEqual",
+        "Plus",
+        "Minus",
+        "Multiply",
+        "Divide",
+        "Contains",
+        "StartsWith",
+        "EndsWith",
+        "Matches",
+        "HasRole",
+        "Before",
+        "After",
+        "During"
+      ]
+    },
+    "Expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "value"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "Literal"
+              ]
+            },
+            "value": true
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "unit",
+            "value"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "QuantityLiteral"
+              ]
+            },
+            "unit": {
+              "type": "string"
+            },
+            "value": {
+              "description": "Decimal value as string for precision",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "timestamp",
+            "type"
+          ],
+          "properties": {
+            "timestamp": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "TimeLiteral"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "end",
+            "start",
+            "type"
+          ],
+          "properties": {
+            "end": {
+              "type": "string"
+            },
+            "start": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "IntervalLiteral"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Variable"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "collection",
+            "condition",
+            "key",
+            "type",
+            "variable"
+          ],
+          "properties": {
+            "collection": {
+              "$ref": "#/definitions/Expression"
+            },
+            "condition": {
+              "$ref": "#/definitions/Expression"
+            },
+            "filter": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Expression"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "key": {
+              "$ref": "#/definitions/Expression"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "GroupBy"
+              ]
+            },
+            "variable": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "left",
+            "op",
+            "right",
+            "type"
+          ],
+          "properties": {
+            "left": {
+              "$ref": "#/definitions/Expression"
+            },
+            "op": {
+              "$ref": "#/definitions/BinaryOp"
+            },
+            "right": {
+              "$ref": "#/definitions/Expression"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Binary"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "op",
+            "operand",
+            "type"
+          ],
+          "properties": {
+            "op": {
+              "$ref": "#/definitions/UnaryOp"
+            },
+            "operand": {
+              "$ref": "#/definitions/Expression"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Unary"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "operand",
+            "target_type",
+            "type"
+          ],
+          "properties": {
+            "operand": {
+              "$ref": "#/definitions/Expression"
+            },
+            "target_type": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Cast"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "collection",
+            "condition",
+            "quantifier",
+            "type",
+            "variable"
+          ],
+          "properties": {
+            "collection": {
+              "$ref": "#/definitions/Expression"
+            },
+            "condition": {
+              "$ref": "#/definitions/Expression"
+            },
+            "quantifier": {
+              "$ref": "#/definitions/Quantifier"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Quantifier"
+              ]
+            },
+            "variable": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "member",
+            "object",
+            "type"
+          ],
+          "properties": {
+            "member": {
+              "type": "string"
+            },
+            "object": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "MemberAccess"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "collection",
+            "function",
+            "type"
+          ],
+          "properties": {
+            "collection": {
+              "$ref": "#/definitions/Expression"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "filter": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Expression"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "function": {
+              "$ref": "#/definitions/AggregateFunction"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Aggregation"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "collection",
+            "function",
+            "predicate",
+            "projection",
+            "type",
+            "variable"
+          ],
+          "properties": {
+            "collection": {
+              "$ref": "#/definitions/Expression"
+            },
+            "function": {
+              "$ref": "#/definitions/AggregateFunction"
+            },
+            "predicate": {
+              "$ref": "#/definitions/Expression"
+            },
+            "projection": {
+              "$ref": "#/definitions/Expression"
+            },
+            "target_unit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "AggregationComprehension"
+              ]
+            },
+            "variable": {
+              "type": "string"
+            },
+            "window": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WindowSpec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "FileMetadata": {
+      "description": "File-level metadata from header annotations",
+      "type": "object",
+      "properties": {
+        "imports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ImportDecl"
+          }
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "ImportDecl": {
+      "description": "Import declaration for a module file",
+      "type": "object",
+      "required": [
+        "from_module",
+        "specifier"
+      ],
+      "properties": {
+        "from_module": {
+          "type": "string"
+        },
+        "specifier": {
+          "$ref": "#/definitions/ImportSpecifier"
+        }
+      }
+    },
+    "ImportItem": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "ImportSpecifier": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "items",
+            "type"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ImportItem"
+              }
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Named"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "alias",
+            "type"
+          ],
+          "properties": {
+            "alias": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Wildcard"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "MappingRule": {
+      "type": "object",
+      "required": [
+        "primitive_name",
+        "primitive_type",
+        "target_type"
+      ],
+      "properties": {
+        "fields": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": true
+        },
+        "primitive_name": {
+          "type": "string"
+        },
+        "primitive_type": {
+          "type": "string"
+        },
+        "target_type": {
+          "type": "string"
+        }
+      }
+    },
+    "MetricMetadata": {
+      "type": "object",
+      "properties": {
+        "refresh_interval": {
+          "description": "Refresh interval in ISO 8601 duration format (e.g., \"PT1H\")",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Severity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threshold": {
+          "description": "Decimal value as string for precision",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "window": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "PolicyKind": {
+      "type": "string",
+      "enum": [
+        "Constraint",
+        "Derivation",
+        "Obligation"
+      ]
+    },
+    "PolicyMetadata": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PolicyKind"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modality": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PolicyModality"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "priority": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "rationale": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PolicyModality": {
+      "type": "string",
+      "enum": [
+        "Obligation",
+        "Prohibition",
+        "Permission"
+      ]
+    },
+    "ProjectionOverride": {
+      "type": "object",
+      "required": [
+        "primitive_name",
+        "primitive_type"
+      ],
+      "properties": {
+        "fields": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": true
+        },
+        "primitive_name": {
+          "type": "string"
+        },
+        "primitive_type": {
+          "type": "string"
+        }
+      }
+    },
+    "Quantifier": {
+      "type": "string",
+      "enum": [
+        "ForAll",
+        "Exists",
+        "ExistsUnique"
+      ]
+    },
+    "Severity": {
+      "type": "string",
+      "enum": [
+        "Info",
+        "Warning",
+        "Error"
+      ]
+    },
+    "SpannedAstNode": {
+      "description": "Spanned AST node with source location information",
+      "type": "object",
+      "required": [
+        "column",
+        "line",
+        "node"
+      ],
+      "properties": {
+        "column": {
+          "description": "1-indexed column number",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "line": {
+          "description": "1-indexed line number",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "node": {
+          "$ref": "#/definitions/AstNode"
+        }
+      }
+    },
+    "TargetFormat": {
+      "type": "string",
+      "enum": [
+        "Calm",
+        "Kg",
+        "Sbvr",
+        "Protobuf"
+      ]
+    },
+    "UnaryOp": {
+      "type": "string",
+      "enum": [
+        "Not",
+        "Negate"
+      ]
+    },
+    "WindowSpec": {
+      "type": "object",
+      "required": [
+        "duration",
+        "unit"
+      ],
+      "properties": {
+        "duration": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "unit": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
