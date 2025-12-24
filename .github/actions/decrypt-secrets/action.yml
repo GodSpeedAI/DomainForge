@@ -28,25 +28,37 @@ runs:
         case "$RUNNER_OS" in
           Linux)
             SOPS_BINARY="sops-v${SOPS_VERSION}.linux.amd64"
+            SOPS_EXT=""
             ;;
           macOS)
             SOPS_BINARY="sops-v${SOPS_VERSION}.darwin.amd64"
+            SOPS_EXT=""
             ;;
           Windows)
             SOPS_BINARY="sops-v${SOPS_VERSION}.exe"
+            SOPS_EXT=".exe"
             ;;
           *)
             echo "Unsupported OS: $RUNNER_OS"
             exit 1
             ;;
         esac
-        curl -sSLo sops "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/${SOPS_BINARY}"
-        chmod +x sops
-        mkdir -p $HOME/.local/bin
-        mv sops $HOME/.local/bin/sops
-        chmod +x $HOME/.local/bin/sops
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-        sops --version
+        curl -sSLo "sops${SOPS_EXT}" "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/${SOPS_BINARY}"
+        chmod +x "sops${SOPS_EXT}"
+        
+        # Use different paths for Windows vs Unix
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          mkdir -p "$RUNNER_TEMP/bin"
+          mv "sops${SOPS_EXT}" "$RUNNER_TEMP/bin/sops${SOPS_EXT}"
+          echo "$RUNNER_TEMP/bin" >> $GITHUB_PATH
+          "$RUNNER_TEMP/bin/sops${SOPS_EXT}" --version
+        else
+          mkdir -p $HOME/.local/bin
+          mv sops $HOME/.local/bin/sops
+          chmod +x $HOME/.local/bin/sops
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          $HOME/.local/bin/sops --version
+        fi
 
     - name: Decrypt secrets
       id: extract
@@ -54,14 +66,17 @@ runs:
       env:
         SOPS_AGE_KEY: ${{ inputs.sops-age-key }}
       run: |
+        # Use RUNNER_TEMP for cross-platform temp file
+        TEMP_FILE="$RUNNER_TEMP/decrypted-secrets.yaml"
+        
         # Decrypt secrets to temp file
-        sops --decrypt secrets/secrets.yaml > /tmp/decrypted-secrets.yaml
+        sops --decrypt secrets/secrets.yaml > "$TEMP_FILE"
 
         # Extract values and set as outputs (masked)
-        PYPI_API_TOKEN=$(grep -E '^PYPI_API_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
-        PYPI_TEST_API_TOKEN=$(grep -E '^PYPI_TEST_API_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
-        NPM_TOKEN=$(grep -E '^NPM_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
-        CARGO_REGISTRY_TOKEN=$(grep -E '^CARGO_REGISTRY_TOKEN:' /tmp/decrypted-secrets.yaml | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        PYPI_API_TOKEN=$(grep -E '^PYPI_API_TOKEN:' "$TEMP_FILE" | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        PYPI_TEST_API_TOKEN=$(grep -E '^PYPI_TEST_API_TOKEN:' "$TEMP_FILE" | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        NPM_TOKEN=$(grep -E '^NPM_TOKEN:' "$TEMP_FILE" | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
+        CARGO_REGISTRY_TOKEN=$(grep -E '^CARGO_REGISTRY_TOKEN:' "$TEMP_FILE" | cut -d':' -f2- | sed -E 's/^ *"?//; s/"?$//' || echo "")
 
         # Mask secrets in logs
         echo "::add-mask::${PYPI_API_TOKEN}"
@@ -76,4 +91,4 @@ runs:
         echo "cargo-registry-token=${CARGO_REGISTRY_TOKEN}" >> $GITHUB_OUTPUT
 
         # Clean up
-        rm -f /tmp/decrypted-secrets.yaml
+        rm -f "$TEMP_FILE"
