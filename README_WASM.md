@@ -1,179 +1,92 @@
-# SEA Core WASM Bindings
+# @domainforge/sea-wasm
 
-This document describes the WebAssembly (WASM) bindings for the SEA Core library, enabling browser and edge runtime usage.
+[![npm](https://img.shields.io/npm/v/@domainforge/sea-wasm.svg)](https://www.npmjs.com/package/@domainforge/sea-wasm)
+[![License](https://img.shields.io/npm/l/@domainforge/sea-wasm.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
+[![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
+[![Bundle Size](https://img.shields.io/badge/bundle%20size-%3C500KB%20gzip-brightgreen)](https://bundlephobia.com/package/@domainforge/sea-wasm)
 
-## Overview
+WebAssembly bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-specific language. Runs in browsers and edge runtimes. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
 
-Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (<500KB gzipped) module for browser and Node.js environments.
+## Features
 
-## Prerequisites
+- 🌐 **Browser & Edge** — Runs anywhere WebAssembly is supported
+- 📦 **Lightweight** — <500KB gzipped bundle size
+- ⚡ **Fast** — ~1ms parse time for typical models
+- 🏗️ **Domain Primitives** — Entities, Resources, Flows, Roles, Relations
+- ✅ **Policy Engine** — Constraint validation with three-valued logic
+- 🔄 **DSL Parsing** — Parse SEA source into queryable graph structures
+- 🌐 **CALM Integration** — Export/import FINOS CALM format
+- 📦 **TypeScript Support** — Full type definitions included
 
-1. **Rust toolchain** (1.77+)
-2. **wasm-pack**:
-   ```bash
-   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-   ```
-3. **wasm-opt** (optional, for size optimization):
-
-   ```bash
-   # macOS
-   brew install binaryen
-
-   # Ubuntu/Debian
-   sudo apt install binaryen
-
-   # Or download from https://github.com/WebAssembly/binaryen/releases
-   ```
-
-## Building
-
-### Quick Build
+## Installation
 
 ```bash
-chmod +x scripts/build-wasm.sh
-./scripts/build-wasm.sh
+npm install @domainforge/sea-wasm
 ```
-
-### Manual Build
 
 ```bash
-cd sea-core
-wasm-pack build --target web --release --out-dir ../pkg --features wasm
-cd ..
-
-# Optional: Optimize with wasm-opt
-wasm-opt -Oz -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
-mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
+yarn add @domainforge/sea-wasm
 ```
 
-## Testing
+### CDN (Browser)
 
-### Unit Tests
+```html
+<script type="module">
+  import init, {
+    Graph,
+    Entity,
+    Resource,
+    Flow,
+  } from "https://unpkg.com/@domainforge/sea-wasm/sea_core.js";
 
-```bash
-cd sea-core
-wasm-pack test --headless --firefox --features wasm
+  await init();
+  // Ready to use
+</script>
 ```
 
-### Browser Testing
+## Quick Start
 
-1. Build the package:
+### Browser
 
-   ```bash
-   ./scripts/build-wasm.sh
-   ```
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module">
+      import init, { Graph, Entity, Resource } from "@domainforge/sea-wasm";
 
-2. Start a local server:
+      async function main() {
+        await init();
 
-   ```bash
-   python3 -m http.server 8000
-   ```
+        const source = `
+        Entity "Warehouse" in logistics
+        Entity "Factory" in manufacturing
+        Resource "Cameras" units
+        Flow "Cameras" from "Warehouse" to "Factory" quantity 100
+      `;
 
-3. Open `http://localhost:8000/examples/browser.html`
+        const graph = Graph.parse(source);
+        console.log(`Entities: ${graph.entityCount()}`);
+        console.log(`Flows: ${graph.flowCount()}`);
+      }
 
-## Package Structure
-
+      main();
+    </script>
+  </head>
+  <body></body>
+</html>
 ```
-pkg/
-├── package.json          # npm package metadata
-├── index.js              # JavaScript wrapper with lazy loading
-├── README.md             # Package documentation
-├── sea_core.js           # Generated WASM bindings
-├── sea_core.d.ts         # TypeScript definitions
-└── sea_core_bg.wasm      # Compiled WASM binary
-```
 
-## API
-
-The WASM bindings expose the same API as the Rust core:
-
-- `Entity` - Business actors, locations, organizational units
-- `Resource` - Quantifiable subjects of value
-- `Flow` - Transfers of resources between entities
-- `Instance` - Entity type instances with named fields
-- `Instance` - Entity type instances with named fields
-- `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
-- `Expression` - Programmatic policy expression builder and normalizer
-- `NormalizedExpression` - Canonical form for semantic equivalence checking
-
-### Constructor Patterns (December 2025)
-
-**Entities:**
+### Node.js / ESM
 
 ```javascript
-// Default namespace
-const entity = new Entity("Warehouse"); // namespace() returns null
+import init, { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
 
-// Explicit namespace
-const entity = new Entity("Warehouse", "logistics"); // namespace() returns "logistics"
-```
-
-**Resources:**
-
-```javascript
-const resource = new Resource("Cameras", "units"); // Default namespace
-const resource = new Resource("Cameras", "units", "inventory"); // Explicit namespace
-```
-
-**Flows:**
-
-```javascript
-// Takes string IDs and quantity as string (for precision)
-const flow = new Flow(
-  resourceId,
-  fromId,
-  toId,
-  "100", // quantity as string
-  null // optional namespace
-);
-```
-
-**Instances:**
-
-```javascript
-// Instance - represents an instance of an entity type
-const instance = new Instance("order_123", "Order"); // name, entityType
-instance.setField("status", "pending");
-console.log(instance.getField("status")); // "pending"
-```
-
-## Usage Examples
-
-### Parse from DSL
-
-```javascript
-import { Graph } from "@domainforge/sea-wasm";
-
-// Supports multiline strings with """ syntax
-const source = `
-  Entity "Warehouse" in logistics
-  Entity """Multi-line
-  Factory Name""" in manufacturing
-  Resource "Cameras" units
-  Flow "Cameras" from "Warehouse" to "Multi-line\\nFactory Name" quantity 100
-`;
-
-const graph = Graph.parse(source);
-console.log("Entities:", graph.entityCount());
-console.log("Flows:", graph.flowCount());
-```
-
-### Build Programmatically
-
-```javascript
-import {
-  Graph,
-  Entity,
-  Resource,
-  Flow,
-  Expression,
-  BinaryOp,
-} from "@domainforge/sea-wasm";
+await init();
 
 const graph = new Graph();
 
-// Use standard constructors
-const warehouse = new Entity("Warehouse");
+const warehouse = new Entity("Warehouse", "logistics");
 const factory = new Entity("Factory", "manufacturing");
 const cameras = new Resource("Cameras", "units");
 
@@ -181,57 +94,175 @@ graph.addEntity(warehouse);
 graph.addEntity(factory);
 graph.addResource(cameras);
 
-// Flow constructor takes string IDs
 const flow = new Flow(cameras.id(), warehouse.id(), factory.id(), "100");
 graph.addFlow(flow);
 
-// Namespace can be null when not specified
-console.log(warehouse.namespace()); // null
-console.log(factory.namespace()); // "manufacturing"
-
-// Programmatic Expression Construction
-const expr = Expression.binary(
-  BinaryOp.And,
-  Expression.variable("a"),
-  Expression.variable("b")
-);
-const normalized = expr.normalize();
-console.log(normalized.toStringRepr()); // "(a AND b)" (commutative sorting)
-console.log(normalized.stableHashHex()); // Stable hash for equivalence checking
+console.log(`Graph has ${graph.entityCount()} entities`);
 ```
 
-## Size Optimization
+### CALM Integration
 
-The WASM module is optimized for size:
+```javascript
+import init, { Graph } from "@domainforge/sea-wasm";
 
-1. **Cargo.toml** optimizations:
+await init();
 
-   ```toml
-   [profile.release]
-   opt-level = "z"        # Optimize for size
-   lto = true             # Link-time optimization
-   codegen-units = 1      # Better optimization
-   strip = true           # Strip debug symbols
-   panic = 'abort'        # Smaller panic handler
-   ```
+// Build your model
+const graph = Graph.parse(`
+  Entity "Customer"
+  Entity "Vendor"
+  Resource "Payment" USD
+  Flow "Payment" from "Customer" to "Vendor"
+`);
 
-2. **wasm-opt** post-processing:
+// Export to CALM JSON
+const calmJson = graph.exportCalm();
+console.log(calmJson);
 
+// Import from CALM
+const importedGraph = Graph.importCalm(calmJson);
+```
+
+## API Reference
+
+### Core Classes
+
+| Class                  | Description                                            |
+| ---------------------- | ------------------------------------------------------ |
+| `Entity`               | Business actors, locations, organizational units (WHO) |
+| `Resource`             | Quantifiable subjects of value (WHAT)                  |
+| `Flow`                 | Transfers of resources between entities                |
+| `Instance`             | Entity type instances with named fields                |
+| `Graph`                | Container with validation and query capabilities       |
+| `Expression`           | Programmatic policy expression builder                 |
+| `NormalizedExpression` | Canonical form for semantic equivalence                |
+
+### Constructor Patterns
+
+```javascript
+// Entities
+const entity = new Entity("Warehouse"); // default namespace
+const entity = new Entity("Warehouse", "logistics"); // explicit namespace
+
+// Resources
+const resource = new Resource("Cameras", "units");
+const resource = new Resource("Cameras", "units", "inventory");
+
+// Flows (quantity as string for precision)
+const flow = new Flow(resourceId, fromId, toId, "100");
+
+// Instances
+const instance = new Instance("order_123", "Order");
+instance.setField("status", "pending");
+```
+
+### Graph Methods
+
+```javascript
+// Add primitives
+graph.addEntity(entity);
+graph.addResource(resource);
+graph.addFlow(flow);
+
+// Counts
+graph.entityCount();
+graph.resourceCount();
+graph.flowCount();
+
+// Lookup
+graph.findEntityByName("Warehouse");
+graph.findResourceByName("Cameras");
+
+// Flow queries
+graph.flowsFrom(entityId);
+graph.flowsTo(entityId);
+
+// Get all
+graph.allEntities();
+graph.allResources();
+graph.allFlows();
+
+// Parsing
+Graph.parse(source);
+
+// CALM integration
+graph.exportCalm();
+Graph.importCalm(calmJson);
+```
+
+## Performance
+
+| Metric          | Value                   |
+| --------------- | ----------------------- |
+| Bundle size     | <500KB gzipped          |
+| Parse time      | ~1ms for typical models |
+| Memory overhead | ~2MB runtime            |
+| Initialization  | <50ms (lazy loaded)     |
+
+## Building from Source
+
+### Prerequisites
+
+1. **Rust toolchain** (1.77+)
+2. **wasm-pack**:
    ```bash
-   wasm-opt -Oz pkg/sea_core_bg.wasm
+   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
    ```
 
-3. **Feature flags** to reduce dependencies:
-   ```toml
-   uuid = { version = "1.6", features = ["v4", "v7", "serde", "wasm-bindgen"] }
-   ```
-
-## Publishing
+### Build
 
 ```bash
-cd pkg
-npm publish --access public
+# Quick build
+./scripts/build-wasm.sh
+
+# Manual build
+cd sea-core
+wasm-pack build --target web --release --out-dir ../pkg --features wasm
 ```
+
+### Test
+
+```bash
+cd sea-core
+wasm-pack test --headless --firefox --features wasm
+```
+
+## Package Structure
+
+```
+pkg/
+├── package.json          # npm package metadata
+├── index.js              # JavaScript wrapper with lazy loading
+├── sea_core.js           # Generated WASM bindings
+├── sea_core.d.ts         # TypeScript definitions
+└── sea_core_bg.wasm      # Compiled WASM binary
+```
+
+## Type Conversions
+
+| Rust Type       | JavaScript Type |
+| --------------- | --------------- |
+| `String`        | `string`        |
+| `Uuid`          | `string`        |
+| `Decimal`       | `string`        |
+| `Option<T>`     | `T \| null`     |
+| `Vec<T>`        | `T[]`           |
+| `HashMap<K, V>` | `object`        |
+
+## Related Packages
+
+| Package                                                                        | Registry  | Description                  |
+| ------------------------------------------------------------------------------ | --------- | ---------------------------- |
+| [`sea-core`](https://crates.io/crates/sea-core)                                | crates.io | Rust core library            |
+| [`sea-dsl`](https://pypi.org/project/sea-dsl/)                                 | PyPI      | Python bindings              |
+| [`@domainforge/sea`](https://www.npmjs.com/package/@domainforge/sea)           | npm       | Native Node.js bindings      |
+| [`@domainforge/sea-wasm`](https://www.npmjs.com/package/@domainforge/sea-wasm) | npm       | WASM bindings (this package) |
+
+## Documentation
+
+- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/sea-dsl-syntax.md) — Language specification
+- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/architecture.md) — Design overview
+- 📚 [WASM Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/wasm-api.md) — Full WASM API
 
 ## Troubleshooting
 
@@ -239,80 +270,21 @@ npm publish --access public
 
 - Ensure server sends correct MIME type: `application/wasm`
 - Check browser console for detailed errors
-- Verify WASM file exists and is not corrupted
 
 ### Size exceeds 500KB
 
 - Run `wasm-opt -Oz` optimization
 - Check for unused dependencies
-- Use feature flags to exclude optional code
 
 ### TypeScript errors
 
 - Ensure `sea_core.d.ts` is present in `pkg/`
 - Check TypeScript version compatibility (4.5+)
 
-## Architecture
-
-### WASM Bindings Layer
-
-```
-JavaScript/TypeScript
-       ↓
-index.js (Wrapper + lazy loading)
-       ↓
-sea_core.js (wasm-bindgen generated)
-       ↓
-sea_core_bg.wasm (Compiled Rust)
-       ↓
-Rust Core (primitives, graph, parser)
-```
-
-### Type Conversions
-
-| Rust Type       | WASM Boundary | JavaScript Type |
-| --------------- | ------------- | --------------- |
-| `String`        | `String`      | `string`        |
-| `Uuid`          | `String`      | `string`        |
-| `Decimal`       | `String`      | `string`        |
-| `Option<T>`     | `nullable T`  | `T \| null`     |
-| `Result<T, E>`  | `throws E`    | `Promise<T>`    |
-| `Vec<T>`        | `Array<T>`    | `T[]`           |
-| `HashMap<K, V>` | `Object`      | `object`        |
-
-## Performance
-
-- **Bundle size**: <500KB gzipped ✅
-- **Parse time**: ~1ms for typical models
-- **Memory**: ~2MB runtime overhead
-- **Initialization**: <50ms (lazy loaded)
-- **Deterministic**: IndexMap ensures reproducible results across runs
-
-## CALM Integration (Architecture-as-Code)
-
-Export/import graphs to/from FINOS CALM format:
-
-```javascript
-import { Graph } from "@domainforge/sea-wasm";
-
-// Build your model
-const graph = new Graph();
-// ... add entities, resources, flows ...
-
-// Export to CALM JSON
-const calmJson = graph.exportCalm();
-console.log(calmJson); // CALM JSON string
-
-// Import from CALM
-const importedGraph = Graph.importCalm(calmJson);
-```
-
-## Related Documentation
-
-- [Phase 9 Plan](../docs/plans/Phase%209%20WASM%20Bindings.md)
-- [Package README](../pkg/README.md)
-- [Browser Example](../examples/browser.html)
-
 ## License
 
-Apache-2.0
+[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+---
+
+Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) project.

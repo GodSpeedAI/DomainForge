@@ -89,12 +89,12 @@ fn generate_ast_schema() {
 
 The schema includes all 15 AST node types:
 
-| Node Type         | Description                            | Required Fields                                                             |
+| Node Type         | Description                            | Fields                                                                      |
 | ----------------- | -------------------------------------- | --------------------------------------------------------------------------- |
 | `Export`          | Export wrapper for public declarations | `declaration`                                                               |
-| `Entity`          | Entity declaration                     | `name`                                                                      |
-| `Resource`        | Resource declaration                   | `name`                                                                      |
-| `Flow`            | Resource transfer between entities     | `resource_name`, `from_entity`, `to_entity`                                 |
+| `Entity`          | Entity declaration                     | `name`, `annotations` (optional)                                            |
+| `Resource`        | Resource declaration                   | `name`, `annotations` (optional)                                            |
+| `Flow`            | Resource transfer between entities     | `resource_name`, `from_entity`, `to_entity`, `annotations` (optional)       |
 | `Pattern`         | Named regex for string validation      | `name`, `regex`                                                             |
 | `Role`            | Participant category                   | `name`                                                                      |
 | `Relation`        | Predicate connecting roles             | `name`, `subject_role`, `predicate`, `object_role`                          |
