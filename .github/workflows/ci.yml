@@ -181,7 +181,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -195,15 +199,15 @@ jobs:
           path: |
             ~/.cargo/registry/index
             sea-core/target
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock', 'package-lock.json') }}
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock', 'bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build TypeScript bindings
-        run: npm run build
+        run: bun run build
 
       - name: Run TypeScript tests
         run: just ci-test-ts
@@ -224,13 +228,18 @@ jobs:
         with:
           node-version: 22
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Build Sea binary
         run: cargo build -p sea-core --bin sea --features cli
 
       - name: Build TypeScript bindings (minimal)
         run: |
-          npm ci
-          npm run build
+          bun install --frozen-lockfile
+          bun run build
 
       - name: Minimal registry ambiguity check
         shell: bash
