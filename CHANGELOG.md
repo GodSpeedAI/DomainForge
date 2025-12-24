@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2025-12-24
+
+### Added
+
+- **CLI Registry Command**: New `sea registry resolve` subcommand for namespace resolution
+  - Supports `--fail-on-ambiguity` flag for strict matching
+  - Enables CI integration tests for registry ambiguity detection
+
+### Fixed
+
+- **CI/Python Tests**: Fixed pytest invocation to use virtualenv (`ci-test-python` now uses `.venv/bin/pytest`)
+- **WASM Bundle Size**: Increased limit from 1MB to 2MB to accommodate actual bundle size (1.83MB)
+
+### Changed
+
+- **Registry Tests**: Added comprehensive unit tests for registry ambiguity and precedence logic
+
 ## [0.7.2] - 2025-12-24
 
 ### Changed
