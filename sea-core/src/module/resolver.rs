@@ -1,3 +1,4 @@
+use crate::error::fuzzy::levenshtein_distance;
 use crate::parser::ast::{Ast, AstNode, ImportDecl, ImportSpecifier};
 use crate::parser::{parse_source, ParseError, ParseOptions, ParseResult};
 use crate::registry::{NamespaceBinding, NamespaceRegistry};
@@ -67,9 +68,14 @@ impl<'a> ModuleResolver<'a> {
         };
 
         if self.visiting.contains(&canonical) {
-            return Err(ParseError::GrammarError(
-                "Circular dependency detected".to_string(),
-            ));
+            // Build the cycle path from currently visiting modules
+            let cycle: Vec<String> = self
+                .visiting
+                .iter()
+                .map(|p| p.to_string_lossy().to_string())
+                .chain(std::iter::once(canonical.to_string_lossy().to_string()))
+                .collect();
+            return Err(ParseError::circular_dependency(cycle));
         }
         if self.loaded_modules.contains_key(&canonical) {
             return Ok(());
@@ -137,7 +143,9 @@ impl<'a> ModuleResolver<'a> {
             .find(|binding| binding.namespace == namespace)
             .map(|binding| binding.path.clone())
             .ok_or_else(|| {
-                ParseError::GrammarError(format!("Module '{}' could not be resolved", namespace))
+                // Find similar namespace for suggestion
+                let suggestion = self.suggest_similar_namespace(namespace);
+                ParseError::namespace_not_found(namespace, 0, 0, suggestion)
             })
     }
 
@@ -161,23 +169,44 @@ impl<'a> ModuleResolver<'a> {
             ImportSpecifier::Named(items) => {
                 for item in items {
                     if !module.exports.contains(&item.name) {
-                        return Err(ParseError::GrammarError(format!(
-                            "Symbol '{}' is not exported by module '{}'",
-                            item.name, module.namespace
-                        )));
+                        return Err(ParseError::symbol_not_exported(
+                            &item.name,
+                            &module.namespace,
+                            0, // TODO: Extract line from import.location if available
+                            0,
+                            module.exports.iter().cloned().collect(),
+                        ));
                     }
                 }
                 Ok(())
             }
         }
     }
+
+    /// Find a similar namespace name for error suggestions using Levenshtein distance
+    fn suggest_similar_namespace(&self, target: &str) -> Option<String> {
+        let available: Vec<&str> = self.bindings.iter().map(|b| b.namespace.as_str()).collect();
+
+        available
+            .iter()
+            .filter_map(|ns| {
+                let distance = levenshtein_distance(target, ns);
+                if distance <= 2 {
+                    Some((*ns, distance))
+                } else {
+                    None
+                }
+            })
+            .min_by_key(|(_, d)| *d)
+            .map(|(ns, _)| ns.to_string())
+    }
 }
 
 fn collect_exports(ast: &Ast) -> HashSet<String> {
     let mut exports = HashSet::new();
     for node in &ast.declarations {
-        if let AstNode::Export(inner) = node {
-            if let Some(name) = declaration_name(inner.as_ref()) {
+        if let AstNode::Export(inner) = &node.node {
+            if let Some(name) = declaration_name(&inner.node) {
                 exports.insert(name.to_string());
             }
         }
@@ -204,7 +233,7 @@ fn declaration_name(node: &AstNode) -> Option<&str> {
         | AstNode::Metric { name, .. }
         | AstNode::MappingDecl { name, .. }
         | AstNode::ProjectionDecl { name, .. } => Some(name),
-        AstNode::Export(inner) => declaration_name(inner.as_ref()),
+        AstNode::Export(inner) => declaration_name(&inner.node),
     }
 }
 

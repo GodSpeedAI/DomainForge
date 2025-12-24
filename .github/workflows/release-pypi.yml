@@ -20,7 +20,7 @@ jobs:
           # x86_64 targets
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: macos-13
+          - os: macos-14
             target: x86_64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -62,9 +62,8 @@ jobs:
       - name: Build and publish wheels (native)
         if: matrix.use_zig != true
         run: |
-          maturin publish \
+          python -m maturin publish \
             --manifest-path sea-core/Cargo.toml \
-            --release \
             --features python \
             --target ${{ matrix.target }} \
             --skip-existing
@@ -74,9 +73,8 @@ jobs:
       - name: Build and publish wheels (cross-compile with Zig)
         if: matrix.use_zig == true
         run: |
-          maturin publish \
+          python -m maturin publish \
             --manifest-path sea-core/Cargo.toml \
-            --release \
             --features python \
             --target ${{ matrix.target }} \
             --skip-existing \

@@ -138,16 +138,24 @@ pub struct ProjectionOverride {
 }
 
 /// Abstract Syntax Tree for SEA DSL
+/// Abstract Syntax Tree for SEA DSL
+#[derive(Debug, Clone, PartialEq)]
+pub struct Spanned<T> {
+    pub node: T,
+    pub line: usize,
+    pub column: usize,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ast {
     pub metadata: FileMetadata,
-    pub declarations: Vec<AstNode>,
+    pub declarations: Vec<Spanned<AstNode>>,
 }
 
 /// AST Node types
 #[derive(Debug, Clone, PartialEq)]
 pub enum AstNode {
-    Export(Box<AstNode>),
+    Export(Box<Spanned<AstNode>>),
     Entity {
         name: String,
         version: Option<String>,
@@ -156,11 +164,13 @@ pub enum AstNode {
     },
     Resource {
         name: String,
+        annotations: HashMap<String, JsonValue>,
         unit_name: Option<String>,
         domain: Option<String>,
     },
     Flow {
         resource_name: String,
+        annotations: HashMap<String, JsonValue>,
         from_entity: String,
         to_entity: String,
         quantity: Option<i32>,
@@ -307,8 +317,9 @@ fn parse_file_header(pair: Pair<Rule>) -> ParseResult<FileMetadata> {
 }
 
 /// Parse a single declaration
-fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
-    match pair.as_rule() {
+fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
+    let (line, column) = pair.line_col();
+    let node = match pair.as_rule() {
         Rule::export_decl => {
             let mut inner = pair.into_inner();
             let wrapped = inner.next().ok_or_else(|| {
@@ -322,7 +333,10 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
                 .into_inner()
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Empty declaration".to_string()))?;
-            parse_declaration(inner)
+            // Recursively call parse_declaration, but we need to unwrap the result if we want to avoid double spanning?
+            // Actually declaration_inner is just a wrapper. The inner parse_declaration returns Spanned<AstNode>.
+            // We should just return that directly.
+            return parse_declaration(inner);
         }
         Rule::dimension_decl => parse_dimension(pair),
         Rule::unit_decl => parse_unit_declaration(pair),
@@ -342,7 +356,9 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
             "Unexpected rule: {:?}",
             pair.as_rule()
         ))),
-    }
+    }?;
+
+    Ok(Spanned { node, line, column })
 }
 
 fn parse_import_decl(pair: Pair<Rule>) -> ParseResult<ImportDecl> {
@@ -611,49 +627,76 @@ fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
     )?;
 
+    let mut annotations = HashMap::new();
     let mut unit_name = None;
     let mut domain = None;
+    let mut saw_in_keyword = false;
 
-    // The grammar produces these patterns (with in_keyword as a separate token):
-    // 1. string_literal + identifier + in_keyword + identifier = unit + domain
-    // 2. string_literal + in_keyword + identifier = domain only
-    // 3. string_literal + identifier = unit only
-    // 4. string_literal only = nothing
+    for part in inner {
+        match part.as_rule() {
+            Rule::resource_annotation => {
+                let mut annotation_inner = part.into_inner();
+                let key_pair = annotation_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Empty annotation".to_string()))?;
 
-    if let Some(first) = inner.next() {
-        match first.as_rule() {
+                match key_pair.as_rule() {
+                    Rule::ea_replaces => {
+                        let target_name =
+                            parse_name(annotation_inner.next().ok_or_else(|| {
+                                ParseError::GrammarError("Expected name in replaces".to_string())
+                            })?)?;
+                        // Check for optional version
+                        let mut target_version = None;
+                        if let Some(next) = annotation_inner.next() {
+                            if next.as_rule() == Rule::version {
+                                target_version = Some(next.as_str().to_string());
+                            }
+                        }
+
+                        let value = if let Some(v) = target_version {
+                            format!("{} v{}", target_name, v)
+                        } else {
+                            target_name
+                        };
+                        annotations.insert("replaces".to_string(), JsonValue::String(value));
+                    }
+                    Rule::ea_changes => {
+                        let array_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected string array in changes".to_string())
+                        })?;
+                        let mut changes = Vec::new();
+                        for item in array_pair.into_inner() {
+                            changes.push(parse_string_literal(item)?);
+                        }
+                        annotations.insert(
+                            "changes".to_string(),
+                            JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
+                        );
+                    }
+                    _ => {}
+                }
+            }
             Rule::in_keyword => {
-                // Case 2: in_keyword + identifier (domain only)
-                domain = Some(parse_identifier(inner.next().ok_or_else(|| {
-                    ParseError::GrammarError("Expected domain after 'in'".to_string())
-                })?)?);
+                // Mark that we've seen 'in', next identifier is domain
+                saw_in_keyword = true;
             }
             Rule::identifier => {
-                // Case 1 or 3: starts with identifier
-                unit_name = Some(parse_identifier(first)?);
-
-                // Check if followed by in_keyword + identifier
-                if let Some(second) = inner.next() {
-                    if second.as_rule() == Rule::in_keyword {
-                        // Case 1: identifier + in_keyword + identifier
-                        domain = Some(parse_identifier(inner.next().ok_or_else(|| {
-                            ParseError::GrammarError("Expected domain after 'in'".to_string())
-                        })?)?);
-                    }
-                    // If second is not in_keyword, it's unexpected (grammar shouldn't allow this)
+                // If we've seen 'in' keyword, this is domain; otherwise it's unit
+                if saw_in_keyword {
+                    domain = Some(parse_identifier(part)?);
+                    saw_in_keyword = false; // Reset for safety
+                } else {
+                    unit_name = Some(parse_identifier(part)?);
                 }
-                // If no second token, it's case 3 (unit only)
             }
-            _ => {
-                return Err(ParseError::GrammarError(
-                    "Unexpected token in resource declaration".to_string(),
-                ));
-            }
+            _ => {}
         }
     }
 
     Ok(AstNode::Resource {
         name,
+        annotations,
         unit_name,
         domain,
     })
@@ -669,28 +712,79 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected resource name".to_string()))?,
     )?;
 
-    let from_entity = parse_string_literal(
-        inner
-            .next()
-            .ok_or_else(|| ParseError::GrammarError("Expected from entity".to_string()))?,
-    )?;
+    let mut annotations = HashMap::new();
+    let mut from_entity = None;
+    let mut to_entity = None;
+    let mut quantity = None;
 
-    let to_entity = parse_string_literal(
-        inner
-            .next()
-            .ok_or_else(|| ParseError::GrammarError("Expected to entity".to_string()))?,
-    )?;
+    for part in inner {
+        match part.as_rule() {
+            Rule::flow_annotation => {
+                let mut annotation_inner = part.into_inner();
+                let key_pair = annotation_inner
+                    .next()
+                    .ok_or_else(|| ParseError::GrammarError("Empty annotation".to_string()))?;
 
-    let quantity = if let Some(qty_pair) = inner.next() {
-        Some(parse_number(qty_pair)?)
-    } else {
-        None
-    };
+                match key_pair.as_rule() {
+                    Rule::ea_replaces => {
+                        let target_name =
+                            parse_name(annotation_inner.next().ok_or_else(|| {
+                                ParseError::GrammarError("Expected name in replaces".to_string())
+                            })?)?;
+                        // Check for optional version
+                        let mut target_version = None;
+                        if let Some(next) = annotation_inner.next() {
+                            if next.as_rule() == Rule::version {
+                                target_version = Some(next.as_str().to_string());
+                            }
+                        }
+
+                        let value = if let Some(v) = target_version {
+                            format!("{} v{}", target_name, v)
+                        } else {
+                            target_name
+                        };
+                        annotations.insert("replaces".to_string(), JsonValue::String(value));
+                    }
+                    Rule::ea_changes => {
+                        let array_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected string array in changes".to_string())
+                        })?;
+                        let mut changes = Vec::new();
+                        for item in array_pair.into_inner() {
+                            changes.push(parse_string_literal(item)?);
+                        }
+                        annotations.insert(
+                            "changes".to_string(),
+                            JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            Rule::string_literal => {
+                // These are from_entity and to_entity in order
+                let parsed = parse_string_literal(part)?;
+                if from_entity.is_none() {
+                    from_entity = Some(parsed);
+                } else if to_entity.is_none() {
+                    to_entity = Some(parsed);
+                }
+            }
+            Rule::number => {
+                quantity = Some(parse_number(part)?);
+            }
+            _ => {}
+        }
+    }
 
     Ok(AstNode::Flow {
         resource_name,
-        from_entity,
-        to_entity,
+        annotations,
+        from_entity: from_entity
+            .ok_or_else(|| ParseError::GrammarError("Expected from entity".to_string()))?,
+        to_entity: to_entity
+            .ok_or_else(|| ParseError::GrammarError("Expected to entity".to_string()))?,
         quantity,
     })
 }
@@ -2006,9 +2100,9 @@ fn parse_property_mapping(pair: Pair<Rule>) -> ParseResult<JsonValue> {
     Ok(JsonValue::Object(map))
 }
 
-fn unwrap_export(node: &AstNode) -> &AstNode {
-    match node {
-        AstNode::Export(inner) => inner.as_ref(),
+fn unwrap_export(spanned: &Spanned<AstNode>) -> &AstNode {
+    match &spanned.node {
+        AstNode::Export(inner) => &inner.node,
         other => other,
     }
 }
@@ -2161,7 +2255,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         match node {
             AstNode::Role { name, domain } => {
                 if role_map.contains_key(name) {
-                    return Err(ParseError::duplicate_declaration(format!(
+                    return Err(ParseError::duplicate_declaration_no_loc(format!(
                         "Role '{}' already declared",
                         name
                     )));
@@ -2182,7 +2276,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 annotations,
             } => {
                 if entity_map.contains_key(name) {
-                    return Err(ParseError::duplicate_declaration(format!(
+                    return Err(ParseError::duplicate_declaration_no_loc(format!(
                         "Entity '{}' already declared",
                         name
                     )));
@@ -2227,9 +2321,10 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 name,
                 unit_name,
                 domain,
+                ..
             } => {
                 if resource_map.contains_key(name) {
-                    return Err(ParseError::duplicate_declaration(format!(
+                    return Err(ParseError::duplicate_declaration_no_loc(format!(
                         "Resource '{}' already declared",
                         name
                     )));
@@ -2256,19 +2351,20 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
             from_entity,
             to_entity,
             quantity,
+            ..
         } = node
         {
             let from_id = entity_map
                 .get(from_entity)
-                .ok_or_else(|| ParseError::undefined_entity(from_entity))?;
+                .ok_or_else(|| ParseError::undefined_entity_no_loc(from_entity))?;
 
             let to_id = entity_map
                 .get(to_entity)
-                .ok_or_else(|| ParseError::undefined_entity(to_entity))?;
+                .ok_or_else(|| ParseError::undefined_entity_no_loc(to_entity))?;
 
             let resource_id = resource_map
                 .get(resource_name)
-                .ok_or_else(|| ParseError::undefined_resource(resource_name))?;
+                .ok_or_else(|| ParseError::undefined_resource_no_loc(resource_name))?;
 
             let qty = quantity.map(Decimal::from).unwrap_or(Decimal::ZERO);
             let flow = Flow::new(resource_id.clone(), from_id.clone(), to_id.clone(), qty);
@@ -2291,7 +2387,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         } = node
         {
             if relation_map.contains_key(name) {
-                return Err(ParseError::duplicate_declaration(format!(
+                return Err(ParseError::duplicate_declaration_no_loc(format!(
                     "Relation '{}' already declared",
                     name
                 )));
@@ -2310,7 +2406,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                     resource_map
                         .get(flow_name)
                         .cloned()
-                        .ok_or_else(|| ParseError::undefined_resource(flow_name))?,
+                        .ok_or_else(|| ParseError::undefined_resource_no_loc(flow_name))?,
                 )
             } else {
                 None

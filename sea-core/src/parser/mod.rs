@@ -7,6 +7,8 @@ use std::path::PathBuf;
 pub struct SeaParser;
 
 pub mod ast;
+#[cfg(test)]
+mod ast_schema;
 pub mod error;
 pub mod lint;
 pub mod printer;

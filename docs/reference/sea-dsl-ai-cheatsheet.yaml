@@ -490,6 +490,18 @@ error_codes:
       name: "Policy Evaluation Failed"
       cause: "Policy expression could not evaluate"
       fix: "Check expression syntax and input validity"
+    E500:
+      name: "Namespace Not Found"
+      cause: "Reference to non-existent namespace"
+      fix: "Check spelling, add import, use fuzzy suggestion"
+    E503:
+      name: "Module Not Found"
+      cause: "Imported module file missing"
+      fix: "Verify file path, check module existence"
+    E504:
+      name: "Symbol Not Exported"
+      cause: "Imported symbol not in module exports"
+      fix: "Check symbol name, verify export in source module"
 
   handling:
     cli: "sea validate --format json file.sea"

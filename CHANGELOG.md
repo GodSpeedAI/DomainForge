@@ -5,22 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2025-12-18
+## [0.6.2] - 2025-12-18
+
+### Fixed
+
+- **Windows Release**: Fixed `maturin publish` on Windows by executing via `python -m maturin` to avoid PATH issues
+
+## [0.6.1] - 2025-12-18
+
+### Fixed
+
+- **Release Workflows**: Resolved issues preventing PyPI and NPM publishing
+  - Removed invalid `--release` flag from maturin publish
+  - Updated macOS runner version
+  - Fixed npm dependency installation and wasm-pack flags
+
+## [0.6.0] - 2025-12-18
 
 ### Added
 
 - **Expression Normalization Engine**: Canonical normalization for policy expressions
+
   - Transforms expressions to canonical form for equivalence checking
   - Implements boolean algebra simplifications (identity, idempotence, double negation)
   - Commutative operand sorting for deterministic output
   - Stable hashing via xxhash-rust for caching and comparison
 
 - **`sea normalize` CLI Command**: New command for expression normalization
+
   - Normalize policy expressions: `sea normalize "a AND b"`
   - Check equivalence: `sea normalize "a AND b" --check-equiv "b AND a"`
   - JSON output mode: `--json` for programmatic use
 
 - **Expression Bindings**: Full Expression API across all language bindings
+
   - **Python**: `Expression`, `NormalizedExpression`, `BinaryOp`, `UnaryOp`, `Quantifier`, `AggregateFunction`, `WindowSpec`
   - **TypeScript**: Same APIs via napi-rs bindings
   - **WASM**: Same APIs for browser environments
@@ -32,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **License**: Standardized to Apache-2.0 across all package configurations
-- **macOS CI Runners**: Updated from macos-13 to macos-14 (macos-13 retired Dec 2024)
 - **Documentation**: Updated CLI reference and language binding docs with expression APIs
 
 ### Fixed
@@ -41,6 +58,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SBVR Test Expression**: Fixed invalid quantifier syntax in test data
 - **CI Network Failures**: Added `RUSTUP_MAX_RETRIES: 10` to all Rust toolchain installations to handle transient network failures on macOS runners
 - **Dependency Review**: Added BSL-1.0 to allowed licenses for xxhash-rust dependency
+- **Rust Toolchain Action**: Added explicit `toolchain: stable` input to all `dtolnay/rust-toolchain@stable` action invocations
+
+## [0.5.0] - 2025-12-17
+
+### Changed
+
+- **macOS CI Runners**: Updated from macos-13 to macos-14 (macos-13 retired Dec 2024)
+- **Release Workflow**: Enhanced version syncing across pyproject.toml and package.json
+
+### Fixed
+
+- **CHANGELOG Update**: Fixed printf-based YAML generation to avoid comment parsing issues
+- **PR Token**: Use dedicated token for creating pull requests
 
 ## [0.4.0] - 2025-12-15
 

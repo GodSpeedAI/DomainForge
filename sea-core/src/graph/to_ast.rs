@@ -24,11 +24,16 @@ impl Graph {
                 .then_with(|| a.namespace().cmp(b.namespace()))
         });
         for entity in entities {
-            declarations.push(AstNode::Entity {
+            let node = AstNode::Entity {
                 name: entity.name().to_string(),
                 version: entity.version().map(|v| v.to_string()),
                 annotations: Default::default(),
                 domain: map_domain(entity.namespace()),
+            };
+            declarations.push(crate::parser::ast::Spanned {
+                node,
+                line: 0,
+                column: 0,
             });
         }
 
@@ -40,10 +45,16 @@ impl Graph {
                 .then_with(|| a.namespace().cmp(b.namespace()))
         });
         for resource in resources {
-            declarations.push(AstNode::Resource {
+            let node = AstNode::Resource {
                 name: resource.name().to_string(),
+                annotations: Default::default(),
                 unit_name: None,
                 domain: map_domain(resource.namespace()),
+            };
+            declarations.push(crate::parser::ast::Spanned {
+                node,
+                line: 0,
+                column: 0,
             });
         }
 

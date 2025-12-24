@@ -62,7 +62,7 @@ fn test_group_by_entity() {
     let ast = parse_source(source).unwrap();
     let policy_decl = &ast.declarations[0];
 
-    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = policy_decl {
+    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = &policy_decl.node {
         let policy = Policy::new("group_by_test", expression.clone());
         let result = policy.evaluate(&graph).unwrap();
         assert!(result.is_satisfied);
@@ -90,7 +90,7 @@ fn test_group_by_entity_fail() {
     let ast = parse_source(source).unwrap();
     let policy_decl = &ast.declarations[0];
 
-    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = policy_decl {
+    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = &policy_decl.node {
         let policy = Policy::new("group_by_test_fail", expression.clone());
         let result = policy.evaluate(&graph).unwrap();
         assert!(!result.is_satisfied);
@@ -118,7 +118,7 @@ fn test_group_by_count() {
     let ast = parse_source(source).unwrap();
     let policy_decl = &ast.declarations[0];
 
-    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = policy_decl {
+    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = &policy_decl.node {
         let policy = Policy::new("group_by_count", expression.clone());
         let result = policy.evaluate(&graph).unwrap();
         assert!(result.is_satisfied);
@@ -152,7 +152,7 @@ fn test_group_by_with_filter() {
     let ast = parse_source(source).unwrap();
     let policy_decl = &ast.declarations[0];
 
-    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = policy_decl {
+    if let sea_core::parser::ast::AstNode::Policy { expression, .. } = &policy_decl.node {
         let policy = Policy::new("group_by_filter", expression.clone());
         let result = policy.evaluate(&graph).unwrap();
         assert!(result.is_satisfied);
