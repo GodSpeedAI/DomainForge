@@ -61,6 +61,7 @@ jobs:
 
       - name: Build and publish wheels (native)
         if: matrix.use_zig != true
+        shell: bash
         run: |
           python -m maturin publish \
             --manifest-path sea-core/Cargo.toml \
@@ -72,6 +73,7 @@ jobs:
 
       - name: Build and publish wheels (cross-compile with Zig)
         if: matrix.use_zig == true
+        shell: bash
         run: |
           python -m maturin publish \
             --manifest-path sea-core/Cargo.toml \
