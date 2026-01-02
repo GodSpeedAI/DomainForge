@@ -28,6 +28,25 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
+    /// Parse SEA DSL source and return AST as JSON string.
+    ///
+    /// This returns the Abstract Syntax Tree (AST) representation of the source,
+    /// which preserves the exact structure and line numbers from the source file.
+    /// Use this for tools that need to work with the raw parsed structure.
+    ///
+    /// For a semantic graph representation, use `Graph.parse()` instead.
+    ///
+    /// @param source - SEA DSL source code string
+    /// @returns JSON string conforming to ast-v3.schema.json
+    #[wasm_bindgen(js_name = parseToAstJson)]
+    pub fn parse_to_ast_json(source: String) -> Result<String, JsValue> {
+        let internal_ast = crate::parser::parse(&source)
+            .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
+        let schema_ast: crate::parser::ast_schema::Ast = internal_ast.into();
+        serde_json::to_string_pretty(&schema_ast)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+    }
+
     #[wasm_bindgen(js_name = isEmpty)]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()

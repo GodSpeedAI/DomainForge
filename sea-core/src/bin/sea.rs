@@ -1,6 +1,6 @@
 use clap::Parser;
 use sea_core::cli::{
-    format, import, normalize, project, registry, test, validate, validate_kg, Cli, Commands,
+    format, import, normalize, parse, project, registry, test, validate, validate_kg, Cli, Commands,
 };
 
 fn main() -> anyhow::Result<()> {
@@ -9,6 +9,7 @@ fn main() -> anyhow::Result<()> {
     // TODO: Setup logging/tracing based on cli.verbose/quiet
 
     match cli.command {
+        Commands::Parse(args) => parse::run(args),
         Commands::Validate(args) => validate::run(args),
         Commands::Import(args) => import::run(args),
         Commands::Project(args) => project::run(args),

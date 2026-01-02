@@ -243,6 +243,28 @@ impl Graph {
         Ok(Self { inner: graph })
     }
 
+    /// Parse SEA DSL source and return AST as JSON string.
+    ///
+    /// This returns the Abstract Syntax Tree (AST) representation of the source,
+    /// which preserves the exact structure and line numbers from the source file.
+    /// Use this for tools that need to work with the raw parsed structure.
+    ///
+    /// For a semantic graph representation, use `Graph.parse()` instead.
+    ///
+    /// Args:
+    ///     source: SEA DSL source code string
+    ///
+    /// Returns:
+    ///     JSON string conforming to ast-v3.schema.json
+    #[staticmethod]
+    fn parse_to_ast_json(source: String) -> PyResult<String> {
+        let internal_ast = parser::parse(&source)
+            .map_err(|e| PyValueError::new_err(format!("Parse error: {}", e)))?;
+        let schema_ast: crate::parser::ast_schema::Ast = internal_ast.into();
+        serde_json::to_string_pretty(&schema_ast)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
     fn export_calm(&self) -> PyResult<String> {
         crate::calm::export(&self.inner)
             .and_then(|value| {

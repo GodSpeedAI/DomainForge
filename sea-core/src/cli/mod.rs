@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 pub mod format;
 pub mod import;
 pub mod normalize;
+pub mod parse;
 pub mod project;
 pub mod registry;
 pub mod test;
@@ -27,6 +28,8 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Parse SEA files and output AST or Graph
+    Parse(parse::ParseArgs),
     /// Validate SEA files
     Validate(validate::ValidateArgs),
     /// Import from other formats

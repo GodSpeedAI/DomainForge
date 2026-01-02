@@ -98,6 +98,8 @@ The WASM bindings expose the same API as the Rust core:
 - `Mapping` - Used for data projections and mapping definitions across models (mapping constructor: `Mapping.new(...)` - refer to mapping docs for details)
 - `Projection` - Projections allow building derived views (e.g., CALM projections) from the Graph
 - `Graph` - Graph container with validation and traversal (uses IndexMap for deterministic iteration)
+  - `Graph.parse(source)` - Parse DSL to Graph
+  - `Graph.parseToAstJson(source)` - Parse DSL to AST JSON string
 - `formatSource` - Format SEA-DSL source code
 - `checkFormat` - Check if source is already formatted
 
@@ -146,6 +148,10 @@ const source = `
 const graph = await Graph.parse(source);
 console.log("Entities:", graph.entityCount());
 console.log("Flows:", graph.flowCount());
+
+// Parse to AST JSON directly
+const astJson = Graph.parseToAstJson(source);
+console.log(astJson);
 ```
 
 ### Build Programmatically

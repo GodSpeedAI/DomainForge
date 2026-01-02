@@ -213,6 +213,7 @@ flow = Flow.new(
 - `all_flows()`: Get all flows
 - `all_instances()`: Get all instances
 - `Graph.parse(source)`: Parse DSL source into a graph
+- `Graph.parse_to_ast_json(source)`: Parse DSL source into AST JSON string
 - `export_calm()`: Export graph to CALM JSON format
 - `Graph.import_calm(json_str)`: Import graph from CALM JSON
 - `add_policy(policy)`: Add a policy to the graph

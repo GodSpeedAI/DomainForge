@@ -6,8 +6,9 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 
 - Rust toolchain 1.77+ and the SEA CLI installed.
 
-   - For developers building from this repo: `cargo install --path sea-core --features cli` (produces the `sea` binary).
-   - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `sea --version`.
+  - For developers building from this repo: `cargo install --path sea-core --features cli` (produces the `sea` binary).
+  - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `sea --version`.
+
 - Optional: Python bindings (install locally via `maturin develop --features python` or via PyPI when published) and TypeScript package (`npm install @domainforge/sea` then `npm run build`).
 - A `.sea` source file. Use `sea-core/examples/basic.sea` or any model under `examples/` to follow along.
 
@@ -42,52 +43,73 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 
    - This pattern stops on the first failure. Add `|| true` to continue despite errors.
 
-4. **Parse programmatically in Rust**
+4. **Generate AST JSON (CLI)**
+
+   ```bash
+   sea parse --ast --format json sea-core/examples/basic.sea > basic.ast.json
+   ```
+
+   - Produces raw AST JSON preserving source structure and location info.
+   - Useful for feeding tools like `tools/ast_to_ir.py` or writing custom linters.
+
+5. **Parse programmatically in Rust**
 
    ```rust
    use sea_core::parser::parse_to_graph;
+   ```
 
 let source = std::fs::read_to_string("sea-core/examples/basic.sea")?;
 let graph = parse_to_graph(&source)?;
 assert!(graph.entity_count() >= 1);
-```
 
-   - Prefer `parse_to_graph_with_options` if you need namespace resolution using `NamespaceRegistry::discover`.
+````
 
-5. **Parse programmatically in Python**
+- Prefer `parse_to_graph_with_options` if you need namespace resolution using `NamespaceRegistry::discover`.
 
-   ```python
-   from pathlib import Path
-   from sea_dsl import Graph
+6. **Parse programmatically in Python**
 
-   text = Path("sea-core/examples/basic.sea").read_text()
-   graph = Graph.parse(text)
-   assert graph.resource_count() >= 1
-   ```
+```python
+from pathlib import Path
+from sea_dsl import Graph
 
-   - Call `graph.all_entities()` or `graph.find_entity_by_name("Customer")` to inspect the parsed model.
-   - Errors raise `ValueError` with the same message as the Rust parser.
+text = Path("sea-core/examples/basic.sea").read_text()
 
-6. **Parse programmatically in TypeScript**
+# Semantic graph parsing
+graph = Graph.parse(text)
+assert graph.resource_count() >= 1
+
+# Raw AST parsing (e.g., for tooling)
+ast_json = Graph.parse_to_ast_json(text)
+````
+
+- Call `graph.all_entities()` or `graph.find_entity_by_name("Customer")` to inspect the parsed model.
+- Errors raise `ValueError` with the same message as the Rust parser.
+
+7. **Parse programmatically in TypeScript**
 
    ```ts
    import { readFileSync } from "fs";
    import { Graph } from "@domainforge/sea";
 
    const source = readFileSync("sea-core/examples/basic.sea", "utf8");
+
+   // Semantic graph parsing
    const graph = Graph.parse(source);
    console.log(graph.entityCount());
+
+   // Raw AST parsing
+   const astJson = Graph.parseToAstJson(source);
    ```
 
    - Use `graph.allResources()` or `graph.findRoleByName("Payer")` after parsing relation-enabled models.
 
-7. **Handle parse warnings and errors**
+8. **Handle parse warnings and errors**
 
    - **Unknown identifiers**: The parser emits `UnknownEntity` or `UnknownResource` errors; add missing declarations or fix typos.
    - **Unit mismatches**: If a flow references an undefined unit, define it in the `Dimension/Unit` section before the flow.
    - **Namespace resolution**: If you see `NamespaceMissing`, create `.sea-registry.toml` near the entry file or pass fully qualified names (e.g., `finance/Invoice`).
 
-8. **Integrate parsing into CI**
+9. **Integrate parsing into CI**
 
    ```bash
    just rust-test  # runs `cargo test -p sea-core --features cli` and exercises parser paths

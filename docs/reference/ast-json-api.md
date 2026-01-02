@@ -150,6 +150,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let json = serde_json::to_string_pretty(&graph)?;
     println!("{}", json);
 
+    // OR: Serialize the AST directly (preserves source structure)
+    // using the new stable schema types
+    let ast_json = sea_core::parser::parse_to_ast_json(source)?;
+    println!("{}", ast_json);
+
     Ok(())
 }
 ```
@@ -213,6 +218,16 @@ Output structure:
 # Export graph to CALM JSON format
 sea project --format calm input.sea output.json
 ```
+
+#### Export AST as JSON
+
+To export the raw Abstract Syntax Tree (useful for tools that need source preservation):
+
+```bash
+sea parse --ast --format json input.sea > output.ast.json
+```
+
+This output conforms to `ast-v3.schema.json` and preserves all declarations, comments, and line/column numbers.
 
 #### Project to Knowledge Graph
 
