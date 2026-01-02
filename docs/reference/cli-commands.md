@@ -28,16 +28,25 @@ sea parse path/to/model.sea
 
 Options:
 
-- `--format <human|json>`: default `human` shows counts; `json` prints the parsed graph structure.
+- `--format <human|json>`: default `human` shows counts; `json` output depends on `--ast`.
+  - Without `--ast`: outputs semantic Graph JSON (entities, resources, flows)
+  - With `--ast`: outputs Abstract Syntax Tree JSON (declarations, source locations)
+- `--ast`: output AST structure instead of semantic graph.
 - `--out <path>`: write output to a file instead of stdout.
 
 Example:
 
 ```
 sea parse sea-core/examples/basic.sea --format human
+
+# Output AST JSON
+sea parse sea-core/examples/basic.sea --ast --format json
+
+# Output Graph JSON
+sea parse sea-core/examples/basic.sea --format json
 ```
 
-Expected output includes entity/resource/flow counts and the active namespace.
+Expected output includes entity/resource/flow counts and the active namespace. AST mode outputs tagged AST nodes (e.g., `{"type": "Entity", ...}`).
 
 ## validate
 
