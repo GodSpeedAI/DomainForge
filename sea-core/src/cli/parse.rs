@@ -1,4 +1,4 @@
-//! Parse SEA files and output Graph JSON.
+//! Parse SEA files and output AST or Graph JSON.
 //!
 //! This command parses a SEA DSL file and outputs the result in the specified format.
 //! Use `--format json` to get structured JSON output suitable for tooling.
@@ -21,6 +21,10 @@ pub struct ParseArgs {
     /// Output file (stdout if not specified)
     #[arg(long, short)]
     pub out: Option<PathBuf>,
+
+    /// Output AST instead of Graph (preserves source structure and line numbers)
+    #[arg(long)]
+    pub ast: bool,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -28,7 +32,7 @@ pub enum ParseFormat {
     /// Human-readable summary
     #[default]
     Human,
-    /// JSON output (Graph structure)
+    /// JSON output
     Json,
 }
 
@@ -36,17 +40,39 @@ pub fn run(args: ParseArgs) -> Result<()> {
     let source = fs::read_to_string(&args.input)
         .with_context(|| format!("Failed to read file: {}", args.input.display()))?;
 
-    let output = match args.format {
-        ParseFormat::Json => {
+    let output = match (args.ast, args.format) {
+        // AST output (uses schema types for stable JSON format)
+        (true, ParseFormat::Json) => {
+            let internal_ast =
+                crate::parser::parse(&source).map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
+            let schema_ast: crate::parser::ast_schema::Ast = internal_ast.into();
+            serde_json::to_string_pretty(&schema_ast).context("Failed to serialize AST to JSON")?
+        }
+        (true, ParseFormat::Human) => {
+            let ast =
+                crate::parser::parse(&source).map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
+            format!(
+                "AST parsed successfully: {}\n\
+                 Namespace: {}\n\
+                 Version: {}\n\
+                 Declarations: {}",
+                args.input.display(),
+                ast.metadata.namespace.as_deref().unwrap_or("(none)"),
+                ast.metadata.version.as_deref().unwrap_or("(none)"),
+                ast.declarations.len()
+            )
+        }
+        // Graph output (default)
+        (false, ParseFormat::Json) => {
             let graph = crate::parser::parse_to_graph(&source)
                 .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
             serde_json::to_string_pretty(&graph).context("Failed to serialize Graph to JSON")?
         }
-        ParseFormat::Human => {
+        (false, ParseFormat::Human) => {
             let graph = crate::parser::parse_to_graph(&source)
                 .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
             format!(
-                "Parsed successfully: {}\n\
+                "Graph parsed successfully: {}\n\
                  Entities: {}\n\
                  Resources: {}\n\
                  Flows: {}\n\
