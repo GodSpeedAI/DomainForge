@@ -1,4 +1,5 @@
 use sea_core::parser::{parse, parse_to_graph, parse_to_graph_with_options, AstNode, ParseOptions};
+use serde_json::json;
 
 #[test]
 fn test_parse_entity_basic() {
@@ -62,6 +63,26 @@ fn test_parse_flow_with_quantity() {
     let ast = parse(source).unwrap();
 
     assert_eq!(ast.declarations.len(), 1);
+}
+
+#[test]
+fn test_parse_flow_with_custom_annotations() {
+    let source = r#"
+        Flow "Chat" @cqrs { "kind": "command" } @tx { "transactional": false } from "Client" to "Server"
+    "#;
+    let ast = parse(source).unwrap();
+
+    assert_eq!(ast.declarations.len(), 1);
+    match &ast.declarations[0].node {
+        AstNode::Flow { annotations, .. } => {
+            assert_eq!(annotations.get("cqrs"), Some(&json!({ "kind": "command" })));
+            assert_eq!(
+                annotations.get("tx"),
+                Some(&json!({ "transactional": false }))
+            );
+        }
+        _ => panic!("Expected flow declaration"),
+    }
 }
 
 #[test]
