@@ -75,6 +75,15 @@ Example:
 Flow "Money" from "Customer" to "PaymentProcessor" quantity 1000
 ```
 
+Custom flow annotations are supported using `@<identifier> <value>` with JSON-like values:
+
+```sea
+Flow "Money"
+  @cqrs { "kind": "command" }
+  @tx { "transactional": false }
+from "Customer" to "PaymentProcessor" quantity 1000
+```
+
 ### Pattern
 
 ```sea
