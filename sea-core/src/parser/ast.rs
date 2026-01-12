@@ -2042,9 +2042,9 @@ fn parse_annotation_value(pair: Pair<Rule>) -> ParseResult<JsonValue> {
     match pair.as_rule() {
         Rule::annotation_value => {
             let mut inner = pair.into_inner();
-            let value_pair = inner.next().ok_or_else(|| {
-                ParseError::GrammarError("Expected annotation value".to_string())
-            })?;
+            let value_pair = inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
             parse_annotation_value(value_pair)
         }
         Rule::string_literal => Ok(JsonValue::String(parse_string_literal(pair)?)),
@@ -2071,10 +2071,7 @@ fn parse_annotation_value(pair: Pair<Rule>) -> ParseResult<JsonValue> {
                 )));
             }
             let num = serde_json::Number::from_f64(f).ok_or_else(|| {
-                ParseError::InvalidQuantity(format!(
-                    "Cannot create JSON Number from decimal {}",
-                    d
-                ))
+                ParseError::InvalidQuantity(format!("Cannot create JSON Number from decimal {}", d))
             })?;
             Ok(JsonValue::Number(num))
         }
