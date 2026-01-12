@@ -88,7 +88,8 @@ flow_decl = {
 flow_annotation = {
     "@" ~ (
         (ea_replaces ~ name ~ (^"v" ~ version)?) |
-        (ea_changes ~ string_array)
+        (ea_changes ~ string_array) |
+        (identifier ~ annotation_value)
     )
 }
 
@@ -196,6 +197,8 @@ policy_annotation_name = {
 }
 
 string_array = { "[" ~ string_literal ~ ("," ~ string_literal)* ~ "]" }
+
+annotation_value = { object_literal | string_array | string_literal | boolean | number }
 
 // Semantic Version
 version = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
@@ -384,7 +387,7 @@ mapping_field = {
 }
 
 object_literal = {
-    "{" ~ (string_literal ~ ":" ~ (string_literal | boolean | number) ~ ","?)* ~ "}"
+    "{" ~ (string_literal ~ ":" ~ annotation_value ~ ","?)* ~ "}"
 }
 
 // Projection Override
