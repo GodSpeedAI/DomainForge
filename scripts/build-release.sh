@@ -205,9 +205,7 @@ if ! $SKIP_PYTHON; then
         log_info "Would run: maturin build --release --features python --out dist"
     else
         if command -v maturin &>/dev/null; then
-            cd sea-core
             maturin build --release --features python --out "$DIST_DIR"
-            cd "$PROJECT_ROOT"
             log_success "Built Python wheel in dist/"
         else
             log_warn "maturin not found, skipping Python wheel"

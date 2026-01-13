@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-544%2B%20passing-brightgreen.svg)](sea-core/tests/)
+[![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
 
 ---
 
