@@ -531,7 +531,21 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
                             JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
                         );
                     }
-                    _ => {}
+                    Rule::identifier => {
+                        let key = parse_identifier(key_pair)?.to_lowercase();
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected annotation value".to_string())
+                        })?;
+                        let value = parse_annotation_value(value_pair)?;
+                        println!("debug insert annotation {} = {:?}", key, value);
+                        annotations.insert(key, value);
+                    }
+                    _ => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Unexpected flow annotation: {}",
+                            key_pair.as_str()
+                        )));
+                    }
                 }
             }
             Rule::in_keyword => {
@@ -674,7 +688,20 @@ fn parse_resource(pair: Pair<Rule>) -> ParseResult<AstNode> {
                             JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
                         );
                     }
-                    _ => {}
+                    Rule::identifier => {
+                        let key = parse_identifier(key_pair)?.to_lowercase();
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected annotation value".to_string())
+                        })?;
+                        let value = parse_annotation_value(value_pair)?;
+                        annotations.insert(key, value);
+                    }
+                    _ => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Unexpected flow annotation: {}",
+                            key_pair.as_str()
+                        )));
+                    }
                 }
             }
             Rule::in_keyword => {
@@ -716,6 +743,7 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut from_entity = None;
     let mut to_entity = None;
     let mut quantity = None;
+    let mut pending_annotation_key: Option<String> = None;
 
     for part in inner {
         match part.as_rule() {
@@ -759,20 +787,53 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
                             JsonValue::Array(changes.into_iter().map(JsonValue::String).collect()),
                         );
                     }
-                    _ => {}
+                    Rule::identifier => {
+                        let key = parse_identifier(key_pair)?.to_lowercase();
+                        let value_pair = annotation_inner.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected annotation value".to_string())
+                        })?;
+                        let value = parse_annotation_value(value_pair)?;
+                        annotations.insert(key, value);
+                    }
+                    _ => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Unexpected flow annotation: {}",
+                            key_pair.as_str()
+                        )));
+                    }
                 }
             }
-            Rule::string_literal => {
-                // These are from_entity and to_entity in order
-                let parsed = parse_string_literal(part)?;
-                if from_entity.is_none() {
-                    from_entity = Some(parsed);
-                } else if to_entity.is_none() {
-                    to_entity = Some(parsed);
+            Rule::identifier => {
+                if pending_annotation_key.is_some() {
+                    return Err(ParseError::GrammarError(
+                        "Unexpected annotation key without value".to_string(),
+                    ));
                 }
+                pending_annotation_key = Some(parse_identifier(part)?.to_lowercase());
             }
-            Rule::number => {
-                quantity = Some(parse_number(part)?);
+            Rule::annotation_value
+            | Rule::object_literal
+            | Rule::string_array
+            | Rule::boolean
+            | Rule::number
+            | Rule::string_literal => {
+                if let Some(key) = pending_annotation_key.take() {
+                    let value = parse_annotation_value(part)?;
+                    annotations.insert(key, value);
+                    continue;
+                }
+
+                if part.as_rule() == Rule::string_literal {
+                    // These are from_entity and to_entity in order
+                    let parsed = parse_string_literal(part)?;
+                    if from_entity.is_none() {
+                        from_entity = Some(parsed);
+                    } else if to_entity.is_none() {
+                        to_entity = Some(parsed);
+                    }
+                } else if part.as_rule() == Rule::number {
+                    quantity = Some(parse_number(part)?);
+                }
             }
             _ => {}
         }
@@ -1971,41 +2032,55 @@ fn parse_object_literal(pair: Pair<Rule>) -> ParseResult<JsonValue> {
         let value_pair = inner.next().ok_or_else(|| {
             ParseError::GrammarError("Expected value in object literal".to_string())
         })?;
-        let value = match value_pair.as_rule() {
-            Rule::string_literal => JsonValue::String(parse_string_literal(value_pair)?),
-            Rule::boolean => JsonValue::Bool(value_pair.as_str().eq_ignore_ascii_case("true")),
-            Rule::number => {
-                let d = parse_decimal(value_pair)?;
-                // Parse the decimal string as f64 to create a JSON Number
-                let f = d.to_f64().ok_or_else(|| {
-                    ParseError::InvalidQuantity(format!(
-                        "Decimal value {} cannot be represented as f64",
-                        d
-                    ))
-                })?;
-                if !f.is_finite() {
-                    return Err(ParseError::InvalidQuantity(format!(
-                        "Decimal value {} converts to non-finite f64",
-                        d
-                    )));
-                }
-                let num = serde_json::Number::from_f64(f).ok_or_else(|| {
-                    ParseError::InvalidQuantity(format!(
-                        "Cannot create JSON Number from decimal {}",
-                        d
-                    ))
-                })?;
-                JsonValue::Number(num)
-            }
-            _ => {
-                return Err(ParseError::GrammarError(
-                    "Unexpected object field value".to_string(),
-                ))
-            }
-        };
+        let value = parse_annotation_value(value_pair)?;
         map.insert(key, value);
     }
     Ok(JsonValue::Object(map))
+}
+
+fn parse_annotation_value(pair: Pair<Rule>) -> ParseResult<JsonValue> {
+    match pair.as_rule() {
+        Rule::annotation_value => {
+            let mut inner = pair.into_inner();
+            let value_pair = inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
+            parse_annotation_value(value_pair)
+        }
+        Rule::string_literal => Ok(JsonValue::String(parse_string_literal(pair)?)),
+        Rule::string_array => {
+            let mut values = Vec::new();
+            for item in pair.into_inner() {
+                values.push(JsonValue::String(parse_string_literal(item)?));
+            }
+            Ok(JsonValue::Array(values))
+        }
+        Rule::boolean => Ok(JsonValue::Bool(pair.as_str().eq_ignore_ascii_case("true"))),
+        Rule::number => {
+            let d = parse_decimal(pair)?;
+            let f = d.to_f64().ok_or_else(|| {
+                ParseError::InvalidQuantity(format!(
+                    "Decimal value {} cannot be represented as f64",
+                    d
+                ))
+            })?;
+            if !f.is_finite() {
+                return Err(ParseError::InvalidQuantity(format!(
+                    "Decimal value {} converts to non-finite f64",
+                    d
+                )));
+            }
+            let num = serde_json::Number::from_f64(f).ok_or_else(|| {
+                ParseError::InvalidQuantity(format!("Cannot create JSON Number from decimal {}", d))
+            })?;
+            Ok(JsonValue::Number(num))
+        }
+        Rule::object_literal => parse_object_literal(pair),
+        _ => Err(ParseError::GrammarError(format!(
+            "Unexpected annotation value: {}",
+            pair.as_str()
+        ))),
+    }
 }
 
 /// Parse projection declaration

@@ -1,6 +1,6 @@
 [package]
 name = "sea-core"
-version = "0.7.3"
+version = "0.9.0"
 authors = ["DomainForge Contributors"]
 edition = "2021"
 rust-version = "1.77"
@@ -18,7 +18,7 @@ icu_decimal = { version = "1.5", optional = true }
 icu_locid = { version = "1.5", optional = true }
 fixed_decimal = { version = "0.5", optional = true }
 rust_decimal = { version = "1.33", features = ["serde"] }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "std", "wasmbind", "clock"] }
 pest = "2.7"
 pest_derive = "2.7"
 indexmap = { version = "2.0", features = ["serde"] }
@@ -26,7 +26,7 @@ log = "0.4.21"
 globset = "0.4"
 globwalk = "0.9"
 toml = { version = "0.8", features = ["parse"] }
-regex = "1.11"
+regex = { version = "1.11", default-features = false, features = ["std", "unicode"] }
 once_cell = "1.19"
 rustc-hash = "2.0"
 xxhash-rust = { version = "0.8", features = ["xxh64"] }
@@ -43,10 +43,10 @@ oxigraph = { version = "0.3", optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 colored = { version = "2.0", optional = true }
 anyhow = "1.0.100"
-
+schemars = { version = "0.8", features = ["chrono", "rust_decimal", "indexmap2"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 proptest = { version = "1.0", features = ["std", "bit-set"] }
@@ -79,6 +79,8 @@ shacl = ["oxigraph"]
 formatting = ["icu_decimal", "icu_locid", "fixed_decimal"]
 cli = ["three_valued_logic", "clap", "colored"]
 three_valued_logic = []
+json-schema = ["schemars"]
+
 
 ## NOTE: Profiles are managed at the workspace root (Cargo.toml). Please
 ## update the workspace-level profiles in /Cargo.toml rather than in
@@ -91,4 +93,4 @@ path = "src/bin/sea.rs"
 required-features = ["cli"]
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+wasm-opt = ["-Oz", "--enable-mutable-globals", "--enable-bulk-memory", "--enable-nontrapping-float-to-int", "--enable-sign-ext"]
