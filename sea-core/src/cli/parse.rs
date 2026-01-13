@@ -25,6 +25,10 @@ pub struct ParseArgs {
     /// Output AST instead of Graph (preserves source structure and line numbers)
     #[arg(long)]
     pub ast: bool,
+
+    /// Output AST v3 (alias for --ast)
+    #[arg(long)]
+    pub ast_v3: bool,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -40,7 +44,7 @@ pub fn run(args: ParseArgs) -> Result<()> {
     let source = fs::read_to_string(&args.input)
         .with_context(|| format!("Failed to read file: {}", args.input.display()))?;
 
-    let output = match (args.ast, args.format) {
+    let output = match (args.ast || args.ast_v3, args.format) {
         // AST output (uses schema types for stable JSON format)
         (true, ParseFormat::Json) => {
             let internal_ast =

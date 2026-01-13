@@ -28,11 +28,21 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install twine
-        run: pip install twine==5.1.1
-
       - name: Yank version on PyPI
         env:
           PYPI_API_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}
         run: |
-          python -m twine yank "sea-dsl==${{ inputs.version }}" -u __token__ -p "$PYPI_API_TOKEN"
+          python - <<'PY'
+          import os
+          import xmlrpc.client
+
+          token = os.environ["PYPI_API_TOKEN"]
+          package = "sea-dsl"
+          version = "${{ inputs.version }}"
+          server = xmlrpc.client.ServerProxy(
+              f"https://__token__:{token}@pypi.org/pypi",
+              use_datetime=True,
+          )
+          result = server.release_yank(package, version)
+          print(f"Yank result: {result}")
+          PY

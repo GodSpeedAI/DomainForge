@@ -1,26 +1,19 @@
-# Release v0.9.0 (2026-01-12)
+# Release v0.8.1 (2026-01-12)
 
 ## What's Changed
 
 
-### 🎉 Added
-- Add `schemars` dependency for JSON schema generation and introduce namespace/version directives in example.
-- feat: Add `schemars` dependency for JSON schema generation and introduce namespace/version directives in example.
-- add AST JSON output support
-- feat: add AST JSON output support
-- feat(cli): add parse command for SEA file parsing
-- : add parse command for SEA file parsing
+### Added
+- **Release Artifacts**: Include Python wheel alongside CLI and WASM artifacts in release bundles.
 
-### 📚 Documentation
-- update specificaton and guides for AST JSON features
-## Contributors
+### Changed
+- **README**: CI badge now reflects live workflow status instead of a static test count.
 
-- @SPRIME01
-- @SPrime01
-
+### Fixed
+- **Python Packaging**: Ensure maturin-based wheel is built and published for releases.
 ## Links
 
 - [Full Changelog](./CHANGELOG.md)
 - [Documentation](./docs/)
-- [Compare with previous version](https://github.com/GodSpeedAI/DomainForge/compare/v0.7.3...v0.9.0)
+- [Compare with previous version](https://github.com/GodSpeedAI/DomainForge/compare/v0.8.0...v0.8.1)
 
