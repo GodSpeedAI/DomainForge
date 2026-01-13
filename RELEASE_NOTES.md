@@ -1,18 +1,19 @@
-# Release v0.9.0 (2026-01-12)
+# Release v0.8.0 (2026-01-12)
 
 ## What's Changed
 
 
-### 🎉 Added
-- Add `schemars` dependency for JSON schema generation and introduce namespace/version directives in example.
-- feat: Add `schemars` dependency for JSON schema generation and introduce namespace/version directives in example.
-- add AST JSON output support
-- feat: add AST JSON output support
-- feat(cli): add parse command for SEA file parsing
-- : add parse command for SEA file parsing
+### Added
 
-### 📚 Documentation
-- update specificaton and guides for AST JSON features
+- **CLI Parse Command**: New `sea parse` command for SEA file parsing
+- **AST JSON Output**: JSON output support for AST generation
+- **Custom Flow Annotations**: Grammar + parser support for flow annotations
+- **AST JSON Schema Generation**: Added `schemars` dependency for schema output
+
+### Changed
+
+- **Documentation**: Updated specs and guides for AST JSON features
+- **Examples**: Added namespace/version directives in AST JSON examples
 ## Contributors
 
 - @SPRIME01
@@ -22,5 +23,5 @@
 
 - [Full Changelog](./CHANGELOG.md)
 - [Documentation](./docs/)
-- [Compare with previous version](https://github.com/GodSpeedAI/DomainForge/compare/v0.7.3...v0.9.0)
+- [Compare with previous version](https://github.com/GodSpeedAI/DomainForge/compare/v0.7.3...v0.8.0)
 
