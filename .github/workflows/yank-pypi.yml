@@ -1,0 +1,38 @@
+name: Yank PyPI Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to yank (e.g., 0.9.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  yank:
+    name: Yank sea-dsl ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decrypt secrets
+        id: secrets
+        uses: ./.github/actions/decrypt-secrets
+        with:
+          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install twine
+        run: pip install twine==5.1.1
+
+      - name: Yank version on PyPI
+        env:
+          PYPI_API_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m twine yank "sea-dsl==${{ inputs.version }}" -u __token__ -p "$PYPI_API_TOKEN"
