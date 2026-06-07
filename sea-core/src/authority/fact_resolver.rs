@@ -145,8 +145,13 @@ impl FactResolver {
                 });
                 continue;
             }
-            let path_allowed = source.allowed_paths.iter().any(|p| {
-                fact.path == *p || fact.path.starts_with(&format!("{}.", p))
+            let path_allowed = source.allowed_paths.iter().any(|allowed_path| {
+                fact.path == *allowed_path
+                    || if allowed_path.ends_with('.') {
+                        fact.path.starts_with(allowed_path)
+                    } else {
+                        fact.path.starts_with(&format!("{}.", allowed_path))
+                    }
             });
 
             if !path_allowed {

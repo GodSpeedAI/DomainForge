@@ -64,7 +64,7 @@ impl AuthorityEnvironment {
             config.compatibility_lowering_version.clone(),
         );
         let compatibility_auditor =
-            CompatibilityLoweringAuditor::new(config.compatibility_lowering_version.clone());
+            CompatibilityLoweringAuditor::new(config.compatibility_lowering_version.clone())?;
         let resolver = AuthorityResolver::new(
             config.unknown_handling.clone(),
             config.specificity_profile.clone(),
@@ -95,6 +95,32 @@ impl AuthorityEnvironment {
     pub fn validate(&mut self) -> Result<(), AuthorityError> {
         self.source_registry.validate()?;
         self.transform_registry.validate()?;
+
+        if self.compiler.semantics_version() != self.config.resolver_semantics_version {
+            return Err(AuthorityError::invalid_environment(format!(
+                "Compiler semantics version '{}' does not match resolver semantics version '{}'",
+                self.compiler.semantics_version(),
+                self.config.resolver_semantics_version
+            )));
+        }
+        if self.compiler.compatibility_version() != self.config.compatibility_lowering_version {
+            return Err(AuthorityError::invalid_environment(format!(
+                "Compiler compatibility version '{}' does not match configured compatibility lowering version '{}'",
+                self.compiler.compatibility_version(),
+                self.config.compatibility_lowering_version
+            )));
+        }
+        if self.compatibility_auditor.version() != self.config.compatibility_lowering_version {
+            return Err(AuthorityError::invalid_environment(format!(
+                "Compatibility auditor version '{}' does not match configured compatibility lowering version '{}'",
+                self.compatibility_auditor.version(),
+                self.config.compatibility_lowering_version
+            )));
+        }
+        self.resolver.validate_versions(
+            &self.config.resolver_semantics_version,
+            &self.config.compatibility_lowering_version,
+        )?;
 
         for pack in &self.loaded_packs {
             if pack.required_specificity_profile != self.config.specificity_profile.id

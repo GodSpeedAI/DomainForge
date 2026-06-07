@@ -77,7 +77,7 @@ pub fn validate_definition_hashes(
         if let (Some(prev), Some(new)) =
             (&latest.previous_definition_hash, &latest.new_definition_hash)
         {
-            if new == current_hash {
+            if prev == &latest.definition_hash && new == current_hash {
                 return DefinitionHashResult::MinorAmendment;
             }
         }

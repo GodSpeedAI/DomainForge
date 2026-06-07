@@ -301,6 +301,26 @@ impl AuthorityResolver {
             Ok((FinalDecision::Escalate, steps))
         }
     }
+
+    pub fn validate_versions(
+        &self,
+        semantics_version: &str,
+        compatibility_version: &str,
+    ) -> Result<(), AuthorityError> {
+        if self.semantics_version != semantics_version {
+            return Err(AuthorityError::invalid_environment(format!(
+                "Resolver semantics version '{}' does not match configured semantics version '{}'",
+                self.semantics_version, semantics_version
+            )));
+        }
+        if self.compatibility_version != compatibility_version {
+            return Err(AuthorityError::invalid_environment(format!(
+                "Resolver compatibility version '{}' does not match configured compatibility lowering version '{}'",
+                self.compatibility_version, compatibility_version
+            )));
+        }
+        Ok(())
+    }
 }
 
 fn modality_to_decision(modality: &PolicyModality, condition: ThreeValuedResult) -> FinalDecision {
@@ -355,7 +375,7 @@ fn classify_unknown_reason(
 }
 
 fn classify_availability(fact_checks: &[(FactRequirement, bool, Option<FactEnvelope>)]) -> String {
-    for (req, satisfied, envelope) in fact_checks {
+    for (_req, satisfied, envelope) in fact_checks {
         if !satisfied {
             if envelope.is_none() {
                 return "caller_omission".to_string();

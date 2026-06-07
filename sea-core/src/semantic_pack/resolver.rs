@@ -81,7 +81,7 @@ pub fn resolve_concept<'a>(
                 concept_id: c.id.clone(),
                 status: c.status,
                 kind: c.kind,
-                match_type: MatchType::ExactId,
+                _match_type: MatchType::ExactId,
             });
         }
     }
@@ -94,7 +94,7 @@ pub fn resolve_concept<'a>(
                     concept_id: c.id.clone(),
                     status: c.status,
                     kind: c.kind,
-                    match_type: MatchType::CanonicalName,
+                    _match_type: MatchType::CanonicalName,
                 });
             }
         }
@@ -114,7 +114,7 @@ pub fn resolve_concept<'a>(
                     concept_id: concept.id.clone(),
                     status: concept.status,
                     kind: concept.kind,
-                    match_type: MatchType::Alias(alias.status),
+                    _match_type: MatchType::Alias,
                 });
             }
         }
@@ -129,7 +129,7 @@ pub fn resolve_concept<'a>(
                         concept_id: concept.id.clone(),
                         status: concept.status,
                         kind: concept.kind,
-                        match_type: MatchType::MappingRule,
+                        _match_type: MatchType::MappingRule,
                     });
                 }
             }
@@ -375,14 +375,14 @@ struct Candidate {
     concept_id: String,
     status: ConceptStatus,
     kind: ConceptKind,
-    match_type: MatchType,
+    _match_type: MatchType,
 }
 
 #[derive(Debug, Clone, Copy)]
 enum MatchType {
     ExactId,
     CanonicalName,
-    Alias(AliasStatus),
+    Alias,
     MappingRule,
 }
 

@@ -431,11 +431,16 @@ impl SpecificityVector {
             get_score(&other.dimensions, name) > get_score(&self.dimensions, name)
         });
 
-        match (a_dominates, b_dominates) {
-            (true, true) => SpecificityComparison::Equal,
-            (true, false) => SpecificityComparison::AMoreSpecific,
-            (false, true) => SpecificityComparison::BMoreSpecific,
-            (false, false) => SpecificityComparison::Incomparable,
+        match (
+            a_dominates,
+            a_strictly_dominates,
+            b_dominates,
+            b_strictly_dominates,
+        ) {
+            (true, false, true, false) => SpecificityComparison::Equal,
+            (true, true, false, _) => SpecificityComparison::AMoreSpecific,
+            (false, _, true, true) => SpecificityComparison::BMoreSpecific,
+            _ => SpecificityComparison::Incomparable,
         }
     }
 }

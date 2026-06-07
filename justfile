@@ -1,17 +1,18 @@
 default := "ai-validate"
+cargo := `if command -v cargo >/dev/null 2>&1; then printf 'cargo'; elif command -v devbox >/dev/null 2>&1; then printf 'devbox run -- cargo'; else printf 'cargo'; fi`
 
 # Run all validation checks required for CI and AI agents
 ai-validate:
-    cargo test -p sea-core --features cli
+    {{cargo}} test -p sea-core --features cli
 
 # Test tasks - run per-language test suites
 rust-test:
     @echo "Running Rust tests..."
-    cargo test -p sea-core --features cli
+    {{cargo}} test -p sea-core --features cli
 
 # Test all CLI commands
 cli-test:
-    cargo test -p sea-core --test cli_tests --features cli
+    {{cargo}} test -p sea-core --test cli_tests --features cli
 
 # Run CLI validation examples
 cli-validate:
@@ -23,7 +24,7 @@ cli-workflow:
 
 build-rust-tests:
     @echo "Build Rust tests without running them (to prepare debug binaries)"
-    cargo test -p sea-core --features cli --no-run
+    {{cargo}} test -p sea-core --features cli --no-run
 
 python-test:
     @echo "Running Python tests..."
@@ -36,7 +37,11 @@ python-test:
 
 ts-test:
     @echo "Running TypeScript tests (Vitest)..."
-    npm test --silent
+    if command -v bun >/dev/null 2>&1; then \
+        bun test; \
+    else \
+        npm run test:node --silent; \
+    fi
 
 all-tests:
     @echo "Running all tests (Rust, Python, TypeScript)..."
@@ -108,7 +113,7 @@ python-clean:
 # Run Rust tests (CI variant)
 ci-test-rust:
     @echo "Running Rust tests (CI)..."
-    cargo test --verbose --workspace --features cli
+    {{cargo}} test --verbose --workspace --features cli
 
 # Run Python tests (CI variant)
 ci-test-python:

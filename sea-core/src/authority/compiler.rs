@@ -36,6 +36,14 @@ impl PolicyCompiler {
         Ok(compiled)
     }
 
+    pub fn semantics_version(&self) -> &str {
+        &self.semantics_version
+    }
+
+    pub fn compatibility_version(&self) -> &str {
+        &self.compatibility_version
+    }
+
     fn compile_one(&self, raw: RawPolicy) -> Result<AuthorityPolicy, AuthorityError> {
         let applies_to = self.parse_structural_predicates(&raw.applies_to)?;
         let when = if raw.when.is_empty() {
@@ -128,8 +136,18 @@ pub struct CompatibilityLoweringAuditor {
 }
 
 impl CompatibilityLoweringAuditor {
-    pub fn new(version: String) -> Self {
-        Self { version }
+    pub fn new(version: String) -> Result<Self, AuthorityError> {
+        if version.trim().is_empty() {
+            return Err(AuthorityError::invalid_environment(
+                "Compatibility lowering version is required",
+            ));
+        }
+
+        Ok(Self { version })
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
     }
 
     pub fn audit_expression(

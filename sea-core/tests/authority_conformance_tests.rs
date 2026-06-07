@@ -272,6 +272,8 @@ fn test_authority_decision_produced() {
     assert_eq!(decision.final_decision, FinalDecision::Deny);
     assert!(!decision.decision_id.is_empty());
     assert!(!decision.trace_ref.is_empty());
+    assert_eq!(trace.decision_id, decision.decision_id);
+    assert_eq!(trace.request_id, decision.request_id);
 }
 
 #[test]
@@ -585,8 +587,15 @@ fn test_structural_predicate_matching() {
 }
 
 #[test]
+fn test_compatibility_lowering_auditor_rejects_empty_version() {
+    assert!(CompatibilityLoweringAuditor::new(String::new()).is_err());
+    assert!(CompatibilityLoweringAuditor::new("   ".to_string()).is_err());
+}
+
+#[test]
 fn test_ambiguous_compatibility_lowering_rejected() {
-    let auditor = CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string());
+    let auditor =
+        CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string()).unwrap();
     let result = auditor.audit_expression(
         r#"action = "ShipOrder" and (resource = "Order" or resource.type = "SpecialOrder")"#,
     );
@@ -595,7 +604,8 @@ fn test_ambiguous_compatibility_lowering_rejected() {
 
 #[test]
 fn test_simple_compatibility_conjunction_lowers() {
-    let auditor = CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string());
+    let auditor =
+        CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string()).unwrap();
     let result = auditor.audit_expression(r#"action = "ShipOrder" and actor.role = "Ops""#);
     assert!(result.is_ok());
     let lowered = result.unwrap();
@@ -896,14 +906,16 @@ fn test_conflicting_specificity_profile_rejected() {
 
 #[test]
 fn test_negative_structural_predicate_rejected() {
-    let auditor = CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string());
+    let auditor =
+        CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string()).unwrap();
     let result = auditor.audit_expression(r#"not resource.type = "Order""#);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_negated_condition_predicate_lowers() {
-    let auditor = CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string());
+    let auditor =
+        CompatibilityLoweringAuditor::new("bounded_compatibility_v1".to_string()).unwrap();
     let result = auditor.audit_expression(r#"not customer.credit_status = "Hold""#);
     assert!(result.is_ok());
     let lowered = result.unwrap();
