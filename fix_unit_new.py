@@ -1,5 +1,4 @@
 import re
-import sys
 from pathlib import Path
 
 def fix_unit_new(content):

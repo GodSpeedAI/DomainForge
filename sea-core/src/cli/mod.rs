@@ -1,8 +1,10 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
+pub mod authority;
 pub mod format;
 pub mod import;
 pub mod normalize;
+pub mod pack;
 pub mod parse;
 pub mod project;
 pub mod registry;
@@ -48,6 +50,10 @@ pub enum Commands {
     Normalize(normalize::NormalizeArgs),
     /// Registry management commands
     Registry(registry::RegistryArgs),
+    /// Evaluate authority decisions
+    Authority(authority::AuthorityArgs),
+    /// Semantic pack management commands
+    Pack(pack::PackArgs),
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy)]

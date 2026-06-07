@@ -405,6 +405,104 @@ Pre-built binaries are available for:
 
 Build from source for other platforms using `npm run build`.
 
+## Semantic Pack API
+
+The `@domainforge/sea` module exposes semantic pack enums and functions for building, validating, signing, and inspecting packs programmatically.
+
+### Enums
+
+```typescript
+import {
+  SemanticTruth,              // Valid = 0, Invalid = 1, Unknown = 2
+  DiagnosticSeverity,         // Error = 0, Warning = 1, Info = 2, Hint = 3
+  ValidationMode,             // Off = 0, Warn = 1, Strict = 2
+  ApprovalState,              // Candidate = 0, Approved = 1, Rejected = 2
+  SignatureState,             // Unsigned = 0, Signed = 1, InvalidSignature = 2
+  ConceptStatus,              // Active = 0, Proposed = 1, Deprecated = 2, Rejected = 3, ExternalOnly = 4
+  ConceptKind,                // Entity = 0, Resource = 1, Role = 2, Flow = 3, Policy = 4, Metric = 5, Dimension = 6, Unit = 7, External = 8
+  AliasStatus,                // Approved = 0, Deprecated = 1, Ambiguous = 2, Blocked = 3
+  SemanticValidationStatus,   // Passed = 0, Failed = 1, Unknown = 2, Blocked = 3
+} from "@domainforge/sea";
+```
+
+### Functions
+
+#### semanticPackBuild
+
+Build a semantic pack from input JSON. Returns a JSON string with `pack`, `pack_content_hash`, `meaning_fingerprint`, `pre_pack_diagnostics`, and `build_warnings`.
+
+```typescript
+const result = semanticPackBuild(inputJson);
+const { pack, pack_content_hash, meaning_fingerprint } = JSON.parse(result);
+```
+
+#### semanticPackValidate
+
+Validate a pack's internal consistency. Returns a JSON array of diagnostics.
+
+```typescript
+const diagnosticsJson = semanticPackValidate(packJson);
+```
+
+#### semanticPackValidateGraph
+
+Validate a source against a pack with options. Returns a JSON validation result.
+
+```typescript
+const resultJson = semanticPackValidateGraph(packJson, "source_uri", optionsJson);
+```
+
+#### semanticPackSign
+
+Sign a pack with an Ed25519 private key (PEM string). Returns the signed pack JSON.
+
+```typescript
+const signedJson = semanticPackSign(packJson, privateKeyPem);
+```
+
+#### semanticPackVerify
+
+Verify a pack's Ed25519 signature. Returns `true` if valid, throws on failure.
+
+```typescript
+const isValid: boolean = semanticPackVerify(packJson, publicKeyPem);
+```
+
+#### semanticPackDiff
+
+Compare two packs. Returns a JSON diff with entries and summary.
+
+```typescript
+const diffJson = semanticPackDiff(oldPackJson, newPackJson);
+```
+
+#### semanticPackHash
+
+Compute the content hash of a pack (excluding signature fields).
+
+```typescript
+const hash: string = semanticPackHash(packJson);
+```
+
+#### semanticNormalizeKey
+
+Normalize a term for lookup (NFC, case-fold, whitespace collapse).
+
+```typescript
+const normalized: string = semanticNormalizeKey("  Hello   World  "); // "hello world"
+```
+
+#### semanticResolveConcept
+
+Resolve a term against a pack. Returns a JSON object with `resolved_concept_id`, `semantic_truth`, `diagnostic_code`, `diagnostic_severity`, `message`, and `suggestions`.
+
+```typescript
+const resultJson = semanticResolveConcept("Supplier", packJson, optionsJson);
+const result = JSON.parse(resultJson);
+console.log(result.resolved_concept_id); // "supplier" or null
+console.log(result.semantic_truth);       // "valid", "invalid", or "unknown"
+```
+
 ## License
 
 Apache-2.0

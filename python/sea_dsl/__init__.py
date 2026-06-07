@@ -17,6 +17,12 @@ from .sea_dsl import (
     Quantifier,
     AggregateFunction,
     WindowSpec,
+    FinalDecision,
+    PolicyModality,
+    SourceClass,
+    ClaimLevel,
+    AuthorityEnvironment,
+    evaluate_authority,
     __version__,
 )
 
@@ -39,5 +45,11 @@ __all__ = [
     "Quantifier",
     "AggregateFunction",
     "WindowSpec",
+    "FinalDecision",
+    "PolicyModality",
+    "SourceClass",
+    "ClaimLevel",
+    "AuthorityEnvironment",
+    "evaluate_authority",
     "__version__",
 ]

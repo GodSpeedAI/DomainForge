@@ -215,6 +215,32 @@ Build from source for other platforms.
 | [`sea-dsl`](https://pypi.org/project/sea-dsl/)                       | PyPI      | Python bindings (this package) |
 | [`@domainforge/sea`](https://www.npmjs.com/package/@domainforge/sea) | npm       | TypeScript/Node.js bindings    |
 
+## Policy Authority
+
+DomainForge includes a Policy Authority system for executable business authority:
+
+```python
+from sea_dsl import AuthorityEnvironment, evaluate_authority
+
+# Create and validate environment
+env = AuthorityEnvironment(config_json)
+env.validate()
+
+# Evaluate a request
+trace_json, decision_json = env.evaluate(request_json, facts_json)
+
+# Or use the convenience function
+trace, decision = evaluate_authority(config_json, request_json, facts_json)
+```
+
+**Available types:**
+- `FinalDecision` — Allow, Deny, Escalate, NotApplicable, Reject
+- `PolicyModality` — Permission, Prohibition, Obligation, Override
+- `SourceClass` — CallerSupplied, RuntimeObserved, SystemOfRecord, Attested, ManualApproval, Derived, UnknownSource
+- `ClaimLevel` — AuditBacked, Validated, FormallyProven
+- `AuthorityEnvironment` — Full authority evaluation environment
+- `evaluate_authority()` — One-shot evaluation function
+
 ## Documentation
 
 - 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/sea-dsl-syntax.md) — Language specification

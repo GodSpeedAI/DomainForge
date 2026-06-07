@@ -269,6 +269,158 @@ except Exception as e:
 - CALM integration: `export_calm()` and `import_calm()` for architecture-as-code
 - IndexMap storage ensures deterministic iteration (reproducible results)
 
+## Semantic Pack API
+
+The `sea_dsl` module exposes semantic pack types and functions for building, validating, signing, and inspecting packs programmatically.
+
+### Enums
+
+```python
+from sea_dsl import (
+    SemanticTruth,        # Valid, Invalid, Unknown
+    DiagnosticSeverity,   # Error, Warning, Info, Hint
+    ValidationMode,       # Off, Warn, Strict
+    ApprovalState,        # Candidate, Approved, Rejected
+    SignatureState,       # Unsigned, Signed, InvalidSignature
+    ConceptStatus,        # Active, Proposed, Deprecated, Rejected, ExternalOnly
+    ConceptKind,          # Entity, Resource, Role, Flow, Policy, Metric, Dimension, Unit, External
+    AliasStatus,          # Approved, Deprecated, Ambiguous, Blocked
+    UnknownConceptPolicy, # Ignore, Warning, Error
+    DeprecatedPolicy,     # Allow, Warn, ErrorInStrict, ErrorAlways
+    SemanticValidationStatus,  # Passed, Failed, Unknown, Blocked
+)
+```
+
+### SemanticPack Class
+
+```python
+pack = sea_dsl.SemanticPack.from_json(pack_json_string)
+print(pack.pack_id())              # "acme/logistics/1.1.0"
+print(pack.schema_version())       # "0.3"
+print(pack.approval_state())       # ApprovalState.Approved
+print(pack.signature_state())      # SignatureState.Signed
+print(pack.concept_count())        # 42
+print(pack.alias_count())          # 15
+print(pack.meaning_version())      # "1.1.0"
+print(pack.meaning_fingerprint())  # "sha256:abc..."
+print(pack.pack_content_hash())    # "sha256:def..."
+
+json_str = pack.to_json()
+```
+
+Methods:
+
+| Method                | Return Type         | Description                            |
+|-----------------------|---------------------|----------------------------------------|
+| `from_json(json)`     | `SemanticPack`      | Deserialize from JSON string.          |
+| `to_json()`           | `str`               | Serialize to JSON string.              |
+| `pack_id()`           | `str`               | Pack identifier.                       |
+| `schema_version()`    | `str`               | Schema version.                        |
+| `approval_state()`    | `ApprovalState`     | Pack approval state.                   |
+| `signature_state()`   | `SignatureState`    | Pack signature state.                  |
+| `concept_count()`     | `int`               | Number of concepts.                    |
+| `alias_count()`       | `int`               | Number of aliases.                     |
+| `meaning_version()`   | `str`               | Meaning version.                       |
+| `meaning_fingerprint()` | `str`             | Meaning fingerprint hash.              |
+| `pack_content_hash()` | `str`               | Content hash (excluding signature).    |
+
+### SemanticValidationResult Class
+
+```python
+result = sea_dsl.SemanticValidationResult.from_json(result_json)
+print(result.status())                        # SemanticValidationStatus.Passed
+print(result.diagnostics_json())              # JSON array of diagnostics
+print(result.unsigned_fixture_bypass_used())  # False
+print(result.first_approved_version_bypass_used())  # False
+```
+
+### Functions
+
+#### build_semantic_pack
+
+Build a semantic pack from input JSON. Returns a tuple of `(pack_json, error_list)`.
+
+```python
+pack_json, errors = sea_dsl.build_semantic_pack(input_json)
+if errors:
+    for err in errors:
+        print(err)
+```
+
+#### validate_semantic_pack
+
+Validate a pack's internal consistency. Returns a list of diagnostic JSON strings.
+
+```python
+diagnostics = sea_dsl.validate_semantic_pack(pack_json)
+for d in diagnostics:
+    print(d)
+```
+
+#### validate_graph_with_pack
+
+Validate a source file against a pack. Returns a JSON result string.
+
+```python
+result_json = sea_dsl.validate_graph_with_pack(
+    pack_json,
+    "source_uri",
+    options_json
+)
+```
+
+#### sign_pack
+
+Sign a pack with an Ed25519 private key. Returns the signed pack JSON.
+
+```python
+signed_json = sea_dsl.sign_pack(pack_json, private_key_pem_string)
+```
+
+#### verify_pack_signature
+
+Verify a pack's signature. Returns `True` or `False`.
+
+```python
+is_valid = sea_dsl.verify_pack_signature(pack_json, public_key_pem_string)
+```
+
+#### diff_packs
+
+Compare two packs. Returns a JSON diff result.
+
+```python
+diff_json = sea_dsl.diff_packs(old_pack_json, new_pack_json)
+```
+
+#### compute_pack_hash
+
+Compute the content hash of a pack.
+
+```python
+hash_str = sea_dsl.compute_pack_hash(pack_json)
+```
+
+#### normalize_lookup_key
+
+Normalize a term for lookup (NFC, case-fold, whitespace collapse).
+
+```python
+normalized = sea_dsl.normalize_lookup_key("  Hello   World  ")  # "hello world"
+```
+
+#### resolve_concept
+
+Resolve a term against a pack. Returns a JSON result with `resolved_concept_id`, `semantic_truth`, `diagnostic_code`, `message`, and `suggestions`.
+
+```python
+result_json = sea_dsl.resolve_concept(
+    "Supplier",
+    pack_json,
+    options_json
+)
+```
+
 ## Development
 
 ### Building from Source

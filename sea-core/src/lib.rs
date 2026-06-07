@@ -33,6 +33,8 @@ pub const VERSION: &str = "0.1.0";
 static ALLOC: lol_alloc::LockedAllocator<lol_alloc::FreeListAllocator> =
     lol_alloc::LockedAllocator::new(lol_alloc::FreeListAllocator::new());
 
+pub mod authority;
+pub mod semantic_pack;
 pub mod calm;
 pub mod concept_id;
 pub mod error;
@@ -136,12 +138,39 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::policy::WindowSpec>()?;
     m.add_class::<python::policy::Expression>()?;
     m.add_class::<python::policy::NormalizedExpression>()?;
+    m.add_class::<python::authority::FinalDecision>()?;
+    m.add_class::<python::authority::PolicyModality>()?;
+    m.add_class::<python::authority::SourceClass>()?;
+    m.add_class::<python::authority::ClaimLevel>()?;
+    m.add_class::<python::authority::AuthorityEnvironment>()?;
+    m.add_function(pyo3::wrap_pyfunction!(python::authority::evaluate_authority, m)?)?;
     m.add_class::<python::units::Dimension>()?;
     m.add_class::<python::units::Unit>()?;
 
     // Formatter functions
     m.add_function(pyo3::wrap_pyfunction!(python::formatter::format_source, m)?)?;
     m.add_function(pyo3::wrap_pyfunction!(python::formatter::check_format, m)?)?;
+
+    m.add_class::<python::semantic_pack::SemanticTruth>()?;
+    m.add_class::<python::semantic_pack::DiagnosticSeverity>()?;
+    m.add_class::<python::semantic_pack::ValidationMode>()?;
+    m.add_class::<python::semantic_pack::ApprovalState>()?;
+    m.add_class::<python::semantic_pack::SignatureState>()?;
+    m.add_class::<python::semantic_pack::ConceptStatus>()?;
+    m.add_class::<python::semantic_pack::ConceptKind>()?;
+    m.add_class::<python::semantic_pack::AliasStatus>()?;
+    m.add_class::<python::semantic_pack::SemanticValidationStatus>()?;
+    m.add_class::<python::semantic_pack::SemanticPack>()?;
+    m.add_class::<python::semantic_pack::SemanticValidationResult>()?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::build_semantic_pack, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::validate_semantic_pack, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::validate_graph_with_pack, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::sign_pack, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::verify_pack_signature, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::diff_packs, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::compute_pack_hash, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::normalize_lookup_key, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::resolve_concept, m)?)?;
 
     Ok(())
 }

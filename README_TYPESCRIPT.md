@@ -268,6 +268,28 @@ npm test
 | [`sea-dsl`](https://pypi.org/project/sea-dsl/)                       | PyPI      | Python bindings                    |
 | [`@domainforge/sea`](https://www.npmjs.com/package/@domainforge/sea) | npm       | TypeScript bindings (this package) |
 
+## Policy Authority
+
+DomainForge includes a Policy Authority system for executable business authority:
+
+```typescript
+import { evaluateAuthority, FinalDecision, PolicyModality, SourceClass, ClaimLevel } from '@domainforge/sea';
+
+const result = evaluateAuthority(configJson, requestJson, factsJson);
+const decision = JSON.parse(result.decisionJson);
+
+if (decision.finalDecision === FinalDecision.Deny) {
+  console.log('Action denied:', decision.reasonCode);
+}
+```
+
+**Available exports:**
+- `FinalDecision` enum — Allow, Deny, Escalate, NotApplicable, Reject
+- `PolicyModality` enum — Permission, Prohibition, Obligation, Override
+- `SourceClass` enum — CallerSupplied, RuntimeObserved, SystemOfRecord, etc.
+- `ClaimLevel` enum — AuditBacked, Validated, FormallyProven
+- `evaluateAuthority(configJson, requestJson, factsJson?)` — One-shot evaluation
+
 ## Documentation
 
 - 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/sea-dsl-syntax.md) — Language specification

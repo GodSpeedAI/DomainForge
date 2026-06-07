@@ -1,0 +1,8 @@
+namespace acme.procurement
+
+policy AmbiguousVendorAlias {
+    description: "A policy using the ambiguous Provider alias"
+    subject: Provider
+    object: PurchaseOrder
+    predicate: "can create"
+}

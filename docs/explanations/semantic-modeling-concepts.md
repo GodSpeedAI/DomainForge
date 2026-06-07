@@ -86,7 +86,24 @@ In DomainForge, the *meaning* comes first. A box on a diagram is just a renderin
 - "Show me all services that write to the UserDatabase."
 - "Are there any flows crossing trust boundaries without encryption?"
 
+## Semantic Packs
+
+While the primitives above define individual concepts in a single .sea file, **semantic packs** provide organization-wide vocabulary governance. A semantic pack is a deterministic, review-gated, signed JSON artifact that defines an organization's approved business concepts, relations, metrics, dimensions, units, aliases, and mapping rules.
+
+Semantic packs serve as the authoritative vocabulary that the DomainForge LSP and CI validators use to check .sea source files. When you write `Entity "PaymentService"` in a .sea file, the LSP resolves that name against the loaded semantic pack and reports diagnostics if the term is unknown, ambiguous, deprecated, or rejected.
+
+Key properties of semantic packs:
+
+- **Review-gated**: Every concept in an approved pack must have a matching human review record.
+- **Signed**: Packs can be signed with Ed25519 to provide tamper evidence.
+- **Three-valued truth**: Concept resolution returns `valid`, `invalid`, or `unknown`---not just true/false.
+- **Deterministic**: Two builds from identical inputs produce bit-for-bit identical output.
+
+For full details, see [Semantic Packs](../semantic-packs.md).
+
 ## See Also
 
 - [Policy Evaluation Logic](policy-evaluation-logic.md)
 - [Architecture Overview](architecture-overview.md)
+- [Semantic Packs](../semantic-packs.md)
+- [Semantic Diagnostic Codes](../diagnostics.md)

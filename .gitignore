@@ -127,3 +127,7 @@ secrets/*.unencrypted.yaml
 
 # Generated release scripts (from just release-preview)
 release-*.sh
+
+
+# Agent files
+.agent/

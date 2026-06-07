@@ -352,3 +352,58 @@ export declare class Unit {
   get baseFactor(): number
   get baseUnit(): string
 }
+
+// =============================================================================
+// Authority Module
+// =============================================================================
+
+/** Final authority decision result */
+export const enum FinalDecision {
+  Allow = 0,
+  Deny = 1,
+  Escalate = 2,
+  NotApplicable = 3,
+  Reject = 4
+}
+
+/** Policy modality type */
+export const enum PolicyModality {
+  Permission = 0,
+  Prohibition = 1,
+  Obligation = 2,
+  Override = 3
+}
+
+/** Source class for fact provenance */
+export const enum SourceClass {
+  CallerSupplied = 0,
+  RuntimeObserved = 1,
+  SystemOfRecord = 2,
+  Attested = 3,
+  ManualApproval = 4,
+  Derived = 5,
+  UnknownSource = 6
+}
+
+/** Claim evidence level */
+export const enum ClaimLevel {
+  AuditBacked = 0,
+  Validated = 1,
+  FormallyProven = 2
+}
+
+/** Result of authority evaluation */
+export interface EvaluateAuthorityResult {
+  traceJson: string
+  decisionJson: string
+}
+
+/**
+ * Evaluate an authority request against a policy environment.
+ *
+ * @param configJson - JSON string of AuthorityEnvironmentConfig
+ * @param requestJson - JSON string of AuthorityRequest
+ * @param factsJson - Optional JSON array string of FactEnvelope objects
+ * @returns Evaluation result containing trace and decision JSON
+ */
+export function evaluateAuthority(configJson: string, requestJson: string, factsJson?: string): EvaluateAuthorityResult

@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { formatSource, checkFormat, Graph, AggregateFunction, BinaryOp, UnaryOp, Quantifier, Severity, Expression, NormalizedExpression, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, Dimension, Unit } = nativeBinding
+const { formatSource, checkFormat, Graph, AggregateFunction, BinaryOp, UnaryOp, Quantifier, Severity, Expression, NormalizedExpression, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, Dimension, Unit, FinalDecision, PolicyModality, SourceClass, ClaimLevel, evaluateAuthority } = nativeBinding
 
 module.exports.formatSource = formatSource
 module.exports.checkFormat = checkFormat
@@ -336,3 +336,8 @@ module.exports.NamespaceBinding = NamespaceBinding
 module.exports.NamespaceRegistry = NamespaceRegistry
 module.exports.Dimension = Dimension
 module.exports.Unit = Unit
+module.exports.FinalDecision = FinalDecision
+module.exports.PolicyModality = PolicyModality
+module.exports.SourceClass = SourceClass
+module.exports.ClaimLevel = ClaimLevel
+module.exports.evaluateAuthority = evaluateAuthority

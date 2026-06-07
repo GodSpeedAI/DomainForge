@@ -1,0 +1,9 @@
+namespace acme.procurement
+
+resource Goods {
+    description: "Physical items provided by a supplier"
+}
+
+resource Payment {
+    description: "Financial transfer from buyer to supplier"
+}

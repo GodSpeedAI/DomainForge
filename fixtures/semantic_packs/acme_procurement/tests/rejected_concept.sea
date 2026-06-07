@@ -1,0 +1,8 @@
+namespace acme.procurement
+
+policy RejectedConceptPolicy {
+    description: "A policy referencing a rejected concept"
+    subject: RejectedEntity
+    object: PurchaseOrder
+    predicate: "can create"
+}

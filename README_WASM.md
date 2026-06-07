@@ -281,6 +281,24 @@ pkg/
 - Ensure `sea_core.d.ts` is present in `pkg/`
 - Check TypeScript version compatibility (4.5+)
 
+## Policy Authority
+
+DomainForge WASM bindings include Policy Authority for executable business authority:
+
+```javascript
+import { evaluateAuthority, FinalDecision, PolicyModality, SourceClass } from '@domainforge/sea-wasm';
+
+const result = evaluateAuthority(configJson, requestJson, factsJson);
+console.log(result.trace, result.decision);
+```
+
+**Available exports:**
+- `FinalDecision` — Allow, Deny, Escalate, NotApplicable, Reject
+- `PolicyModality` — Permission, Prohibition, Obligation, Override
+- `SourceClass` — CallerSupplied, RuntimeObserved, SystemOfRecord, etc.
+- `ClaimLevel` — AuditBacked, Validated, FormallyProven
+- `evaluateAuthority(config, request, facts)` — Returns `{ trace, decision }`
+
 ## License
 
 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)
