@@ -104,8 +104,14 @@ fn make_prohibition_pack() -> AuthorityPack {
     let version = "1.0.0";
     let semantics_version = "0.4";
     let required_specificity_profile = "default";
-    let hash = compute_pack_hash(id, version, semantics_version, required_specificity_profile, &policies)
-        .expect("pack hash computation failed");
+    let hash = compute_pack_hash(
+        id,
+        version,
+        semantics_version,
+        required_specificity_profile,
+        &policies,
+    )
+    .expect("pack hash computation failed");
     AuthorityPack {
         id: id.to_string(),
         version: version.to_string(),
@@ -169,8 +175,14 @@ fn make_permission_pack() -> AuthorityPack {
     let version = "1.0.0";
     let semantics_version = "0.4";
     let required_specificity_profile = "default";
-    let hash = compute_pack_hash(id, version, semantics_version, required_specificity_profile, &policies)
-        .expect("pack hash computation failed");
+    let hash = compute_pack_hash(
+        id,
+        version,
+        semantics_version,
+        required_specificity_profile,
+        &policies,
+    )
+    .expect("pack hash computation failed");
     AuthorityPack {
         id: id.to_string(),
         version: version.to_string(),
@@ -258,8 +270,14 @@ fn make_override_pack() -> AuthorityPack {
     let version = "1.0.0";
     let semantics_version = "0.4";
     let required_specificity_profile = "default";
-    let hash = compute_pack_hash(id, version, semantics_version, required_specificity_profile, &policies)
-        .expect("pack hash computation failed");
+    let hash = compute_pack_hash(
+        id,
+        version,
+        semantics_version,
+        required_specificity_profile,
+        &policies,
+    )
+    .expect("pack hash computation failed");
     AuthorityPack {
         id: id.to_string(),
         version: version.to_string(),
