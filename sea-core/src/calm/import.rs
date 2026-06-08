@@ -71,15 +71,44 @@ fn import_constraint_node(
     let calm_id = &node.unique_id;
 
     if let NodeType::Constraint = node.node_type {
-        // Extract SBVR/SEA expression from metadata
+        let primitive = node.metadata.get("sea:primitive").and_then(|v| v.as_str());
+        match primitive {
+            Some("Pattern") => {
+                let regex = node
+                    .metadata
+                    .get("sea:regex")
+                    .and_then(|v| v.as_str())
+                    .ok_or("Missing sea:regex for Pattern node")?;
+                let ns = node
+                    .namespace
+                    .clone()
+                    .unwrap_or_else(|| "default".to_string());
+                let pattern = crate::patterns::Pattern::new(
+                    node.name.clone(),
+                    ns,
+                    regex.to_string(),
+                )
+                .map_err(|e| format!("Invalid pattern regex: {}", e))?;
+                let pattern_id = pattern.id().clone();
+                graph
+                    .add_pattern(pattern)
+                    .map_err(|e| e.to_string())?;
+                id_map.insert(calm_id.clone(), pattern_id);
+                return Ok(());
+            }
+            Some("Metric") => {
+                return Ok(());
+            }
+            Some("Policy") | None => {}
+            _ => return Ok(()),
+        }
+
         let expr_str = node
             .metadata
             .get("sea:expression")
             .and_then(|v| v.as_str())
             .ok_or("Missing sea:expression for constraint node")?;
 
-        // Parse the expression using the SEA parser; SBVR XMI exports expressions
-        // in a compatible textual form (forall/exist style) - use the same parser.
         let expr = crate::parser::parse_expression_from_str(expr_str)
             .map_err(|e| format!("Failed to parse policy expression: {}", e))?;
 
@@ -89,14 +118,12 @@ fn import_constraint_node(
             .unwrap_or_else(|| "default".to_string());
         let mut policy = Policy::new_with_namespace(node.name.clone(), ns.clone(), expr);
 
-        // Optional metadata mapping
         if let Some(priority_val) = node.metadata.get("sea:priority") {
             if let Some(priority) = priority_val.as_i64() {
                 policy = policy.with_priority(priority as i32);
             }
         }
 
-        // Modality and kind mapping if present
         if let Some(modality) = node.metadata.get("sea:modality").and_then(|v| v.as_str()) {
             match modality {
                 "Obligation" => {
@@ -151,11 +178,19 @@ fn import_instance_node(
 }
 
 fn import_entity(node: &super::models::CalmNode) -> Result<Entity, String> {
-    let entity = if let Some(ns) = &node.namespace {
+    let mut entity = if let Some(ns) = &node.namespace {
         Entity::new_with_namespace(node.name.clone(), ns.clone())
     } else {
         Entity::new_with_namespace(node.name.clone(), "default".to_string())
     };
+
+    if let Some(attrs) = node.metadata.get("sea:attributes") {
+        if let Some(obj) = attrs.as_object() {
+            for (key, value) in obj {
+                entity.set_attribute(key.clone(), value.clone());
+            }
+        }
+    }
 
     Ok(entity)
 }
@@ -170,11 +205,19 @@ fn import_resource(node: &super::models::CalmNode) -> Result<Resource, String> {
 
     let unit_obj = unit_from_string(unit);
 
-    let resource = if let Some(ns) = &node.namespace {
+    let mut resource = if let Some(ns) = &node.namespace {
         Resource::new_with_namespace(node.name.clone(), unit_obj, ns.clone())
     } else {
         Resource::new_with_namespace(node.name.clone(), unit_obj, "default".to_string())
     };
+
+    if let Some(attrs) = node.metadata.get("sea:attributes") {
+        if let Some(obj) = attrs.as_object() {
+            for (key, value) in obj {
+                resource.set_attribute(key.clone(), value.clone());
+            }
+        }
+    }
 
     Ok(resource)
 }
@@ -203,7 +246,7 @@ fn import_instance(
         .get(resource_id_str)
         .ok_or_else(|| format!("Unknown resource ID: {}", resource_id_str))?;
 
-    let instance = if let Some(ns) = &node.namespace {
+    let mut instance = if let Some(ns) = &node.namespace {
         ResourceInstance::new_with_namespace(resource_id.clone(), entity_id.clone(), ns.clone())
     } else {
         ResourceInstance::new_with_namespace(
@@ -212,6 +255,14 @@ fn import_instance(
             "default".to_string(),
         )
     };
+
+    if let Some(attrs) = node.metadata.get("sea:attributes") {
+        if let Some(obj) = attrs.as_object() {
+            for (key, value) in obj {
+                instance.set_attribute(key.clone(), value.clone());
+            }
+        }
+    }
 
     Ok(instance)
 }

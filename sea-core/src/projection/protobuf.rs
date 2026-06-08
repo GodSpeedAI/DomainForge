@@ -24,7 +24,7 @@ use crate::primitives::{Entity, Resource};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // ============================================================================
 // Protobuf IR Types
@@ -973,7 +973,7 @@ pub fn map_sea_type_to_proto(sea_type: &str) -> ProtoType {
         }
 
         // Custom types become messages
-        _ => ProtoType::Message(to_pascal_case(sea_type)),
+        _ => ProtoType::Message(sanitize_proto_ident(sea_type)),
     }
 }
 
@@ -1020,7 +1020,12 @@ impl ProtobufEngine {
     pub fn project(graph: &Graph, namespace: &str, package: &str) -> ProtoFile {
         let mut proto = ProtoFile::new(package);
         proto.metadata.source_namespace = namespace.to_string();
-        proto.metadata.generated_at = chrono::Utc::now().to_rfc3339();
+        proto.metadata.generated_at = std::env::var("SOURCE_DATE_EPOCH")
+            .ok()
+            .and_then(|epoch| epoch.parse::<i64>().ok())
+            .and_then(|epoch| chrono::DateTime::from_timestamp(epoch, 0))
+            .map(|dt| dt.to_rfc3339())
+            .unwrap_or_default();
 
         // Convert entities to messages
         for entity in graph.all_entities() {
@@ -1081,6 +1086,9 @@ impl ProtobufEngine {
 
         if include_services {
             proto.services = Self::flows_to_services(graph, namespace);
+            let response_msgs = Self::collect_response_messages(&proto.services);
+            proto.messages.extend(response_msgs);
+            proto.messages.sort_by(|a, b| a.name.cmp(&b.name));
         }
 
         // Re-add WKT imports in case governance messages need them
@@ -1125,7 +1133,7 @@ impl ProtobufEngine {
             };
 
             type_index.insert(
-                to_pascal_case(entity.name()),
+                sanitize_proto_ident(entity.name()),
                 (ns.to_string(), package.clone()),
             );
 
@@ -1145,7 +1153,7 @@ impl ProtobufEngine {
             };
 
             type_index.insert(
-                to_pascal_case(resource.name()),
+                sanitize_proto_ident(resource.name()),
                 (ns.to_string(), package.clone()),
             );
 
@@ -1158,17 +1166,14 @@ impl ProtobufEngine {
 
         // 2. Add Services
         if include_services {
-            // Iterate all flows to capture services
             let services = Self::flows_to_services(graph, "");
+            let response_msgs = Self::collect_response_messages(&services);
             for service in services {
-                // Try to find the namespace of the service based on the destination entity name
-                // Service name is {DestEntity}Service
                 let entity_name = service
                     .name
                     .strip_suffix("Service")
                     .unwrap_or(&service.name);
 
-                // Look up entity namespace in type_index
                 if let Some((ns, package)) = type_index.get(entity_name) {
                     files
                         .entry(ns.clone())
@@ -1176,7 +1181,6 @@ impl ProtobufEngine {
                         .services
                         .push(service);
                 } else {
-                    // Default to base package if not found (e.g. flow to unknown entity)
                     let package = base_package.to_string();
                     files
                         .entry("".to_string())
@@ -1184,6 +1188,14 @@ impl ProtobufEngine {
                         .services
                         .push(service);
                 }
+            }
+            for resp in response_msgs {
+                type_index.insert(resp.name.clone(), ("".to_string(), base_package.to_string()));
+                files
+                    .entry("".to_string())
+                    .or_insert_with(|| ProtoFile::new(base_package.to_string()))
+                    .messages
+                    .push(resp);
             }
         }
 
@@ -1321,49 +1333,39 @@ impl ProtobufEngine {
     /// ```
     pub fn flows_to_services(graph: &Graph, namespace: &str) -> Vec<ProtoService> {
         let mut services: BTreeMap<String, ProtoService> = BTreeMap::new();
+        let mut response_types: HashSet<String> = HashSet::new();
 
         for flow in graph.all_flows() {
-            // Filter by namespace if specified
             if !namespace.is_empty() && flow.namespace() != namespace {
                 continue;
             }
 
-            // Get the destination entity (service provider)
             let to_entity = match graph.get_entity(flow.to_id()) {
                 Some(e) => e,
-                None => continue, // Skip if entity not found
+                None => continue,
             };
 
-            // Get the resource being transferred (becomes the request type)
             let resource = match graph.get_resource(flow.resource_id()) {
                 Some(r) => r,
-                None => continue, // Skip if resource not found
+                None => continue,
             };
 
-            // Determine service name: {DestinationEntity}Service
-            let service_name = format!("{}Service", to_pascal_case(to_entity.name()));
+            let service_name = format!("{}Service", sanitize_proto_ident(to_entity.name()));
+            let method_name = format!("Process{}", sanitize_proto_ident(resource.name()));
+            let request_type = sanitize_proto_ident(resource.name());
+            let response_type = format!("{}Response", sanitize_proto_ident(resource.name()));
 
-            // Determine method name: Process{Resource} or Send{Resource}
-            let method_name = format!("Process{}", to_pascal_case(resource.name()));
+            response_types.insert(response_type.clone());
 
-            // Request type is the resource name
-            let request_type = to_pascal_case(resource.name());
-
-            // Response type is {Resource}Response
-            let response_type = format!("{}Response", to_pascal_case(resource.name()));
-
-            // Check for streaming mode in flow attributes
             let streaming = flow
                 .get_attribute("streaming")
                 .and_then(|v| v.as_str())
                 .map(StreamingMode::parse)
                 .unwrap_or(StreamingMode::Unary);
 
-            // Create the RPC method
             let mut method = ProtoRpcMethod::new(&method_name, &request_type, &response_type);
             method.streaming = streaming;
 
-            // Get the source entity for the comment
             if let Some(from_entity) = graph.get_entity(flow.from_id()) {
                 method.comments.push(format!(
                     "Flow: {} -> {} of {}",
@@ -1373,7 +1375,6 @@ impl ProtobufEngine {
                 ));
             }
 
-            // Add to or create service
             services
                 .entry(service_name.clone())
                 .or_insert_with(|| {
@@ -1386,15 +1387,45 @@ impl ProtobufEngine {
                 .push(method);
         }
 
-        // Also generate response messages for each service method
-        // (This would normally be done, but we'll keep it simple for now)
-
         services.into_values().collect()
+    }
+
+    pub fn collect_response_messages(services: &[ProtoService]) -> Vec<ProtoMessage> {
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut messages = Vec::new();
+        for service in services {
+            for method in &service.methods {
+                if !seen.contains(&method.response_type) {
+                    seen.insert(method.response_type.clone());
+                    let mut msg = ProtoMessage::new(&method.response_type);
+                    msg.comments
+                        .push(format!("Response message for {}", method.name));
+                    msg.fields.push(ProtoField {
+                        name: "success".to_string(),
+                        number: 1,
+                        proto_type: ProtoType::Scalar(ScalarType::Bool),
+                        repeated: false,
+                        optional: false,
+                        comments: vec![],
+                    });
+                    msg.fields.push(ProtoField {
+                        name: "message".to_string(),
+                        number: 2,
+                        proto_type: ProtoType::Scalar(ScalarType::String),
+                        repeated: false,
+                        optional: true,
+                        comments: vec![],
+                    });
+                    messages.push(msg);
+                }
+            }
+        }
+        messages
     }
 
     /// Convert an Entity to a ProtoMessage.
     fn entity_to_message(entity: &Entity) -> ProtoMessage {
-        let mut msg = ProtoMessage::new(to_pascal_case(entity.name()));
+        let mut msg = ProtoMessage::new(sanitize_proto_ident(entity.name()));
         msg.comments.push(format!("SEA Entity: {}", entity.name()));
         msg.comments
             .push(format!("Namespace: {}", entity.namespace()));
@@ -1446,7 +1477,7 @@ impl ProtobufEngine {
 
     /// Convert a Resource to a ProtoMessage.
     fn resource_to_message(resource: &Resource) -> ProtoMessage {
-        let mut msg = ProtoMessage::new(to_pascal_case(resource.name()));
+        let mut msg = ProtoMessage::new(sanitize_proto_ident(resource.name()));
         msg.comments
             .push(format!("SEA Resource: {}", resource.name()));
         msg.comments
@@ -1622,17 +1653,48 @@ impl ProtobufEngine {
 // ============================================================================
 
 /// Convert a string to PascalCase.
+///
+/// Preserves original casing of characters after the first letter of each word,
+/// so "PaymentProcessor" stays "PaymentProcessor" (not "Paymentprocessor").
 fn to_pascal_case(s: &str) -> String {
     s.split(|c: char| !c.is_alphanumeric())
         .filter(|part| !part.is_empty())
         .map(|part| {
             let mut chars = part.chars();
             match chars.next() {
-                Some(first) => first.to_uppercase().to_string() + &chars.as_str().to_lowercase(),
+                Some(first) => first.to_uppercase().to_string() + chars.as_str(),
                 None => String::new(),
             }
         })
         .collect()
+}
+
+fn sanitize_proto_ident(raw: &str) -> String {
+    let pascal = to_pascal_case(raw);
+    if pascal.is_empty() {
+        return "SeaUnnamed".to_string();
+    }
+    let mut result = String::new();
+    for (i, c) in pascal.chars().enumerate() {
+        if i == 0 && !c.is_ascii_alphabetic() && c != '_' {
+            result.push_str("Sea");
+        }
+        if c.is_ascii_alphanumeric() || c == '_' {
+            result.push(c);
+        }
+    }
+    if result.is_empty() {
+        return "SeaUnnamed".to_string();
+    }
+    let reserved = [
+        "syntax", "package", "message", "service", "rpc", "enum", "import", "option", "returns",
+        "stream", "reserved", "bool", "string", "bytes", "double", "float", "int32", "int64",
+        "uint32", "uint64", "true", "false",
+    ];
+    if reserved.contains(&result.to_lowercase().as_str()) {
+        result = format!("Sea{}", result);
+    }
+    result
 }
 
 /// Convert a string to snake_case.
@@ -1664,6 +1726,66 @@ fn to_snake_case(s: &str) -> String {
 /// Convert a string to SCREAMING_SNAKE_CASE.
 fn to_screaming_snake_case(s: &str) -> String {
     to_snake_case(s).to_uppercase()
+}
+
+pub fn validate_proto_package_namespace(ns: &str) -> Result<(), String> {
+    if ns.is_empty() {
+        return Ok(());
+    }
+    if ns.contains('/') || ns.contains('\\') || ns.contains("..") || ns.starts_with('.') || ns.starts_with('/') {
+        return Err(format!(
+            "Invalid protobuf namespace '{}': must not contain path separators or traversal",
+            ns
+        ));
+    }
+    let mut chars = ns.chars().peekable();
+    loop {
+        let first = match chars.next() {
+            Some(c) => c,
+            None => break,
+        };
+        if !first.is_ascii_alphabetic() && first != '_' {
+            return Err(format!(
+                "Invalid protobuf namespace '{}': must be dotted identifiers (e.g., com.example.api)",
+                ns
+            ));
+        }
+        loop {
+            match chars.peek() {
+                Some('.') => {
+                    chars.next();
+                    break;
+                }
+                Some(c) if c.is_ascii_alphanumeric() || *c == '_' => {
+                    chars.next();
+                }
+                Some(_) => {
+                    return Err(format!(
+                        "Invalid protobuf namespace '{}': must be dotted identifiers (e.g., com.example.api)",
+                        ns
+                    ));
+                }
+                None => break,
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), String> {
+    let canonical_output = output_root
+        .canonicalize()
+        .unwrap_or_else(|_| output_root.to_path_buf());
+    let canonical_target = target
+        .canonicalize()
+        .unwrap_or_else(|_| target.to_path_buf());
+    if !canonical_target.starts_with(&canonical_output) {
+        return Err(format!(
+            "Security: output path '{}' escapes output directory",
+            target.display()
+        ));
+    }
+    Ok(())
 }
 
 // ============================================================================
@@ -2096,8 +2218,21 @@ mod tests {
     fn test_to_pascal_case() {
         assert_eq!(to_pascal_case("hello_world"), "HelloWorld");
         assert_eq!(to_pascal_case("my-entity"), "MyEntity");
-        assert_eq!(to_pascal_case("already PascalCase"), "AlreadyPascalcase");
-        assert_eq!(to_pascal_case("UPPERCASE"), "Uppercase");
+        assert_eq!(to_pascal_case("already PascalCase"), "AlreadyPascalCase");
+        assert_eq!(to_pascal_case("UPPERCASE"), "UPPERCASE");
+        assert_eq!(to_pascal_case("PaymentProcessor"), "PaymentProcessor");
+    }
+
+    #[test]
+    fn test_sanitize_proto_ident() {
+        assert_eq!(sanitize_proto_ident("PaymentProcessor"), "PaymentProcessor");
+        assert_eq!(sanitize_proto_ident("123Invalid"), "Sea123Invalid");
+        assert_eq!(sanitize_proto_ident("message"), "SeaMessage");
+        assert_eq!(sanitize_proto_ident("String"), "SeaString");
+        assert_eq!(sanitize_proto_ident("hello_world"), "HelloWorld");
+        assert_eq!(sanitize_proto_ident(""), "SeaUnnamed");
+        assert_eq!(sanitize_proto_ident("rpc"), "SeaRpc");
+        assert_eq!(sanitize_proto_ident("service"), "SeaService");
     }
 
     #[test]
@@ -2136,7 +2271,7 @@ mod tests {
         );
         assert_eq!(
             map_sea_type_to_proto("CustomType"),
-            ProtoType::Message("Customtype".to_string())
+            ProtoType::Message("CustomType".to_string())
         );
     }
 

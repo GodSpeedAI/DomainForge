@@ -311,7 +311,7 @@ export declare class Expression {
   /** Create a member access expression (e.g., user.name). */
   static memberAccess(object: string, member: string): Expression
   /** Create an aggregation expression (e.g., COUNT(items)). */
-  static aggregation(function: AggregateFunction, collection: Expression, field?: string | undefined | null, filter?: Expression | undefined | null): Expression
+  static aggregation(aggregateFunction: AggregateFunction, collection: Expression, field?: string | undefined | null, filter?: Expression | undefined | null): Expression
   /** Create an aggregation comprehension expression. */
   static aggregationComprehension(function: AggregateFunction, variable: string, collection: Expression, predicate: Expression, projection: Expression, window?: WindowSpec | undefined | null, targetUnit?: string | undefined | null): Expression
   /** Create a group-by expression. */
@@ -432,7 +432,7 @@ export declare class NamespaceBinding {
 }
 export declare class NamespaceRegistry {
   static fromFile(path: string): NamespaceRegistry
-  static discover(path: string): Self | null
+  static discover(path: string): NamespaceRegistry | null
   resolveFiles(failOnAmbiguity?: boolean | undefined | null): Array<NamespaceBinding>
   namespaceFor(path: string, failOnAmbiguity?: boolean | undefined | null): string
   get root(): string

@@ -10,6 +10,7 @@ pub use protobuf::{
     CompatibilityChecker, CompatibilityMode, CompatibilityResult, CompatibilityViolation,
     ProtoCustomOption, ProtoField, ProtoFile, ProtoMessage, ProtoOptionValue, ProtoOptions,
     ProtoRpcMethod, ProtoService, ProtoType, ProtobufEngine, ScalarType, SchemaHistory,
-    StreamingMode, ViolationType, WellKnownType,
+    StreamingMode, ViolationType, WellKnownType, validate_output_path,
+    validate_proto_package_namespace,
 };
 pub use registry::ProjectionRegistry;

@@ -38,9 +38,16 @@ jobs:
       - name: Build napi package
         run: npm run build
 
+      - name: Check if already published
+        run: |
+          if npm view "@domainforge/sea@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+            echo "Already published, skipping"
+            echo "SKIP_PUBLISH=1" >> $GITHUB_ENV
+          fi
+
       - name: Publish to npm
-        run: npm publish --access public || echo "Package may already be published"
-        continue-on-error: true
+        if: env.SKIP_PUBLISH != '1'
+        run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}
 
@@ -76,10 +83,18 @@ jobs:
           cd sea-core
           wasm-pack build --target web --release --scope domainforge -- --features wasm
 
-      - name: Publish WASM to npm
+      - name: Check if WASM already published
         run: |
           cd sea-core/pkg
-          npm publish --access public || echo "WASM package may already be published"
-        continue-on-error: true
+          if npm view "@domainforge/sea-wasm@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+            echo "Already published, skipping"
+            echo "SKIP_PUBLISH=1" >> $GITHUB_ENV
+          fi
+
+      - name: Publish WASM to npm
+        if: env.SKIP_PUBLISH != '1'
+        run: |
+          cd sea-core/pkg
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}

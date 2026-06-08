@@ -10,6 +10,7 @@
     "test": "bun vitest run",
     "test:watch": "bun vitest",
     "test:node": "npx vitest run",
+    "test:types": "tsc --noEmit --strict --skipLibCheck false -p tsconfig.json",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -30,7 +31,9 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "sea-core/target/release/*.node"
+    "README.md",
+    "LICENSE",
+    "sea-core.*.node"
   ],
   "devDependencies": {
     "@napi-rs/cli": "^2.18.0",

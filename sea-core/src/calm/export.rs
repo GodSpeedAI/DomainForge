@@ -10,7 +10,7 @@ use crate::primitives::{
 };
 use crate::projection::{find_mapping_rule, find_projection_override, ProjectionRegistry};
 use crate::Graph;
-use chrono::Utc;
+
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -208,13 +208,26 @@ fn export_flow(
     }
 
     CalmRelationship {
-        unique_id: flow.id().to_string(),
+        unique_id: deterministic_flow_id(
+            &flow.resource_id().to_string(),
+            &flow.from_id().to_string(),
+            &flow.to_id().to_string(),
+        ),
         relationship_type,
         parties: Parties::SourceDestination {
             source: flow.from_id().to_string(),
             destination: flow.to_id().to_string(),
         },
     }
+}
+
+fn deterministic_flow_id(resource_id: &str, from_id: &str, to_id: &str) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    resource_id.hash(&mut hasher);
+    from_id.hash(&mut hasher);
+    to_id.hash(&mut hasher);
+    format!("flow-{:016x}", hasher.finish())
 }
 
 fn parse_node_type(s: &str) -> Option<NodeType> {
@@ -231,7 +244,15 @@ fn parse_node_type(s: &str) -> Option<NodeType> {
 pub fn export(graph: &Graph) -> Result<Value, String> {
     let mut calm_model = CalmModel::new();
 
-    calm_model.metadata.sea_timestamp = Some(Utc::now().to_rfc3339());
+    calm_model.metadata.sea_timestamp = Some(
+        std::env::var("SOURCE_DATE_EPOCH")
+            .ok()
+            .and_then(|epoch| epoch.parse::<i64>().ok())
+            .and_then(|epoch| {
+                chrono::DateTime::from_timestamp(epoch, 0).map(|dt| dt.to_rfc3339())
+            })
+            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+    );
 
     let registry = ProjectionRegistry::new(graph);
     let mappings = registry.find_mappings_for_target(&TargetFormat::Calm);

@@ -93,7 +93,7 @@ fn test_protobuf_text_output() {
     // Check essential proto3 elements
     assert!(proto_text.contains("syntax = \"proto3\";"));
     assert!(proto_text.contains("package payments;"));
-    assert!(proto_text.contains("message Paymentprocessor {"));
+    assert!(proto_text.contains("message PaymentProcessor {"));
     assert!(proto_text.contains("string id = 1;"));
     assert!(proto_text.contains("string name = 2;"));
 }
@@ -121,7 +121,7 @@ fn test_governance_messages() {
     let message_names: Vec<&str> = proto.messages.iter().map(|m| m.name.as_str()).collect();
     assert!(message_names.contains(&"PolicyViolation"));
     assert!(message_names.contains(&"MetricEvent"));
-    assert!(message_names.contains(&"Testentity"));
+    assert!(message_names.contains(&"TestEntity"));
 }
 
 #[test]
