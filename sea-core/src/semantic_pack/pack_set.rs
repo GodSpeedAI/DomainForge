@@ -45,7 +45,7 @@ pub fn merge_packs(
 ) -> Result<PackSet, Vec<PackConflict>> {
     if !packs.is_empty() && priority_order.len() != packs.len() {
         return Err(vec![PackConflict {
-            conflict_type: ConflictType::SameUnitSymbolDifferentDimension,
+            conflict_type: ConflictType::InvalidPriorityOrder,
             key: String::new(),
             pack_a_id: String::new(),
             pack_b_id: String::new(),
