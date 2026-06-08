@@ -66,6 +66,8 @@ pub fn validate_definition_hashes(
     }
 
     let latest = matching.last().unwrap();
+
+    if latest.definition_hash == current_hash {
         return DefinitionHashResult::Match;
     }
 
