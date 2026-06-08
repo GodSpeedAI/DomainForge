@@ -394,6 +394,194 @@ Reading these files ensures documentation stays aligned with the shipped binary.
 - CLI does not execute embedded code; however, avoid running against untrusted files in directories with malicious symlinks (use `--out` to control output paths).
 - When exporting CALM or RDF, check file permissions to avoid leaking sensitive model details.
 
+## Pack Commands
+
+The `sea pack` subcommand provides tools for building, validating, inspecting, diffing, signing, and verifying semantic packs.
+
+### sea pack build
+
+Build a semantic pack from .sea source files.
+
+```bash
+sea pack build \
+  --source <glob> \
+  --org <id> \
+  --domain <id> \
+  --version <semver> \
+  --meaning-version <semver> \
+  --approval candidate|approved \
+  --review <path> \
+  --previous-pack <path> \
+  --allow-first-approved-version \
+  --out <path> \
+  --format human|json|jsonl
+```
+
+Options:
+
+| Option                          | Description                                                        |
+|---------------------------------|--------------------------------------------------------------------|
+| `--source` (required, repeatable) | Glob patterns or file paths for .sea source files.               |
+| `--org` (required)              | Organization identifier.                                           |
+| `--domain` (required)           | Domain identifier.                                                 |
+| `--version` (required)          | Pack version (semver).                                             |
+| `--meaning-version` (required)  | Meaning version (semver). Must increase when fingerprint changes.  |
+| `--approval`                    | `candidate` (default) or `approved`.                               |
+| `--review`                      | Path to JSONL review manifest (required for `approved`).           |
+| `--previous-pack`               | Path to previous pack for version comparison.                      |
+| `--allow-first-approved-version`| Allow first approved pack without a previous version.              |
+| `--out`                         | Output file path. Prints to stdout if omitted.                     |
+| `--format`                      | Output format: `human` (default), `json`, or `jsonl`.              |
+
+Exit codes: `0` success, `1` semantic/build errors, `2` parse error.
+
+Examples:
+
+```bash
+# Build a candidate pack
+sea pack build --source "models/**/*.sea" --org acme --domain logistics \
+  --version 1.0.0 --meaning-version 1.0.0 --out packs/candidate.json
+
+# Build an approved pack with review
+sea pack build --source "models/**/*.sea" --org acme --domain logistics \
+  --version 1.1.0 --meaning-version 1.1.0 --approval approved \
+  --review reviews/logistics.jsonl --previous-pack packs/candidate.json \
+  --out packs/approved.json
+```
+
+### sea pack validate
+
+Validate .sea source files against a semantic pack.
+
+```bash
+sea pack validate \
+  --pack <path> \
+  --mode off|warn|strict \
+  --deprecated-policy allow|warn|error_in_strict|error_always \
+  --require-signature \
+  --expected-hash <hash> \
+  --format human|json|jsonl \
+  <input.sea>...
+```
+
+Options:
+
+| Option                   | Description                                                        |
+|--------------------------|--------------------------------------------------------------------|
+| `--pack` (required)      | Path to the semantic pack JSON file.                               |
+| `--mode`                 | `warn` (default), `off`, or `strict`.                              |
+| `--deprecated-policy`    | `warn` (default), `allow`, `error_in_strict`, or `error_always`.   |
+| `--require-signature`    | Fail if the pack is unsigned.                                      |
+| `--expected-hash`        | Pin the expected pack content hash for tamper protection.          |
+| `--format`               | Output format: `human` (default), `json`, or `jsonl`.              |
+| `<input.sea>...`         | One or more .sea files to validate.                                |
+
+Exit codes: `0` passed, `1` validation errors, `2` parse error, `3` unsigned pack, `4` signature failure.
+
+Examples:
+
+```bash
+# Warn-mode validation
+sea pack validate --pack packs/approved.json models/*.sea
+
+# Strict CI validation
+sea pack validate --pack packs/signed.json --mode strict \
+  --require-signature --expected-hash sha256:abc123... models/**/*.sea
+```
+
+### sea pack inspect
+
+Display metadata and contents of a semantic pack.
+
+```bash
+sea pack inspect [--format human|json|jsonl] <pack-path>
+```
+
+Options:
+
+| Option      | Description                                            |
+|-------------|--------------------------------------------------------|
+| `--format`  | `human` (default), `json`, or `jsonl`.                 |
+
+Example:
+
+```bash
+sea pack inspect packs/acme-logistics-1.1.0.json
+sea pack inspect --format json packs/acme-logistics-1.1.0.json
+```
+
+### sea pack diff
+
+Compare two semantic packs and classify changes.
+
+```bash
+sea pack diff --old <path> --new <path> [--format human|json|jsonl]
+```
+
+Options:
+
+| Option      | Description                                            |
+|-------------|--------------------------------------------------------|
+| `--old`     | Path to the old (base) pack.                           |
+| `--new`     | Path to the new pack.                                  |
+| `--format`  | `human` (default), `json`, or `jsonl`.                 |
+
+Exit codes: `0` no breaking changes, `1` breaking changes detected.
+
+Diff classifications: `ADD` (additive), `DEF` (definitional change), `DEP` (deprecating), `BRK` (breaking), `GOV` (governance critical), `SIG` (signature only).
+
+Example:
+
+```bash
+sea pack diff --old packs/v1.0.0.json --new packs/v1.1.0.json
+```
+
+### sea pack sign
+
+Sign a semantic pack with an Ed25519 private key.
+
+```bash
+sea pack sign <pack-path> --key <private.pem> [--out <path>]
+```
+
+Options:
+
+| Option      | Description                                            |
+|-------------|--------------------------------------------------------|
+| `--key`     | Path to the Ed25519 private key (PEM format).          |
+| `--out`     | Output path for the signed pack. Prints to stdout if omitted. |
+
+Exit codes: `0` success, `4` signing failure.
+
+Example:
+
+```bash
+sea pack sign packs/approved.json --key keys/private.pem \
+  --out packs/signed.json
+```
+
+### sea pack verify
+
+Verify the Ed25519 signature of a semantic pack.
+
+```bash
+sea pack verify <pack-path> --key <public.pem>
+```
+
+Options:
+
+| Option      | Description                                            |
+|-------------|--------------------------------------------------------|
+| `--key`     | Path to the Ed25519 public key (PEM format).           |
+
+Exit codes: `0` valid signature, `4` invalid or missing signature.
+
+Example:
+
+```bash
+sea pack verify packs/signed.json --key keys/public.pem
+```
+
 ## Version compatibility
 
 - New flags are added under minor version bumps; scripts should check `sea --version` to ensure expected options exist.

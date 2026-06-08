@@ -1,0 +1,39 @@
+namespace acme.procurement
+
+entity Supplier {
+    description: "A party that provides goods or services to the organization"
+    owner: "procurement-team@acme.com"
+}
+
+entity PurchaseOrder {
+    description: "A formal request to a supplier to deliver goods or services"
+    owner: "procurement-team@acme.com"
+}
+
+entity MaterialLot {
+    description: "A specific batch of physical materials received from a supplier"
+    owner: "warehouse-team@acme.com"
+}
+
+entity InspectionRecord {
+    description: "A record of quality inspection performed on received materials"
+    owner: "quality-team@acme.com"
+}
+
+entity CorrectiveAction {
+    description: "An action taken to address a quality issue identified during inspection"
+    owner: "quality-team@acme.com"
+}
+
+entity InventoryItem {
+    description: "An item tracked in the organization's inventory system"
+    owner: "warehouse-team@acme.com"
+}
+
+entity CashRegister {
+    description: "A point-of-sale terminal for processing financial transactions"
+    owner: "finance-team@acme.com"
+}
+
+alias Vendor for Supplier
+alias PO for PurchaseOrder

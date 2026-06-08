@@ -207,3 +207,61 @@ class Graph:
         ...
 
     def __repr__(self) -> str: ...
+
+# =============================================================================
+# Authority Module
+# =============================================================================
+
+class FinalDecision:
+    """Final authority decision result."""
+    Allow: 'FinalDecision'
+    Deny: 'FinalDecision'
+    Escalate: 'FinalDecision'
+    NotApplicable: 'FinalDecision'
+    Reject: 'FinalDecision'
+
+class PolicyModality:
+    """Policy modality type."""
+    Permission: 'PolicyModality'
+    Prohibition: 'PolicyModality'
+    Obligation: 'PolicyModality'
+    Override: 'PolicyModality'
+
+class SourceClass:
+    """Source class for fact provenance."""
+    CallerSupplied: 'SourceClass'
+    RuntimeObserved: 'SourceClass'
+    SystemOfRecord: 'SourceClass'
+    Attested: 'SourceClass'
+    ManualApproval: 'SourceClass'
+    Derived: 'SourceClass'
+    UnknownSource: 'SourceClass'
+
+class ClaimLevel:
+    """Claim evidence level."""
+    AuditBacked: 'ClaimLevel'
+    Validated: 'ClaimLevel'
+    FormallyProven: 'ClaimLevel'
+
+class AuthorityEnvironment:
+    """Authority evaluation environment loaded from config."""
+
+    def __init__(self, config_json: str) -> None:
+        """Create a new AuthorityEnvironment from a JSON config string."""
+        ...
+
+    def validate(self) -> None:
+        """Validate the environment configuration."""
+        ...
+
+    def evaluate(self, request_json: str, facts_json: str = "[]") -> tuple:
+        """Evaluate an authority request. Returns (trace_json, decision_json)."""
+        ...
+
+def evaluate_authority(
+    config_json: str,
+    request_json: str,
+    facts_json: str = "[]",
+) -> tuple:
+    """Evaluate an authority request against a policy environment. Returns (trace_json, decision_json)."""
+    ...

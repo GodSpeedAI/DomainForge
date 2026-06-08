@@ -1,6 +1,5 @@
 """Tests for Expression and NormalizedExpression bindings."""
 
-import pytest
 from sea_dsl import (
     Expression,
     NormalizedExpression,

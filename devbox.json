@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetpack-io/devbox/main/.schema/devbox.schema.json",
+  "packages": [
+    "rustup@1.29.0",
+    "just",
+    "bun",
+    "nodejs",
+    "python3"
+  ],
+  "env": {
+    "RUSTUP_TOOLCHAIN": "1.92.0",
+    "VENV_DIR": ".devbox/virtenv/python/.venv"
+  }
+}

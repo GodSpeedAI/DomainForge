@@ -1,0 +1,8 @@
+namespace acme.procurement
+
+policy UnknownVendorPolicy {
+    description: "A policy referencing an unknown concept"
+    subject: UnknownWidget
+    object: PurchaseOrder
+    predicate: "can create"
+}

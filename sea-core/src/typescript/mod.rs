@@ -1,7 +1,9 @@
+pub mod authority;
 pub mod error;
 pub mod formatter;
 pub mod graph;
 pub mod policy;
 pub mod primitives;
 pub mod registry;
+pub mod semantic_pack;
 pub mod units;

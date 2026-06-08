@@ -1,0 +1,8 @@
+namespace acme.procurement
+
+policy DeprecatedVendorAlias {
+    description: "A policy using the deprecated Vendor alias"
+    subject: Vendor
+    object: PurchaseOrder
+    predicate: "can create"
+}

@@ -1,0 +1,7 @@
+namespace acme.procurement
+
+metric UnitMismatchMetric {
+    unit: kilograms
+    threshold: 100.0
+    compare_with: percent
+}

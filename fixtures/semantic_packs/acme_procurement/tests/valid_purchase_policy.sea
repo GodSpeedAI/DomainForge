@@ -1,0 +1,8 @@
+namespace acme.procurement
+
+policy ValidPurchasePolicy {
+    description: "A purchase policy using only approved concepts"
+    subject: Supplier
+    object: PurchaseOrder
+    predicate: "can create"
+}

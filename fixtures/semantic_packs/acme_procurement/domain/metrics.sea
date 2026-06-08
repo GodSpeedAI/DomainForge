@@ -1,0 +1,11 @@
+namespace acme.procurement
+
+metric SupplierOnTimeDeliveryRate {
+    unit: percent
+    threshold: 95.0
+}
+
+metric DefectRate {
+    unit: percent
+    threshold: 2.0
+}

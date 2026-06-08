@@ -310,8 +310,13 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { formatSource, checkFormat, Graph, AggregateFunction, BinaryOp, UnaryOp, Quantifier, Severity, Expression, NormalizedExpression, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, Dimension, Unit } = nativeBinding
+const { FinalDecision, PolicyModality, SourceClass, ClaimLevel, evaluateAuthority, formatSource, checkFormat, Graph, AggregateFunction, BinaryOp, UnaryOp, Quantifier, Severity, Expression, NormalizedExpression, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, SemanticTruth, DiagnosticSeverity, ValidationMode, ApprovalState, SignatureState, ConceptStatus, ConceptKind, AliasStatus, SemanticValidationStatus, semanticPackBuild, semanticPackValidate, semanticPackValidateGraph, semanticPackSign, semanticPackVerify, semanticPackDiff, semanticPackHash, semanticNormalizeKey, semanticResolveConcept, Dimension, Unit } = nativeBinding
 
+module.exports.FinalDecision = FinalDecision
+module.exports.PolicyModality = PolicyModality
+module.exports.SourceClass = SourceClass
+module.exports.ClaimLevel = ClaimLevel
+module.exports.evaluateAuthority = evaluateAuthority
 module.exports.formatSource = formatSource
 module.exports.checkFormat = checkFormat
 module.exports.Graph = Graph
@@ -334,5 +339,23 @@ module.exports.Role = Role
 module.exports.Relation = Relation
 module.exports.NamespaceBinding = NamespaceBinding
 module.exports.NamespaceRegistry = NamespaceRegistry
+module.exports.SemanticTruth = SemanticTruth
+module.exports.DiagnosticSeverity = DiagnosticSeverity
+module.exports.ValidationMode = ValidationMode
+module.exports.ApprovalState = ApprovalState
+module.exports.SignatureState = SignatureState
+module.exports.ConceptStatus = ConceptStatus
+module.exports.ConceptKind = ConceptKind
+module.exports.AliasStatus = AliasStatus
+module.exports.SemanticValidationStatus = SemanticValidationStatus
+module.exports.semanticPackBuild = semanticPackBuild
+module.exports.semanticPackValidate = semanticPackValidate
+module.exports.semanticPackValidateGraph = semanticPackValidateGraph
+module.exports.semanticPackSign = semanticPackSign
+module.exports.semanticPackVerify = semanticPackVerify
+module.exports.semanticPackDiff = semanticPackDiff
+module.exports.semanticPackHash = semanticPackHash
+module.exports.semanticNormalizeKey = semanticNormalizeKey
+module.exports.semanticResolveConcept = semanticResolveConcept
 module.exports.Dimension = Dimension
 module.exports.Unit = Unit

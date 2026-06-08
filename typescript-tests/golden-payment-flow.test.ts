@@ -43,7 +43,9 @@ describe('Payment role flow golden path', () => {
         expect(relations[0].objectRoleId).toBe(roles.Payee);
         const flows = graph.allFlows();
         expect(flows).toHaveLength(1);
-        expect(flows[0].resourceId ? graph.getResource(flows[0].resourceId).name : null).toBe('Money');
+        const flowResource = flows[0].resourceId ? graph.getResource(flows[0].resourceId) : null;
+        expect(flowResource).not.toBeNull();
+        expect(flowResource?.name).toBe('Money');
         expect(flows[0].quantity).toBe(10);
     });
 });

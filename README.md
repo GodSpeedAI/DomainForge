@@ -419,12 +419,12 @@ All bindings provide **identical semantics**—zero behavioral drift.
 ├───────────────────────────────────────────────────────┤
 │ Rust Core Engine (sea-core) │
 │ ┌─────────────┬──────────────┬─────────────────┐ │
-│ │ Primitives │ Graph Store │ Policy Engine │ │
-│ │ (5 types) │ (IndexMap) │ (SBVR logic) │ │
-│ ├─────────────┼──────────────┼─────────────────┤ │
-│ │ Parser │ Validator │ CALM Integration│ │
-│ │ (Pest) │ (Ref check) │ (export/import) │ │
-│ └─────────────┴──────────────┴─────────────────┘ │
+ │ │ Primitives │ Graph Store │ Policy Engine │ Authority │ │
+ │ │ (5 types) │ (IndexMap) │ (SBVR logic) │ (Resolver) │ │
+ │ ├─────────────┼──────────────┼─────────────────┼────────────┤ │
+ │ │ Parser │ Validator │ CALM Integration│ Fact Store │ │
+ │ │ (Pest) │ (Ref check) │ (export/import) │ (Provenance)│ │
+ │ └─────────────┴──────────────┴─────────────────┴────────────┘ │
 └───────────────────────────────────────────────────────┘
 
 ```
@@ -455,9 +455,54 @@ sea import --format kg model.ttl
 
 # Normalize Expressions
 sea normalize "b AND a"  # -> "(a AND b)"
+
+# Evaluate authority decisions
+sea authority config.json request.json --facts facts.json --json
 ```
 
 [Full CLI Reference →](docs/reference/cli.md)
+
+</details>
+
+<details>
+<summary><strong>🛡️ Policy Authority</strong></summary>
+
+DomainForge includes a **Policy Authority** system that makes business authority executable, deterministic, fact-grounded, and traceable.
+
+**Key capabilities:**
+- **Four policy modalities:** Permission, Prohibition, Obligation, Override
+- **Trusted fact provenance:** Caller-supplied facts are untrusted by default
+- **Three-valued logic:** True, False, and Unknown with modality-aware unknown handling
+- **Deterministic conflict resolution:** Modality precedence → priority → specificity vector dominance
+- **Replayable audit traces:** Every decision produces a complete `AuthorityTrace`
+
+```python
+from sea_dsl import AuthorityEnvironment
+
+# Create environment from config
+env = AuthorityEnvironment(config_json)
+env.validate()
+
+# Evaluate an authority request
+trace_json, decision_json = env.evaluate(request_json, facts_json)
+```
+
+```typescript
+import { evaluateAuthority } from '@domainforge/sea';
+
+const result = evaluateAuthority(configJson, requestJson, factsJson);
+console.log(result.decisionJson);
+```
+
+**Decision outcomes:** `Allow`, `Deny`, `Escalate`, `NotApplicable`, `Reject`
+
+**Safety guarantees:**
+- No authority without declared semantics
+- No decision without trusted facts
+- No trust upgrade through derivation
+- No allow from unknown permission
+- No weakened prohibition from omitted facts
+- No scalar specificity shortcuts
 
 </details>
 

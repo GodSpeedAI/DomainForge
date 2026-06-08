@@ -311,6 +311,104 @@ console.log(calmJson); // CALM JSON string
 const importedGraph = await Graph.importCalm(calmJson);
 ```
 
+## Semantic Pack API
+
+The WASM bindings expose semantic pack enums and functions for browser and edge runtime usage.
+
+### Enums
+
+```javascript
+import {
+  SemanticTruth,              // Valid = 0, Invalid = 1, Unknown = 2
+  DiagnosticSeverity,         // Error = 0, Warning = 1, Info = 2, Hint = 3
+  ValidationMode,             // Off = 0, Warn = 1, Strict = 2
+  ApprovalState,              // Candidate = 0, Approved = 1, Rejected = 2
+  SignatureState,             // Unsigned = 0, Signed = 1, InvalidSignature = 2
+  ConceptStatus,              // Active = 0, Proposed = 1, Deprecated = 2, Rejected = 3, ExternalOnly = 4
+  ConceptKind,                // Entity = 0, Resource = 1, Role = 2, Flow = 3, Policy = 4, Metric = 5, Dimension = 6, Unit = 7, External = 8
+  AliasStatus,                // Approved = 0, Deprecated = 1, Ambiguous = 2, Blocked = 3
+  SemanticValidationStatus,   // Passed = 0, Failed = 1, Unknown = 2, Blocked = 3
+} from "@domainforge/sea-wasm";
+```
+
+### Functions
+
+#### semanticPackBuild
+
+Build a semantic pack from input JSON. Returns a JSON string with `pack`, `pack_content_hash`, `meaning_fingerprint`, `pre_pack_diagnostics`, and `build_warnings`.
+
+```javascript
+const result = semanticPackBuild(inputJson);
+const { pack, pack_content_hash, meaning_fingerprint } = JSON.parse(result);
+```
+
+#### semanticPackValidate
+
+Validate a pack's internal consistency. Returns a JSON array of diagnostics.
+
+```javascript
+const diagnosticsJson = semanticPackValidate(packJson);
+```
+
+#### semanticPackValidateGraph
+
+Validate a source against a pack with options. Returns a JSON validation result.
+
+```javascript
+const resultJson = semanticPackValidateGraph(packJson, "source_uri", optionsJson);
+```
+
+#### semanticPackSign
+
+Sign a pack with an Ed25519 private key (PEM string). Returns the signed pack JSON. Throws `JsError` on failure.
+
+```javascript
+const signedJson = semanticPackSign(packJson, privateKeyPem);
+```
+
+#### semanticPackVerify
+
+Verify a pack's Ed25519 signature. Returns `true` if valid, throws `JsError` on failure.
+
+```javascript
+const isValid = semanticPackVerify(packJson, publicKeyPem);
+```
+
+#### semanticPackDiff
+
+Compare two packs. Returns a JSON diff with entries and summary.
+
+```javascript
+const diffJson = semanticPackDiff(oldPackJson, newPackJson);
+```
+
+#### semanticPackHash
+
+Compute the content hash of a pack (excluding signature fields).
+
+```javascript
+const hash = semanticPackHash(packJson);
+```
+
+#### semanticNormalizeKey
+
+Normalize a term for lookup (NFC, case-fold, whitespace collapse).
+
+```javascript
+const normalized = semanticNormalizeKey("  Hello   World  "); // "hello world"
+```
+
+#### semanticResolveConcept
+
+Resolve a term against a pack. Returns a JSON object with `resolved_concept_id`, `semantic_truth`, `diagnostic_code`, `diagnostic_severity`, `message`, and `suggestions`.
+
+```javascript
+const resultJson = semanticResolveConcept("Supplier", packJson, optionsJson);
+const result = JSON.parse(resultJson);
+console.log(result.resolved_concept_id); // "supplier" or null
+console.log(result.semantic_truth);       // "valid", "invalid", or "unknown"
+```
+
 ## Related Documentation
 
 - [Phase 9 Plan](../../work/plans/Phase 9_WASM Bindings.md)

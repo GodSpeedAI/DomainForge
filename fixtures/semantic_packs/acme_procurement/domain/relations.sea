@@ -1,0 +1,7 @@
+namespace acme.procurement
+
+relation Supplier supplies MaterialLot
+relation PurchaseOrder orders MaterialLot
+relation MaterialLot requires InspectionRecord
+relation InspectionRecord triggers CorrectiveAction
+relation MaterialLot stored_as InventoryItem

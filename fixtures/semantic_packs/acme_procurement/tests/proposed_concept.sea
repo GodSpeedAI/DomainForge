@@ -1,0 +1,8 @@
+namespace acme.procurement
+
+policy ProposedConceptPolicy {
+    description: "A policy referencing a proposed concept"
+    subject: ProposedSupplier
+    object: PurchaseOrder
+    predicate: "can create"
+}
