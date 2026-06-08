@@ -1,9 +1,7 @@
 use super::diagnostics::{
     DiagnosticSeverity, SemanticDiagnosticCode, SemanticTruth, ValidationMode, ValidationOptions,
 };
-use super::schema::{
-    AliasDef, AliasStatus, ConceptKind, ConceptStatus, SemanticPack, SourceRef,
-};
+use super::schema::{AliasDef, AliasStatus, ConceptKind, ConceptStatus, SemanticPack, SourceRef};
 
 use unicode_normalization::UnicodeNormalization;
 
@@ -24,9 +22,9 @@ pub fn normalize_lookup_key(s: &str) -> String {
 /// Validate canonical ID format: [A-Za-z0-9._:/-]+
 pub fn is_valid_canonical_id(id: &str) -> bool {
     !id.is_empty()
-        && id
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == ':' || c == '/' || c == '-')
+        && id.chars().all(|c| {
+            c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == ':' || c == '/' || c == '-'
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +106,11 @@ pub fn resolve_concept<'a>(
         .collect();
 
     for alias in &alias_matches {
-        if let Some(concept) = pack.concepts.iter().find(|c| c.id == alias.target_concept_id) {
+        if let Some(concept) = pack
+            .concepts
+            .iter()
+            .find(|c| c.id == alias.target_concept_id)
+        {
             if !candidates.iter().any(|cand| cand.concept_id == concept.id) {
                 candidates.push(Candidate {
                     concept_id: concept.id.clone(),
@@ -123,7 +125,11 @@ pub fn resolve_concept<'a>(
     // Step 6: mapping rule matches
     for rule in &pack.mapping_rules {
         if normalize_lookup_key(&rule.source_term) == key {
-            if let Some(concept) = pack.concepts.iter().find(|c| c.id == rule.target_concept_id) {
+            if let Some(concept) = pack
+                .concepts
+                .iter()
+                .find(|c| c.id == rule.target_concept_id)
+            {
                 if !candidates.iter().any(|cand| cand.concept_id == concept.id) {
                     candidates.push(Candidate {
                         concept_id: concept.id.clone(),
@@ -196,7 +202,10 @@ pub fn resolve_concept<'a>(
     let mut groups: std::collections::HashMap<String, Vec<&Candidate>> =
         std::collections::HashMap::new();
     for cand in &candidates {
-        groups.entry(cand.concept_id.clone()).or_default().push(cand);
+        groups
+            .entry(cand.concept_id.clone())
+            .or_default()
+            .push(cand);
     }
 
     if groups.len() > 1 {
@@ -207,7 +216,9 @@ pub fn resolve_concept<'a>(
             .copied()
             .collect();
 
-        let all_ambiguous = non_blocked_aliases.iter().all(|a| a.status == AliasStatus::Ambiguous);
+        let all_ambiguous = non_blocked_aliases
+            .iter()
+            .all(|a| a.status == AliasStatus::Ambiguous);
         if all_ambiguous && !non_blocked_aliases.is_empty() {
             return ResolveResult {
                 resolved_concept_id: None,
@@ -265,7 +276,11 @@ pub fn resolve_concept<'a>(
     }
 
     // Step 14: deprecated
-    if winner.status == ConceptStatus::Deprecated || alias_matches.iter().any(|a| a.status == AliasStatus::Deprecated) {
+    if winner.status == ConceptStatus::Deprecated
+        || alias_matches
+            .iter()
+            .any(|a| a.status == AliasStatus::Deprecated)
+    {
         let severity = deprecated_severity(options);
         return ResolveResult {
             resolved_concept_id: Some(winner.concept_id.clone()),
@@ -294,7 +309,10 @@ pub fn detect_alias_conflicts(aliases: &[AliasDef]) -> AliasConflictReport {
     let mut groups: std::collections::HashMap<String, Vec<&AliasDef>> =
         std::collections::HashMap::new();
     for a in aliases {
-        groups.entry(a.normalized_alias.clone()).or_default().push(a);
+        groups
+            .entry(a.normalized_alias.clone())
+            .or_default()
+            .push(a);
     }
 
     let mut conflicting = Vec::new();
@@ -310,14 +328,18 @@ pub fn detect_alias_conflicts(aliases: &[AliasDef]) -> AliasConflictReport {
             continue;
         }
 
-        let distinct_targets: std::collections::HashSet<&str> =
-            non_blocked.iter().map(|a| a.target_concept_id.as_str()).collect();
+        let distinct_targets: std::collections::HashSet<&str> = non_blocked
+            .iter()
+            .map(|a| a.target_concept_id.as_str())
+            .collect();
         if distinct_targets.len() < 2 {
             continue;
         }
 
         // Check if all non-blocked are ambiguous
-        let all_ambiguous = non_blocked.iter().all(|a| a.status == AliasStatus::Ambiguous);
+        let all_ambiguous = non_blocked
+            .iter()
+            .all(|a| a.status == AliasStatus::Ambiguous);
         if all_ambiguous {
             ambiguous_only.push(key.clone());
         } else {
@@ -360,12 +382,10 @@ fn deprecated_severity(options: &ValidationOptions) -> DiagnosticSeverity {
     match options.deprecated_policy {
         super::diagnostics::DeprecatedPolicy::Allow => DiagnosticSeverity::Hint,
         super::diagnostics::DeprecatedPolicy::Warn => DiagnosticSeverity::Warning,
-        super::diagnostics::DeprecatedPolicy::ErrorInStrict => {
-            match options.mode {
-                ValidationMode::Strict => DiagnosticSeverity::Error,
-                _ => DiagnosticSeverity::Warning,
-            }
-        }
+        super::diagnostics::DeprecatedPolicy::ErrorInStrict => match options.mode {
+            ValidationMode::Strict => DiagnosticSeverity::Error,
+            _ => DiagnosticSeverity::Warning,
+        },
         super::diagnostics::DeprecatedPolicy::ErrorAlways => DiagnosticSeverity::Error,
     }
 }

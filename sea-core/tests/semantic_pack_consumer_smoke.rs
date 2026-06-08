@@ -1,9 +1,6 @@
 use sea_core::semantic_pack::*;
 
-fn make_concept(
-    id: &str,
-    canonical_name: &str,
-) -> ConceptDef {
+fn make_concept(id: &str, canonical_name: &str) -> ConceptDef {
     ConceptDef {
         id: id.to_string(),
         canonical_name: canonical_name.to_string(),
@@ -116,12 +113,15 @@ fn consumer_smoke_rejects_failing_validation_json() {
     let json = serde_json::to_string(&result).expect("serialize result");
     let parsed: serde_json::Value = serde_json::from_str(&json).expect("re-parse json");
 
-    let diags = parsed.get("diagnostics").and_then(|v| v.as_array()).unwrap();
+    let diags = parsed
+        .get("diagnostics")
+        .and_then(|v| v.as_array())
+        .unwrap();
     assert!(!diags.is_empty());
 
-    let has_error = diags.iter().any(|d| {
-        d.get("severity").and_then(|v| v.as_str()) == Some("error")
-    });
+    let has_error = diags
+        .iter()
+        .any(|d| d.get("severity").and_then(|v| v.as_str()) == Some("error"));
     assert!(has_error);
 }
 

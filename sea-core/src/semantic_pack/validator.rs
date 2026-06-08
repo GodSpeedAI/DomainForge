@@ -4,9 +4,7 @@ use super::diagnostics::{
     SemanticValidationResult, SemanticValidationStatus, ValidationMode, ValidationOptions,
 };
 use super::resolver::{self, ResolveRequest};
-use super::schema::{
-    ConceptStatus, PackRef, PackSetRef, SemanticPack, SignatureState, SourceRef,
-};
+use super::schema::{ConceptStatus, PackRef, PackSetRef, SemanticPack, SignatureState, SourceRef};
 
 /// Validate a semantic pack itself (internal consistency).
 pub fn validate_semantic_pack(
@@ -172,7 +170,10 @@ pub fn validate_semantic_pack(
                     code: SemanticDiagnosticCode::UnknownDimension,
                     severity: DiagnosticSeverity::Warning,
                     semantic_truth: SemanticTruth::Unknown,
-                    message: format!("Metric '{}' references unknown dimension '{}'", m.id, dim_id),
+                    message: format!(
+                        "Metric '{}' references unknown dimension '{}'",
+                        m.id, dim_id
+                    ),
                     source_ref: SourceRef::pack_uri(&pack.pack_id),
                     pack_ref: pack_ref.clone(),
                     suggestions: vec![],
@@ -218,11 +219,15 @@ pub fn validate_graph_with_pack(
             code: SemanticDiagnosticCode::PackUnsigned,
             severity: DiagnosticSeverity::Error,
             semantic_truth: SemanticTruth::Invalid,
-            message: format!("Pack '{}' is unsigned but signature is required", pack.pack_id),
+            message: format!(
+                "Pack '{}' is unsigned but signature is required",
+                pack.pack_id
+            ),
             source_ref: SourceRef::pack_uri(&pack.pack_id),
             pack_ref: pack_ref.clone(),
             suggestions: vec![],
-            recoverability_hint: "Sign the pack or use --allow-unsigned-for-test-fixtures".to_string(),
+            recoverability_hint: "Sign the pack or use --allow-unsigned-for-test-fixtures"
+                .to_string(),
         });
         return result;
     }

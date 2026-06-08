@@ -157,7 +157,9 @@ impl AuthorityEnvironment {
         let (all_facts, trust_decisions) =
             fact_resolver.resolve_trusted_facts(&raw_facts, provided_facts);
 
-        let transform_keys: Vec<String> = self.config.fact_transforms
+        let transform_keys: Vec<String> = self
+            .config
+            .fact_transforms
             .iter()
             .map(|t| format!("{}@{}", t.id, t.version))
             .collect();

@@ -56,7 +56,11 @@ pub fn diff_packs(old: &SemanticPack, new: &SemanticPack) -> PackDiff {
                 classification: DiffClassification::Additive,
                 subject_type: "concept".to_string(),
                 subject_id: id.to_string(),
-                detail: format!("Added concept '{}' ({})", concept.canonical_name, concept.status.as_str()),
+                detail: format!(
+                    "Added concept '{}' ({})",
+                    concept.canonical_name,
+                    concept.status.as_str()
+                ),
             });
         }
     }
@@ -64,10 +68,7 @@ pub fn diff_packs(old: &SemanticPack, new: &SemanticPack) -> PackDiff {
     // Removed concepts (breaking if active)
     for (id, concept) in &old_concepts {
         if !new_concepts.contains_key(id) {
-            let is_breaking = matches!(
-                concept.status,
-                super::schema::ConceptStatus::Active
-            );
+            let is_breaking = matches!(concept.status, super::schema::ConceptStatus::Active);
             entries.push(DiffEntry {
                 classification: if is_breaking {
                     DiffClassification::Breaking
@@ -76,7 +77,11 @@ pub fn diff_packs(old: &SemanticPack, new: &SemanticPack) -> PackDiff {
                 },
                 subject_type: "concept".to_string(),
                 subject_id: id.to_string(),
-                detail: format!("Removed concept '{}' (was {})", concept.canonical_name, concept.status.as_str()),
+                detail: format!(
+                    "Removed concept '{}' (was {})",
+                    concept.canonical_name,
+                    concept.status.as_str()
+                ),
             });
         }
     }
@@ -98,7 +103,9 @@ pub fn diff_packs(old: &SemanticPack, new: &SemanticPack) -> PackDiff {
                     subject_id: id.to_string(),
                     detail: format!(
                         "Definition changed for '{}' (hash {} -> {})",
-                        id, old_concept.definition.definition_hash, new_concept.definition.definition_hash
+                        id,
+                        old_concept.definition.definition_hash,
+                        new_concept.definition.definition_hash
                     ),
                 });
             }
@@ -147,12 +154,30 @@ pub fn diff_packs(old: &SemanticPack, new: &SemanticPack) -> PackDiff {
     });
 
     let summary = DiffSummary {
-        additive_count: entries.iter().filter(|e| e.classification == DiffClassification::Additive).count(),
-        definitional_change_count: entries.iter().filter(|e| e.classification == DiffClassification::DefinitionalChange).count(),
-        deprecating_count: entries.iter().filter(|e| e.classification == DiffClassification::Deprecating).count(),
-        breaking_count: entries.iter().filter(|e| e.classification == DiffClassification::Breaking).count(),
-        governance_critical_count: entries.iter().filter(|e| e.classification == DiffClassification::GovernanceCritical).count(),
-        signature_only_count: entries.iter().filter(|e| e.classification == DiffClassification::SignatureOnly).count(),
+        additive_count: entries
+            .iter()
+            .filter(|e| e.classification == DiffClassification::Additive)
+            .count(),
+        definitional_change_count: entries
+            .iter()
+            .filter(|e| e.classification == DiffClassification::DefinitionalChange)
+            .count(),
+        deprecating_count: entries
+            .iter()
+            .filter(|e| e.classification == DiffClassification::Deprecating)
+            .count(),
+        breaking_count: entries
+            .iter()
+            .filter(|e| e.classification == DiffClassification::Breaking)
+            .count(),
+        governance_critical_count: entries
+            .iter()
+            .filter(|e| e.classification == DiffClassification::GovernanceCritical)
+            .count(),
+        signature_only_count: entries
+            .iter()
+            .filter(|e| e.classification == DiffClassification::SignatureOnly)
+            .count(),
     };
 
     PackDiff {
@@ -175,9 +200,7 @@ fn classification_order(c: DiffClassification) -> u8 {
 }
 
 fn version_increased(old: &str, new: &str) -> bool {
-    let parse = |s: &str| -> Vec<u32> {
-        s.split('.').filter_map(|p| p.parse().ok()).collect()
-    };
+    let parse = |s: &str| -> Vec<u32> { s.split('.').filter_map(|p| p.parse().ok()).collect() };
     let old_parts = parse(old);
     let new_parts = parse(new);
     for i in 0..std::cmp::max(old_parts.len(), new_parts.len()) {

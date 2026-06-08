@@ -1,10 +1,6 @@
 use sea_core::semantic_pack::*;
 
-fn make_concept(
-    id: &str,
-    canonical_name: &str,
-    def_hash: &str,
-) -> ConceptDef {
+fn make_concept(id: &str, canonical_name: &str, def_hash: &str) -> ConceptDef {
     ConceptDef {
         id: id.to_string(),
         canonical_name: canonical_name.to_string(),

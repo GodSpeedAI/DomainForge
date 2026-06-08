@@ -4,12 +4,12 @@ use super::error::AuthorityError;
 use super::types::*;
 
 pub fn compute_pack_hash(policies: &[AuthorityPolicy]) -> Result<String, AuthorityError> {
-    let canonical = serde_json::to_string(policies).map_err(|e|
+    let canonical = serde_json::to_string(policies).map_err(|e| {
         AuthorityError::new(
             super::error::AuthorityErrorCode::InvalidPolicyPack,
             format!("Failed to serialize policies for hash computation: {}", e),
         )
-    )?;
+    })?;
     Ok(compute_deterministic_hash(&canonical))
 }
 use super::policy::AuthorityPolicy;
@@ -63,11 +63,15 @@ impl AuthorityPack {
                 format!("Pack '{}' hash is required", self.id),
             ));
         }
-        let canonical = serde_json::to_string(&self.policies)
-            .map_err(|_| AuthorityError::new(
+        let canonical = serde_json::to_string(&self.policies).map_err(|_| {
+            AuthorityError::new(
                 super::error::AuthorityErrorCode::InvalidPolicyPack,
-                format!("Pack '{}' failed to serialize policies for hash validation", self.id),
-            ))?;
+                format!(
+                    "Pack '{}' failed to serialize policies for hash validation",
+                    self.id
+                ),
+            )
+        })?;
         let computed = compute_deterministic_hash(&canonical);
         if self.hash != computed {
             return Err(AuthorityError::pack_hash_mismatch(&self.id));

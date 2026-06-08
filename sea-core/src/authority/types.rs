@@ -414,22 +414,25 @@ impl SpecificityVector {
             .collect();
 
         let get_score = |dims: &[(String, u32)], name: &str| -> u32 {
-            dims.iter().find(|(n, _)| n == name).map(|(_, s)| *s).unwrap_or(0)
+            dims.iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, s)| *s)
+                .unwrap_or(0)
         };
 
-        let a_dominates = all_dims.iter().all(|name| {
-            get_score(&self.dimensions, name) >= get_score(&other.dimensions, name)
-        });
-        let a_strictly_dominates = all_dims.iter().any(|name| {
-            get_score(&self.dimensions, name) > get_score(&other.dimensions, name)
-        });
+        let a_dominates = all_dims
+            .iter()
+            .all(|name| get_score(&self.dimensions, name) >= get_score(&other.dimensions, name));
+        let a_strictly_dominates = all_dims
+            .iter()
+            .any(|name| get_score(&self.dimensions, name) > get_score(&other.dimensions, name));
 
-        let b_dominates = all_dims.iter().all(|name| {
-            get_score(&other.dimensions, name) >= get_score(&self.dimensions, name)
-        });
-        let b_strictly_dominates = all_dims.iter().any(|name| {
-            get_score(&other.dimensions, name) > get_score(&self.dimensions, name)
-        });
+        let b_dominates = all_dims
+            .iter()
+            .all(|name| get_score(&other.dimensions, name) >= get_score(&self.dimensions, name));
+        let b_strictly_dominates = all_dims
+            .iter()
+            .any(|name| get_score(&other.dimensions, name) > get_score(&self.dimensions, name));
 
         match (
             a_dominates,

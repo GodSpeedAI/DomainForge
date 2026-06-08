@@ -122,9 +122,15 @@ fn parse_duration(s: &str) -> chrono::Duration {
     } else if s.ends_with('m') {
         s.trim_end_matches('m').parse::<i64>().ok().map(|v| v * 60)
     } else if s.ends_with('h') {
-        s.trim_end_matches('h').parse::<i64>().ok().map(|v| v * 3600)
+        s.trim_end_matches('h')
+            .parse::<i64>()
+            .ok()
+            .map(|v| v * 3600)
     } else if s.ends_with('d') {
-        s.trim_end_matches('d').parse::<i64>().ok().map(|v| v * 86400)
+        s.trim_end_matches('d')
+            .parse::<i64>()
+            .ok()
+            .map(|v| v * 86400)
     } else {
         s.parse::<i64>().ok().map(|v| v * 3600) // default hours
     };
@@ -150,10 +156,7 @@ impl CompatibilityLoweringAuditor {
         &self.version
     }
 
-    pub fn audit_expression(
-        &self,
-        expr: &str,
-    ) -> Result<Option<LoweredPolicy>, AuthorityError> {
+    pub fn audit_expression(&self, expr: &str) -> Result<Option<LoweredPolicy>, AuthorityError> {
         // Reject all structural OR as ambiguous (spec §14.1.7, §17.7)
         if expr.contains(" or ") {
             return Err(AuthorityError::ambiguous_lowering(expr));
@@ -165,13 +168,19 @@ impl CompatibilityLoweringAuditor {
             let inner = &expr[4..];
             let inner_trimmed = inner.trim();
             // Reject if the negated expression targets structural keys
-            if inner_trimmed.starts_with("resource.") || inner_trimmed.starts_with("actor.") || inner_trimmed.starts_with("action") {
+            if inner_trimmed.starts_with("resource.")
+                || inner_trimmed.starts_with("actor.")
+                || inner_trimmed.starts_with("action")
+            {
                 return Err(AuthorityError::ambiguous_lowering(expr));
             }
             // Lower `not fact.path = "value"` to when condition with negated comparison
             if let Some(eq_pos) = inner_trimmed.find(" = ") {
                 let key = inner_trimmed[..eq_pos].trim().to_string();
-                let val = inner_trimmed[eq_pos + 3..].trim().trim_matches('"').to_string();
+                let val = inner_trimmed[eq_pos + 3..]
+                    .trim()
+                    .trim_matches('"')
+                    .to_string();
                 return Ok(Some(LoweredPolicy {
                     original: expr.to_string(),
                     lowered_applies_to: HashMap::new(),
@@ -191,7 +200,10 @@ impl CompatibilityLoweringAuditor {
             let mut when = HashMap::new();
             for part in parts {
                 let trimmed = part.trim();
-                if trimmed.starts_with("resource.") || trimmed.starts_with("actor.") || trimmed.starts_with("action") {
+                if trimmed.starts_with("resource.")
+                    || trimmed.starts_with("actor.")
+                    || trimmed.starts_with("action")
+                {
                     if let Some((k, v)) = parse_equality(trimmed) {
                         applies_to.insert(k, v);
                     }

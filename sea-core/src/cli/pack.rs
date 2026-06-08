@@ -1,15 +1,12 @@
-use crate::semantic_pack::{
-    build_semantic_pack, compute_pack_content_hash, derive_signer_id, diff_packs,
-    sign_pack, validate_graph_with_pack, validate_semantic_pack,
-    verify_pack_signature,
-    ApprovalState, ConceptDef, ConceptKind,
-    ConceptStatus, DiagnosticSeverity, PackBuildInput,
-    SemanticDiagnostic, SemanticPack, SignatureState, ValidationMode,
-    ValidationOptions,
-};
-use crate::semantic_pack::schema::{ConceptDefinition, ReviewRecord};
 use crate::semantic_pack::diagnostics::{DeprecatedPolicy, UnknownConceptPolicy};
 use crate::semantic_pack::diff::DiffClassification;
+use crate::semantic_pack::schema::{ConceptDefinition, ReviewRecord};
+use crate::semantic_pack::{
+    build_semantic_pack, compute_pack_content_hash, derive_signer_id, diff_packs, sign_pack,
+    validate_graph_with_pack, validate_semantic_pack, verify_pack_signature, ApprovalState,
+    ConceptDef, ConceptKind, ConceptStatus, DiagnosticSeverity, PackBuildInput, SemanticDiagnostic,
+    SemanticPack, SignatureState, ValidationMode, ValidationOptions,
+};
 use crate::{parse_to_graph, Graph};
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand, ValueEnum};
@@ -198,7 +195,8 @@ fn collect_sea_files(globs: &[String]) -> Result<Vec<PathBuf>> {
             for entry in globwalk::glob(parent.join(file_pattern).to_string_lossy().as_ref())
                 .with_context(|| format!("Invalid glob pattern: {}", pattern))?
             {
-                let entry = entry.with_context(|| format!("Error reading glob entry for: {}", pattern))?;
+                let entry =
+                    entry.with_context(|| format!("Error reading glob entry for: {}", pattern))?;
                 if entry.path().extension().and_then(|e| e.to_str()) == Some("sea") {
                     files.push(entry.path().to_path_buf());
                 }
@@ -396,8 +394,8 @@ fn run_build(args: BuildArgs) -> Result<()> {
         print_diagnostics(&output.build_warnings, args.format);
     }
 
-    let pack_json = serde_json::to_string_pretty(&output.pack)
-        .context("Failed to serialize pack")?;
+    let pack_json =
+        serde_json::to_string_pretty(&output.pack).context("Failed to serialize pack")?;
 
     match args.out {
         Some(ref p) => {
@@ -513,9 +511,8 @@ fn run_validate(args: PackValidateArgs) -> Result<()> {
     for input_path in &args.inputs {
         let source = fs::read_to_string(input_path)
             .with_context(|| format!("Failed to read: {}", input_path.display()))?;
-        let graph = parse_to_graph(&source).map_err(|e| {
-            anyhow::anyhow!("Parse error in {}: {}", input_path.display(), e)
-        })?;
+        let graph = parse_to_graph(&source)
+            .map_err(|e| anyhow::anyhow!("Parse error in {}: {}", input_path.display(), e))?;
         combined_graph
             .extend(graph)
             .map_err(|e| anyhow::anyhow!("Merge error: {}", e))?;
@@ -644,26 +641,14 @@ fn run_inspect(args: InspectArgs) -> Result<()> {
         }
         PackOutputFormat::Human => {
             println!("{}", "Semantic Pack".bold());
-            println!(
-                "{:<25} {}",
-                "Pack ID:".dimmed(),
-                pack.pack_id
-            );
-            println!(
-                "{:<25} {}",
-                "Schema Version:".dimmed(),
-                pack.schema_version
-            );
+            println!("{:<25} {}", "Pack ID:".dimmed(), pack.pack_id);
+            println!("{:<25} {}", "Schema Version:".dimmed(), pack.schema_version);
             println!(
                 "{:<25} {}",
                 "Org / Domain:".dimmed(),
                 format!("{}/{}", pack.org_id, pack.domain_id)
             );
-            println!(
-                "{:<25} {}",
-                "Pack Version:".dimmed(),
-                pack.pack_version
-            );
+            println!("{:<25} {}", "Pack Version:".dimmed(), pack.pack_version);
             println!(
                 "{:<25} {}",
                 "Meaning Version:".dimmed(),
@@ -674,21 +659,13 @@ fn run_inspect(args: InspectArgs) -> Result<()> {
                 "Meaning Fingerprint:".dimmed(),
                 pack.meaning_fingerprint
             );
-            println!(
-                "{:<25} {}",
-                "Content Hash:".dimmed(),
-                content_hash
-            );
+            println!("{:<25} {}", "Content Hash:".dimmed(), content_hash);
             println!(
                 "{:<25} {}",
                 "Source Graph Hash:".dimmed(),
                 pack.source_graph_hash
             );
-            println!(
-                "{:<25} {}",
-                "Created At:".dimmed(),
-                pack.created_at
-            );
+            println!("{:<25} {}", "Created At:".dimmed(), pack.created_at);
             println!(
                 "{:<25} {} {}",
                 "Generator:".dimmed(),
@@ -703,36 +680,12 @@ fn run_inspect(args: InspectArgs) -> Result<()> {
             );
             println!();
             println!("{}", "Counts".bold());
-            println!(
-                "{:<25} {}",
-                "Concepts:".dimmed(),
-                pack.concepts.len()
-            );
-            println!(
-                "{:<25} {}",
-                "Relations:".dimmed(),
-                pack.relations.len()
-            );
-            println!(
-                "{:<25} {}",
-                "Metrics:".dimmed(),
-                pack.metrics.len()
-            );
-            println!(
-                "{:<25} {}",
-                "Dimensions:".dimmed(),
-                pack.dimensions.len()
-            );
-            println!(
-                "{:<25} {}",
-                "Units:".dimmed(),
-                pack.units.len()
-            );
-            println!(
-                "{:<25} {}",
-                "Aliases:".dimmed(),
-                pack.aliases.len()
-            );
+            println!("{:<25} {}", "Concepts:".dimmed(), pack.concepts.len());
+            println!("{:<25} {}", "Relations:".dimmed(), pack.relations.len());
+            println!("{:<25} {}", "Metrics:".dimmed(), pack.metrics.len());
+            println!("{:<25} {}", "Dimensions:".dimmed(), pack.dimensions.len());
+            println!("{:<25} {}", "Units:".dimmed(), pack.units.len());
+            println!("{:<25} {}", "Aliases:".dimmed(), pack.aliases.len());
             println!(
                 "{:<25} {}",
                 "Mapping Rules:".dimmed(),
@@ -768,8 +721,8 @@ fn run_diff(args: DiffArgs) -> Result<()> {
 
     match args.format {
         PackOutputFormat::Json => {
-            let out = serde_json::to_string_pretty(&diff_result)
-                .context("Failed to serialize diff")?;
+            let out =
+                serde_json::to_string_pretty(&diff_result).context("Failed to serialize diff")?;
             println!("{}", out);
         }
         PackOutputFormat::Jsonl => {
@@ -802,9 +755,7 @@ fn run_diff(args: DiffArgs) -> Result<()> {
                     let classification = format_classification(entry.classification);
                     println!(
                         "  [{}] {}: {}",
-                        classification,
-                        entry.subject_id,
-                        entry.detail,
+                        classification, entry.subject_id, entry.detail,
                     );
                 }
             }
@@ -850,8 +801,8 @@ fn run_sign(args: SignArgs) -> Result<()> {
     signed_pack.trust.signature_alg = Some(sign_output.signature_alg);
     signed_pack.trust.signed_by = Some(signer_id);
 
-    let pack_json = serde_json::to_string_pretty(&signed_pack)
-        .context("Failed to serialize signed pack")?;
+    let pack_json =
+        serde_json::to_string_pretty(&signed_pack).context("Failed to serialize signed pack")?;
 
     match args.out {
         Some(ref p) => {
@@ -875,11 +826,7 @@ fn run_verify(args: VerifyArgs) -> Result<()> {
             println!(
                 "Signature verified for pack '{}' ({})",
                 pack.pack_id,
-                pack
-                    .trust
-                    .signature_alg
-                    .as_deref()
-                    .unwrap_or("unknown")
+                pack.trust.signature_alg.as_deref().unwrap_or("unknown")
             );
             Ok(())
         }

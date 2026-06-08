@@ -1,7 +1,12 @@
-use sea_core::authority::*;
 use chrono::Utc;
+use sea_core::authority::*;
 
-fn make_request(operation: &str, actor_id: &str, actor_role: Option<&str>, resource_type: &str) -> AuthorityRequest {
+fn make_request(
+    operation: &str,
+    actor_id: &str,
+    actor_role: Option<&str>,
+    resource_type: &str,
+) -> AuthorityRequest {
     AuthorityRequest {
         request_id: uuid::Uuid::new_v4().to_string(),
         actor: ActorContext {
@@ -71,7 +76,10 @@ fn make_prohibition_pack() -> AuthorityPack {
         when: Some(ConditionPredicates {
             conditions: {
                 let mut m = std::collections::HashMap::new();
-                m.insert("customer.credit_status".to_string(), serde_json::json!("Hold"));
+                m.insert(
+                    "customer.credit_status".to_string(),
+                    serde_json::json!("Hold"),
+                );
                 m
             },
         }),
@@ -116,7 +124,10 @@ fn make_permission_pack() -> AuthorityPack {
         applies_to: StructuralPredicates {
             predicates: {
                 let mut m = std::collections::HashMap::new();
-                m.insert("actor.role".to_string(), serde_json::json!("WarehouseOperator"));
+                m.insert(
+                    "actor.role".to_string(),
+                    serde_json::json!("WarehouseOperator"),
+                );
                 m.insert("action".to_string(), serde_json::json!("ShipOrder"));
                 m.insert("resource.type".to_string(), serde_json::json!("Order"));
                 m
@@ -125,7 +136,10 @@ fn make_permission_pack() -> AuthorityPack {
         when: Some(ConditionPredicates {
             conditions: {
                 let mut m = std::collections::HashMap::new();
-                m.insert("customer.credit_status".to_string(), serde_json::json!("Clear"));
+                m.insert(
+                    "customer.credit_status".to_string(),
+                    serde_json::json!("Clear"),
+                );
                 m
             },
         }),
@@ -179,15 +193,25 @@ fn make_override_pack() -> AuthorityPack {
         when: Some(ConditionPredicates {
             conditions: {
                 let mut m = std::collections::HashMap::new();
-                m.insert("legal_override.status".to_string(), serde_json::json!("Approved"));
-                m.insert("legal_override.scope".to_string(), serde_json::json!("ShippingHold"));
+                m.insert(
+                    "legal_override.status".to_string(),
+                    serde_json::json!("Approved"),
+                );
+                m.insert(
+                    "legal_override.scope".to_string(),
+                    serde_json::json!("ShippingHold"),
+                );
                 m
             },
         }),
         requires_fact: vec![
             FactRequirement {
                 fact_path: "legal_override.status".to_string(),
-                allowed_source_classes: vec![SourceClass::SystemOfRecord, SourceClass::Attested, SourceClass::ManualApproval],
+                allowed_source_classes: vec![
+                    SourceClass::SystemOfRecord,
+                    SourceClass::Attested,
+                    SourceClass::ManualApproval,
+                ],
                 allowed_source_ids: vec![],
                 max_age: None,
                 evidence_ref_required: false,
@@ -198,7 +222,11 @@ fn make_override_pack() -> AuthorityPack {
             },
             FactRequirement {
                 fact_path: "legal_override.id".to_string(),
-                allowed_source_classes: vec![SourceClass::SystemOfRecord, SourceClass::Attested, SourceClass::ManualApproval],
+                allowed_source_classes: vec![
+                    SourceClass::SystemOfRecord,
+                    SourceClass::Attested,
+                    SourceClass::ManualApproval,
+                ],
                 allowed_source_ids: vec![],
                 max_age: None,
                 evidence_ref_required: false,
@@ -266,7 +294,10 @@ fn test_authority_decision_produced() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Hold"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
 
     let (trace, decision) = env.evaluate(&request, &facts).unwrap();
     assert_eq!(decision.final_decision, FinalDecision::Deny);
@@ -284,7 +315,10 @@ fn test_trace_completeness() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Hold"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
 
     let (trace, _) = env.evaluate(&request, &facts).unwrap();
     assert!(!trace.decision_id.is_empty());
@@ -338,7 +372,10 @@ fn test_permission_with_trusted_fact_allowed() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Clear"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Clear"),
+    )];
 
     let (_, decision) = env.evaluate(&request, &facts).unwrap();
     assert_eq!(decision.final_decision, FinalDecision::Allow);
@@ -483,10 +520,22 @@ fn test_three_valued_logic_unknown_preserved() {
 #[test]
 fn test_unknown_handling_defaults() {
     let config = UnknownHandlingConfig::defaults();
-    assert_eq!(config.for_modality(&PolicyModality::Permission), FinalDecision::Escalate);
-    assert_eq!(config.for_modality(&PolicyModality::Prohibition), FinalDecision::Deny);
-    assert_eq!(config.for_modality(&PolicyModality::Override), FinalDecision::NotApplicable);
-    assert_eq!(config.for_modality(&PolicyModality::Obligation), FinalDecision::Escalate);
+    assert_eq!(
+        config.for_modality(&PolicyModality::Permission),
+        FinalDecision::Escalate
+    );
+    assert_eq!(
+        config.for_modality(&PolicyModality::Prohibition),
+        FinalDecision::Deny
+    );
+    assert_eq!(
+        config.for_modality(&PolicyModality::Override),
+        FinalDecision::NotApplicable
+    );
+    assert_eq!(
+        config.for_modality(&PolicyModality::Obligation),
+        FinalDecision::Escalate
+    );
 }
 
 #[test]
@@ -508,27 +557,15 @@ fn test_specificity_vector_dominance() {
 
 #[test]
 fn test_specificity_incomparability() {
-    let a = SpecificityVector::new(vec![
-        ("actor".to_string(), 1),
-        ("role".to_string(), 0),
-    ]);
-    let b = SpecificityVector::new(vec![
-        ("actor".to_string(), 0),
-        ("role".to_string(), 1),
-    ]);
+    let a = SpecificityVector::new(vec![("actor".to_string(), 1), ("role".to_string(), 0)]);
+    let b = SpecificityVector::new(vec![("actor".to_string(), 0), ("role".to_string(), 1)]);
     assert_eq!(a.compare(&b), SpecificityComparison::Incomparable);
 }
 
 #[test]
 fn test_specificity_equality() {
-    let a = SpecificityVector::new(vec![
-        ("actor".to_string(), 1),
-        ("role".to_string(), 1),
-    ]);
-    let b = SpecificityVector::new(vec![
-        ("actor".to_string(), 1),
-        ("role".to_string(), 1),
-    ]);
+    let a = SpecificityVector::new(vec![("actor".to_string(), 1), ("role".to_string(), 1)]);
+    let b = SpecificityVector::new(vec![("actor".to_string(), 1), ("role".to_string(), 1)]);
     assert_eq!(a.compare(&b), SpecificityComparison::Equal);
 }
 
@@ -617,7 +654,10 @@ fn test_negated_condition_preserves_unknown() {
     let cond = ConditionPredicates {
         conditions: {
             let mut m = std::collections::HashMap::new();
-            m.insert("customer.credit_status".to_string(), serde_json::json!("Hold"));
+            m.insert(
+                "customer.credit_status".to_string(),
+                serde_json::json!("Hold"),
+            );
             m
         },
     };
@@ -634,7 +674,10 @@ fn test_audit_trace_not_formal_proof() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Hold"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
 
     let (trace, _) = env.evaluate(&request, &facts).unwrap();
     assert_eq!(trace.claim_level, ClaimLevel::AuditBacked);
@@ -738,7 +781,9 @@ fn test_final_decision_precedence() {
     assert!(FinalDecision::Reject.precedence_rank() > FinalDecision::Deny.precedence_rank());
     assert!(FinalDecision::Deny.precedence_rank() > FinalDecision::Escalate.precedence_rank());
     assert!(FinalDecision::Escalate.precedence_rank() > FinalDecision::Allow.precedence_rank());
-    assert!(FinalDecision::Allow.precedence_rank() > FinalDecision::NotApplicable.precedence_rank());
+    assert!(
+        FinalDecision::Allow.precedence_rank() > FinalDecision::NotApplicable.precedence_rank()
+    );
 }
 
 #[test]
@@ -944,19 +989,21 @@ fn test_not_unknown_preserves_unknown() {
 #[test]
 fn test_source_class_mismatch_rejected() {
     let mut registry = FactSourceRegistry::new();
-    registry.register(FactSource {
-        id: "credit-service".to_string(),
-        source_class: SourceClass::SystemOfRecord,
-        allowed_paths: vec!["customer.".to_string()],
-        evidence_required: true,
-        signature_required: false,
-        max_response_latency_ms: 5000,
-        health_endpoint: None,
-        credential_ref: None,
-        schema_ref: None,
-        owner: None,
-        recovery_hint: None,
-    }).unwrap();
+    registry
+        .register(FactSource {
+            id: "credit-service".to_string(),
+            source_class: SourceClass::SystemOfRecord,
+            allowed_paths: vec!["customer.".to_string()],
+            evidence_required: true,
+            signature_required: false,
+            max_response_latency_ms: 5000,
+            health_endpoint: None,
+            credential_ref: None,
+            schema_ref: None,
+            owner: None,
+            recovery_hint: None,
+        })
+        .unwrap();
 
     let resolver = FactResolver::new(registry);
     let raw_facts = vec![];
@@ -964,7 +1011,7 @@ fn test_source_class_mismatch_rejected() {
         path: "customer.credit_status".to_string(),
         value: serde_json::json!("Clear"),
         source_class: SourceClass::CallerSupplied, // Wrong class!
-        source_id: "credit-service".to_string(), // Registered as SystemOfRecord
+        source_id: "credit-service".to_string(),   // Registered as SystemOfRecord
         observed_at: Utc::now(),
         expires_at: None,
         evidence_ref: Some("ref".to_string()),
@@ -1009,7 +1056,7 @@ fn test_minimum_trust_returns_least_trusted() {
             transform_hash: "h".to_string(),
             input_fact_paths: vec!["raw".to_string()],
             input_source_classes: vec![SourceClass::CallerSupplied], // Least trusted parent
-            effective_trust: SourceClass::CallerSupplied, // Should inherit least trusted
+            effective_trust: SourceClass::CallerSupplied,            // Should inherit least trusted
             trust_upgrade_applied: false,
         }),
     };
@@ -1041,7 +1088,10 @@ fn test_resolver_semantics_version_in_trace() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Hold"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
     let (trace, _) = env.evaluate(&request, &facts).unwrap();
 
     assert_eq!(trace.resolver_semantics_version, "0.4");
@@ -1056,7 +1106,10 @@ fn test_claim_level_audit_backed_not_formally_proven() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Hold"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
     let (trace, _) = env.evaluate(&request, &facts).unwrap();
 
     assert_eq!(trace.claim_level, ClaimLevel::AuditBacked);
@@ -1075,7 +1128,10 @@ fn test_modality_precedence_prohibition_wins_over_permission() {
     env.validate().unwrap();
 
     let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
-    let facts = vec![make_trusted_fact("customer.credit_status", serde_json::json!("Hold"))];
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
     let (_, decision) = env.evaluate(&request, &facts).unwrap();
 
     // Prohibition should win: credit_status=Hold triggers prohibition -> Deny

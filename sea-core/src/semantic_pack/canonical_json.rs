@@ -43,10 +43,12 @@ pub fn hash_canonical_json(value: &serde_json::Value) -> String {
 /// Sort a pack's vectors for deterministic serialization (§6.1.1).
 pub fn sort_pack_for_canonicalization(pack: &mut SemanticPack) {
     pack.concepts.sort_by(|a, b| a.id.cmp(&b.id));
-    pack.relations.sort_by(|a, b| a.id.cmp(&b.id).then(a.predicate.cmp(&b.predicate)));
+    pack.relations
+        .sort_by(|a, b| a.id.cmp(&b.id).then(a.predicate.cmp(&b.predicate)));
     pack.metrics.sort_by(|a, b| a.id.cmp(&b.id));
     pack.dimensions.sort_by(|a, b| a.id.cmp(&b.id));
-    pack.units.sort_by(|a, b| a.id.cmp(&b.id).then(a.symbol.cmp(&b.symbol)));
+    pack.units
+        .sort_by(|a, b| a.id.cmp(&b.id).then(a.symbol.cmp(&b.symbol)));
     pack.aliases.sort_by(|a, b| {
         a.normalized_alias
             .cmp(&b.normalized_alias)
@@ -75,9 +77,7 @@ pub fn sort_pack_for_canonicalization(pack: &mut SemanticPack) {
 }
 
 /// Sort diagnostics for deterministic output.
-pub fn sort_diagnostics(
-    diags: &mut Vec<super::diagnostics::SemanticDiagnostic>,
-) {
+pub fn sort_diagnostics(diags: &mut Vec<super::diagnostics::SemanticDiagnostic>) {
     diags.sort_by(|a, b| {
         a.source_ref
             .uri
@@ -87,7 +87,8 @@ pub fn sort_diagnostics(
             .then(a.message.cmp(&b.message))
     });
     for d in diags.iter_mut() {
-        d.suggestions.sort_by(|a, b| b.rank.cmp(&a.rank).then(a.label.cmp(&b.label)));
+        d.suggestions
+            .sort_by(|a, b| b.rank.cmp(&a.rank).then(a.label.cmp(&b.label)));
     }
 }
 
@@ -100,7 +101,8 @@ pub fn compute_pack_content_hash(pack: &SemanticPack) -> String {
 
     sort_pack_for_canonicalization(&mut pack_for_hash);
 
-    let json = serde_json::to_value(&pack_for_hash).expect("failed to serialize pack for hash computation");
+    let json = serde_json::to_value(&pack_for_hash)
+        .expect("failed to serialize pack for hash computation");
     hash_canonical_json(&json)
 }
 
@@ -166,5 +168,10 @@ fn sort_string_vec(v: &mut Vec<String>) {
 }
 
 fn sort_source_refs(v: &mut Vec<SourceRef>) {
-    v.sort_by(|a, b| a.uri.cmp(&b.uri).then(a.start_byte.cmp(&b.start_byte)).then(a.end_byte.cmp(&b.end_byte)));
+    v.sort_by(|a, b| {
+        a.uri
+            .cmp(&b.uri)
+            .then(a.start_byte.cmp(&b.start_byte))
+            .then(a.end_byte.cmp(&b.end_byte))
+    });
 }

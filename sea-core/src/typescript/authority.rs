@@ -1,9 +1,8 @@
 use crate::authority::{
     AuthorityEnvironment as RustAuthorityEnvironment,
-    AuthorityEnvironmentConfig as RustAuthorityEnvironmentConfig,
-    ClaimLevel as RustClaimLevel, FactEnvelope as RustFactEnvelope,
-    FinalDecision as RustFinalDecision, PolicyModality as RustPolicyModality,
-    SourceClass as RustSourceClass,
+    AuthorityEnvironmentConfig as RustAuthorityEnvironmentConfig, ClaimLevel as RustClaimLevel,
+    FactEnvelope as RustFactEnvelope, FinalDecision as RustFinalDecision,
+    PolicyModality as RustPolicyModality, SourceClass as RustSourceClass,
 };
 use napi_derive::napi;
 
@@ -165,14 +164,16 @@ pub fn evaluate_authority(
     let fact_envs: Vec<RustFactEnvelope> = serde_json::from_str(&facts)
         .map_err(|e| napi::Error::from_reason(format!("Invalid facts: {}", e)))?;
 
-    let (trace, decision) = env.evaluate(&request, &fact_envs)
+    let (trace, decision) = env
+        .evaluate(&request, &fact_envs)
         .map_err(|e| napi::Error::from_reason(format!("Evaluation error: {}", e)))?;
 
     Ok(EvaluateAuthorityResult {
         trace_json: serde_json::to_string(&trace)
             .map_err(|e| napi::Error::from_reason(format!("Trace serialization error: {}", e)))?,
-        decision_json: serde_json::to_string(&decision)
-            .map_err(|e| napi::Error::from_reason(format!("Decision serialization error: {}", e)))?,
+        decision_json: serde_json::to_string(&decision).map_err(|e| {
+            napi::Error::from_reason(format!("Decision serialization error: {}", e))
+        })?,
     })
 }
 

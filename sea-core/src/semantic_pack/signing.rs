@@ -25,10 +25,7 @@ pub fn derive_signer_id(private_key_pem: &[u8]) -> Result<String, SigningError> 
 }
 
 /// Sign pack content with Ed25519 private key PEM bytes.
-pub fn sign_pack(
-    pack: &SemanticPack,
-    private_key_pem: &[u8],
-) -> Result<SignOutput, SigningError> {
+pub fn sign_pack(pack: &SemanticPack, private_key_pem: &[u8]) -> Result<SignOutput, SigningError> {
     use ed25519_dalek::Signer;
 
     let signing_key = parse_private_key(private_key_pem)?;
@@ -90,8 +87,7 @@ fn base64_encode(data: &[u8]) -> String {
 
 fn base64_decode(s: &str) -> Result<Vec<u8>, VerificationError> {
     use base64::engine::general_purpose::STANDARD;
-    base64::Engine::decode(&STANDARD, s)
-        .map_err(|e| VerificationError::Base64Error(e.to_string()))
+    base64::Engine::decode(&STANDARD, s).map_err(|e| VerificationError::Base64Error(e.to_string()))
 }
 
 #[derive(Debug, Clone)]

@@ -4,15 +4,14 @@ use crate::semantic_pack::{
     resolve_concept as rust_resolve_concept, sign_pack as rust_sign_pack,
     validate_graph_with_pack as rust_validate_graph_with_pack,
     validate_semantic_pack as rust_validate_semantic_pack,
-    verify_pack_signature as rust_verify_pack_signature,
-    AliasStatus as RustAliasStatus, ApprovalState as RustApprovalState,
-    ConceptKind as RustConceptKind, ConceptStatus as RustConceptStatus,
-    DeprecatedPolicy as RustDeprecatedPolicy, DiagnosticSeverity as RustDiagnosticSeverity,
-    PackBuildInput, SemanticPack as RustSemanticPack, SemanticTruth as RustSemanticTruth,
-    SemanticValidationResult as RustSemanticValidationResult,
-    SemanticValidationStatus as RustSemanticValidationStatus,
-    SignatureState as RustSignatureState, UnknownConceptPolicy as RustUnknownConceptPolicy,
-    ValidationMode as RustValidationMode, ValidationOptions,
+    verify_pack_signature as rust_verify_pack_signature, AliasStatus as RustAliasStatus,
+    ApprovalState as RustApprovalState, ConceptKind as RustConceptKind,
+    ConceptStatus as RustConceptStatus, DeprecatedPolicy as RustDeprecatedPolicy,
+    DiagnosticSeverity as RustDiagnosticSeverity, PackBuildInput, SemanticPack as RustSemanticPack,
+    SemanticTruth as RustSemanticTruth, SemanticValidationResult as RustSemanticValidationResult,
+    SemanticValidationStatus as RustSemanticValidationStatus, SignatureState as RustSignatureState,
+    UnknownConceptPolicy as RustUnknownConceptPolicy, ValidationMode as RustValidationMode,
+    ValidationOptions,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -481,9 +480,8 @@ pub fn build_semantic_pack(input_json: &str) -> PyResult<(String, Vec<String>)> 
                 .iter()
                 .chain(output.build_warnings.iter())
                 .map(|d| {
-                    serde_json::to_string(d).unwrap_or_else(|_| {
-                        serde_json::json!({"message": &d.message}).to_string()
-                    })
+                    serde_json::to_string(d)
+                        .unwrap_or_else(|_| serde_json::json!({"message": &d.message}).to_string())
                 })
                 .collect();
             Ok((pack_json, errors))
@@ -492,9 +490,8 @@ pub fn build_semantic_pack(input_json: &str) -> PyResult<(String, Vec<String>)> 
             let errors: Vec<String> = diagnostics
                 .iter()
                 .map(|d| {
-                    serde_json::to_string(d).unwrap_or_else(|_| {
-                        serde_json::json!({"message": &d.message}).to_string()
-                    })
+                    serde_json::to_string(d)
+                        .unwrap_or_else(|_| serde_json::json!({"message": &d.message}).to_string())
                 })
                 .collect();
             Ok((String::new(), errors))
@@ -510,7 +507,10 @@ pub fn validate_semantic_pack(pack_json: &str) -> PyResult<Vec<String>> {
         .map_err(|e| PyValueError::new_err(format!("Validation error: {:?}", e)))?;
     Ok(diagnostics
         .iter()
-        .map(|d| serde_json::to_string(d).unwrap_or_else(|_| format!("{{\"message\": \"{}\"}}", d.message)))
+        .map(|d| {
+            serde_json::to_string(d)
+                .unwrap_or_else(|_| format!("{{\"message\": \"{}\"}}", d.message))
+        })
         .collect())
 }
 
@@ -576,11 +576,7 @@ pub fn normalize_lookup_key(text: &str) -> String {
 }
 
 #[pyfunction]
-pub fn resolve_concept(
-    raw_text: &str,
-    pack_json: &str,
-    options_json: &str,
-) -> PyResult<String> {
+pub fn resolve_concept(raw_text: &str, pack_json: &str, options_json: &str) -> PyResult<String> {
     let pack: RustSemanticPack = serde_json::from_str(pack_json)
         .map_err(|e| PyValueError::new_err(format!("Invalid pack JSON: {}", e)))?;
     let options: ValidationOptions = serde_json::from_str(options_json)

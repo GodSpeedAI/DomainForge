@@ -38,7 +38,10 @@ pub enum ConflictType {
 // ---------------------------------------------------------------------------
 // Merge packs into a PackSet
 // ---------------------------------------------------------------------------
-pub fn merge_packs(packs: &[SemanticPack], priority_order: &[i32]) -> Result<PackSet, Vec<PackConflict>> {
+pub fn merge_packs(
+    packs: &[SemanticPack],
+    priority_order: &[i32],
+) -> Result<PackSet, Vec<PackConflict>> {
     if !packs.is_empty() && priority_order.len() != packs.len() {
         return Err(vec![PackConflict {
             conflict_type: ConflictType::SameUnitSymbolDifferentDimension,
@@ -104,10 +107,7 @@ pub fn merge_packs(packs: &[SemanticPack], priority_order: &[i32]) -> Result<Pac
     })
 }
 
-fn detect_conflicts(
-    packs: &[SemanticPack],
-    refs: &[(PackRef, usize)],
-) -> Vec<PackConflict> {
+fn detect_conflicts(packs: &[SemanticPack], refs: &[(PackRef, usize)]) -> Vec<PackConflict> {
     let mut conflicts = Vec::new();
 
     // Same concept ID, different definition hash
@@ -119,7 +119,9 @@ fn detect_conflicts(
             // Concept conflicts
             for ca in &pack_a.concepts {
                 for cb in &pack_b.concepts {
-                    if ca.id == cb.id && ca.definition.definition_hash != cb.definition.definition_hash {
+                    if ca.id == cb.id
+                        && ca.definition.definition_hash != cb.definition.definition_hash
+                    {
                         conflicts.push(PackConflict {
                             conflict_type: ConflictType::SameConceptIdDifferentHash,
                             key: ca.id.clone(),
@@ -136,7 +138,8 @@ fn detect_conflicts(
 
             // Canonical name conflicts
             use super::resolver::normalize_lookup_key;
-            let mut names_a: std::collections::HashMap<String, &str> = std::collections::HashMap::new();
+            let mut names_a: std::collections::HashMap<String, &str> =
+                std::collections::HashMap::new();
             for c in &pack_a.concepts {
                 let norm = normalize_lookup_key(&c.canonical_name);
                 names_a.insert(norm, &c.id);
@@ -160,7 +163,8 @@ fn detect_conflicts(
             }
 
             // Alias conflicts
-            let mut aliases_a: std::collections::HashMap<String, &str> = std::collections::HashMap::new();
+            let mut aliases_a: std::collections::HashMap<String, &str> =
+                std::collections::HashMap::new();
             for a in &pack_a.aliases {
                 aliases_a.insert(a.normalized_alias.clone(), &a.target_concept_id);
             }
@@ -182,7 +186,8 @@ fn detect_conflicts(
             }
 
             // Unit symbol conflicts
-            let mut units_a: std::collections::HashMap<String, &str> = std::collections::HashMap::new();
+            let mut units_a: std::collections::HashMap<String, &str> =
+                std::collections::HashMap::new();
             for u in &pack_a.units {
                 units_a.insert(u.symbol.clone(), &u.dimension_id);
             }

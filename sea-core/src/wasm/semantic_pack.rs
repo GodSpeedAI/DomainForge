@@ -1,11 +1,11 @@
 use crate::semantic_pack::{
-    build_semantic_pack, canonical_json, derive_signer_id, diff_packs, normalize_lookup_key, resolve_concept,
-    sign_pack, validate_graph_with_pack, validate_semantic_pack, verify_pack_signature,
-    AliasStatus as RustAliasStatus, ApprovalState as RustApprovalState, ConceptKind as RustConceptKind,
-    ConceptStatus as RustConceptStatus, DiagnosticSeverity as RustDiagnosticSeverity,
-    PackBuildInput, SemanticPack, SemanticTruth as RustSemanticTruth,
-    SemanticValidationStatus as RustSemanticValidationStatus, SignatureState as RustSignatureState,
-    ValidationMode as RustValidationMode, ValidationOptions,
+    build_semantic_pack, canonical_json, derive_signer_id, diff_packs, normalize_lookup_key,
+    resolve_concept, sign_pack, validate_graph_with_pack, validate_semantic_pack,
+    verify_pack_signature, AliasStatus as RustAliasStatus, ApprovalState as RustApprovalState,
+    ConceptKind as RustConceptKind, ConceptStatus as RustConceptStatus,
+    DiagnosticSeverity as RustDiagnosticSeverity, PackBuildInput, SemanticPack,
+    SemanticTruth as RustSemanticTruth, SemanticValidationStatus as RustSemanticValidationStatus,
+    SignatureState as RustSignatureState, ValidationMode as RustValidationMode, ValidationOptions,
 };
 use wasm_bindgen::prelude::*;
 
@@ -328,8 +328,7 @@ pub fn semantic_pack_build(input_json: &str) -> Result<String, JsError> {
         "build_warnings": output.build_warnings,
     });
 
-    serde_json::to_string(&result)
-        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
 }
 
 #[wasm_bindgen(js_name = "semanticPackValidate")]
@@ -362,15 +361,11 @@ pub fn semantic_pack_validate_graph(
 
     let result = validate_graph_with_pack(&pack, source, &options);
 
-    serde_json::to_string(&result)
-        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
 }
 
 #[wasm_bindgen(js_name = "semanticPackSign")]
-pub fn semantic_pack_sign(
-    pack_json: &str,
-    private_key_pem: &str,
-) -> Result<String, JsError> {
+pub fn semantic_pack_sign(pack_json: &str, private_key_pem: &str) -> Result<String, JsError> {
     let mut pack: SemanticPack = serde_json::from_str(pack_json)
         .map_err(|e| JsError::new(&format!("Invalid pack JSON: {}", e)))?;
 
@@ -384,15 +379,11 @@ pub fn semantic_pack_sign(
     pack.trust.signature_alg = Some(sign_output.signature_alg);
     pack.trust.signed_by = Some(signer_id);
 
-    serde_json::to_string(&pack)
-        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
+    serde_json::to_string(&pack).map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
 }
 
 #[wasm_bindgen(js_name = "semanticPackVerify")]
-pub fn semantic_pack_verify(
-    pack_json: &str,
-    public_key_pem: &str,
-) -> Result<bool, JsError> {
+pub fn semantic_pack_verify(pack_json: &str, public_key_pem: &str) -> Result<bool, JsError> {
     let pack: SemanticPack = serde_json::from_str(pack_json)
         .map_err(|e| JsError::new(&format!("Invalid pack JSON: {}", e)))?;
 
@@ -410,8 +401,7 @@ pub fn semantic_pack_diff(old_json: &str, new_json: &str) -> Result<String, JsEr
 
     let diff = diff_packs(&old_pack, &new_pack);
 
-    serde_json::to_string(&diff)
-        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
+    serde_json::to_string(&diff).map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
 }
 
 #[wasm_bindgen(js_name = "semanticPackHash")]
@@ -461,6 +451,5 @@ pub fn semantic_resolve_concept(
         "suggestions": result.suggestions,
     });
 
-    serde_json::to_string(&output)
-        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
+    serde_json::to_string(&output).map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
 }

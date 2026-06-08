@@ -1,13 +1,11 @@
 use crate::semantic_pack::{
     build_semantic_pack, canonical_json, derive_signer_id, diff_packs, normalize_lookup_key,
     resolve_concept, sign_pack, validate_graph_with_pack, validate_semantic_pack,
-    verify_pack_signature,
-    AliasStatus as RustAliasStatus, ApprovalState as RustApprovalState,
+    verify_pack_signature, AliasStatus as RustAliasStatus, ApprovalState as RustApprovalState,
     ConceptKind as RustConceptKind, ConceptStatus as RustConceptStatus,
-    DiagnosticSeverity as RustDiagnosticSeverity, SemanticTruth as RustSemanticTruth,
-    SemanticValidationStatus as RustSemanticValidationStatus,
-    SignatureState as RustSignatureState, ValidationMode as RustValidationMode,
-    PackBuildInput, ResolveRequest, ValidationOptions,
+    DiagnosticSeverity as RustDiagnosticSeverity, PackBuildInput, ResolveRequest,
+    SemanticTruth as RustSemanticTruth, SemanticValidationStatus as RustSemanticValidationStatus,
+    SignatureState as RustSignatureState, ValidationMode as RustValidationMode, ValidationOptions,
 };
 use napi_derive::napi;
 
@@ -300,11 +298,10 @@ pub fn semantic_pack_build(input_json: String) -> napi::Result<String> {
     let input: PackBuildInput = serde_json::from_str(&input_json)
         .map_err(|e| napi::Error::from_reason(format!("Invalid build input: {}", e)))?;
 
-    let output = build_semantic_pack(input)
-        .map_err(|diags| {
-            let messages: Vec<String> = diags.iter().map(|d| d.message.clone()).collect();
-            napi::Error::from_reason(format!("Build failed: {}", messages.join("; ")))
-        })?;
+    let output = build_semantic_pack(input).map_err(|diags| {
+        let messages: Vec<String> = diags.iter().map(|d| d.message.clone()).collect();
+        napi::Error::from_reason(format!("Build failed: {}", messages.join("; ")))
+    })?;
 
     let result = serde_json::json!({
         "pack": output.pack,
@@ -353,10 +350,7 @@ pub fn semantic_pack_validate_graph(
 }
 
 #[napi]
-pub fn semantic_pack_sign(
-    pack_json: String,
-    private_key_pem: String,
-) -> napi::Result<String> {
+pub fn semantic_pack_sign(pack_json: String, private_key_pem: String) -> napi::Result<String> {
     let mut pack: crate::semantic_pack::SemanticPack = serde_json::from_str(&pack_json)
         .map_err(|e| napi::Error::from_reason(format!("Invalid pack JSON: {}", e)))?;
 
@@ -375,16 +369,16 @@ pub fn semantic_pack_sign(
 }
 
 #[napi]
-pub fn semantic_pack_verify(
-    pack_json: String,
-    public_key_pem: String,
-) -> napi::Result<bool> {
+pub fn semantic_pack_verify(pack_json: String, public_key_pem: String) -> napi::Result<bool> {
     let pack: crate::semantic_pack::SemanticPack = serde_json::from_str(&pack_json)
         .map_err(|e| napi::Error::from_reason(format!("Invalid pack JSON: {}", e)))?;
 
     match verify_pack_signature(&pack, public_key_pem.as_bytes()) {
         Ok(()) => Ok(true),
-        Err(e) => Err(napi::Error::from_reason(format!("Signature verification failed: {:?}", e))),
+        Err(e) => Err(napi::Error::from_reason(format!(
+            "Signature verification failed: {:?}",
+            e
+        ))),
     }
 }
 

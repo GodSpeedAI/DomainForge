@@ -78,7 +78,8 @@ pub fn run_with_writer<W: std::io::Write>(
     };
 
     // Evaluate
-    let (trace, decision) = env.evaluate(&request, &facts)
+    let (trace, decision) = env
+        .evaluate(&request, &facts)
         .map_err(|e| anyhow::anyhow!("Authority evaluation failed: {}", e))?;
 
     if args.json {
@@ -105,8 +106,16 @@ pub fn run_with_writer<W: std::io::Write>(
         }
         writeln!(writer)?;
         writeln!(writer, "Trace Details")?;
-        writeln!(writer, "  Semantics:    {} ({})", trace.resolver_semantics_version, trace.resolver_semantics_hash)?;
-        writeln!(writer, "  Profile:      {} ({})", trace.specificity_profile_id, trace.specificity_profile_hash)?;
+        writeln!(
+            writer,
+            "  Semantics:    {} ({})",
+            trace.resolver_semantics_version, trace.resolver_semantics_hash
+        )?;
+        writeln!(
+            writer,
+            "  Profile:      {} ({})",
+            trace.specificity_profile_id, trace.specificity_profile_hash
+        )?;
         writeln!(writer, "  Packs:        {:?}", trace.pack_hashes)?;
         writeln!(writer, "  Claim Level:  {:?}", trace.claim_level)?;
         writeln!(writer, "  Created:      {}", trace.created_at)?;

@@ -1,6 +1,6 @@
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
 use super::error::AuthorityError;
 use super::types::*;

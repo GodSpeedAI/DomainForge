@@ -1,10 +1,6 @@
 use sea_core::semantic_pack::*;
 
-fn make_concept(
-    id: &str,
-    canonical_name: &str,
-    status: ConceptStatus,
-) -> ConceptDef {
+fn make_concept(id: &str, canonical_name: &str, status: ConceptStatus) -> ConceptDef {
     ConceptDef {
         id: id.to_string(),
         canonical_name: canonical_name.to_string(),
@@ -99,7 +95,10 @@ fn unknown_concept_is_unknown() {
     let result = resolve_concept(&request, &pack, &options);
 
     assert_eq!(result.semantic_truth, SemanticTruth::Unknown);
-    assert_eq!(result.diagnostic_code, Some(SemanticDiagnosticCode::UnknownConcept));
+    assert_eq!(
+        result.diagnostic_code,
+        Some(SemanticDiagnosticCode::UnknownConcept)
+    );
     assert!(result.resolved_concept_id.is_none());
 }
 
@@ -121,7 +120,10 @@ fn rejected_concept_is_invalid() {
     let result = resolve_concept(&request, &pack, &options);
 
     assert_eq!(result.semantic_truth, SemanticTruth::Invalid);
-    assert_eq!(result.diagnostic_code, Some(SemanticDiagnosticCode::RejectedConcept));
+    assert_eq!(
+        result.diagnostic_code,
+        Some(SemanticDiagnosticCode::RejectedConcept)
+    );
 }
 
 #[test]
@@ -142,7 +144,10 @@ fn proposed_concept_is_unknown() {
     let result = resolve_concept(&request, &pack, &options);
 
     assert_eq!(result.semantic_truth, SemanticTruth::Unknown);
-    assert_eq!(result.diagnostic_code, Some(SemanticDiagnosticCode::ProposedConcept));
+    assert_eq!(
+        result.diagnostic_code,
+        Some(SemanticDiagnosticCode::ProposedConcept)
+    );
     assert_eq!(result.resolved_concept_id, Some("draft_thing".to_string()));
 }
 
@@ -164,7 +169,10 @@ fn deprecated_concept_is_valid_with_diagnostic() {
     let result = resolve_concept(&request, &pack, &options);
 
     assert_eq!(result.semantic_truth, SemanticTruth::Valid);
-    assert_eq!(result.diagnostic_code, Some(SemanticDiagnosticCode::DeprecatedConcept));
+    assert_eq!(
+        result.diagnostic_code,
+        Some(SemanticDiagnosticCode::DeprecatedConcept)
+    );
     assert_eq!(result.resolved_concept_id, Some("old_thing".to_string()));
 }
 

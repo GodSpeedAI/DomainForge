@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
 use super::error::AuthorityError;
 use super::types::*;
@@ -71,15 +71,9 @@ impl DerivedFactEngine {
                     "Transform key must be in format id@version",
                 ));
             }
-            let transform = self
-                .registry
-                .get(parts[0], parts[1])
-                .ok_or_else(|| {
-                    AuthorityError::invalid_transform(
-                        transform_key,
-                        "Transform not registered",
-                    )
-                })?;
+            let transform = self.registry.get(parts[0], parts[1]).ok_or_else(|| {
+                AuthorityError::invalid_transform(transform_key, "Transform not registered")
+            })?;
 
             let mut input_values = Vec::new();
             let mut input_source_classes = Vec::new();

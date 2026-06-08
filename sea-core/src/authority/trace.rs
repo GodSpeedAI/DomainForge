@@ -104,7 +104,10 @@ impl AuthorityTraceEmitter {
     }
 
     pub fn get_traces(&self) -> Vec<AuthorityTrace> {
-        self.memory_store.lock().map(|s| s.clone()).unwrap_or_default()
+        self.memory_store
+            .lock()
+            .map(|s| s.clone())
+            .unwrap_or_default()
     }
 
     pub fn clear_traces(&self) {
@@ -128,7 +131,9 @@ impl AuthorityTraceEmitter {
         let trace = AuthorityTrace {
             decision_id: output.decision_id.clone(),
             request_id: request.request_id.clone(),
-            ir_hash: compute_hash(&serde_json::to_string(&output.candidate_policies).unwrap_or_default()),
+            ir_hash: compute_hash(
+                &serde_json::to_string(&output.candidate_policies).unwrap_or_default(),
+            ),
             pack_hashes: packs.iter().map(|p| p.hash.clone()).collect(),
             resolver_version: self.resolver_version.clone(),
             resolver_semantics_version: self.semantics_version.clone(),

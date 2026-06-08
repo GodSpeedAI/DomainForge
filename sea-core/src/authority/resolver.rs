@@ -48,7 +48,8 @@ impl AuthorityResolver {
     ) -> Result<ResolverOutput, AuthorityError> {
         request.validate()?;
 
-        let all_policies: Vec<&AuthorityPolicy> = packs.iter().flat_map(|p| p.policies.iter()).collect();
+        let all_policies: Vec<&AuthorityPolicy> =
+            packs.iter().flat_map(|p| p.policies.iter()).collect();
 
         let candidates: Vec<&AuthorityPolicy> = all_policies
             .into_iter()
@@ -116,10 +117,7 @@ impl AuthorityResolver {
         let applicable: Vec<&PolicyEvaluation> = evaluations
             .iter()
             .filter(|e| {
-                matches!(
-                    e.condition_result,
-                    ThreeValuedResult::True
-                ) || e.unknown_handling_applied
+                matches!(e.condition_result, ThreeValuedResult::True) || e.unknown_handling_applied
             })
             .collect();
 
@@ -128,7 +126,10 @@ impl AuthorityResolver {
                 decision_id: generate_decision_id(),
                 final_decision: FinalDecision::NotApplicable,
                 reason_code: "no_applicable_policy_after_evaluation".to_string(),
-                candidate_policies: candidates.into_iter().map(|p| p.policy_id.clone()).collect(),
+                candidate_policies: candidates
+                    .into_iter()
+                    .map(|p| p.policy_id.clone())
+                    .collect(),
                 applicable_policies: vec![],
                 incomparable_policies: vec![],
                 evaluations,
@@ -136,8 +137,7 @@ impl AuthorityResolver {
             });
         }
 
-        let (final_decision, conflict_steps) =
-            self.resolve_conflicts(&applicable)?;
+        let (final_decision, conflict_steps) = self.resolve_conflicts(&applicable)?;
 
         let decision_id = generate_decision_id();
         let reason_code = format!(
@@ -159,8 +159,14 @@ impl AuthorityResolver {
             decision_id,
             final_decision,
             reason_code,
-            candidate_policies: candidates.into_iter().map(|p| p.policy_id.clone()).collect(),
-            applicable_policies: applicable.iter().map(|e| e.policy.policy_id.clone()).collect(),
+            candidate_policies: candidates
+                .into_iter()
+                .map(|p| p.policy_id.clone())
+                .collect(),
+            applicable_policies: applicable
+                .iter()
+                .map(|e| e.policy.policy_id.clone())
+                .collect(),
             incomparable_policies: vec![],
             evaluations,
             conflict_resolution_steps: conflict_steps,
@@ -174,7 +180,8 @@ impl AuthorityResolver {
         if applicable.len() == 1 {
             let ev = applicable[0];
             let decision = if ev.unknown_handling_applied {
-                ev.unknown_handling_result.unwrap_or(FinalDecision::NotApplicable)
+                ev.unknown_handling_result
+                    .unwrap_or(FinalDecision::NotApplicable)
             } else {
                 modality_to_decision(&ev.policy.modality, ev.condition_result)
             };
@@ -203,7 +210,11 @@ impl AuthorityResolver {
 
         let mut steps = vec![ConflictResolutionStep {
             step: "modality_precedence".to_string(),
-            policy_id: modal_filtered.iter().map(|e| e.policy.policy_id.clone()).collect::<Vec<_>>().join(","),
+            policy_id: modal_filtered
+                .iter()
+                .map(|e| e.policy.policy_id.clone())
+                .collect::<Vec<_>>()
+                .join(","),
             result: format!("modality_rank={}", best_modality_rank),
         }];
 
@@ -232,7 +243,11 @@ impl AuthorityResolver {
 
         steps.push(ConflictResolutionStep {
             step: "priority_filter".to_string(),
-            policy_id: top_priority.iter().map(|e| e.policy.policy_id.clone()).collect::<Vec<_>>().join(","),
+            policy_id: top_priority
+                .iter()
+                .map(|e| e.policy.policy_id.clone())
+                .collect::<Vec<_>>()
+                .join(","),
             result: format!("priority={}", best_priority),
         });
 
@@ -256,8 +271,12 @@ impl AuthorityResolver {
                 if i == j || dominated[j] {
                     continue;
                 }
-                let vec_i = top_priority[i].policy.compute_specificity(&self.specificity_profile);
-                let vec_j = top_priority[j].policy.compute_specificity(&self.specificity_profile);
+                let vec_i = top_priority[i]
+                    .policy
+                    .compute_specificity(&self.specificity_profile);
+                let vec_j = top_priority[j]
+                    .policy
+                    .compute_specificity(&self.specificity_profile);
                 match vec_i.compare(&vec_j) {
                     SpecificityComparison::AMoreSpecific => {
                         dominated[j] = true;
@@ -290,13 +309,23 @@ impl AuthorityResolver {
 
         steps.push(ConflictResolutionStep {
             step: "specificity_incomparable".to_string(),
-            policy_id: non_dominated.iter().map(|e| e.policy.policy_id.clone()).collect::<Vec<_>>().join(","),
+            policy_id: non_dominated
+                .iter()
+                .map(|e| e.policy.policy_id.clone())
+                .collect::<Vec<_>>()
+                .join(","),
             result: "incomparable".to_string(),
         });
 
         if self.strict_mode {
-            let ids: Vec<String> = non_dominated.iter().map(|e| e.policy.policy_id.clone()).collect();
-            Err(AuthorityError::specificity_conflict(&ids[0], &ids.get(1).map(|s| s.as_str()).unwrap_or("?")))
+            let ids: Vec<String> = non_dominated
+                .iter()
+                .map(|e| e.policy.policy_id.clone())
+                .collect();
+            Err(AuthorityError::specificity_conflict(
+                &ids[0],
+                &ids.get(1).map(|s| s.as_str()).unwrap_or("?"),
+            ))
         } else {
             Ok((FinalDecision::Escalate, steps))
         }
@@ -344,7 +373,8 @@ fn modality_precedence_rank(modality: &PolicyModality) -> u8 {
 
 fn compute_eval_decision(ev: &PolicyEvaluation) -> FinalDecision {
     if ev.unknown_handling_applied {
-        ev.unknown_handling_result.unwrap_or(FinalDecision::NotApplicable)
+        ev.unknown_handling_result
+            .unwrap_or(FinalDecision::NotApplicable)
     } else {
         modality_to_decision(&ev.policy.modality, ev.condition_result)
     }

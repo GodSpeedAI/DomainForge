@@ -74,9 +74,10 @@ pub fn validate_definition_hashes(
         latest.decision,
         super::schema::ReviewDecision::MinorAmendmentNoSemanticChange
     ) {
-        if let (Some(prev), Some(new)) =
-            (&latest.previous_definition_hash, &latest.new_definition_hash)
-        {
+        if let (Some(prev), Some(new)) = (
+            &latest.previous_definition_hash,
+            &latest.new_definition_hash,
+        ) {
             if prev == &latest.definition_hash && new == current_hash {
                 return DefinitionHashResult::MinorAmendment;
             }
@@ -93,7 +94,8 @@ pub fn validate_definition_hashes(
 pub fn compute_review_manifest_hash(records: &[ReviewRecord]) -> String {
     let mut sorted = records.to_vec();
     sorted.sort_by(|a, b| a.decision_id.cmp(&b.decision_id));
-    let json = serde_json::to_string(&sorted).expect("failed to serialize review records for manifest hash");
+    let json = serde_json::to_string(&sorted)
+        .expect("failed to serialize review records for manifest hash");
     super::canonical_json::compute_sha256(json.as_bytes())
 }
 
@@ -108,7 +110,10 @@ pub enum DefinitionHashResult {
     Match,
     MinorAmendment,
     NoReview,
-    Mismatch { reviewed_hash: String, current_hash: String },
+    Mismatch {
+        reviewed_hash: String,
+        current_hash: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

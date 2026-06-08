@@ -71,7 +71,11 @@ impl StructuralPredicates {
     pub fn specificity_score(&self, profile: &SpecificityProfile) -> SpecificityVector {
         let mut dims = Vec::new();
         for dim_name in &profile.dimensions {
-            let score = self.predicates.iter().filter(|(k, _)| *k == dim_name || k.starts_with(&format!("{}.", dim_name))).count() as u32;
+            let score = self
+                .predicates
+                .iter()
+                .filter(|(k, _)| *k == dim_name || k.starts_with(&format!("{}.", dim_name)))
+                .count() as u32;
             dims.push((dim_name.clone(), score));
         }
         SpecificityVector::new(dims)
@@ -85,10 +89,7 @@ pub struct ConditionPredicates {
 }
 
 impl ConditionPredicates {
-    pub fn evaluate(
-        &self,
-        facts: &[FactEnvelope],
-    ) -> Result<ThreeValuedResult, AuthorityError> {
+    pub fn evaluate(&self, facts: &[FactEnvelope]) -> Result<ThreeValuedResult, AuthorityError> {
         if self.conditions.is_empty() {
             return Ok(ThreeValuedResult::True);
         }
@@ -161,7 +162,10 @@ impl AuthorityPolicy {
         if self.modality == PolicyModality::Override && self.override_spec.is_none() {
             return Err(AuthorityError::new(
                 super::error::AuthorityErrorCode::PolicyParseError,
-                format!("Override policy '{}' must have override_spec", self.policy_id),
+                format!(
+                    "Override policy '{}' must have override_spec",
+                    self.policy_id
+                ),
             ));
         }
         Ok(())

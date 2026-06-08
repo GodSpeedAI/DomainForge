@@ -1,9 +1,8 @@
 use crate::authority::{
     AuthorityEnvironment as RustAuthorityEnvironment,
-    AuthorityEnvironmentConfig as RustAuthorityEnvironmentConfig,
-    FactEnvelope as RustFactEnvelope,
-    FinalDecision as RustFinalDecision, PolicyModality as RustPolicyModality,
-    SourceClass as RustSourceClass, ClaimLevel as RustClaimLevel,
+    AuthorityEnvironmentConfig as RustAuthorityEnvironmentConfig, ClaimLevel as RustClaimLevel,
+    FactEnvelope as RustFactEnvelope, FinalDecision as RustFinalDecision,
+    PolicyModality as RustPolicyModality, SourceClass as RustSourceClass,
 };
 use wasm_bindgen::prelude::*;
 
@@ -174,11 +173,13 @@ pub fn evaluate_authority(
         .map_err(|e| JsError::new(&format!("Invalid request: {}", e)))?;
     let facts: Vec<RustFactEnvelope> = match facts_json.as_deref() {
         None | Some("") => vec![],
-        Some(s) => serde_json::from_str(s)
-            .map_err(|e| JsError::new(&format!("Invalid facts: {}", e)))?,
+        Some(s) => {
+            serde_json::from_str(s).map_err(|e| JsError::new(&format!("Invalid facts: {}", e)))?
+        }
     };
 
-    let (trace, decision) = env.evaluate(&request, &facts)
+    let (trace, decision) = env
+        .evaluate(&request, &facts)
         .map_err(|e| JsError::new(&format!("Evaluation error: {}", e)))?;
 
     let result = serde_json::json!({

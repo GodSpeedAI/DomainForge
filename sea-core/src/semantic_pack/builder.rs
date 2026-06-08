@@ -42,7 +42,9 @@ pub struct PackBuildOutput {
 }
 
 /// Build a semantic pack from input.
-pub fn build_semantic_pack(input: PackBuildInput) -> Result<PackBuildOutput, Vec<SemanticDiagnostic>> {
+pub fn build_semantic_pack(
+    input: PackBuildInput,
+) -> Result<PackBuildOutput, Vec<SemanticDiagnostic>> {
     let mut pre_pack_diagnostics = Vec::new();
 
     // Run pre-pack checks (§5.1)
@@ -153,7 +155,9 @@ pub fn build_semantic_pack(input: PackBuildInput) -> Result<PackBuildOutput, Vec
                 });
             }
         }
-    } else if matches!(input.approval, ApprovalState::Approved) && !input.allow_first_approved_version {
+    } else if matches!(input.approval, ApprovalState::Approved)
+        && !input.allow_first_approved_version
+    {
         pre_pack_diagnostics.push(SemanticDiagnostic {
             code: SemanticDiagnosticCode::MeaningVersionBaselineMissing,
             severity: DiagnosticSeverity::Error,
@@ -198,7 +202,10 @@ fn run_pre_pack_checks(
     build_warnings: &mut Vec<SemanticDiagnostic>,
 ) {
     let dummy_ref = PackRef {
-        pack_id: format!("{}/{}/{}", input.org_id, input.domain_id, input.pack_version),
+        pack_id: format!(
+            "{}/{}/{}",
+            input.org_id, input.domain_id, input.pack_version
+        ),
         pack_content_hash: String::new(),
         path_or_uri: String::new(),
         priority: 0,
@@ -307,7 +314,10 @@ fn run_pre_pack_checks(
             code: SemanticDiagnosticCode::AliasConflict,
             severity: DiagnosticSeverity::Error,
             semantic_truth: SemanticTruth::Invalid,
-            message: format!("Alias conflict for key '{}': multiple targets through approved/deprecated entries", key),
+            message: format!(
+                "Alias conflict for key '{}': multiple targets through approved/deprecated entries",
+                key
+            ),
             source_ref: SourceRef::pack_uri(&dummy_ref.pack_id),
             pack_ref: dummy_ref.clone(),
             suggestions: vec![],
@@ -315,11 +325,7 @@ fn run_pre_pack_checks(
         });
     }
     for key in &conflict_report.ambiguous_only_keys {
-        build_warnings_push(
-            build_warnings,
-            key,
-            &dummy_ref,
-        );
+        build_warnings_push(build_warnings, key, &dummy_ref);
     }
 }
 
@@ -420,11 +426,7 @@ fn check_review_coverage(
 }
 
 fn version_increased(old: &str, new: &str) -> bool {
-    let parse = |s: &str| -> Vec<u32> {
-        s.split('.')
-            .filter_map(|p| p.parse().ok())
-            .collect()
-    };
+    let parse = |s: &str| -> Vec<u32> { s.split('.').filter_map(|p| p.parse().ok()).collect() };
     let old_parts = parse(old);
     let new_parts = parse(new);
     for i in 0..std::cmp::max(old_parts.len(), new_parts.len()) {

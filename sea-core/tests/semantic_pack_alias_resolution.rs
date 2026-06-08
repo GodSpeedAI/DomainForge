@@ -1,10 +1,6 @@
 use sea_core::semantic_pack::*;
 
-fn make_concept(
-    id: &str,
-    canonical_name: &str,
-    status: ConceptStatus,
-) -> ConceptDef {
+fn make_concept(id: &str, canonical_name: &str, status: ConceptStatus) -> ConceptDef {
     ConceptDef {
         id: id.to_string(),
         canonical_name: canonical_name.to_string(),
@@ -24,11 +20,7 @@ fn make_concept(
     }
 }
 
-fn make_alias(
-    alias: &str,
-    target_id: &str,
-    status: AliasStatus,
-) -> AliasDef {
+fn make_alias(alias: &str, target_id: &str, status: AliasStatus) -> AliasDef {
     AliasDef {
         alias: alias.to_string(),
         normalized_alias: normalize_lookup_key(alias),
@@ -198,5 +190,8 @@ fn approved_and_deprecated_alias_same_key_is_ambiguous() {
     let result = resolve_concept(&request, &pack, &options);
 
     assert_eq!(result.semantic_truth, SemanticTruth::Unknown);
-    assert_eq!(result.diagnostic_code, Some(SemanticDiagnosticCode::AmbiguousAlias));
+    assert_eq!(
+        result.diagnostic_code,
+        Some(SemanticDiagnosticCode::AmbiguousAlias)
+    );
 }

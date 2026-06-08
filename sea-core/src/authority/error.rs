@@ -110,7 +110,10 @@ impl AuthorityError {
     pub fn ambiguous_lowering(expr: &str) -> Self {
         Self::new(
             AuthorityErrorCode::AmbiguousCompatibilityLowering,
-            format!("Ambiguous compatibility expression cannot be safely lowered: {}", expr),
+            format!(
+                "Ambiguous compatibility expression cannot be safely lowered: {}",
+                expr
+            ),
         )
     }
 

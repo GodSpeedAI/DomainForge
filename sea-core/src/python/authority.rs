@@ -165,7 +165,8 @@ impl AuthorityEnvironment {
     }
 
     fn validate(&mut self) -> PyResult<()> {
-        self.inner.validate()
+        self.inner
+            .validate()
             .map_err(|e| PyValueError::new_err(format!("Validation error: {}", e)))
     }
 
@@ -175,7 +176,9 @@ impl AuthorityEnvironment {
             .map_err(|e| PyValueError::new_err(format!("Invalid request JSON: {}", e)))?;
         let facts: Vec<RustFactEnvelope> = serde_json::from_str(facts_json)
             .map_err(|e| PyValueError::new_err(format!("Invalid facts JSON: {}", e)))?;
-        let (trace, decision) = self.inner.evaluate(&request, &facts)
+        let (trace, decision) = self
+            .inner
+            .evaluate(&request, &facts)
             .map_err(|e| PyValueError::new_err(format!("Evaluation error: {}", e)))?;
         let trace_json = serde_json::to_string(&trace)
             .map_err(|e| PyValueError::new_err(format!("Trace serialization error: {}", e)))?;
@@ -203,7 +206,10 @@ pub struct AuthorityErrorCode {
 #[pymethods]
 impl AuthorityErrorCode {
     fn __repr__(&self) -> String {
-        format!("AuthorityError(code='{}', message='{}')", self.code, self.message)
+        format!(
+            "AuthorityError(code='{}', message='{}')",
+            self.code, self.message
+        )
     }
 }
 
@@ -235,7 +241,8 @@ pub fn evaluate_authority(
     let facts: Vec<RustFactEnvelope> = serde_json::from_str(facts_json)
         .map_err(|e| PyValueError::new_err(format!("Invalid facts: {}", e)))?;
 
-    let (trace, decision) = env.evaluate(&request, &facts)
+    let (trace, decision) = env
+        .evaluate(&request, &facts)
         .map_err(|e| PyValueError::new_err(format!("Evaluation error: {}", e)))?;
 
     let trace_json = serde_json::to_string(&trace).unwrap_or_default();

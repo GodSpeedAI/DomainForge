@@ -222,7 +222,10 @@ fn meaning_fingerprint_change_requires_meaning_version_bump() {
 
     let result = build_semantic_pack(input2);
     if let Err(diags) = &result {
-        if diags.iter().any(|d| d.code == SemanticDiagnosticCode::MeaningVersionNotBumped) {
+        if diags
+            .iter()
+            .any(|d| d.code == SemanticDiagnosticCode::MeaningVersionNotBumped)
+        {
             return;
         }
     }
@@ -259,10 +262,7 @@ fn canonical_json_sorts_examples_and_counterexamples() {
         "a_example".to_string(),
         "m_example".to_string(),
     ];
-    concept.counterexamples = vec![
-        "z_counter".to_string(),
-        "a_counter".to_string(),
-    ];
+    concept.counterexamples = vec!["z_counter".to_string(), "a_counter".to_string()];
 
     let mut input = minimal_build_input();
     input.concepts = vec![concept];
