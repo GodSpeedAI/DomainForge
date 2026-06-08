@@ -60,6 +60,8 @@ pub fn sort_pack_for_canonicalization(pack: &mut SemanticPack) {
     for concept in &mut pack.concepts {
         sort_string_vec(&mut concept.examples);
         sort_string_vec(&mut concept.counterexamples);
+        sort_string_vec(&mut concept.allowed_predicates);
+        sort_string_vec(&mut concept.valid_contexts);
         sort_source_refs(&mut concept.source_refs);
     }
     for relation in &mut pack.relations {
