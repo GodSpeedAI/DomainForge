@@ -115,6 +115,10 @@ fn test_multi_file_writes_inside_output_dir() {
     fs::create_dir_all(&output).unwrap();
 
     let result = run_project(&input, &output, &[]);
-    assert!(result.is_ok(), "Multi-file projection should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Multi-file projection should succeed: {:?}",
+        result
+    );
     assert!(fs::read_dir(&output).unwrap().count() > 0);
 }

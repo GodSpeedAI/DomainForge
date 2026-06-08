@@ -1190,7 +1190,10 @@ impl ProtobufEngine {
                 }
             }
             for resp in response_msgs {
-                type_index.insert(resp.name.clone(), ("".to_string(), base_package.to_string()));
+                type_index.insert(
+                    resp.name.clone(),
+                    ("".to_string(), base_package.to_string()),
+                );
                 files
                     .entry("".to_string())
                     .or_insert_with(|| ProtoFile::new(base_package.to_string()))
@@ -1732,18 +1735,19 @@ pub fn validate_proto_package_namespace(ns: &str) -> Result<(), String> {
     if ns.is_empty() {
         return Ok(());
     }
-    if ns.contains('/') || ns.contains('\\') || ns.contains("..") || ns.starts_with('.') || ns.starts_with('/') {
+    if ns.contains('/')
+        || ns.contains('\\')
+        || ns.contains("..")
+        || ns.starts_with('.')
+        || ns.starts_with('/')
+    {
         return Err(format!(
             "Invalid protobuf namespace '{}': must not contain path separators or traversal",
             ns
         ));
     }
     let mut chars = ns.chars().peekable();
-    loop {
-        let first = match chars.next() {
-            Some(c) => c,
-            None => break,
-        };
+    while let Some(first) = chars.next() {
         if !first.is_ascii_alphabetic() && first != '_' {
             return Err(format!(
                 "Invalid protobuf namespace '{}': must be dotted identifiers (e.g., com.example.api)",

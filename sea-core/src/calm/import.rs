@@ -83,16 +83,11 @@ fn import_constraint_node(
                     .namespace
                     .clone()
                     .unwrap_or_else(|| "default".to_string());
-                let pattern = crate::patterns::Pattern::new(
-                    node.name.clone(),
-                    ns,
-                    regex.to_string(),
-                )
-                .map_err(|e| format!("Invalid pattern regex: {}", e))?;
+                let pattern =
+                    crate::patterns::Pattern::new(node.name.clone(), ns, regex.to_string())
+                        .map_err(|e| format!("Invalid pattern regex: {}", e))?;
                 let pattern_id = pattern.id().clone();
-                graph
-                    .add_pattern(pattern)
-                    .map_err(|e| e.to_string())?;
+                graph.add_pattern(pattern).map_err(|e| e.to_string())?;
                 id_map.insert(calm_id.clone(), pattern_id);
                 return Ok(());
             }

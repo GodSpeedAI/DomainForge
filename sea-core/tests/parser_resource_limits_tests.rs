@@ -6,7 +6,7 @@ fn deeply_nested_expressions_parse_or_error_gracefully() {
     for _ in 0..30 {
         source.push_str("(1 + ");
     }
-    source.push_str("1");
+    source.push('1');
     for _ in 0..30 {
         source.push(')');
     }
