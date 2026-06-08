@@ -102,6 +102,17 @@ impl ConditionPredicates {
                     results.push(ThreeValuedResult::Unknown);
                 }
                 Some(f) => {
+                    if let Some(obj) = expected.as_object() {
+                        if let Some(neq) = obj.get("__neq") {
+                            results.push(if &f.value != neq {
+                                ThreeValuedResult::True
+                            } else {
+                                ThreeValuedResult::False
+                            });
+                            continue;
+                        }
+                    }
+
                     if &f.value == expected {
                         results.push(ThreeValuedResult::True);
                     } else {
