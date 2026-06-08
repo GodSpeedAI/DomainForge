@@ -95,7 +95,11 @@ pub fn sort_diagnostics(diags: &mut Vec<super::diagnostics::SemanticDiagnostic>)
 /// Compute pack content hash excluding signature fields (§6.2).
 pub fn compute_pack_content_hash(pack: &SemanticPack) -> String {
     let mut pack_for_hash = pack.clone();
-    // Clear signature fields for hash computation
+
+    // Clear non-semantic / build-variant and signature metadata fields for hash computation
+    pack_for_hash.created_at = String::new();
+    pack_for_hash.trust.signed_by = None;
+    pack_for_hash.trust.signature_alg = None;
     pack_for_hash.trust.signature = None;
     pack_for_hash.trust.signature_state = super::schema::SignatureState::Unsigned;
 
