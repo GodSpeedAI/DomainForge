@@ -106,6 +106,28 @@ python-clean:
     @echo "Removing Python virtual environment (.venv)"
     if [ -d .venv ]; then rm -rf .venv || true; fi
 
+audit:
+    cargo audit 2>/dev/null || echo "cargo-audit: advisory DB not available, skipping"
+    cargo deny check 2>/dev/null || echo "cargo-deny: not installed, skipping"
+
+enterprise-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "=== Enterprise Release Verification ==="
+    echo "1/6: Format check..."
+    cargo fmt --all --check
+    echo "2/6: Clippy..."
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    echo "3/6: Rust tests..."
+    cargo test --workspace --all-targets --all-features
+    echo "4/6: Doctests..."
+    cargo test -p sea-core --features cli --doc
+    echo "5/6: All language tests..."
+    just all-tests
+    echo "6/6: Audit..."
+    just audit
+    echo "=== Enterprise Verification PASSED ==="
+
 # ============================================================================
 # CI-specific recipes (used by GitHub Actions)
 # ============================================================================

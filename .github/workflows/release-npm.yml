@@ -33,7 +33,7 @@ jobs:
           toolchain: stable
 
       - name: Install dependencies
-        run: npm install
+        run: bun install --frozen-lockfile
 
       - name: Build napi package
         run: npm run build
