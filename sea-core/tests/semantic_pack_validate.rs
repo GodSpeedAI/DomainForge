@@ -162,8 +162,10 @@ fn deprecated_policy_error_in_strict_preserves_valid_truth() {
 fn unknown_truth_survives_error_severity() {
     let pack = make_minimal_pack();
 
-    let mut options = ValidationOptions::default();
-    options.unknown_concept_policy = UnknownConceptPolicy::Error;
+    let options = ValidationOptions {
+        unknown_concept_policy: UnknownConceptPolicy::Error,
+        ..ValidationOptions::default()
+    };
 
     let source_ref = SourceRef::synthetic("test://policy");
     let diag = validate_term("nonexistent_concept", &pack, &options, source_ref);

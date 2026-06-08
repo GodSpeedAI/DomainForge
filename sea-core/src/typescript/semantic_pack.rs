@@ -1,12 +1,14 @@
 use crate::semantic_pack::{
-    build_semantic_pack, canonical_json, derive_signer_id, diff_packs, normalize_lookup_key,
-    resolve_concept, sign_pack, validate_graph_with_pack, validate_semantic_pack,
-    verify_pack_signature, AliasStatus as RustAliasStatus, ApprovalState as RustApprovalState,
-    ConceptKind as RustConceptKind, ConceptStatus as RustConceptStatus,
-    DiagnosticSeverity as RustDiagnosticSeverity, PackBuildInput, ResolveRequest,
-    SemanticTruth as RustSemanticTruth, SemanticValidationStatus as RustSemanticValidationStatus,
-    SignatureState as RustSignatureState, ValidationMode as RustValidationMode, ValidationOptions,
+    build_semantic_pack, canonical_json, diff_packs, normalize_lookup_key, resolve_concept,
+    validate_graph_with_pack, validate_semantic_pack, AliasStatus as RustAliasStatus,
+    ApprovalState as RustApprovalState, ConceptKind as RustConceptKind,
+    ConceptStatus as RustConceptStatus, DiagnosticSeverity as RustDiagnosticSeverity,
+    PackBuildInput, ResolveRequest, SemanticTruth as RustSemanticTruth,
+    SemanticValidationStatus as RustSemanticValidationStatus, SignatureState as RustSignatureState,
+    ValidationMode as RustValidationMode, ValidationOptions,
 };
+#[cfg(feature = "signing")]
+use crate::semantic_pack::{derive_signer_id, sign_pack, verify_pack_signature};
 use napi_derive::napi;
 
 // =============================================================================
@@ -349,6 +351,7 @@ pub fn semantic_pack_validate_graph(
         .map_err(|e| napi::Error::from_reason(format!("Serialization error: {}", e)))
 }
 
+#[cfg(feature = "signing")]
 #[napi]
 pub fn semantic_pack_sign(pack_json: String, private_key_pem: String) -> napi::Result<String> {
     let mut pack: crate::semantic_pack::SemanticPack = serde_json::from_str(&pack_json)
@@ -368,6 +371,15 @@ pub fn semantic_pack_sign(pack_json: String, private_key_pem: String) -> napi::R
         .map_err(|e| napi::Error::from_reason(format!("Serialization error: {}", e)))
 }
 
+#[cfg(not(feature = "signing"))]
+#[napi]
+pub fn semantic_pack_sign(_pack_json: String, _private_key_pem: String) -> napi::Result<String> {
+    Err(napi::Error::from_reason(
+        "signing requires the 'signing' feature",
+    ))
+}
+
+#[cfg(feature = "signing")]
 #[napi]
 pub fn semantic_pack_verify(pack_json: String, public_key_pem: String) -> napi::Result<bool> {
     let pack: crate::semantic_pack::SemanticPack = serde_json::from_str(&pack_json)
@@ -380,6 +392,14 @@ pub fn semantic_pack_verify(pack_json: String, public_key_pem: String) -> napi::
             e
         ))),
     }
+}
+
+#[cfg(not(feature = "signing"))]
+#[napi]
+pub fn semantic_pack_verify(_pack_json: String, _public_key_pem: String) -> napi::Result<bool> {
+    Err(napi::Error::from_reason(
+        "signing requires the 'signing' feature",
+    ))
 }
 
 #[napi]
@@ -435,9 +455,9 @@ pub fn semantic_resolve_concept(
 
     let json = serde_json::json!({
         "resolved_concept_id": result.resolved_concept_id,
-        "semantic_truth": serde_json::to_value(&result.semantic_truth).unwrap_or_default(),
+        "semantic_truth": serde_json::to_value(result.semantic_truth).unwrap_or_default(),
         "diagnostic_code": result.diagnostic_code.as_ref().map(|c| c.as_str().to_string()),
-        "diagnostic_severity": serde_json::to_value(&result.diagnostic_severity).unwrap_or_default(),
+        "diagnostic_severity": serde_json::to_value(result.diagnostic_severity).unwrap_or_default(),
         "message": result.message,
         "suggestions": result.suggestions,
     });

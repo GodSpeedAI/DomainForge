@@ -126,8 +126,8 @@ impl ConditionPredicates {
         }
 
         let all_true = results.iter().all(|r| *r == ThreeValuedResult::True);
-        let any_false = results.iter().any(|r| *r == ThreeValuedResult::False);
-        let any_unknown = results.iter().any(|r| *r == ThreeValuedResult::Unknown);
+        let any_false = results.contains(&ThreeValuedResult::False);
+        let any_unknown = results.contains(&ThreeValuedResult::Unknown);
 
         if any_false {
             Ok(ThreeValuedResult::False)

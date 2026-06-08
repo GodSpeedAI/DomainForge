@@ -79,7 +79,7 @@ pub fn sort_pack_for_canonicalization(pack: &mut SemanticPack) {
 }
 
 /// Sort diagnostics for deterministic output.
-pub fn sort_diagnostics(diags: &mut Vec<super::diagnostics::SemanticDiagnostic>) {
+pub fn sort_diagnostics(diags: &mut [super::diagnostics::SemanticDiagnostic]) {
     diags.sort_by(|a, b| {
         a.source_ref
             .uri
@@ -121,7 +121,7 @@ pub fn compute_meaning_fingerprint(pack: &SemanticPack) -> String {
             "subject_type": "concept",
             "subject_id": c.id,
             "definition_hash": c.definition.definition_hash,
-            "status": serde_json::to_value(&c.status).unwrap_or_default(),
+            "status": serde_json::to_value(c.status).unwrap_or_default(),
             "decision_ref": c.definition.decision_ref,
         }));
     }
@@ -169,11 +169,11 @@ fn alias_status_order(s: &AliasStatus) -> u8 {
     }
 }
 
-fn sort_string_vec(v: &mut Vec<String>) {
+fn sort_string_vec(v: &mut [String]) {
     v.sort();
 }
 
-fn sort_source_refs(v: &mut Vec<SourceRef>) {
+fn sort_source_refs(v: &mut [SourceRef]) {
     v.sort_by(|a, b| {
         a.uri
             .cmp(&b.uri)

@@ -50,7 +50,7 @@ impl From<&FactEnvelope> for FactEnvelopeSummary {
     fn from(f: &FactEnvelope) -> Self {
         Self {
             path: f.path.clone(),
-            source_class: f.source_class.clone(),
+            source_class: f.source_class,
             source_id: f.source_id.clone(),
             trusted: f.is_trusted(),
         }
@@ -116,6 +116,7 @@ impl AuthorityTraceEmitter {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn emit(
         &self,
         request: &AuthorityRequest,

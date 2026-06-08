@@ -646,7 +646,7 @@ fn run_inspect(args: InspectArgs) -> Result<()> {
             println!(
                 "{:<25} {}",
                 "Org / Domain:".dimmed(),
-                format!("{}/{}", pack.org_id, pack.domain_id)
+                format_args!("{}/{}", pack.org_id, pack.domain_id)
             );
             println!("{:<25} {}", "Pack Version:".dimmed(), pack.pack_version);
             println!(

@@ -86,15 +86,15 @@ pub fn resolve_concept<'a>(
 
     // Step 4: canonical name matches
     for c in &pack.concepts {
-        if normalize_lookup_key(&c.canonical_name) == key {
-            if !candidates.iter().any(|cand| cand.concept_id == c.id) {
-                candidates.push(Candidate {
-                    concept_id: c.id.clone(),
-                    status: c.status,
-                    kind: c.kind,
-                    _match_type: MatchType::CanonicalName,
-                });
-            }
+        if normalize_lookup_key(&c.canonical_name) == key
+            && !candidates.iter().any(|cand| cand.concept_id == c.id)
+        {
+            candidates.push(Candidate {
+                concept_id: c.id.clone(),
+                status: c.status,
+                kind: c.kind,
+                _match_type: MatchType::CanonicalName,
+            });
         }
     }
 
@@ -261,7 +261,7 @@ pub fn resolve_concept<'a>(
     }
 
     // Step 12: single winner
-    let winner = candidates.iter().next().unwrap();
+    let winner = candidates.first().unwrap();
 
     // Step 13: proposed
     if winner.status == ConceptStatus::Proposed {

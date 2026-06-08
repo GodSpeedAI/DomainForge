@@ -320,9 +320,7 @@ fn compute_status(
         .iter()
         .any(|d| d.semantic_truth == SemanticTruth::Unknown);
 
-    if has_blocking_error {
-        SemanticValidationStatus::Failed
-    } else if matches!(options.mode, ValidationMode::Strict) && has_unknown {
+    if has_blocking_error || (matches!(options.mode, ValidationMode::Strict) && has_unknown) {
         SemanticValidationStatus::Failed
     } else if has_unknown {
         SemanticValidationStatus::Unknown

@@ -6,6 +6,7 @@ pub mod pack_set;
 pub mod resolver;
 pub mod review;
 pub mod schema;
+#[cfg(feature = "signing")]
 pub mod signing;
 pub mod validator;
 
@@ -25,5 +26,6 @@ pub use schema::{
     ConceptKind, ConceptStatus, GeneratorInfo, PackRef, PackSetRef, PackTrust, ReviewDecision,
     ReviewRecord, SemanticPack, SignatureState, SourceRef,
 };
+#[cfg(feature = "signing")]
 pub use signing::{derive_signer_id, sign_pack, verify_pack_signature, SignOutput};
 pub use validator::{validate_graph_with_pack, validate_semantic_pack, validate_term};

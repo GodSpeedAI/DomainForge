@@ -187,6 +187,6 @@ pub fn evaluate_authority(
         "decision": decision,
     });
 
-    Ok(serde_wasm_bindgen::to_value(&result)
-        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))?)
+    serde_wasm_bindgen::to_value(&result)
+        .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))
 }

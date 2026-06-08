@@ -1,4 +1,25 @@
+#![cfg(feature = "signing")]
+
 use sea_core::semantic_pack::*;
+
+fn test_keypair_pem() -> (Vec<u8>, Vec<u8>) {
+    use ed25519_dalek::pkcs8::{EncodePrivateKey, EncodePublicKey};
+
+    let private_key = ed25519_dalek::SigningKey::from_bytes(&[7u8; 32]);
+    let public_key = private_key.verifying_key();
+
+    (
+        private_key
+            .to_pkcs8_pem(Default::default())
+            .expect("failed to encode test private key")
+            .to_string()
+            .into_bytes(),
+        public_key
+            .to_public_key_pem(Default::default())
+            .expect("failed to encode test public key")
+            .into_bytes(),
+    )
+}
 
 fn make_concept(id: &str, canonical_name: &str) -> ConceptDef {
     ConceptDef {
@@ -55,28 +76,10 @@ fn make_pack() -> SemanticPack {
     }
 }
 
-const TEST_PRIVATE_KEY_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../fixtures/keys/test-ed25519-private.pem"
-);
-const TEST_PUBLIC_KEY_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../fixtures/keys/test-ed25519-public.pem"
-);
-
-fn read_private_key() -> Vec<u8> {
-    std::fs::read(TEST_PRIVATE_KEY_PATH).expect("failed to read test private key")
-}
-
-fn read_public_key() -> Vec<u8> {
-    std::fs::read(TEST_PUBLIC_KEY_PATH).expect("failed to read test public key")
-}
-
 #[test]
 fn signature_verifies_content_hash() {
     let pack = make_pack();
-    let private_key = read_private_key();
-    let public_key = read_public_key();
+    let (private_key, public_key) = test_keypair_pem();
 
     let sign_output = sign_pack(&pack, &private_key).expect("signing failed");
 
@@ -91,8 +94,7 @@ fn signature_verifies_content_hash() {
 #[test]
 fn signature_payload_pack_id_must_match_pack_field() {
     let mut pack = make_pack();
-    let private_key = read_private_key();
-    let public_key = read_public_key();
+    let (private_key, public_key) = test_keypair_pem();
 
     let sign_output = sign_pack(&pack, &private_key).expect("signing failed");
 
@@ -108,8 +110,7 @@ fn signature_payload_pack_id_must_match_pack_field() {
 #[test]
 fn signature_payload_schema_version_must_match_pack_field() {
     let mut pack = make_pack();
-    let private_key = read_private_key();
-    let public_key = read_public_key();
+    let (private_key, public_key) = test_keypair_pem();
 
     let sign_output = sign_pack(&pack, &private_key).expect("signing failed");
 
@@ -125,8 +126,7 @@ fn signature_payload_schema_version_must_match_pack_field() {
 #[test]
 fn tampered_pack_fails_signature_verification() {
     let pack = make_pack();
-    let private_key = read_private_key();
-    let public_key = read_public_key();
+    let (private_key, public_key) = test_keypair_pem();
 
     let sign_output = sign_pack(&pack, &private_key).expect("signing failed");
 

@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::LazyLock;
 
 use crate::authority::error::AuthorityError;
 
@@ -196,9 +196,9 @@ impl FactEnvelope {
 
     pub fn effective_trust(&self) -> SourceClass {
         if let Some(ref lineage) = self.lineage {
-            lineage.effective_trust.clone()
+            lineage.effective_trust
         } else {
-            self.source_class.clone()
+            self.source_class
         }
     }
 }
@@ -335,7 +335,7 @@ pub struct TransformOutput {
     pub fact_path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PurityFlags {
     pub network_access: bool,
     pub filesystem_access: bool,
@@ -353,19 +353,6 @@ impl PurityFlags {
             && !self.random_access
             && !self.side_effects
             && !self.global_state_access
-    }
-}
-
-impl Default for PurityFlags {
-    fn default() -> Self {
-        Self {
-            network_access: false,
-            filesystem_access: false,
-            clock_access: false,
-            random_access: false,
-            side_effects: false,
-            global_state_access: false,
-        }
     }
 }
 
@@ -602,8 +589,8 @@ impl std::fmt::Display for ClaimLevel {
     }
 }
 
-static FACT_PATH_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"^[A-Za-z0-9_.\-]+$").unwrap());
+static FACT_PATH_RE: Lazy<regex::Regex> =
+    Lazy::new(|| regex::Regex::new(r"^[A-Za-z0-9_.\-]+$").unwrap());
 
 pub fn validate_fact_path(path: &str) -> Result<(), AuthorityError> {
     if !FACT_PATH_RE.is_match(path) {

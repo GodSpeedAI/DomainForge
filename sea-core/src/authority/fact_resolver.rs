@@ -123,7 +123,7 @@ impl FactResolver {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),
                     required_sources: vec![],
-                    observed_source: fact.source_class.clone(),
+                    observed_source: fact.source_class,
                     trusted: false,
                     reason: "unregistered_source".to_string(),
                     evidence_ref: fact.evidence_ref.clone(),
@@ -137,8 +137,8 @@ impl FactResolver {
             if fact.source_class != source.source_class {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),
-                    required_sources: vec![source.source_class.clone()],
-                    observed_source: fact.source_class.clone(),
+                    required_sources: vec![source.source_class],
+                    observed_source: fact.source_class,
                     trusted: false,
                     reason: "source_class_mismatch".to_string(),
                     evidence_ref: fact.evidence_ref.clone(),
@@ -157,8 +157,8 @@ impl FactResolver {
             if !path_allowed {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),
-                    required_sources: vec![source.source_class.clone()],
-                    observed_source: fact.source_class.clone(),
+                    required_sources: vec![source.source_class],
+                    observed_source: fact.source_class,
                     trusted: false,
                     reason: "path_not_allowed".to_string(),
                     evidence_ref: fact.evidence_ref.clone(),
@@ -169,8 +169,8 @@ impl FactResolver {
             if source.evidence_required && fact.evidence_ref.is_none() {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),
-                    required_sources: vec![source.source_class.clone()],
-                    observed_source: fact.source_class.clone(),
+                    required_sources: vec![source.source_class],
+                    observed_source: fact.source_class,
                     trusted: false,
                     reason: "missing_evidence_ref".to_string(),
                     evidence_ref: None,
@@ -181,8 +181,8 @@ impl FactResolver {
             if source.signature_required && fact.signature.is_none() {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),
-                    required_sources: vec![source.source_class.clone()],
-                    observed_source: fact.source_class.clone(),
+                    required_sources: vec![source.source_class],
+                    observed_source: fact.source_class,
                     trusted: false,
                     reason: "missing_signature".to_string(),
                     evidence_ref: fact.evidence_ref.clone(),
@@ -194,8 +194,8 @@ impl FactResolver {
             if !fact.is_fresh(now) {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),
-                    required_sources: vec![source.source_class.clone()],
-                    observed_source: fact.source_class.clone(),
+                    required_sources: vec![source.source_class],
+                    observed_source: fact.source_class,
                     trusted: false,
                     reason: "stale_fact".to_string(),
                     evidence_ref: fact.evidence_ref.clone(),
@@ -205,8 +205,8 @@ impl FactResolver {
 
             trust_decisions.push(FactTrustDecision {
                 fact_path: fact.path.clone(),
-                required_sources: vec![source.source_class.clone()],
-                observed_source: fact.source_class.clone(),
+                required_sources: vec![source.source_class],
+                observed_source: fact.source_class,
                 trusted: true,
                 reason: "trusted".to_string(),
                 evidence_ref: fact.evidence_ref.clone(),

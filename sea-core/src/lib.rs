@@ -177,7 +177,9 @@ fn sea_dsl(m: &Bound<'_, PyModule>) -> PyResult<()> {
         python::semantic_pack::validate_graph_with_pack,
         m
     )?)?;
+    #[cfg(feature = "signing")]
     m.add_function(pyo3::wrap_pyfunction!(python::semantic_pack::sign_pack, m)?)?;
+    #[cfg(feature = "signing")]
     m.add_function(pyo3::wrap_pyfunction!(
         python::semantic_pack::verify_pack_signature,
         m

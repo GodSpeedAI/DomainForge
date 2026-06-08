@@ -181,20 +181,16 @@ openssl pkey -in acme-private.pem -pubout -out acme-public.pem
 
 ### Verify Key Format
 
-Private keys should be in PKCS#8 PEM format:
+Private keys should be in PKCS#8 PEM format. Do not commit real private keys; generate them locally at runtime or in CI.
 
 ```
------BEGIN PRIVATE KEY-----
-MC4CAQ...
------END PRIVATE KEY-----
+<PKCS#8 PEM-encoded Ed25519 private key generated locally>
 ```
 
 Public keys should be in SPKI PEM format:
 
 ```
------BEGIN PUBLIC KEY-----
-MCowBQ...
------END PUBLIC KEY-----
+<SPKI PEM-encoded Ed25519 public key corresponding to that generated key>
 ```
 
 ## Expected-Hash Pinning

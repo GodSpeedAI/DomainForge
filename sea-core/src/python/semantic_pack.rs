@@ -1,10 +1,9 @@
 use crate::semantic_pack::{
     build_semantic_pack as rust_build_semantic_pack, compute_pack_content_hash,
     diff_packs as rust_diff_packs, normalize_lookup_key as rust_normalize_lookup_key,
-    resolve_concept as rust_resolve_concept, sign_pack as rust_sign_pack,
+    resolve_concept as rust_resolve_concept,
     validate_graph_with_pack as rust_validate_graph_with_pack,
-    validate_semantic_pack as rust_validate_semantic_pack,
-    verify_pack_signature as rust_verify_pack_signature, AliasStatus as RustAliasStatus,
+    validate_semantic_pack as rust_validate_semantic_pack, AliasStatus as RustAliasStatus,
     ApprovalState as RustApprovalState, ConceptKind as RustConceptKind,
     ConceptStatus as RustConceptStatus, DeprecatedPolicy as RustDeprecatedPolicy,
     DiagnosticSeverity as RustDiagnosticSeverity, PackBuildInput, SemanticPack as RustSemanticPack,
@@ -12,6 +11,10 @@ use crate::semantic_pack::{
     SemanticValidationStatus as RustSemanticValidationStatus, SignatureState as RustSignatureState,
     UnknownConceptPolicy as RustUnknownConceptPolicy, ValidationMode as RustValidationMode,
     ValidationOptions,
+};
+#[cfg(feature = "signing")]
+use crate::semantic_pack::{
+    sign_pack as rust_sign_pack, verify_pack_signature as rust_verify_pack_signature,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -529,6 +532,7 @@ pub fn validate_graph_with_pack(
         .map_err(|e| PyValueError::new_err(format!("Result serialization error: {}", e)))
 }
 
+#[cfg(feature = "signing")]
 #[pyfunction]
 pub fn sign_pack(pack_json: &str, private_key_pem: &str) -> PyResult<String> {
     let mut pack: RustSemanticPack = serde_json::from_str(pack_json)
@@ -542,6 +546,15 @@ pub fn sign_pack(pack_json: &str, private_key_pem: &str) -> PyResult<String> {
         .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
 }
 
+#[cfg(not(feature = "signing"))]
+#[pyfunction]
+pub fn sign_pack(_pack_json: &str, _private_key_pem: &str) -> PyResult<String> {
+    Err(PyValueError::new_err(
+        "signing requires the 'signing' feature",
+    ))
+}
+
+#[cfg(feature = "signing")]
 #[pyfunction]
 pub fn verify_pack_signature(pack_json: &str, public_key_pem: &str) -> PyResult<bool> {
     let pack: RustSemanticPack = serde_json::from_str(pack_json)
@@ -550,6 +563,14 @@ pub fn verify_pack_signature(pack_json: &str, public_key_pem: &str) -> PyResult<
         Ok(()) => Ok(true),
         Err(_) => Ok(false),
     }
+}
+
+#[cfg(not(feature = "signing"))]
+#[pyfunction]
+pub fn verify_pack_signature(_pack_json: &str, _public_key_pem: &str) -> PyResult<bool> {
+    Err(PyValueError::new_err(
+        "signing requires the 'signing' feature",
+    ))
 }
 
 #[pyfunction]

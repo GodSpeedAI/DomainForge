@@ -222,8 +222,10 @@ fn resolution_is_case_insensitive() {
 fn unknown_severity_depends_on_policy() {
     let pack = make_pack_with_concepts(vec![]);
 
-    let mut options_warn = ValidationOptions::default();
-    options_warn.unknown_concept_policy = UnknownConceptPolicy::Warning;
+    let options_warn = ValidationOptions {
+        unknown_concept_policy: UnknownConceptPolicy::Warning,
+        ..ValidationOptions::default()
+    };
     let source_ref1 = SourceRef::synthetic("test://term");
     let request1 = ResolveRequest {
         raw_text: "unknown",
@@ -233,8 +235,10 @@ fn unknown_severity_depends_on_policy() {
     let result_warn = resolve_concept(&request1, &pack, &options_warn);
     assert_eq!(result_warn.diagnostic_severity, DiagnosticSeverity::Warning);
 
-    let mut options_error = ValidationOptions::default();
-    options_error.unknown_concept_policy = UnknownConceptPolicy::Error;
+    let options_error = ValidationOptions {
+        unknown_concept_policy: UnknownConceptPolicy::Error,
+        ..ValidationOptions::default()
+    };
     let source_ref2 = SourceRef::synthetic("test://term");
     let request2 = ResolveRequest {
         raw_text: "unknown",

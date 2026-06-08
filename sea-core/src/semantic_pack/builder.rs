@@ -77,7 +77,7 @@ pub fn build_semantic_pack(
                 &c.definition.text,
                 &c.examples,
                 &c.counterexamples,
-                &serde_json::to_value(&c.status)
+                &serde_json::to_value(c.status)
                     .ok()
                     .and_then(|v| v.as_str().map(String::from))
                     .unwrap_or_default(),
@@ -389,38 +389,36 @@ fn check_review_coverage(
             &c.definition.definition_hash,
             &input.review_records,
         );
-        match hash_result {
-            DefinitionHashResult::Mismatch {
-                reviewed_hash,
-                current_hash,
-            } => {
-                diagnostics.push(SemanticDiagnostic {
-                    code: SemanticDiagnosticCode::UnreviewedConcept,
-                    severity: DiagnosticSeverity::Error,
-                    semantic_truth: SemanticTruth::Unknown,
-                    message: format!(
-                        "Definition hash mismatch for '{}': reviewed='{}', current='{}'",
-                        c.id, reviewed_hash, current_hash
-                    ),
-                    source_ref: SourceRef::pack_uri(&format!(
+        if let DefinitionHashResult::Mismatch {
+            reviewed_hash,
+            current_hash,
+        } = hash_result
+        {
+            diagnostics.push(SemanticDiagnostic {
+                code: SemanticDiagnosticCode::UnreviewedConcept,
+                severity: DiagnosticSeverity::Error,
+                semantic_truth: SemanticTruth::Unknown,
+                message: format!(
+                    "Definition hash mismatch for '{}': reviewed='{}', current='{}'",
+                    c.id, reviewed_hash, current_hash
+                ),
+                source_ref: SourceRef::pack_uri(&format!(
+                    "{}/{}/{}",
+                    input.org_id, input.domain_id, input.pack_version
+                )),
+                pack_ref: PackRef {
+                    pack_id: format!(
                         "{}/{}/{}",
                         input.org_id, input.domain_id, input.pack_version
-                    )),
-                    pack_ref: PackRef {
-                        pack_id: format!(
-                            "{}/{}/{}",
-                            input.org_id, input.domain_id, input.pack_version
-                        ),
-                        pack_content_hash: String::new(),
-                        path_or_uri: String::new(),
-                        priority: 0,
-                    },
-                    suggestions: vec![],
-                    recoverability_hint: "Re-review or record minor_amendment_no_semantic_change"
-                        .to_string(),
-                });
-            }
-            _ => {}
+                    ),
+                    pack_content_hash: String::new(),
+                    path_or_uri: String::new(),
+                    priority: 0,
+                },
+                suggestions: vec![],
+                recoverability_hint: "Re-review or record minor_amendment_no_semantic_change"
+                    .to_string(),
+            });
         }
     }
 }

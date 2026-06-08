@@ -106,7 +106,7 @@ impl DerivedFactEngine {
                 transform_hash: transform.hash.clone(),
                 input_fact_paths: input_values.iter().map(|f| f.path.clone()).collect(),
                 input_source_classes: input_source_classes.clone(),
-                effective_trust: effective_trust.clone(),
+                effective_trust,
                 trust_upgrade_applied: false,
             };
 
@@ -153,7 +153,7 @@ fn minimum_trust(classes: &[SourceClass]) -> SourceClass {
             max_idx = max_idx.max(idx);
         }
     }
-    trust_order[max_idx].clone()
+    trust_order[max_idx]
 }
 
 fn apply_simple_transform(

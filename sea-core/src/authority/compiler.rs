@@ -72,7 +72,7 @@ impl PolicyCompiler {
         &self,
         raw: &HashMap<String, serde_json::Value>,
     ) -> Result<StructuralPredicates, AuthorityError> {
-        for (key, _) in raw {
+        for key in raw.keys() {
             validate_fact_path(key)?;
         }
         Ok(StructuralPredicates {
@@ -84,7 +84,7 @@ impl PolicyCompiler {
         &self,
         raw: &HashMap<String, serde_json::Value>,
     ) -> Result<ConditionPredicates, AuthorityError> {
-        for (key, _) in raw {
+        for key in raw.keys() {
             validate_fact_path(key)?;
         }
         Ok(ConditionPredicates {
@@ -164,8 +164,7 @@ impl CompatibilityLoweringAuditor {
 
         // Handle negated conditions: `not X = "Y"` lowers to when condition
         // Reject negative structural predicates (spec §14.1.7)
-        if expr.starts_with("not ") {
-            let inner = &expr[4..];
+        if let Some(inner) = expr.strip_prefix("not ") {
             let inner_trimmed = inner.trim();
             // Reject if the negated expression targets structural keys
             if inner_trimmed.starts_with("resource.")
@@ -207,10 +206,8 @@ impl CompatibilityLoweringAuditor {
                     if let Some((k, v)) = parse_equality(trimmed) {
                         applies_to.insert(k, v);
                     }
-                } else {
-                    if let Some((k, v)) = parse_equality(trimmed) {
-                        when.insert(k, v);
-                    }
+                } else if let Some((k, v)) = parse_equality(trimmed) {
+                    when.insert(k, v);
                 }
             }
             return Ok(Some(LoweredPolicy {

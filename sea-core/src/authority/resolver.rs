@@ -91,7 +91,7 @@ impl AuthorityResolver {
                 let ud = UnknownDecision {
                     policy_id: policy.policy_id.clone(),
                     unknown_handling_applied: true,
-                    unknown_modality: policy.modality.clone(),
+                    unknown_modality: policy.modality,
                     unknown_default_result: default,
                     unknown_reason: classify_unknown_reason(&fact_checks, fact_trust_decisions),
                     affected_fact_paths: unsatisfied_facts,
@@ -324,7 +324,7 @@ impl AuthorityResolver {
                 .collect();
             Err(AuthorityError::specificity_conflict(
                 &ids[0],
-                &ids.get(1).map(|s| s.as_str()).unwrap_or("?"),
+                ids.get(1).map(|s| s.as_str()).unwrap_or("?"),
             ))
         } else {
             Ok((FinalDecision::Escalate, steps))

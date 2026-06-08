@@ -188,7 +188,7 @@ impl AuthorityEnvironment {
     }
 
     fn __repr__(&self) -> String {
-        format!("<Py AuthorityEnvironment>")
+        "<Py AuthorityEnvironment>".to_string()
     }
 }
 
