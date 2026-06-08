@@ -33,6 +33,7 @@ pub enum ConflictType {
     SameAliasKeyDifferentTarget,
     IncompatibleRelationCardinality,
     SameUnitSymbolDifferentDimension,
+    InvalidPriorityOrder,
 }
 
 // ---------------------------------------------------------------------------
