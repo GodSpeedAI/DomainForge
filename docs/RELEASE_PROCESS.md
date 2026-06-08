@@ -50,14 +50,16 @@ Use the shell scripts for full control over the release process:
 ### Method 3: Justfile Recipes
 
 ```bash
-# Preview release changes
-just release-preview patch
+# Run all tests (validates before release)
+just all-tests
 
-# Prepare release locally (updates files, no push)
-just prepare-release patch
+# Per-language tests
+just rust-test
+just python-test
+just ts-test
 
-# Full CI pipeline
-just ci-pipeline
+# Full CI validation
+just ai-validate
 ```
 
 ## Script Reference

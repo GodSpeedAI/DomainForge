@@ -1,11 +1,11 @@
 # 🏛️ DomainForge
 
-### **Your Business Rules, Everywhere. Always Correct. Always in Sync.**
+### **Your Business Rules, Everywhere. _Goal: Always Correct. Always in Sync._**
 
 > _What if your team never had to ask "which version is right?" again?_
 
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Rust](https://img.shields.io/badge/rust-1.92%2B-orange.svg)](https://www.rust-lang.org/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![WASM](https://img.shields.io/badge/wasm-ready-purple.svg)](https://webassembly.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -32,56 +32,54 @@ You scramble across Confluence pages, Jira tickets, Python services, and TypeScr
 
 ## What If You Could Write It Once?
 
-**DomainForge makes your business logic portable, provable, and permanent.**
+**DomainForge makes your business logic portable and permanent.**
 
 Write your rules in plain language. Run them _identically_ in Python, TypeScript, Rust, or your browser. Change them in one place—watch the change cascade everywhere, automatically.
 
 | What You Get                              | Why It Matters                                               |
 | ----------------------------------------- | ------------------------------------------------------------ |
 | **One model, every language**             | Python validation = TypeScript validation. Period. No drift. |
-| **Instant rule checking**                 | 10,000 entities validated in under 100 milliseconds          |
+| **Instant rule checking**                 | Fast validation powered by a Rust core                         |
 | **Business-readable, machine-executable** | Your analysts can read the rules. Your systems enforce them. |
 | **Architecture-as-Code**                  | Export directly to FINOS CALM for enterprise governance      |
-| **Formal mathematical rigor**             | Not just documentation—provable correctness                  |
+| **Formal mathematical rigor**             | Goal: provable correctness through structured validation       |
 
 ---
 
 ## See It Working (60 seconds)
 
 ```python
-from sea import Model
+import sea_dsl
+
+graph = sea_dsl.Graph()
 
 # Define WHO does the work
-assembly_line = model.entity("Assembly Line A")
-warehouse = model.entity("Warehouse")
+warehouse = sea_dsl.Entity("Warehouse", "logistics")
+assembly_line = sea_dsl.Entity("Assembly Line A", "manufacturing")
+graph.add_entity(warehouse)
+graph.add_entity(assembly_line)
 
 # Define WHAT moves between them
-camera = model.resource("Camera", unit="units")
+cameras = sea_dsl.Resource("Camera", "units")
+graph.add_resource(cameras)
 
 # Define HOW much moves
-production = model.flow(
-    name="Daily Production",
-    resource=camera,
-    from_entity=assembly_line,
-    to_entity=warehouse,
-    quantity=1000
+flow = sea_dsl.Flow(
+    cameras.id(),
+    assembly_line.id(),
+    warehouse.id(),
+    1000.0
 )
+graph.add_flow(flow)
 
-# Define the RULES that must always be true
-model.policy(
-    "Minimum Production Threshold",
-    expression="forall f in Flow where f.resource = Camera: f.quantity >= 500",
-    severity="error"
-)
-
-# Validate everything—instantly
-results = model.validate()
-print(f"✅ Model valid: {results.is_valid}")
+# Validate everything
+print(f"Entities: {graph.entity_count()}")
+print(f"Flows: {graph.flow_count()}")
 ```
 
 **That's it.** You just created a formal, executable business rule that:
 
-- Validates production quantities instantly
+- Defines entities, resources, and flows as a typed graph
 - Works identically in Python, TypeScript, Rust, or the browser
 - Exports to FINOS CALM for architecture governance
 - Becomes the single source of truth everyone can trust
@@ -104,7 +102,7 @@ cargo add sea-core
 python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
 ```
 
-> 💡 Pre-built packages for PyPI, npm, and Crates.io. No compilation required.
+> 💡 Pre-built packages for PyPI, npm, and Crates.io. Build from source if pre-built wheels/binaries are not yet available for your platform.
 
 ---
 
@@ -259,35 +257,34 @@ Policy all_shipments_inspected as:
 <summary><strong>🏭 Manufacturing: Assembly Line Control</strong> (click to expand)</summary>
 
 ```python
-model = Model("electronics-manufacturing")
+import sea_dsl
+
+graph = sea_dsl.Graph()
 
 # Define the supply chain
-supplier = model.entity("Component Supplier")
-assembly = model.entity("Assembly Line A")
-quality_control = model.entity("QC Department")
-finished_goods = model.entity("Finished Goods Warehouse")
+supplier = sea_dsl.Entity("Component Supplier", "supply")
+assembly = sea_dsl.Entity("Assembly Line A", "manufacturing")
+quality_control = sea_dsl.Entity("QC Department", "quality")
+finished_goods = sea_dsl.Entity("Finished Goods Warehouse", "logistics")
+graph.add_entity(supplier)
+graph.add_entity(assembly)
+graph.add_entity(quality_control)
+graph.add_entity(finished_goods)
 
 # Define what's being built
-pcb_board = model.resource("PCB Board", unit="pieces")
-camera_module = model.resource("Camera Module", unit="units")
+pcb_board = sea_dsl.Resource("PCB Board", "pieces")
+camera_module = sea_dsl.Resource("Camera Module", "units")
+graph.add_resource(pcb_board)
+graph.add_resource(camera_module)
 
 # Define the flow of components
-component_delivery = model.flow(
-    resource=pcb_board,
-    from_entity=supplier,
-    to_entity=assembly,
-    quantity=500
+component_delivery = sea_dsl.Flow(
+    pcb_board.id(),
+    supplier.id(),
+    assembly.id(),
+    500.0
 )
-
-# Enforce Just-in-Time inventory limits
-model.policy(
-    "JIT Inventory Control",
-    expression="""
-        forall e in Entity where e.type = 'Assembly':
-            sum(Instance.quantity where Instance.at = e) <= 1000
-    """,
-    severity="warn"
-)
+graph.add_flow(component_delivery)
 ```
 
 **Result:** Inventory violations caught before they cause production delays.
@@ -298,23 +295,23 @@ model.policy(
 <summary><strong>💰 Finance: Payment Fraud Detection</strong> (click to expand)</summary>
 
 ```typescript
-const model = new Model("payment-system");
+import { Graph, Entity, Resource, Flow } from "@domainforge/sea";
 
-const customer = model.entity("Customer Account");
-const merchant = model.entity("Merchant Account");
-const gateway = model.entity("Payment Gateway");
+const graph = new Graph();
 
-const money = model.resource("USD", { unit: "dollars" });
+const customer = new Entity("Customer Account");
+const merchant = new Entity("Merchant Account");
+const gateway = new Entity("Payment Gateway");
+graph.addEntity(customer);
+graph.addEntity(merchant);
+graph.addEntity(gateway);
 
-// Detect unusual spending patterns
-model.policy({
-  name: "Unusual Activity Detection",
-  expression: `
-    forall c in Entity where c.type = 'Customer':
-      sum(Flow.quantity where Flow.from = c and Flow.timestamp > now() - 1hour) <= 10000
-  `,
-  severity: "error",
-});
+const money = new Resource("USD", "dollars");
+graph.addResource(money);
+
+// Track payment flows
+const payment = new Flow(money.id, customer.id, merchant.id, 100);
+graph.addFlow(payment);
 ```
 
 **Result:** Suspicious transactions flagged automatically—before they clear.
@@ -325,24 +322,35 @@ model.policy({
 <summary><strong>🚚 Logistics: Cross-Border Compliance</strong> (click to expand)</summary>
 
 ```python
-model = Model("global-supply-chain")
+import sea_dsl
+
+graph = sea_dsl.Graph()
 
 # Multi-location warehouses
-warehouse_us = model.entity("US Distribution Center", location="USA")
-warehouse_eu = model.entity("EU Distribution Center", location="Germany")
-retail_store = model.entity("Retail Store", location="France")
+warehouse_us = sea_dsl.Entity("US Distribution Center", "logistics")
+warehouse_us.set_attribute("location", "USA")
 
-product = model.resource("Widget", unit="boxes")
+warehouse_eu = sea_dsl.Entity("EU Distribution Center", "logistics")
+warehouse_eu.set_attribute("location", "Germany")
 
-# Ensure customs documentation for international shipments
-model.policy(
-    "Customs Documentation Required",
-    expression="""
-        forall f in Flow where f.from.location != f.to.location:
-            f.attributes.customs_cleared = true
-    """,
-    severity="error"
+retail_store = sea_dsl.Entity("Retail Store", "logistics")
+retail_store.set_attribute("location", "France")
+
+graph.add_entity(warehouse_us)
+graph.add_entity(warehouse_eu)
+graph.add_entity(retail_store)
+
+product = sea_dsl.Resource("Widget", "boxes")
+graph.add_resource(product)
+
+# Create cross-border flow
+shipment = sea_dsl.Flow(
+    product.id(),
+    warehouse_eu.id(),
+    retail_store.id(),
+    250.0
 )
+graph.add_flow(shipment)
 ```
 
 **Result:** Cross-border shipments without proper documentation are blocked automatically.
@@ -356,10 +364,11 @@ model.policy(
 <details>
 <summary><strong>⚡ Performance Characteristics</strong></summary>
 
-- **10,000 entities** validated in **< 100ms**
 - **Rust core** for maximum performance
 - **FFI overhead < 1ms** per operation
 - **Streaming validation** for large models
+
+See [benchmarks](docs/explanations/performance-benchmarks.md) for measured results.
 
 </details>
 
@@ -460,7 +469,7 @@ sea normalize "b AND a"  # -> "(a AND b)"
 sea authority config.json request.json --facts facts.json --json
 ```
 
-[Full CLI Reference →](docs/reference/cli.md)
+[Full CLI Reference →](docs/reference/cli-commands.md)
 
 </details>
 
@@ -525,7 +534,7 @@ Error[E001]: Undefined Entity: 'Warehous' at line 1
 - **Multiple output formats**: JSON, Human-readable, LSP
 - **Native error types** for Python, TypeScript, and WASM
 
-[Error Code Catalog →](docs/specs/error_codes.md)
+[Error Code Catalog →](docs/reference/error-codes.md)
 
 </details>
 
@@ -578,16 +587,16 @@ npm install && npm run build
 | Resource                                                              | Description                          |
 | --------------------------------------------------------------------- | ------------------------------------ |
 | 📘 [**Copilot Instructions**](.github/copilot-instructions.md)        | Essential guide for AI coding agents |
-| 🔗 [**API Specification**](docs/reference/specs/api_specification.md) | Complete API reference               |
-| 📙 [**Product Requirements**](docs/reference/specs/prd.md)            | PRD with success metrics             |
-| 📕 [**System Design**](docs/reference/specs/sds.md)                   | Technical specifications             |
-| 🏛️ [**Architecture Decisions**](docs/reference/specs/adr.md)          | Key architectural choices            |
-| 🗺️ [**CALM Mapping**](docs/reference/specs/calm-mapping.md)           | SEA ↔ CALM conversion                |
-| 📖 [**Error Codes**](docs/specs/error_codes.md)                       | Validation error reference           |
+| 📗 [**Product Requirements**](docs/specs/PRD-001-sea-projection-framework.md) | PRD with success metrics             |
+| 📕 [**System Design**](docs/specs/SDS-002-sea-core-architecture.md)   | Technical specifications             |
+| 🏛️ [**Architecture Decisions**](docs/specs/ADR-001-sea-dsl-semantic-source-of-truth.md) | Key architectural choices            |
+| 🗺️ [**CALM Mapping**](docs/reference/calm-mapping.md)                | SEA ↔ CALM conversion                |
+| 📖 [**Error Codes**](docs/reference/error-codes.md)                   | Validation error reference           |
+| 🔧 [**CLI Reference**](docs/reference/cli-commands.md)                | CLI commands and usage               |
 
 ## Contributing
 
-We welcome contributions! Please see [Contributing Guide](docs/CONTRIBUTING.md) for developer notes on building the CLI, TypeScript bindings, and WASM.
+We welcome contributions! Please see [Contributing Guide](CONTRIBUTING.md) for developer notes on building the CLI, TypeScript bindings, and WASM.
 
 ---
 
@@ -610,7 +619,7 @@ Built on foundational work from:
 
 <div align="center">
 
-**Your business rules, everywhere. Always correct. Always in sync.**
+**Your business rules, everywhere.**
 
 [Get Started →](#install-in-30-seconds) · [Read the Docs →](#documentation) · [See Examples →](#real-world-impact)
 

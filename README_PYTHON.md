@@ -22,7 +22,7 @@ Python bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-sp
 pip install sea-dsl
 ```
 
-**Requires:** Python 3.9+
+**Requires:** Python 3.11+
 
 ## Quick Start
 
@@ -243,8 +243,8 @@ trace, decision = evaluate_authority(config_json, request_json, facts_json)
 
 ## Documentation
 
-- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/sea-dsl-syntax.md) — Language specification
-- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/architecture.md) — Design overview
+- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/grammar-spec.md) — Language specification
+- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/explanations/architecture-overview.md) — Design overview
 - 📚 [API Reference](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/python-api.md) — Full Python API
 
 ## License
