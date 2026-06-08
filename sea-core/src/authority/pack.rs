@@ -3,11 +3,37 @@ use serde::{Deserialize, Serialize};
 use super::error::AuthorityError;
 use super::types::*;
 
-pub fn compute_pack_hash(policies: &[AuthorityPolicy]) -> Result<String, AuthorityError> {
-    let canonical = serde_json::to_string(policies).map_err(|e| {
+pub fn compute_pack_hash(
+    id: &str,
+    version: &str,
+    semantics_version: &str,
+    required_specificity_profile: &str,
+    policies: &[AuthorityPolicy],
+) -> Result<String, AuthorityError> {
+    #[derive(Serialize)]
+    struct PackHashPayload<'a> {
+        id: &'a str,
+        version: &'a str,
+        semantics_version: &'a str,
+        required_specificity_profile: &'a str,
+        policies: &'a [AuthorityPolicy],
+    }
+
+    let payload = PackHashPayload {
+        id,
+        version,
+        semantics_version,
+        required_specificity_profile,
+        policies,
+    };
+
+    let canonical = serde_json::to_string(&payload).map_err(|e| {
         AuthorityError::new(
             super::error::AuthorityErrorCode::InvalidPolicyPack,
-            format!("Failed to serialize policies for hash computation: {}", e),
+            format!(
+                "Failed to serialize pack '{}' for hash computation: {}",
+                id, e
+            ),
         )
     })?;
     Ok(compute_deterministic_hash(&canonical))
@@ -63,12 +89,30 @@ impl AuthorityPack {
                 format!("Pack '{}' hash is required", self.id),
             ));
         }
-        let canonical = serde_json::to_string(&self.policies).map_err(|_| {
+
+        #[derive(Serialize)]
+        struct PackHashPayload<'a> {
+            id: &'a str,
+            version: &'a str,
+            semantics_version: &'a str,
+            required_specificity_profile: &'a str,
+            policies: &'a [AuthorityPolicy],
+        }
+
+        let payload = PackHashPayload {
+            id: &self.id,
+            version: &self.version,
+            semantics_version: &self.semantics_version,
+            required_specificity_profile: &self.required_specificity_profile,
+            policies: &self.policies,
+        };
+
+        let canonical = serde_json::to_string(&payload).map_err(|e| {
             AuthorityError::new(
                 super::error::AuthorityErrorCode::InvalidPolicyPack,
                 format!(
-                    "Pack '{}' failed to serialize policies for hash validation",
-                    self.id
+                    "Pack '{}' failed to serialize for hash validation: {}",
+                    self.id, e
                 ),
             )
         })?;

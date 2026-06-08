@@ -100,12 +100,17 @@ fn make_prohibition_pack() -> AuthorityPack {
         description: Some("Block shipping for credit hold orders".to_string()),
         evidence_ref: None,
     }];
-    let hash = compute_pack_hash(&policies).expect("pack hash computation failed");
+    let id = "shipping-policy";
+    let version = "1.0.0";
+    let semantics_version = "0.4";
+    let required_specificity_profile = "default";
+    let hash = compute_pack_hash(id, version, semantics_version, required_specificity_profile, &policies)
+        .expect("pack hash computation failed");
     AuthorityPack {
-        id: "shipping-policy".to_string(),
-        version: "1.0.0".to_string(),
-        semantics_version: "0.4".to_string(),
-        required_specificity_profile: "default".to_string(),
+        id: id.to_string(),
+        version: version.to_string(),
+        semantics_version: semantics_version.to_string(),
+        required_specificity_profile: required_specificity_profile.to_string(),
         policies,
         hash,
         signature: None,
@@ -160,12 +165,17 @@ fn make_permission_pack() -> AuthorityPack {
         description: None,
         evidence_ref: None,
     }];
-    let hash = compute_pack_hash(&policies).expect("pack hash computation failed");
+    let id = "shipping-permission";
+    let version = "1.0.0";
+    let semantics_version = "0.4";
+    let required_specificity_profile = "default";
+    let hash = compute_pack_hash(id, version, semantics_version, required_specificity_profile, &policies)
+        .expect("pack hash computation failed");
     AuthorityPack {
-        id: "shipping-permission".to_string(),
-        version: "1.0.0".to_string(),
-        semantics_version: "0.4".to_string(),
-        required_specificity_profile: "default".to_string(),
+        id: id.to_string(),
+        version: version.to_string(),
+        semantics_version: semantics_version.to_string(),
+        required_specificity_profile: required_specificity_profile.to_string(),
         policies,
         hash,
         signature: None,
@@ -244,12 +254,17 @@ fn make_override_pack() -> AuthorityPack {
         description: None,
         evidence_ref: None,
     }];
-    let hash = compute_pack_hash(&policies).expect("pack hash computation failed");
+    let id = "override-policy";
+    let version = "1.0.0";
+    let semantics_version = "0.4";
+    let required_specificity_profile = "default";
+    let hash = compute_pack_hash(id, version, semantics_version, required_specificity_profile, &policies)
+        .expect("pack hash computation failed");
     AuthorityPack {
-        id: "override-policy".to_string(),
-        version: "1.0.0".to_string(),
-        semantics_version: "0.4".to_string(),
-        required_specificity_profile: "default".to_string(),
+        id: id.to_string(),
+        version: version.to_string(),
+        semantics_version: semantics_version.to_string(),
+        required_specificity_profile: required_specificity_profile.to_string(),
         policies,
         hash,
         signature: None,

@@ -134,25 +134,50 @@ pub fn build_semantic_pack(
     if let Some(ref prev) = input.previous_pack {
         if prev.meaning_fingerprint != pack.meaning_fingerprint {
             // Meaning changed — version must increase
-            if !version_increased(&prev.meaning_version, &pack.meaning_version) {
-                pre_pack_diagnostics.push(SemanticDiagnostic {
-                    code: SemanticDiagnosticCode::MeaningVersionNotBumped,
-                    severity: DiagnosticSeverity::Error,
-                    semantic_truth: SemanticTruth::Invalid,
-                    message: format!(
-                        "meaning_fingerprint changed but meaning_version '{}' did not increase from '{}'",
-                        pack.meaning_version, prev.meaning_version
-                    ),
-                    source_ref: SourceRef::pack_uri(&pack_id),
-                    pack_ref: PackRef {
-                        pack_id: pack_id.clone(),
-                        pack_content_hash: pack_content_hash.clone(),
-                        path_or_uri: format!("pack://{}", pack_id),
-                        priority: 0,
-                    },
-                    suggestions: vec![],
-                    recoverability_hint: "Bump meaning_version (MAJOR.MINOR.PATCH)".to_string(),
-                });
+            match version_increased(&prev.meaning_version, &pack.meaning_version) {
+                None => {
+                    pre_pack_diagnostics.push(SemanticDiagnostic {
+                        code: SemanticDiagnosticCode::MeaningVersionNotBumped,
+                        severity: DiagnosticSeverity::Error,
+                        semantic_truth: SemanticTruth::Invalid,
+                        message: format!(
+                            "Invalid version format: meaning_version '{}' or previous meaning_version '{}' contains non-numeric segments",
+                            pack.meaning_version, prev.meaning_version
+                        ),
+                        source_ref: SourceRef::pack_uri(&pack_id),
+                        pack_ref: PackRef {
+                            pack_id: pack_id.clone(),
+                            pack_content_hash: pack_content_hash.clone(),
+                            path_or_uri: format!("pack://{}", pack_id),
+                            priority: 0,
+                        },
+                        suggestions: vec![],
+                        recoverability_hint: "Use numeric-only version format (e.g., MAJOR.MINOR.PATCH)".to_string(),
+                    });
+                }
+                Some(false) => {
+                    pre_pack_diagnostics.push(SemanticDiagnostic {
+                        code: SemanticDiagnosticCode::MeaningVersionNotBumped,
+                        severity: DiagnosticSeverity::Error,
+                        semantic_truth: SemanticTruth::Invalid,
+                        message: format!(
+                            "meaning_fingerprint changed but meaning_version '{}' did not increase from '{}'",
+                            pack.meaning_version, prev.meaning_version
+                        ),
+                        source_ref: SourceRef::pack_uri(&pack_id),
+                        pack_ref: PackRef {
+                            pack_id: pack_id.clone(),
+                            pack_content_hash: pack_content_hash.clone(),
+                            path_or_uri: format!("pack://{}", pack_id),
+                            priority: 0,
+                        },
+                        suggestions: vec![],
+                        recoverability_hint: "Bump meaning_version (MAJOR.MINOR.PATCH)".to_string(),
+                    });
+                }
+                Some(true) => {
+                    // Version properly increased, no error
+                }
             }
         }
     } else if matches!(input.approval, ApprovalState::Approved)
@@ -423,19 +448,23 @@ fn check_review_coverage(
     }
 }
 
-fn version_increased(old: &str, new: &str) -> bool {
-    let parse = |s: &str| -> Vec<u32> { s.split('.').filter_map(|p| p.parse().ok()).collect() };
-    let old_parts = parse(old);
-    let new_parts = parse(new);
+fn version_increased(old: &str, new: &str) -> Option<bool> {
+    let parse = |s: &str| -> Option<Vec<u32>> {
+        s.split('.')
+            .map(|p| p.parse::<u32>().ok())
+            .collect::<Option<Vec<u32>>>()
+    };
+    let old_parts = parse(old)?;
+    let new_parts = parse(new)?;
     for i in 0..std::cmp::max(old_parts.len(), new_parts.len()) {
         let o = old_parts.get(i).copied().unwrap_or(0);
         let n = new_parts.get(i).copied().unwrap_or(0);
         if n > o {
-            return true;
+            return Some(true);
         }
         if n < o {
-            return false;
+            return Some(false);
         }
     }
-    false
+    Some(false)
 }
