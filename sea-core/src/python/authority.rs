@@ -245,7 +245,9 @@ pub fn evaluate_authority(
         .evaluate(&request, &facts)
         .map_err(|e| PyValueError::new_err(format!("Evaluation error: {}", e)))?;
 
-    let trace_json = serde_json::to_string(&trace).unwrap_or_default();
-    let decision_json = serde_json::to_string(&decision).unwrap_or_default();
+    let trace_json = serde_json::to_string(&trace)
+        .map_err(|e| PyValueError::new_err(format!("Trace serialization error: {}", e)))?;
+    let decision_json = serde_json::to_string(&decision)
+        .map_err(|e| PyValueError::new_err(format!("Decision serialization error: {}", e)))?;
     Ok((trace_json, decision_json))
 }
