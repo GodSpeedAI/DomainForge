@@ -366,7 +366,7 @@ pub enum AstNode {
         from_entity: String,
         to_entity: String,
         #[serde(skip_serializing_if = "Option::is_none")]
-        quantity: Option<i32>,
+        quantity: Option<String>,
     },
 
     /// Pattern declaration - named regex for string validation

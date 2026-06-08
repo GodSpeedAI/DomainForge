@@ -2,6 +2,7 @@ use crate::parser::ast::{
     Ast, AstNode, FileMetadata, ImportDecl, ImportItem, ImportSpecifier, MappingRule,
     ProjectionOverride,
 };
+use rust_decimal::Decimal;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -327,7 +328,7 @@ impl PrettyPrinter {
         annotations: &HashMap<String, JsonValue>,
         from: &str,
         to: &str,
-        quantity: Option<i32>,
+        quantity: Option<Decimal>,
     ) -> String {
         let mut lines = Vec::new();
         let head = format!("Flow {}", self.quote(resource));

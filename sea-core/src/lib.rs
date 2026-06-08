@@ -22,10 +22,10 @@
 //!
 //! ```
 //! use sea_core::VERSION;
-//! assert_eq!(VERSION, "0.1.0");
+//! assert_eq!(VERSION, env!("CARGO_PKG_VERSION"));
 //! ```
 
-pub const VERSION: &str = "0.1.0";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // Use a compact allocator only when compiling to wasm to avoid pulling wasm-only symbols on other targets.
 #[cfg(all(feature = "lol_alloc", target_arch = "wasm32"))]
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_version() {
-        assert_eq!(VERSION, "0.1.0");
+        assert_eq!(VERSION, env!("CARGO_PKG_VERSION"));
     }
 }
 

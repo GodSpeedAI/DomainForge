@@ -38,7 +38,7 @@ fn test_pretty_print_ast() {
                 annotations: HashMap::new(),
                 from_entity: "Warehouse".to_string(),
                 to_entity: "Factory".to_string(),
-                quantity: Some(100),
+                quantity: Some(rust_decimal::Decimal::from(100)),
             }),
         ],
     };
