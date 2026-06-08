@@ -180,6 +180,7 @@ pub enum DeprecatedPolicy {
 // ValidationOptions (11.2)
 // ---------------------------------------------------------------------------
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ValidationOptions {
     pub mode: ValidationMode,
     pub unknown_concept_policy: UnknownConceptPolicy,
