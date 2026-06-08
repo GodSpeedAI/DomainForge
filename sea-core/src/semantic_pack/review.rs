@@ -55,17 +55,17 @@ pub fn validate_definition_hashes(
     current_hash: &str,
     records: &[ReviewRecord],
 ) -> DefinitionHashResult {
-    let matching: Vec<&ReviewRecord> = records
+    let mut matching: Vec<&ReviewRecord> = records
         .iter()
         .filter(|r| r.subject_id == concept_id)
         .collect();
+    matching.sort_by(|a, b| a.decision_id.cmp(&b.decision_id));
 
     if matching.is_empty() {
         return DefinitionHashResult::NoReview;
     }
 
     let latest = matching.last().unwrap();
-    if latest.definition_hash == current_hash {
         return DefinitionHashResult::Match;
     }
 
