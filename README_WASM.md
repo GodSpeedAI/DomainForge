@@ -215,7 +215,7 @@ Graph.importCalm(calmJson);
 # Quick build
 ./scripts/build-wasm.sh
 
-// Manual build (output goes to target/wasm-pkg)
+# Manual build (output goes to target/wasm-pkg)
 cd sea-core
 wasm-pack build --target web --release --out-dir ../target/wasm-pkg --features wasm
 ```
