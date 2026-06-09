@@ -1782,13 +1782,17 @@ pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), Str
         )
     })?;
 
-    // Lexically require `target` to be within `output_root` (rejects `..` components even when the file doesn't exist yet).
-    let rel = target.strip_prefix(&canonical_output).map_err(|_| {
-        format!(
-            "Security: output path '{}' escapes output directory",
-            target.display()
-        )
-    })?;
+    let rel = target
+        .strip_prefix(output_root)
+        .or_else(|_| target.strip_prefix(&canonical_output))
+        .map_err(|_| {
+            format!(
+                "Security: output path '{}' escapes output directory",
+                target.display()
+            )
+        })?;
+
+    // Lexically reject traversal even when the file does not exist yet.
     if rel.components().any(|c| {
         matches!(
             c,
@@ -1803,8 +1807,14 @@ pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), Str
         ));
     }
 
-    // Target file may not exist yet; canonicalize its parent when possible to catch symlink escapes.
-    if let Some(canonical_parent) = target
+    let canonical_target_base = canonical_output.join(rel);
+    let target_for_canonical_checks = if target.is_absolute() {
+        target
+    } else {
+        canonical_target_base.as_path()
+    };
+
+    if let Some(canonical_parent) = canonical_target_base
         .parent()
         .filter(|p| p.exists())
         .and_then(|p| p.canonicalize().ok())
@@ -1817,8 +1827,21 @@ pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), Str
         }
     }
 
-    // Best-effort canonicalization for existing paths (catches symlink escapes).
-    if let Ok(canonical_target) = target.canonicalize() {
+    if let Some(canonical_parent) = target_for_canonical_checks
+        .parent()
+        .filter(|p| p.exists())
+        .and_then(|p| p.canonicalize().ok())
+    {
+        if !canonical_parent.starts_with(&canonical_output) {
+            return Err(format!(
+                "Security: output path '{}' escapes output directory",
+                target.display()
+            ));
+        }
+    }
+
+    // Best-effort canonicalization for existing paths catches symlink escapes.
+    if let Ok(canonical_target) = target_for_canonical_checks.canonicalize() {
         if !canonical_target.starts_with(&canonical_output) {
             return Err(format!(
                 "Security: output path '{}' escapes output directory",
@@ -2275,6 +2298,30 @@ mod tests {
         assert_eq!(sanitize_proto_ident(""), "SeaUnnamed");
         assert_eq!(sanitize_proto_ident("rpc"), "SeaRpc");
         assert_eq!(sanitize_proto_ident("service"), "SeaService");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_validate_output_path_accepts_symlinked_output_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let real_output = tmp.path().join("real-output");
+        let linked_output = tmp.path().join("linked-output");
+        std::fs::create_dir_all(&real_output).unwrap();
+        std::os::unix::fs::symlink(&real_output, &linked_output).unwrap();
+
+        let target = linked_output.join("generated.proto");
+
+        assert!(validate_output_path(&linked_output, &target).is_ok());
+    }
+
+    #[test]
+    fn test_validate_output_path_rejects_traversal() {
+        let tmp = tempfile::tempdir().unwrap();
+        let output = tmp.path().join("out");
+        std::fs::create_dir_all(&output).unwrap();
+        let target = output.join("..").join("escape.proto");
+
+        assert!(validate_output_path(&output, &target).is_err());
     }
 
     #[test]

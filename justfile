@@ -58,7 +58,8 @@ clear-rust-debug:
     ./scripts/clear_debug_test.sh || true
 python-setup:
     @echo "Setting up Python virtualenv and installing dev dependencies..."
-    python3 -m venv .venv || python -m venv .venv || (echo "Python 3 is required; please install python3."; exit 1)
+    rm -rf .venv
+    python -m venv .venv || python3 -m venv .venv || (echo "Python 3 is required; please install python."; exit 1)
     .venv/bin/python -m pip install --upgrade pip
     # Install runtime requirements if present
     if [ -f requirements.txt ]; then .venv/bin/python -m pip install -r requirements.txt || true; fi
