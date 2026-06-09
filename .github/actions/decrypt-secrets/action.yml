@@ -57,6 +57,12 @@ runs:
           ACTUAL_SHA256=$(shasum -a 256 "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1)
         else
           echo "::error::No SHA256 tool available on runner"
+          rm -f "$DOWNLOAD_DIR/sops${SOPS_EXT}"
+          exit 1
+        fi
+        if [ -z "$ACTUAL_SHA256" ]; then
+          echo "::error::SHA256 calculation failed for sops binary"
+          rm -f "$DOWNLOAD_DIR/sops${SOPS_EXT}"
           exit 1
         fi
         if [ "$ACTUAL_SHA256" != "$SOPS_SHA256" ]; then

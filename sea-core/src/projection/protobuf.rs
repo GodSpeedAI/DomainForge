@@ -1774,9 +1774,13 @@ pub fn validate_proto_package_namespace(ns: &str) -> Result<(), String> {
 }
 
 pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), String> {
-    let canonical_output = output_root
-        .canonicalize()
-        .unwrap_or_else(|_| output_root.to_path_buf());
+    let canonical_output = output_root.canonicalize().map_err(|e| {
+        format!(
+            "Cannot resolve output root '{}': {}",
+            output_root.display(),
+            e
+        )
+    })?;
 
     // Lexically require `target` to be within `output_root` (rejects `..` components even when the file doesn't exist yet).
     let rel = target.strip_prefix(&canonical_output).map_err(|_| {
@@ -1797,6 +1801,20 @@ pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), Str
             "Security: output path '{}' escapes output directory",
             target.display()
         ));
+    }
+
+    // Target file may not exist yet; canonicalize its parent when possible to catch symlink escapes.
+    if let Some(canonical_parent) = target
+        .parent()
+        .filter(|p| p.exists())
+        .and_then(|p| p.canonicalize().ok())
+    {
+        if !canonical_parent.starts_with(&canonical_output) {
+            return Err(format!(
+                "Security: output path '{}' escapes output directory",
+                target.display()
+            ));
+        }
     }
 
     // Best-effort canonicalization for existing paths (catches symlink escapes).

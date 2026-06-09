@@ -18,6 +18,11 @@ fi
 PKG_DIR="target/wasm-pkg"
 VERSION=$(grep '^version =' sea-core/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
+if [ -z "$VERSION" ]; then
+    echo "ERROR: Failed to extract version from sea-core/Cargo.toml: VERSION is empty" >&2
+    exit 1
+fi
+
 echo "Building wasm-pack (version=${VERSION})..."
 cd sea-core
 wasm-pack build --target web --release --out-dir ../${PKG_DIR} --features wasm

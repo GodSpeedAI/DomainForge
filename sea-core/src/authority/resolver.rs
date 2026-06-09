@@ -117,7 +117,13 @@ impl AuthorityResolver {
         let applicable: Vec<&PolicyEvaluation> = evaluations
             .iter()
             .filter(|e| {
-                matches!(e.condition_result, ThreeValuedResult::True) || e.unknown_handling_applied
+                if matches!(e.condition_result, ThreeValuedResult::True) {
+                    return true;
+                }
+                if e.unknown_handling_applied {
+                    return e.unknown_handling_result != Some(FinalDecision::NotApplicable);
+                }
+                false
             })
             .collect();
 

@@ -49,6 +49,30 @@ pub fn run_with_writer<W: std::io::Write>(
     args: AuthorityArgs,
     mut writer: W,
 ) -> anyhow::Result<()> {
+    // Validate and canonicalize user-supplied paths
+    let config_path = std::path::Path::new(&args.config);
+    if !config_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Config file '{}' does not exist",
+            args.config
+        ));
+    }
+
+    let request_path = std::path::Path::new(&args.request);
+    if !request_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Request file '{}' does not exist",
+            args.request
+        ));
+    }
+
+    if let Some(ref facts) = args.facts {
+        let facts_path = std::path::Path::new(facts);
+        if !facts_path.exists() {
+            return Err(anyhow::anyhow!("Facts file '{}' does not exist", facts));
+        }
+    }
+
     // Load config
     let config_str = std::fs::read_to_string(&args.config)
         .map_err(|e| anyhow::anyhow!("Failed to read config file '{}': {}", args.config, e))?;

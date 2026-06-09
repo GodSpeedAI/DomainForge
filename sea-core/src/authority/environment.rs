@@ -155,7 +155,7 @@ impl AuthorityEnvironment {
         let now = chrono::Utc::now();
         let raw_facts = fact_resolver.wrap_context_as_caller_supplied(&request.context, now);
         let (all_facts, trust_decisions) =
-            fact_resolver.resolve_trusted_facts(&raw_facts, provided_facts);
+            fact_resolver.resolve_trusted_facts(&raw_facts, provided_facts, now);
 
         let transform_keys: Vec<String> = self
             .config

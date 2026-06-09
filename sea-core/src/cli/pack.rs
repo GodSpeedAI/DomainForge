@@ -87,7 +87,7 @@ pub struct PackValidateArgs {
     pub expected_hash: Option<String>,
     #[arg(long, value_enum, default_value_t = PackOutputFormat::Human)]
     pub format: PackOutputFormat,
-    #[arg(required = true)]
+    #[arg(required = false)]
     pub inputs: Vec<PathBuf>,
 }
 

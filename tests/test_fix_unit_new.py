@@ -1,10 +1,6 @@
 """
 Tests for fix_unit_new.py — the fix_unit_new() function that rewrites
 Unit::new(...) calls in Rust source to add .unwrap().
-
-The only code change in this PR was removing the unused `import sys`.
-The function itself is tested here to ensure the regex transformation
-remains correct and complete.
 """
 
 import sys

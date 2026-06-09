@@ -112,8 +112,14 @@ audit:
 
 smoke-test-npm:
     @echo "Running npm pack smoke test..."
-    npm pack --dry-run 2>&1 | grep -E "index\.(js|d\.ts)|sea-core.*\.node|README\.md|LICENSE" || { echo "ERROR: npm pack missing expected files"; exit 1; }
-    @echo "npm pack smoke test passed"
+    @output=$$(npm pack --dry-run 2>&1); \
+    echo "$$output"; \
+    echo "$$output" | grep -q "index\.js" || { echo "ERROR: index.js missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "index\.d\.ts" || { echo "ERROR: index.d.ts missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "sea-core.*\.node" || { echo "ERROR: native .node binary missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "README\.md" || { echo "ERROR: README.md missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "LICENSE" || { echo "ERROR: LICENSE missing from pack"; exit 1; }; \
+    echo "npm pack smoke test passed"
 
 smoke-test-wasm:
     @echo "Running WASM pkg smoke test..."

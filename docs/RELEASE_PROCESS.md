@@ -47,7 +47,9 @@ Use the shell scripts for full control over the release process:
 5. Create a GitHub Release from the tag
 6. Publishing workflows trigger automatically
 
-### Method 3: Justfile Recipes
+### Pre-Release Validation Commands (Justfile)
+
+These recipes validate the build before cutting a release. They are not release-execution commands.
 
 ```bash
 # Run all tests (validates before release)
