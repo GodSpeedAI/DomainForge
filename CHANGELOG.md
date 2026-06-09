@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CALM And RDF Round Trips**: Improved import/export fidelity for CALM and RDF knowledge graph projections.
 - **Parser And AST Robustness**: Tightened namespace semantics, resource limits, AST conversion/schema behavior, and printer output.
 - **Release Packaging**: Hardened npm/WASM packaging, release artifact checks, and workflow behavior for published releases.
+- **WASM Release Budget**: Aligned the release WASM bundle size gate with CI at 2.5MB for the expanded authority-enabled WASM API surface.
 - **Dependency Baseline**: Updated locked dependencies, including `uuid`, `time`, and `bytes`.
 
 ### Fixed
