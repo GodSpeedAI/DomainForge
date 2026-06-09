@@ -41,7 +41,7 @@ Triggered on version tags (`v*.*.*`). Builds release artifacts for all platforms
 | --------------------------- | -------------- | -------------------------- |
 | `x86_64-unknown-linux-gnu`  | ubuntu-latest  | Standard Linux             |
 | `x86_64-apple-darwin`       | macos-15-intel | Intel Mac                  |
-| `x86_64-pc-windows-msvc`    | windows-latest | Windows                    |
+| `x86_64-pc-windows-msvc`    | windows-2025-vs2026 | Windows                    |
 | `aarch64-apple-darwin`      | macos-15       | Apple Silicon              |
 | `aarch64-unknown-linux-gnu` | ubuntu-latest  | ARM Linux (cross-compiled) |
 

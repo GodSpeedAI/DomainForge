@@ -27,10 +27,10 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-15
           - target: x86_64-pc-windows-msvc
-            os: windows-latest
+            os: windows-2025-vs2026
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -38,21 +38,21 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }} --features cli
         working-directory: sea-core
 
       - name: Resolve CLI binary path
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows-2025-vs2026'
         run: |
           CLI_BIN=$(python3 scripts/resolve_rust_binary.py --workspace "$(pwd)" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable)
           echo "Resolved CLI binary: $CLI_BIN"
           echo "CLI_BIN=$CLI_BIN" >> "$GITHUB_ENV"
 
       - name: Resolve CLI binary path (windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2025-vs2026'
         shell: pwsh
         run: |
           $workspace = (Get-Location).Path
@@ -69,7 +69,7 @@ jobs:
       - name: Package artifacts
         run: |
           ARCHIVE="sea-core-${{ matrix.target }}"
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          if [ "${{ matrix.os }}" = "windows-2025-vs2026" ]; then
             ARCHIVE="${ARCHIVE}.zip"
           else
             ARCHIVE="${ARCHIVE}.tar.gz"
@@ -85,7 +85,7 @@ jobs:
         run: just ci-check-package-size "${{ env.ARCHIVE_PATH }}" "${{ env.CLI_ARTIFACT_MAX_BYTES }}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sea-core-${{ matrix.target }}
           path: ${{ env.ARCHIVE_PATH }}
@@ -102,13 +102,13 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-15
           - target: x86_64-pc-windows-msvc
-            os: windows-latest
+            os: windows-2025-vs2026
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -125,7 +125,7 @@ jobs:
         working-directory: sea-core
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.target }}
           path: sea-core/dist/*.whl
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -143,10 +143,10 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index
@@ -189,7 +189,7 @@ jobs:
           tar czf ../../sea-core-wasm.tar.gz *
 
       - name: Upload WASM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sea-core-wasm
           path: sea-core-wasm.tar.gz
@@ -199,10 +199,10 @@ jobs:
     needs: [build-release, build-python-wheels, build-wasm-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
 
