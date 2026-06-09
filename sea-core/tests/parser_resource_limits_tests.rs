@@ -75,11 +75,11 @@ fn moderately_nested_policy_boolean_parses() {
         source.push(')');
     }
 
-    let result = parse(&source);
-    assert!(
-        result.is_ok() || result.is_err(),
-        "parser must return a result without panicking for 30-deep boolean nesting"
-    );
+    let result = std::panic::catch_unwind(|| parse(&source));
+    match result {
+        Ok(Err(_)) | Ok(Ok(_)) => {}
+        Err(_) => panic!("parser panicked for 30-deep boolean nesting"),
+    }
 }
 
 #[test]
