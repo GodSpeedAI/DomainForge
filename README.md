@@ -28,29 +28,23 @@ The problem is that this meaning usually gets scattered.
 
 That is not governance. That is a scavenger hunt.
 
-DomainForge gives teams a semantic source of truth: human-readable, machine-executable, versionable, and projectable into the systems that need to use it.
-
----
-
-## Stop Rebuilding the Same Domain Truth in Every Layer
-
-DomainForge gives teams a semantic source of truth for domain structure.
+DomainForge gives teams a semantic source of truth for domain structure: human-readable, machine-executable, versionable, and projectable into the systems that need to use it.
 
 Analysts can read it. Developers can bind to it. Agents can reason over it. Governance systems can inspect it. Architecture tools can project it.
 
 Not documentation hoping to be obeyed. Executable meaning with receipts.
 
-| What You Get                              | Why It Matters                                               |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| **One model, every language**             | Python validation = TypeScript validation. Period. No drift. |
-| **Instant rule checking**                 | 10,000 entities validated in under 100 milliseconds          |
-| **Business-readable, machine-executable** | Your analysts can read the rules. Your systems enforce them. |
-| **Architecture-as-Code**                  | Export directly to FINOS CALM for enterprise governance      |
-| **Structured validation and deterministic projection surfaces**             | Not just documentation—provable correctness                  |
+| What You Get | Why It Matters |
+| --- | --- |
+| **One model, every language** | Python validation and TypeScript validation can use the same declared domain structure. |
+| **Fast rule checking** | Current benchmarks include validation of 10,000 entities in under 100 milliseconds. |
+| **Business-readable, machine-executable structure** | Analysts can read the rules. Systems can parse, validate, and enforce them. |
+| **Architecture-as-Code projection** | Export to FINOS CALM for enterprise architecture and governance workflows. |
+| **Structured validation and deterministic projection surfaces** | Not just documentation — rules that can be parsed, checked, projected, and tested. |
 
 ---
 
-## See It Working (60 seconds)
+## See It Working: 60 Seconds
 
 ```python
 import sea_dsl
@@ -81,12 +75,12 @@ print(f"Entities: {graph.entity_count()}")
 print(f"Flows: {graph.flow_count()}")
 ```
 
-**That's it.** You just created a formal, executable business rule that:
+**That's it.** You just created an executable domain model that:
 
 - Defines entities, resources, and flows as a typed graph
-- Works identically in Python, TypeScript, Rust, or the browser
+- Uses the same Rust-backed core semantics across Python, TypeScript, Rust, and browser/WASM surfaces
 - Exports to FINOS CALM for architecture governance
-- Becomes the single source of truth that teams can inspect, test, and govern
+- Becomes a source of truth teams can inspect, test, version, and govern
 
 ---
 
@@ -110,6 +104,40 @@ python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
 
 ---
 
+## Use DomainForge Anywhere
+
+DomainForge is stack-agnostic.
+
+It does **not** require the GodSpeed AI ecosystem. It does not require SEA-Forge, SWE_SEED, GodSpeed-Agent, a specific agent runtime, a specific cloud, or a specific governance platform.
+
+You can use DomainForge as a standalone Apache 2.0 semantic/domain layer in:
+
+- internal tools
+- backend services
+- frontend validation
+- architecture repositories
+- agent runtimes
+- policy engines
+- knowledge graphs
+- compliance workflows
+- browser/WASM applications
+- Python, TypeScript, and Rust systems
+
+DomainForge's value is self-contained: it makes domain meaning readable, executable, portable, and testable.
+
+Within the broader GodSpeed AI stack, DomainForge can also serve as the semantic layer:
+
+```text
+DomainForge defines the domain.
+SEA-Forge governs the work.
+SWE_SEED proves the change.
+GodSpeed-Agent compounds the capability.
+```
+
+That stack is optional. DomainForge stands on its own.
+
+---
+
 ## Who Benefits?
 
 <table>
@@ -118,22 +146,22 @@ python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
 
 ### 💼 Business Analysts
 
-**"I can finally model our processes without waiting for developers."**
+**"I can finally model our processes without waiting for every rule to become custom code."**
 
 - Write rules in controlled natural language
-- Get instant validation feedback
-- See the same model developers use
+- Get validation feedback
+- See the same domain model developers use
 
 </td>
 <td width="50%">
 
 ### 🏛️ Enterprise Architects
 
-**"Single source of truth for the entire business architecture."**
+**"We can make business architecture executable and projectable."**
 
 - Export to FINOS CALM
-- Formal mathematical foundation
-- Integrates with existing governance tools
+- Preserve semantic consistency across systems
+- Integrate with architecture and governance workflows
 
 </td>
 </tr>
@@ -142,22 +170,22 @@ python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
 
 ### 💻 Software Developers
 
-**"Type-safe domain models that work across our whole stack."**
+**"Type-safe domain models that work across our stack."**
 
-- Native APIs for Python, TypeScript, Rust, WASM
-- Fast enough for runtime validation
-- No more "which system has the right logic?"
+- Native APIs for Python, TypeScript, Rust, and WASM
+- Runtime validation backed by a Rust core
+- Less duplicate business logic across services and frontends
 
 </td>
 <td width="50%">
 
-### 📋 Compliance Officers
+### 📋 Compliance and Governance Teams
 
-**"Regulations become executable, auditable policies."**
+**"Policies can become executable, auditable structures."**
 
 - Express complex rules in controlled language
-- Automatic compliance checking
-- Complete audit trail of policy changes
+- Check policies against declared domain structure
+- Preserve inspectable traces of policy changes and decisions
 
 </td>
 </tr>
@@ -165,26 +193,28 @@ python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
 
 ---
 
-## How It Works: Six Building Blocks
+## How It Works: Six Core Building Blocks
 
-DomainForge models any business domain using just **six universal concepts**:
+DomainForge starts with **six core concepts**:
 
-| Concept         | What It Represents                  | Example                            |
-| --------------- | ----------------------------------- | ---------------------------------- |
-| **🏢 Entity**   | Actors and locations in your system | Assembly Line, Customer, Warehouse |
-| **📦 Resource** | Things of value that move           | Products, Money, Information       |
-| **🔄 Flow**     | Movement between entities           | Shipments, Payments, Work Orders   |
-| **🔖 Instance** | Specific, trackable items           | Camera #SN12345, Invoice #INV-2024 |
-| **🔍 Pattern**   | Reusable validation patterns        | Email format, SKU codes            |
-| **📜 Policy**  | Business rules and constraints      | "All shipments must be inspected"  |
+| Concept | What It Represents | Example |
+| --- | --- | --- |
+| **🏢 Entity** | Actors and locations in your system | Assembly Line, Customer, Warehouse |
+| **📦 Resource** | Things of value that move | Products, Money, Information |
+| **🔄 Flow** | Movement between entities | Shipments, Payments, Work Orders |
+| **🔖 Instance** | Specific, trackable items | Camera #SN12345, Invoice #INV-2024 |
+| **🔍 Pattern** | Reusable validation patterns | Email format, SKU codes |
+| **📜 Policy** | Business rules and constraints | "All shipments must be inspected" |
 
-That's the entire vocabulary. No magic syntax to learn. No framework lock-in.
+That is the starting vocabulary. More advanced declarations — roles, relations, dimensions, units, metrics, mappings, projections, and concept changes — extend the model when the domain needs more structure.
+
+No magic syntax. No framework lock-in. Just executable domain meaning.
 
 ---
 
 ## SEA DSL Syntax
 
-Write models directly in `.sea` files—human-readable, version-controllable, and parseable by all bindings.
+Write models directly in `.sea` files — human-readable, version-controllable, and parseable by all bindings.
 
 ### Basic Example
 
@@ -236,22 +266,22 @@ Policy all_shipments_inspected as:
 
 ### All Declaration Types
 
-| Declaration   | Syntax                                                    |
-| ------------- | --------------------------------------------------------- |
-| Entity        | `Entity "Name" [vX.Y.Z] [in domain]`                      |
-| Resource      | `Resource "Name" [unit] [in domain]`                      |
-| Flow          | `Flow "Resource" from "A" to "B" [quantity N]`            |
-| Pattern       | `Pattern "Name" matches "regex"`                          |
-| Role          | `Role "Name" [in domain]`                                 |
-| Relation      | `Relation "Name" subject: ... predicate: ... object: ...` |
-| Instance      | `Instance id of "Entity" { field: value }`                |
-| Policy        | `Policy name as: expression`                              |
-| Dimension     | `Dimension "Name"`                                        |
-| Unit          | `Unit "Name" of "Dimension" factor N base "Base"`         |
-| Metric        | `Metric "Name" as: expression`                            |
-| Mapping       | `Mapping "Name" for format { ... }`                       |
-| Projection    | `Projection "Name" for format { ... }`                    |
-| ConceptChange | `ConceptChange "Name" @from_version ... @to_version ...`  |
+| Declaration | Syntax |
+| --- | --- |
+| Entity | `Entity "Name" [vX.Y.Z] [in domain]` |
+| Resource | `Resource "Name" [unit] [in domain]` |
+| Flow | `Flow "Resource" from "A" to "B" [quantity N]` |
+| Pattern | `Pattern "Name" matches "regex"` |
+| Role | `Role "Name" [in domain]` |
+| Relation | `Relation "Name" subject: ... predicate: ... object: ...` |
+| Instance | `Instance id of "Entity" { field: value }` |
+| Policy | `Policy name as: expression` |
+| Dimension | `Dimension "Name"` |
+| Unit | `Unit "Name" of "Dimension" factor N base "Base"` |
+| Metric | `Metric "Name" as: expression` |
+| Mapping | `Mapping "Name" for format { ... }` |
+| Projection | `Projection "Name" for format { ... }` |
+| ConceptChange | `ConceptChange "Name" @from_version ... @to_version ...` |
 
 ---
 
@@ -291,7 +321,7 @@ component_delivery = sea_dsl.Flow(
 graph.add_flow(component_delivery)
 ```
 
-**Result:** Inventory violations caught before they cause production delays.
+**Result:** Inventory constraints can be checked before they turn into production delays.
 
 </details>
 
@@ -357,7 +387,7 @@ shipment = sea_dsl.Flow(
 graph.add_flow(shipment)
 ```
 
-**Result:** Cross-border shipments without proper documentation can be modeled as enforceable policy.
+**Result:** Cross-border requirements can be modeled as enforceable policy instead of scattered checklist logic.
 
 </details>
 
@@ -368,7 +398,7 @@ graph.add_flow(shipment)
 <details>
 <summary><strong>⚡ Performance Characteristics</strong></summary>
 
-- **Rust core** for maximum performance
+- **Rust core** for performance-critical validation
 - **FFI overhead < 1ms** per operation
 - **Streaming validation** for large models
 
@@ -415,38 +445,34 @@ const expr = Expression.binary(
 console.log(expr.normalize().toStringRepr()); // "(a AND b)"
 ```
 
-All bindings provide **identical semantics**—zero behavioral drift.
+Bindings are designed to preserve the same core semantics across runtimes, with conformance tests guarding against behavioral drift.
 
 </details>
 
 <details>
 <summary><strong>🏗️ Architecture</strong></summary>
 
-```
-
+```text
 ┌───────────────────────────────────────────────────────┐
-│ Your Application │
+│ Your Application                                      │
 ├───────────────────────────────────────────────────────┤
-│ Python API │ TypeScript │ WASM │
-│ (PyO3) │ (napi-rs) │ (wasm-bindgen) │
+│ Python API        │ TypeScript        │ WASM           │
+│ (PyO3)            │ (napi-rs)         │ (wasm-bindgen) │
 ├───────────────────────────────────────────────────────┤
-│ Rust Core Engine (sea-core) │
-│ ┌─────────────┬──────────────┬─────────────────┐ │
- │ │ Primitives │ Graph Store │ Policy Engine │ Authority │ │
- │ │ (5 types) │ (IndexMap) │ (SBVR logic) │ (Resolver) │ │
- │ ├─────────────┼──────────────┼─────────────────┼────────────┤ │
- │ │ Parser │ Validator │ CALM Integration│ Fact Store │ │
- │ │ (Pest) │ (Ref check) │ (export/import) │ (Provenance)│ │
- │ └─────────────┴──────────────┴─────────────────┴────────────┘ │
+│ Rust Core Engine (sea-core)                           │
+│ ┌─────────────┬──────────────┬─────────────────┐      │
+│ │ Primitives  │ Graph Store  │ Policy Engine   │      │
+│ │ Parser      │ Validator    │ CALM Export     │      │
+│ │ Authority   │ Fact Store   │ Provenance      │      │
+│ └─────────────┴──────────────┴─────────────────┘      │
 └───────────────────────────────────────────────────────┘
-
 ```
 
 **Design Principles:**
 
-1. **Rust core is canonical.** Bindings wrap core—never duplicate logic.
-2. **Deterministic behavior.** IndexMap ensures stable ordering across runs.
-3. **Standards-based.** SBVR-aligned expressions, FINOS CALM export.
+1. **Rust core is canonical.** Bindings wrap core behavior instead of duplicating logic.
+2. **Deterministic behavior.** Stable ordering supports repeatable outputs across runs.
+3. **Standards-aware projection.** SBVR-aligned expressions and FINOS CALM export help domain models travel into enterprise architecture workflows.
 
 </details>
 
@@ -483,6 +509,7 @@ sea authority config.json request.json --facts facts.json --json
 DomainForge includes a **Policy Authority** system that makes business authority executable, deterministic, fact-grounded, and traceable.
 
 **Key capabilities:**
+
 - **Four policy modalities:** Permission, Prohibition, Obligation, Override
 - **Trusted fact provenance:** Caller-supplied facts are untrusted by default
 - **Three-valued logic:** True, False, and Unknown with modality-aware unknown handling
@@ -510,6 +537,7 @@ console.log(result.decisionJson);
 **Decision outcomes:** `Allow`, `Deny`, `Escalate`, `NotApplicable`, `Reject`
 
 **Safety guarantees:**
+
 - No authority without declared semantics
 - No decision without trusted facts
 - No trust upgrade through derivation
@@ -524,7 +552,7 @@ console.log(result.decisionJson);
 
 Comprehensive error handling with fuzzy matching suggestions:
 
-```
+```text
 Error[E001]: Undefined Entity: 'Warehous' at line 1
   --> 1:23
   |
@@ -535,7 +563,7 @@ Error[E001]: Undefined Entity: 'Warehous' at line 1
 ```
 
 - **30+ structured error codes** with detailed descriptions
-- **Multiple output formats**: JSON, Human-readable, LSP
+- **Multiple output formats**: JSON, human-readable, LSP
 - **Native error types** for Python, TypeScript, and WASM
 
 [Error Code Catalog →](docs/reference/error-codes.md)
@@ -588,19 +616,21 @@ npm install && npm run build
 
 ## Documentation
 
-| Resource                                                              | Description                          |
-| --------------------------------------------------------------------- | ------------------------------------ |
-| 📘 [**Copilot Instructions**](.github/copilot-instructions.md)        | Essential guide for AI coding agents |
-| 📗 [**Product Requirements**](docs/specs/PRD-001-sea-projection-framework.md) | PRD with success metrics             |
-| 📕 [**System Design**](docs/specs/SDS-002-sea-core-architecture.md)   | Technical specifications             |
-| 🏛️ [**Architecture Decisions**](docs/specs/ADR-001-sea-dsl-semantic-source-of-truth.md) | Key architectural choices            |
-| 🗺️ [**CALM Mapping**](docs/reference/calm-mapping.md)                | SEA ↔ CALM conversion                |
-| 📖 [**Error Codes**](docs/reference/error-codes.md)                   | Validation error reference           |
-| 🔧 [**CLI Reference**](docs/reference/cli-commands.md)                | CLI commands and usage               |
+| Resource | Description |
+| --- | --- |
+| 📘 [**Copilot Instructions**](.github/copilot-instructions.md) | Essential guide for AI coding agents |
+| 📗 [**Product Requirements**](docs/specs/PRD-001-sea-projection-framework.md) | PRD with success metrics |
+| 📕 [**System Design**](docs/specs/SDS-002-sea-core-architecture.md) | Technical specifications |
+| 🏛️ [**Architecture Decisions**](docs/specs/ADR-001-sea-dsl-semantic-source-of-truth.md) | Key architectural choices |
+| 🗺️ [**CALM Mapping**](docs/reference/calm-mapping.md) | SEA ↔ CALM conversion |
+| 📖 [**Error Codes**](docs/reference/error-codes.md) | Validation error reference |
+| 🔧 [**CLI Reference**](docs/reference/cli-commands.md) | CLI commands and usage |
+
+---
 
 ## Contributing
 
-We welcome contributions! Please see [Contributing Guide](CONTRIBUTING.md) for developer notes on building the CLI, TypeScript bindings, and WASM.
+We welcome contributions. Please see [Contributing Guide](CONTRIBUTING.md) for developer notes on building the CLI, TypeScript bindings, and WASM.
 
 ---
 
@@ -623,7 +653,7 @@ Built on foundational work from:
 
 <div align="center">
 
-**Your business rules, everywhere.**
+**Make business meaning executable.**
 
 [Get Started →](#install-in-30-seconds) · [Read the Docs →](#documentation) · [See Examples →](#real-world-impact)
 
