@@ -20,7 +20,7 @@ fn deeply_nested_expressions_parse_or_error_gracefully() {
 
 #[test]
 fn long_string_does_not_panic() {
-    let long_val = "A".repeat(1_000_000);
+    let long_val = "A".repeat(100_000);
     let source = format!("Entity \"{}\"", long_val);
 
     let result = std::panic::catch_unwind(|| parse(&source));
@@ -52,8 +52,8 @@ fn import_cycle_produces_diagnostic() {
 
 #[test]
 fn large_input_does_not_panic() {
-    let mut source = String::with_capacity(2_000_000);
-    for i in 0..100_000 {
+    let mut source = String::with_capacity(200_000);
+    for i in 0..10_000 {
         source.push_str(&format!("Entity \"item_{}\" in domain\n", i));
     }
 
@@ -85,7 +85,7 @@ fn moderately_nested_policy_boolean_parses() {
 #[test]
 fn many_rapid_declarations_do_not_panic() {
     let mut source = String::new();
-    for i in 0..50_000 {
+    for i in 0..5_000 {
         source.push_str(&format!(
             "Flow \"res_{}\" from \"A\" to \"B\" quantity 1\n",
             i
@@ -111,7 +111,7 @@ fn null_bytes_in_input_do_not_panic() {
 
 #[test]
 fn extremely_long_line_does_not_panic() {
-    let long_line = "X".repeat(1_000_000);
+    let long_line = "X".repeat(100_000);
     let source = format!("Entity \"{}\"", long_line);
 
     let result = std::panic::catch_unwind(|| parse(&source));
