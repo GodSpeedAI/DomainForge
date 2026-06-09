@@ -311,7 +311,7 @@ export declare class Expression {
   /** Create a member access expression (e.g., user.name). */
   static memberAccess(object: string, member: string): Expression
   /** Create an aggregation expression (e.g., COUNT(items)). */
-  static aggregation(aggregateFunction: AggregateFunction, collection: Expression, field?: string | undefined | null, filter?: Expression | undefined | null): Expression
+  static aggregation(aggFunction: AggregateFunction, collection: Expression, field?: string | undefined | null, filter?: Expression | undefined | null): Expression
   /** Create an aggregation comprehension expression. */
   static aggregationComprehension(aggregateFunction: AggregateFunction, variable: string, collection: Expression, predicate: Expression, projection: Expression, window?: WindowSpec | undefined | null, targetUnit?: string | undefined | null): Expression
   /** Create a group-by expression. */

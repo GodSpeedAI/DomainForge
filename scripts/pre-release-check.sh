@@ -188,7 +188,7 @@ if $DRY_RUN; then
     log_info "  - package.json"
 else
     CARGO_VERSION=$(grep -m1 '^version = ' sea-core/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-    PYPROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+    PYPROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/' | tr -d '\r')
     PKG_VERSION=$(grep -m1 '"version"' package.json | sed 's/.*"\([0-9][^"]*\)".*/\1/')
 
     log_info "Cargo.toml:    $CARGO_VERSION"

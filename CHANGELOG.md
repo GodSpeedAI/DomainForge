@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-06-09
+
+### Added
+
+- **Semantic Pack System**: Added canonical semantic pack support with schema definitions, builder APIs, validation, diffing, pack-set resolution, canonical JSON, review records, and signing helpers.
+- **Authority Evaluation**: Added authority policy compilation and evaluation with environments, fact resolvers, resolver traces, policy transforms, and conformance coverage.
+- **CLI Pack Workflows**: Added `sea pack` and authority-oriented CLI support for building, validating, reviewing, signing, and checking semantic packs.
+- **Cross-Language Semantic Pack Bindings**: Exposed semantic pack and authority APIs through Python, TypeScript napi, and WASM bindings to keep FFI packages in lockstep with `sea-core`.
+- **Semantic Pack Fixtures And Tests**: Added ACME procurement fixtures and comprehensive Rust, Python, TypeScript, and WASM tests for semantic pack behavior, authority evaluation, aliases, pack sets, signing, and three-valued logic.
+- **Security And Diagnostics Documentation**: Added security model, generated-artifact policy, semantic pack, signing, review, diagnostics, and expanded language API documentation.
+- **Release And CI Guardrails**: Added release workflow linting, enterprise verification gates, resource guardrails, native export validation, and deterministic napi type patching.
+
+### Changed
+
+- **README And Binding Guides**: Reworked the main README and Python, TypeScript, and WASM package READMEs for clearer domain modeling and binding usage.
+- **Protobuf Projection**: Expanded projection handling and validation for generated Protobuf output.
+- **CALM And RDF Round Trips**: Improved import/export fidelity for CALM and RDF knowledge graph projections.
+- **Parser And AST Robustness**: Tightened namespace semantics, resource limits, AST conversion/schema behavior, and printer output.
+- **Release Packaging**: Hardened npm/WASM packaging, release artifact checks, and workflow behavior for published releases.
+- **Dependency Baseline**: Updated locked dependencies, including `uuid`, `time`, and `bytes`.
+
+### Fixed
+
+- **Path Traversal Protection**: Hardened CLI and semantic pack file handling against unsafe paths.
+- **Python Stubs And TypeScript Declarations**: Regenerated and patched binding declarations so exported APIs match native implementations.
+- **Decimal Quantity Handling**: Fixed decimal quantity behavior in parser and projection paths.
+- **CI Stability**: Stabilized Rust, Python, TypeScript, macOS, and release jobs; removed stale helper tests and committed artifact hygiene issues.
+- **Release Security**: Removed a committed private-key fixture and improved encrypted secret handling in release workflows.
+- **Release Precheck Version Parsing**: Stripped carriage returns when comparing package versions so CRLF TOML files do not trigger false mismatches.
+- **Parser/Protobuf Review Findings**: Addressed review findings around parser behavior, Protobuf validity, and deferred CI-only failures.
+
 ## [0.10.0] - 2026-01-13
 
 ### Added
