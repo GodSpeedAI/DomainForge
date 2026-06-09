@@ -4,6 +4,8 @@ This document describes how to create releases for DomainForge.
 
 ## Quick Start
 
+Run the full release from `main` after the release commit has been merged or fast-forwarded from `dev`.
+
 ```bash
 # Patch release (e.g., 0.6.2 -> 0.6.3)
 ./scripts/release.sh
@@ -24,6 +26,10 @@ This document describes how to create releases for DomainForge.
 
 Use the shell scripts for full control over the release process:
 
+1. Prepare the release changes on `dev` or `release/*`.
+2. Merge or fast-forward those changes onto `main`.
+3. Run `./scripts/release.sh ...` from `main`.
+
 ```bash
 # Full release with all steps
 ./scripts/release.sh patch
@@ -43,9 +49,10 @@ Use the shell scripts for full control over the release process:
 1. Go to **Actions** → **Prepare Release** → **Run workflow**
 2. Select version bump type (patch/minor/major)
 3. Review and merge the created PR
-4. Create and push tag: `git tag v<version> && git push --tags`
-5. Create a GitHub Release from the tag
-6. Publishing workflows trigger automatically
+4. Merge or fast-forward the approved release commit onto `main`
+5. Create and push tag from `main`: `git tag v<version> && git push origin main && git push --tags`
+6. Create a GitHub Release from the tag
+7. Publishing workflows trigger automatically
 
 ### Pre-Release Validation Commands (Justfile)
 

@@ -70,6 +70,7 @@ OPTIONS:
     -h, --help      Show this help message
 
 RELEASE PROCESS:
+    Run this from main after merging the release changes.
     1. Run pre-release checks (git status, tests, version sync)
     2. Bump version in all package files
     3. Generate changelog from commits
@@ -105,16 +106,16 @@ EOF
 confirm() {
     local prompt="$1"
     local default="${2:-n}"
-    
+
     if $AUTO_CONFIRM; then
         return 0
     fi
-    
+
     if $DRY_RUN; then
         log_info "Would prompt: $prompt"
         return 0
     fi
-    
+
     local answer
     read -r -p "$prompt [y/N] " answer
     [[ "$answer" =~ ^[Yy]$ ]]
@@ -124,11 +125,11 @@ run_script() {
     local script="$1"
     shift
     local args=("$@")
-    
+
     if $DRY_RUN; then
         args+=("--dry-run")
     fi
-    
+
     if [[ -x "$SCRIPT_DIR/$script" ]]; then
         "$SCRIPT_DIR/$script" "${args[@]}"
     else
@@ -182,6 +183,14 @@ done
 cd "$PROJECT_ROOT"
 
 banner
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ "$CURRENT_BRANCH" != "main" ]]; then
+    log_error "Release execution must start from main. Current branch: $CURRENT_BRANCH"
+    log_info "Merge or fast-forward the intended release commit onto main, then rerun this script from main."
+    exit 1
+fi
 
 if $DRY_RUN; then
     log_warn "DRY RUN MODE - No changes will be made"
@@ -290,12 +299,12 @@ echo ""
 if ! $SKIP_BUILD; then
     log_step "Step 7/9: Building release artifacts..."
     echo ""
-    
+
     BUILD_ARGS=()
     if $DRY_RUN; then
         BUILD_ARGS+=("--dry-run")
     fi
-    
+
     "$SCRIPT_DIR/build-release.sh" "${BUILD_ARGS[@]}"
     echo ""
 else
@@ -309,7 +318,7 @@ fi
 log_step "Step 8/9: Preparing to push..."
 echo ""
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+BRANCH="$CURRENT_BRANCH"
 TAG_NAME="v$NEW_VERSION"
 
 log_warn "Ready to push the following:"
@@ -325,21 +334,21 @@ else
         log_info "Pushing branch..."
         git push origin "$BRANCH"
         log_success "Pushed branch: $BRANCH"
-        
+
         log_info "Pushing tag..."
         git push origin "$TAG_NAME"
         log_success "Pushed tag: $TAG_NAME"
         echo ""
-        
+
         # ============================================================================
         # Step 9: Create GitHub release
         # ============================================================================
         log_step "Step 9/9: Creating GitHub release..."
         echo ""
-        
+
         GH_ARGS=("$NEW_VERSION")
         "$SCRIPT_DIR/create-github-release.sh" "${GH_ARGS[@]}"
-        
+
         echo ""
         echo -e "${GREEN}=============================================="
         echo "  ✨ Release v$NEW_VERSION completed!"

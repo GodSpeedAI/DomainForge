@@ -153,6 +153,9 @@ else
     BRANCH=$(git rev-parse --abbrev-ref HEAD)
     if [[ "$BRANCH" =~ ^(main|dev|release/.*)$ ]]; then
         log_success "On valid branch: $BRANCH"
+        if [[ "$BRANCH" != "main" ]]; then
+            log_warn "Release preparation is allowed on $BRANCH, but scripts/release.sh must be run from main after promotion."
+        fi
     else
         log_warn "On branch '$BRANCH' - releases typically done from main, dev, or release/*"
         # Not a hard failure, just a warning
@@ -244,7 +247,7 @@ else
             fi
         else
             log_warn "'just' not found, attempting individual test commands..."
-            
+
             # Try Rust tests
             log_info "Running Rust tests..."
             if cargo test -p sea-core --features cli; then
