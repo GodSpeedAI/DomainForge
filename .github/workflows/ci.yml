@@ -82,7 +82,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Cache dependencies
         uses: actions/cache@v5
@@ -148,7 +148,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Cache dependencies
         uses: actions/cache@v5
@@ -190,7 +190,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Cache dependencies
         uses: actions/cache@v5
@@ -291,7 +291,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Cache dependencies
         uses: actions/cache@v5

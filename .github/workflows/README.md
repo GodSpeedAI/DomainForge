@@ -134,7 +134,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 ## Cache Management
 
-All workflows use GitHub Actions cache (v4) with a `CACHE_VERSION` environment variable. To bust all caches:
+All workflows use GitHub Actions cache (v5) with a `CACHE_VERSION` environment variable. To bust all caches:
 
 1. Increment `CACHE_VERSION` in the workflow file
 2. This is useful when dependencies are corrupted or need a fresh start
