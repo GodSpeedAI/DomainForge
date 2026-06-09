@@ -18,7 +18,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   CARGO_INCREMENTAL: 0
-  CACHE_VERSION: v3 # Increment to bust all caches
+  CACHE_VERSION: v4 # Increment to bust all caches
   CLI_MAX_BYTES: "52428800" # 50MB
   WASM_MAX_BYTES: "2621440" # 2.5MB
 
@@ -47,7 +47,6 @@ jobs:
           path: |
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            target
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
@@ -91,7 +90,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            target
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
@@ -157,7 +155,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            target
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock', 'requirements*.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
@@ -197,7 +194,8 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/index
-            sea-core/target
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock', 'bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-
@@ -300,7 +298,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            target
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-

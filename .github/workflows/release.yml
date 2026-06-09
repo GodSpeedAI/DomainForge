@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 env:
-  CACHE_VERSION: v3
+  CACHE_VERSION: v4
   WASM_MAX_BYTES: "2621440" # 2.5MB
   CLI_MAX_BYTES: "52428800" # 50MB
   CLI_ARTIFACT_MAX_BYTES: "73400320" # 70MB
@@ -152,7 +152,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            target
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
