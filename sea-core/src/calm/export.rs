@@ -222,12 +222,17 @@ fn export_flow(
 }
 
 fn deterministic_flow_id(resource_id: &str, from_id: &str, to_id: &str) -> String {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    resource_id.hash(&mut hasher);
-    from_id.hash(&mut hasher);
-    to_id.hash(&mut hasher);
-    format!("flow-{:016x}", hasher.finish())
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(resource_id.as_bytes());
+    hasher.update(b"\0");
+    hasher.update(from_id.as_bytes());
+    hasher.update(b"\0");
+    hasher.update(to_id.as_bytes());
+
+    let digest = hasher.finalize();
+    format!("flow-{:x}", digest)
 }
 
 fn parse_node_type(s: &str) -> Option<NodeType> {
