@@ -1780,15 +1780,34 @@ pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), Str
     let canonical_output = output_root
         .canonicalize()
         .unwrap_or_else(|_| output_root.to_path_buf());
-    let canonical_target = target
-        .canonicalize()
-        .unwrap_or_else(|_| target.to_path_buf());
-    if !canonical_target.starts_with(&canonical_output) {
+
+    // Lexically require `target` to be within `output_root` (rejects `..` components even when the file doesn't exist yet).
+    let rel = target.strip_prefix(&canonical_output).map_err(|_| {
+        format!(
+            "Security: output path '{}' escapes output directory",
+            target.display()
+        )
+    })?;
+    if rel.components().any(|c| matches!(
+        c,
+        std::path::Component::ParentDir | std::path::Component::RootDir | std::path::Component::Prefix(_)
+    )) {
         return Err(format!(
             "Security: output path '{}' escapes output directory",
             target.display()
         ));
     }
+
+    // Best-effort canonicalization for existing paths (catches symlink escapes).
+    if let Ok(canonical_target) = target.canonicalize() {
+        if !canonical_target.starts_with(&canonical_output) {
+            return Err(format!(
+                "Security: output path '{}' escapes output directory",
+                target.display()
+            ));
+        }
+    }
+
     Ok(())
 }
 
