@@ -52,9 +52,9 @@ runs:
         curl -sSLo "$DOWNLOAD_DIR/sops${SOPS_EXT}" "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/${SOPS_BINARY}"
         
         if command -v sha256sum >/dev/null 2>&1; then
-          ACTUAL_SHA256=$(sha256sum "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1)
+          ACTUAL_SHA256=$(sha256sum "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1 | tr -d '\\')
         elif command -v shasum >/dev/null 2>&1; then
-          ACTUAL_SHA256=$(shasum -a 256 "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1)
+          ACTUAL_SHA256=$(shasum -a 256 "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1 | tr -d '\\')
         else
           echo "::error::No SHA256 tool available on runner"
           rm -f "$DOWNLOAD_DIR/sops${SOPS_EXT}"
