@@ -158,7 +158,6 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-            .venv
           key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock', 'requirements*.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-

@@ -292,6 +292,19 @@ impl From<RustSemanticValidationStatus> for SemanticValidationStatus {
 }
 
 // =============================================================================
+// Shared helpers
+// =============================================================================
+
+fn parse_validation_options(options_json: &str) -> napi::Result<ValidationOptions> {
+    if options_json.is_empty() {
+        Ok(ValidationOptions::default())
+    } else {
+        serde_json::from_str(options_json)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid options JSON: {}", e)))
+    }
+}
+
+// =============================================================================
 // Functions
 // =============================================================================
 
@@ -338,12 +351,7 @@ pub fn semantic_pack_validate_graph(
     let pack: crate::semantic_pack::SemanticPack = serde_json::from_str(&pack_json)
         .map_err(|e| napi::Error::from_reason(format!("Invalid pack JSON: {}", e)))?;
 
-    let options: ValidationOptions = if options_json.is_empty() {
-        ValidationOptions::default()
-    } else {
-        serde_json::from_str(&options_json)
-            .map_err(|e| napi::Error::from_reason(format!("Invalid options JSON: {}", e)))?
-    };
+    let options = parse_validation_options(&options_json)?;
 
     let result = validate_graph_with_pack(&pack, &source, &options);
 
@@ -437,12 +445,7 @@ pub fn semantic_resolve_concept(
     let pack: crate::semantic_pack::SemanticPack = serde_json::from_str(&pack_json)
         .map_err(|e| napi::Error::from_reason(format!("Invalid pack JSON: {}", e)))?;
 
-    let options: ValidationOptions = if options_json.is_empty() {
-        ValidationOptions::default()
-    } else {
-        serde_json::from_str(&options_json)
-            .map_err(|e| napi::Error::from_reason(format!("Invalid options JSON: {}", e)))?
-    };
+    let options = parse_validation_options(&options_json)?;
 
     let source_ref = crate::semantic_pack::schema::SourceRef::synthetic("typescript://resolve");
     let request = ResolveRequest {

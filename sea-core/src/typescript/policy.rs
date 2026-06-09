@@ -371,14 +371,14 @@ impl Expression {
     /// Create an aggregation expression (e.g., COUNT(items)).
     #[napi(factory)]
     pub fn aggregation(
-        function: AggregateFunction,
+        agg_function: AggregateFunction,
         collection: &Expression,
         field: Option<String>,
         filter: Option<&Expression>,
     ) -> Self {
         Self {
             inner: RustExpression::Aggregation {
-                function: function.into(),
+                function: agg_function.into(),
                 collection: Box::new(collection.inner.clone()),
                 field,
                 filter: filter.map(|e| Box::new(e.inner.clone())),
@@ -387,9 +387,9 @@ impl Expression {
     }
 
     /// Create an aggregation comprehension expression.
-    #[napi(factory)]
+    #[napi(factory, js_name = "aggregationComprehension")]
     pub fn aggregation_comprehension(
-        function: AggregateFunction,
+        aggregate_function: AggregateFunction,
         variable: String,
         collection: &Expression,
         predicate: &Expression,
@@ -399,7 +399,7 @@ impl Expression {
     ) -> Self {
         Self {
             inner: RustExpression::AggregationComprehension {
-                function: function.into(),
+                function: aggregate_function.into(),
                 variable,
                 collection: Box::new(collection.inner.clone()),
                 window: window.map(|w| w.into()),

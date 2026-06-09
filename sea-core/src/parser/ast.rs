@@ -173,7 +173,7 @@ pub enum AstNode {
         annotations: HashMap<String, JsonValue>,
         from_entity: String,
         to_entity: String,
-        quantity: Option<i32>,
+        quantity: Option<Decimal>,
     },
     Pattern {
         name: String,
@@ -832,7 +832,7 @@ fn parse_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
                         to_entity = Some(parsed);
                     }
                 } else if part.as_rule() == Rule::number {
-                    quantity = Some(parse_number(part)?);
+                    quantity = Some(parse_decimal(part)?);
                 }
             }
             _ => {}
@@ -878,11 +878,18 @@ fn parse_role(pair: Pair<Rule>) -> ParseResult<AstNode> {
             .ok_or_else(|| ParseError::GrammarError("Expected role name".to_string()))?,
     )?;
 
-    let domain = if let Some(domain_pair) = inner.next() {
-        Some(parse_identifier(domain_pair)?)
-    } else {
-        None
-    };
+    let mut domain = None;
+    for part in inner {
+        match part.as_rule() {
+            Rule::in_keyword => {
+                // Skip "in"
+            }
+            Rule::identifier => {
+                domain = Some(parse_identifier(part)?);
+            }
+            _ => {}
+        }
+    }
 
     Ok(AstNode::Role { name, domain })
 }
@@ -2182,6 +2189,43 @@ fn unwrap_export(spanned: &Spanned<AstNode>) -> &AstNode {
     }
 }
 
+/// Resolve a name in a namespace-keyed map.
+/// Tries (default_namespace, name) first, then scans all namespaces for an unqualified match.
+/// Returns None if not found, or the concept ID if exactly one match exists.
+fn resolve_by_name(
+    map: &HashMap<(String, String), crate::ConceptId>,
+    name: &str,
+    default_namespace: &str,
+) -> Result<Option<crate::ConceptId>, ParseError> {
+    // Try exact match in default namespace first
+    if let Some(id) = map.get(&(default_namespace.to_string(), name.to_string())) {
+        return Ok(Some(id.clone()));
+    }
+    // Fall back to any namespace with this name
+    let matches: Vec<(&str, &crate::ConceptId)> = map
+        .iter()
+        .filter(|((_, n), _)| n == name)
+        .map(|((namespace, _), id)| (namespace.as_str(), id))
+        .collect();
+    if matches.len() == 1 {
+        return Ok(Some(matches[0].1.clone()));
+    }
+    if matches.len() > 1 {
+        let mut namespaces: Vec<&str> = matches
+            .into_iter()
+            .map(|(namespace, _)| namespace)
+            .collect();
+        namespaces.sort_unstable();
+        namespaces.dedup();
+        return Err(ParseError::Validation(format!(
+            "Ambiguous reference '{}' found in namespaces: {}",
+            name,
+            namespaces.join(", ")
+        )));
+    }
+    Ok(None)
+}
+
 /// Convert AST to Graph
 pub fn ast_to_graph(ast: Ast) -> ParseResult<Graph> {
     ast_to_graph_with_options(ast, &ParseOptions::default())
@@ -2212,10 +2256,10 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
     }
 
     let mut graph = Graph::new();
-    let mut entity_map = HashMap::new();
-    let mut role_map = HashMap::new();
-    let mut resource_map = HashMap::new();
-    let mut relation_map = HashMap::new();
+    let mut entity_map: HashMap<(String, String), crate::ConceptId> = HashMap::new();
+    let mut role_map: HashMap<(String, String), crate::ConceptId> = HashMap::new();
+    let mut resource_map: HashMap<(String, String), crate::ConceptId> = HashMap::new();
+    let mut relation_map: HashMap<String, crate::ConceptId> = HashMap::new();
 
     let default_namespace = ast
         .metadata
@@ -2329,20 +2373,21 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         let node = unwrap_export(node);
         match node {
             AstNode::Role { name, domain } => {
-                if role_map.contains_key(name) {
+                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
+                let key = (namespace.clone(), name.clone());
+                if role_map.contains_key(&key) {
                     return Err(ParseError::duplicate_declaration_no_loc(format!(
-                        "Role '{}' already declared",
-                        name
+                        "Role '{}' already declared in namespace '{}'",
+                        name, namespace
                     )));
                 }
 
-                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
                 let role = Role::new_with_namespace(name.clone(), namespace);
                 let role_id = role.id().clone();
                 graph
                     .add_role(role)
                     .map_err(|e| ParseError::GrammarError(format!("Failed to add role: {}", e)))?;
-                role_map.insert(name.clone(), role_id);
+                role_map.insert(key, role_id);
             }
             AstNode::Entity {
                 name,
@@ -2350,14 +2395,15 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 version,
                 annotations,
             } => {
-                if entity_map.contains_key(name) {
+                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
+                let key = (namespace.clone(), name.clone());
+                if entity_map.contains_key(&key) {
                     return Err(ParseError::duplicate_declaration_no_loc(format!(
-                        "Entity '{}' already declared",
-                        name
+                        "Entity '{}' already declared in namespace '{}'",
+                        name, namespace
                     )));
                 }
 
-                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
                 let mut entity = Entity::new_with_namespace(name.clone(), namespace);
 
                 if let Some(v_str) = version {
@@ -2390,7 +2436,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 graph.add_entity(entity).map_err(|e| {
                     ParseError::GrammarError(format!("Failed to add entity: {}", e))
                 })?;
-                entity_map.insert(name.clone(), entity_id);
+                entity_map.insert(key, entity_id);
             }
             AstNode::Resource {
                 name,
@@ -2398,21 +2444,22 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 domain,
                 ..
             } => {
-                if resource_map.contains_key(name) {
+                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
+                let key = (namespace.clone(), name.clone());
+                if resource_map.contains_key(&key) {
                     return Err(ParseError::duplicate_declaration_no_loc(format!(
-                        "Resource '{}' already declared",
-                        name
+                        "Resource '{}' already declared in namespace '{}'",
+                        name, namespace
                     )));
                 }
 
-                let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
                 let unit = unit_from_string(unit_name.as_deref().unwrap_or("units"));
                 let resource = Resource::new_with_namespace(name.clone(), unit, namespace);
                 let resource_id = resource.id().clone();
                 graph.add_resource(resource).map_err(|e| {
                     ParseError::GrammarError(format!("Failed to add resource: {}", e))
                 })?;
-                resource_map.insert(name.clone(), resource_id);
+                resource_map.insert(key, resource_id);
             }
             _ => {}
         }
@@ -2429,20 +2476,23 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
             ..
         } = node
         {
-            let from_id = entity_map
-                .get(from_entity)
+            let from_id = resolve_by_name(&entity_map, from_entity, &default_namespace)?
                 .ok_or_else(|| ParseError::undefined_entity_no_loc(from_entity))?;
 
-            let to_id = entity_map
-                .get(to_entity)
+            let to_id = resolve_by_name(&entity_map, to_entity, &default_namespace)?
                 .ok_or_else(|| ParseError::undefined_entity_no_loc(to_entity))?;
 
-            let resource_id = resource_map
-                .get(resource_name)
+            let resource_id = resolve_by_name(&resource_map, resource_name, &default_namespace)?
                 .ok_or_else(|| ParseError::undefined_resource_no_loc(resource_name))?;
 
-            let qty = quantity.map(Decimal::from).unwrap_or(Decimal::ZERO);
-            let flow = Flow::new(resource_id.clone(), from_id.clone(), to_id.clone(), qty);
+            let qty = quantity.unwrap_or(Decimal::ZERO);
+            let flow = Flow::new_with_namespace(
+                resource_id.clone(),
+                from_id.clone(),
+                to_id.clone(),
+                qty,
+                default_namespace.clone(),
+            );
 
             graph
                 .add_flow(flow)
@@ -2468,19 +2518,19 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 )));
             }
 
-            let subject_id = role_map.get(subject_role).ok_or_else(|| {
-                ParseError::GrammarError(format!("Undefined subject role '{}'", subject_role))
-            })?;
+            let subject_id = resolve_by_name(&role_map, subject_role, &default_namespace)?
+                .ok_or_else(|| {
+                    ParseError::GrammarError(format!("Undefined subject role '{}'", subject_role))
+                })?;
 
-            let object_id = role_map.get(object_role).ok_or_else(|| {
-                ParseError::GrammarError(format!("Undefined object role '{}'", object_role))
-            })?;
+            let object_id = resolve_by_name(&role_map, object_role, &default_namespace)?
+                .ok_or_else(|| {
+                    ParseError::GrammarError(format!("Undefined object role '{}'", object_role))
+                })?;
 
             let via_flow_id = if let Some(flow_name) = via_flow {
                 Some(
-                    resource_map
-                        .get(flow_name)
-                        .cloned()
+                    resolve_by_name(&resource_map, flow_name, &default_namespace)?
                         .ok_or_else(|| ParseError::undefined_resource_no_loc(flow_name))?,
                 )
             } else {

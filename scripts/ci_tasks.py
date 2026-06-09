@@ -216,6 +216,28 @@ def verify_cli_binary(binary_path: str, expected_output: Optional[str] = None) -
         return 1
 
 
+def _is_safe_path(target_dir: str, member_path: str) -> bool:
+    abs_target = os.path.realpath(target_dir)
+    abs_member = os.path.realpath(os.path.join(target_dir, member_path))
+    return abs_member.startswith(abs_target + os.sep) or abs_member == abs_target
+
+
+def _validate_tar_member(target_dir: str, member: tarfile.TarInfo) -> None:
+    if member.name.startswith("/") or ".." in member.name.split("/"):
+        raise ValueError(f"Unsafe path in tar: {member.name}")
+    if member.issym() or member.islnk():
+        raise ValueError(f"Symlink/hardlink in tar: {member.name}")
+    if not _is_safe_path(target_dir, member.name):
+        raise ValueError(f"Path traversal in tar: {member.name}")
+
+
+def _validate_zip_member(target_dir: str, filename: str) -> None:
+    if filename.startswith("/") or ".." in filename.split("/"):
+        raise ValueError(f"Unsafe path in zip: {filename}")
+    if not _is_safe_path(target_dir, filename):
+        raise ValueError(f"Path traversal in zip: {filename}")
+
+
 def unpack_and_verify(archive_path: str, binary_name: str) -> int:
     """
     Unpack an archive and verify the binary inside can execute.
@@ -233,18 +255,23 @@ def unpack_and_verify(archive_path: str, binary_name: str) -> int:
         print(f"::error::Archive not found: {archive_path}", file=sys.stderr)
         return 1
 
-    # Create temp directory for unpacking
     temp_dir = Path("tmp_verify_unpack")
     temp_dir.mkdir(exist_ok=True)
 
     try:
-        # Unpack
         if archive_path.endswith(".zip"):
             with zipfile.ZipFile(archive_p, "r") as zf:
+                for info in zf.infolist():
+                    _validate_zip_member(str(temp_dir), info.filename)
                 zf.extractall(temp_dir)
         elif archive_path.endswith(".tar.gz") or archive_path.endswith(".tgz"):
             with tarfile.open(archive_p, "r:gz") as tf:
-                tf.extractall(temp_dir)
+                for member in tf.getmembers():
+                    _validate_tar_member(str(temp_dir), member)
+                if sys.version_info >= (3, 12):
+                    tf.extractall(temp_dir, filter="data")
+                else:
+                    tf.extractall(temp_dir)
         else:
             print(
                 f"::error::Unsupported archive format: {archive_path}", file=sys.stderr

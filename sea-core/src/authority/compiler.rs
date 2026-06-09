@@ -103,7 +103,11 @@ impl PolicyCompiler {
                 fact_path: req.fact_path.clone(),
                 allowed_source_classes: req.allowed_source_classes.clone(),
                 allowed_source_ids: req.allowed_source_ids.clone().unwrap_or_default(),
-                max_age: req.max_age.as_ref().map(|s| parse_duration(s)),
+                max_age: req
+                    .max_age
+                    .as_ref()
+                    .map(|s| parse_duration(s))
+                    .transpose()?,
                 evidence_ref_required: req.evidence_ref_required.unwrap_or(false),
                 signature_required: req.signature_required.unwrap_or(false),
                 minimum_confidence: req.minimum_confidence,
@@ -115,7 +119,7 @@ impl PolicyCompiler {
     }
 }
 
-fn parse_duration(s: &str) -> chrono::Duration {
+fn parse_duration(s: &str) -> Result<chrono::Duration, AuthorityError> {
     let s = s.trim();
     let seconds = if s.ends_with('s') {
         s.trim_end_matches('s').parse::<i64>().ok()
@@ -134,7 +138,9 @@ fn parse_duration(s: &str) -> chrono::Duration {
     } else {
         s.parse::<i64>().ok().map(|v| v * 3600) // default hours
     };
-    chrono::Duration::seconds(seconds.unwrap_or(6 * 3600))
+    seconds
+        .map(chrono::Duration::seconds)
+        .ok_or_else(|| AuthorityError::invalid_environment(format!("Invalid duration: '{}'", s)))
 }
 
 pub struct CompatibilityLoweringAuditor {
@@ -157,14 +163,16 @@ impl CompatibilityLoweringAuditor {
     }
 
     pub fn audit_expression(&self, expr: &str) -> Result<Option<LoweredPolicy>, AuthorityError> {
+        let expr_lc = expr.to_lowercase();
+
         // Reject all structural OR as ambiguous (spec §14.1.7, §17.7)
-        if expr.contains(" or ") {
+        if expr_lc.contains(" or ") {
             return Err(AuthorityError::ambiguous_lowering(expr));
         }
 
         // Handle negated conditions: `not X = "Y"` lowers to when condition
         // Reject negative structural predicates (spec §14.1.7)
-        if let Some(inner) = expr.strip_prefix("not ") {
+        if let Some(inner) = expr_lc.strip_prefix("not ") {
             let inner_trimmed = inner.trim();
             // Reject if the negated expression targets structural keys
             if inner_trimmed.starts_with("resource.")
@@ -175,11 +183,8 @@ impl CompatibilityLoweringAuditor {
             }
             // Lower `not fact.path = "value"` to when condition with negated comparison
             if let Some(eq_pos) = inner_trimmed.find(" = ") {
-                let key = inner_trimmed[..eq_pos].trim().to_string();
-                let val = inner_trimmed[eq_pos + 3..]
-                    .trim()
-                    .trim_matches('"')
-                    .to_string();
+                let key = expr[4..][..eq_pos].trim().to_string();
+                let val = expr[4..][eq_pos + 3..].trim().trim_matches('"').to_string();
                 return Ok(Some(LoweredPolicy {
                     original: expr.to_string(),
                     lowered_applies_to: HashMap::new(),
@@ -193,15 +198,28 @@ impl CompatibilityLoweringAuditor {
             return Err(AuthorityError::ambiguous_lowering(expr));
         }
 
-        if expr.contains(" and ") {
-            let parts: Vec<&str> = expr.split(" and ").collect();
+        if expr_lc.contains(" and ") {
+            // Split on case-insensitive " and " boundaries
+            let mut parts: Vec<&str> = Vec::new();
+            let mut last = 0;
+            let lc_bytes = expr_lc.as_bytes();
+            let pattern = b" and ";
+            let plen = pattern.len();
+            for i in 0..=lc_bytes.len().saturating_sub(plen) {
+                if &lc_bytes[i..i + plen] == pattern {
+                    parts.push(&expr[last..i]);
+                    last = i + plen;
+                }
+            }
+            parts.push(&expr[last..]);
             let mut applies_to = HashMap::new();
             let mut when = HashMap::new();
             for part in parts {
                 let trimmed = part.trim();
-                if trimmed.starts_with("resource.")
-                    || trimmed.starts_with("actor.")
-                    || trimmed.starts_with("action")
+                let trimmed_lc = trimmed.to_lowercase();
+                if trimmed_lc.starts_with("resource.")
+                    || trimmed_lc.starts_with("actor.")
+                    || trimmed_lc.starts_with("action")
                 {
                     if let Some((k, v)) = parse_equality(trimmed) {
                         applies_to.insert(k, v);

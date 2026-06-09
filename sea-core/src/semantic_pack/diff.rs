@@ -200,20 +200,7 @@ fn classification_order(c: DiffClassification) -> u8 {
 }
 
 fn version_increased(old: &str, new: &str) -> bool {
-    let parse = |s: &str| -> Vec<u32> { s.split('.').filter_map(|p| p.parse().ok()).collect() };
-    let old_parts = parse(old);
-    let new_parts = parse(new);
-    for i in 0..std::cmp::max(old_parts.len(), new_parts.len()) {
-        let o = old_parts.get(i).copied().unwrap_or(0);
-        let n = new_parts.get(i).copied().unwrap_or(0);
-        if n > o {
-            return true;
-        }
-        if n < o {
-            return false;
-        }
-    }
-    false
+    super::builder::version_increased(old, new).unwrap_or(false)
 }
 
 impl super::schema::ConceptStatus {

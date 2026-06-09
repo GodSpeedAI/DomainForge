@@ -42,27 +42,44 @@ jobs:
       - name: Safety gate – ensure all checks pass
         id: check_status
         run: |
-          # Wait a moment for checks to register
           sleep 10
           
-          # Get check status with proper formatting
           checks=$(gh pr checks ${{ github.event.pull_request.number }} --json state,conclusion 2>/dev/null || echo '[]')
           
-          # Skip if no checks returned
           if [ "$checks" = "[]" ] || [ -z "$checks" ]; then
-            echo "No checks to validate. Proceeding."
-            exit 0
-          fi
-          
-          # Check if any checks failed
-          failed=$(echo "$checks" | jq -r '.[] | select(.state=="COMPLETED") | select(.conclusion=="FAILURE") | .conclusion' | head -1)
-          
-          if [ ! -z "$failed" ]; then
-            echo "Some required checks failed."
+            echo "No checks found. Cannot verify CI. Failing."
             exit 1
           fi
           
-          echo "All required checks passed."
+          failed=$(echo "$checks" | jq -r '.[] | select(.state=="COMPLETED") | select(.conclusion=="FAILURE") | .conclusion' | head -1)
+          if [ ! -z "$failed" ]; then
+            echo "Some checks failed."
+            exit 1
+          fi
+          
+          pending=$(echo "$checks" | jq -r '.[] | select(.state=="IN_PROGRESS" or .state=="PENDING" or .state=="QUEUED") | .state' | head -1)
+          if [ ! -z "$pending" ]; then
+            MAX_WAIT_SECONDS=${MAX_WAIT_SECONDS:-120}
+            SLEEP_INTERVAL=${SLEEP_INTERVAL:-15}
+            elapsed=0
+            while [ $elapsed -lt $MAX_WAIT_SECONDS ]; do
+              echo "Checks still pending (${elapsed}s elapsed). Waiting ${SLEEP_INTERVAL}s..."
+              sleep $SLEEP_INTERVAL
+              elapsed=$((elapsed + SLEEP_INTERVAL))
+              checks=$(gh api repos/${{ github.repository }}/commits/${{ github.event.pull_request.head.sha }}/check-runs --jq '.check_runs')
+              pending=$(echo "$checks" | jq -r '.[] | select(.state=="IN_PROGRESS" or .state=="PENDING" or .state=="QUEUED") | .state' | head -1)
+              if [ -z "$pending" ]; then
+                echo "All checks completed."
+                break
+              fi
+            done
+            if [ ! -z "$pending" ]; then
+              echo "Checks still pending after ${MAX_WAIT_SECONDS}s. Failing."
+              exit 1
+            fi
+          fi
+          
+          echo "All checks passed."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -1,7 +1,7 @@
 use crate::graph::Graph;
 use crate::parser::ast::TargetFormat;
 use crate::projection::{find_projection_override, ProjectionRegistry};
-use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
+use percent_encoding::{percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -660,44 +660,68 @@ impl KnowledgeGraph {
 
         let mut graph = Graph::new();
 
-        // First, collect entities and resources
+        let mut namespace_map: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for t in &self.triples {
+            if t.predicate == "sea:namespace" {
+                let name_encoded = t.subject.split(':').nth(1).unwrap_or(&t.subject);
+                let name = percent_decode_str(name_encoded)
+                    .decode_utf8_lossy()
+                    .to_string();
+                let ns = extract_literal_value(&t.object);
+                namespace_map.insert(name, ns);
+            }
+        }
+
+        let mut unit_map: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for t in &self.triples {
+            if t.predicate == "sea:unit" {
+                let name_encoded = t.subject.split(':').nth(1).unwrap_or(&t.subject);
+                let name = percent_decode_str(name_encoded)
+                    .decode_utf8_lossy()
+                    .to_string();
+                let unit_str = extract_literal_value(&t.object);
+                unit_map.insert(name, unit_str);
+            }
+        }
+
         for t in &self.triples {
             if t.predicate == "rdf:type" && t.object == "sea:Entity" {
-                // subject is like sea:Name — extract after colon
-                let name = t
-                    .subject
-                    .split(':')
-                    .nth(1)
-                    .unwrap_or(&t.subject)
+                let name_encoded = t.subject.split(':').nth(1).unwrap_or(&t.subject);
+                let name = percent_decode_str(name_encoded)
+                    .decode_utf8_lossy()
                     .to_string();
-                let entity = Entity::new_with_namespace(name.clone(), "default".to_string());
+                let namespace = namespace_map
+                    .get(&name)
+                    .cloned()
+                    .unwrap_or_else(|| "default".to_string());
+                let entity = Entity::new_with_namespace(name, namespace);
                 graph
                     .add_entity(entity)
                     .map_err(|e| KgError::SerializationError(e.to_string()))?;
             }
             if t.predicate == "rdf:type" && t.object == "sea:Resource" {
-                let name = t
-                    .subject
-                    .split(':')
-                    .nth(1)
-                    .unwrap_or(&t.subject)
+                let name_encoded = t.subject.split(':').nth(1).unwrap_or(&t.subject);
+                let name = percent_decode_str(name_encoded)
+                    .decode_utf8_lossy()
                     .to_string();
-                let resource = Resource::new_with_namespace(
-                    name.clone(),
-                    unit_from_string("units"),
-                    "default".to_string(),
-                );
+                let namespace = namespace_map
+                    .get(&name)
+                    .cloned()
+                    .unwrap_or_else(|| "default".to_string());
+                let unit =
+                    unit_from_string(unit_map.get(&name).map(|s| s.as_str()).unwrap_or("units"));
+                let resource = Resource::new_with_namespace(name, unit, namespace);
                 graph
                     .add_resource(resource)
                     .map_err(|e| KgError::SerializationError(e.to_string()))?;
             }
         }
 
-        // Now flows: find subjects typed as sea:Flow
         for t in &self.triples {
             if t.predicate == "rdf:type" && t.object == "sea:Flow" {
                 let flow_subject = t.subject.clone();
-                // we expect sea:flow_uuid etc. collect properties for this subject
                 let mut from: Option<String> = None;
                 let mut to: Option<String> = None;
                 let mut resource_name: Option<String> = None;
@@ -731,17 +755,25 @@ impl KnowledgeGraph {
                     }
                 }
 
-                if let (Some(from_name), Some(to_name), Some(resource_name), Some(quantity_val)) =
+                if let (Some(from_name), Some(to_name), Some(res_name), Some(quantity_val)) =
                     (from, to, resource_name, quantity)
                 {
-                    let from_id = graph.find_entity_by_name(&from_name).ok_or_else(|| {
-                        KgError::SerializationError(format!("Unknown entity: {}", from_name))
+                    let from_decoded = percent_decode_str(&from_name)
+                        .decode_utf8_lossy()
+                        .to_string();
+                    let to_decoded = percent_decode_str(&to_name).decode_utf8_lossy().to_string();
+                    let res_decoded = percent_decode_str(&res_name)
+                        .decode_utf8_lossy()
+                        .to_string();
+
+                    let from_id = graph.find_entity_by_name(&from_decoded).ok_or_else(|| {
+                        KgError::SerializationError(format!("Unknown entity: {}", from_decoded))
                     })?;
-                    let to_id = graph.find_entity_by_name(&to_name).ok_or_else(|| {
-                        KgError::SerializationError(format!("Unknown entity: {}", to_name))
+                    let to_id = graph.find_entity_by_name(&to_decoded).ok_or_else(|| {
+                        KgError::SerializationError(format!("Unknown entity: {}", to_decoded))
                     })?;
-                    let res_id = graph.find_resource_by_name(&resource_name).ok_or_else(|| {
-                        KgError::SerializationError(format!("Unknown resource: {}", resource_name))
+                    let res_id = graph.find_resource_by_name(&res_decoded).ok_or_else(|| {
+                        KgError::SerializationError(format!("Unknown resource: {}", res_decoded))
                     })?;
 
                     let flow = Flow::new(res_id, from_id, to_id, quantity_val);

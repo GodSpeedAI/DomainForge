@@ -202,9 +202,13 @@ impl AuthorityTraceEmitter {
     fn persist_trace(&self, trace: &AuthorityTrace) -> Result<(), AuthorityError> {
         match self.evidence_sink {
             EvidenceSink::Memory => {
-                if let Ok(mut store) = self.memory_store.lock() {
-                    store.push(trace.clone());
-                }
+                let mut store = self.memory_store.lock().map_err(|e| {
+                    AuthorityError::new(
+                        super::error::AuthorityErrorCode::TracePersistenceFailure,
+                        format!("Mutex poisoned: {}", e),
+                    )
+                })?;
+                store.push(trace.clone());
                 Ok(())
             }
             EvidenceSink::Discard => Ok(()),

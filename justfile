@@ -58,7 +58,8 @@ clear-rust-debug:
     ./scripts/clear_debug_test.sh || true
 python-setup:
     @echo "Setting up Python virtualenv and installing dev dependencies..."
-    python3 -m venv .venv || python -m venv .venv || (echo "Python 3 is required; please install python3."; exit 1)
+    rm -rf .venv
+    python -m venv .venv || python3 -m venv .venv || (echo "Python 3 is required; please install python."; exit 1)
     .venv/bin/python -m pip install --upgrade pip
     # Install runtime requirements if present
     if [ -f requirements.txt ]; then .venv/bin/python -m pip install -r requirements.txt || true; fi
@@ -106,6 +107,47 @@ python-clean:
     @echo "Removing Python virtual environment (.venv)"
     if [ -d .venv ]; then rm -rf .venv || true; fi
 
+audit:
+    cargo audit
+    cargo deny check
+
+smoke-test-npm:
+    @echo "Running npm pack smoke test..."
+    @output=$$(npm pack --dry-run 2>&1); \
+    echo "$$output"; \
+    echo "$$output" | grep -q "index\.js" || { echo "ERROR: index.js missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "index\.d\.ts" || { echo "ERROR: index.d.ts missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "sea-core.*\.node" || { echo "ERROR: native .node binary missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "README\.md" || { echo "ERROR: README.md missing from pack"; exit 1; }; \
+    echo "$$output" | grep -q "LICENSE" || { echo "ERROR: LICENSE missing from pack"; exit 1; }; \
+    echo "npm pack smoke test passed"
+
+smoke-test-wasm:
+    @echo "Running WASM pkg smoke test..."
+    test -d target/wasm-pkg || { echo "ERROR: WASM pkg not built. Run scripts/build-wasm.sh first"; exit 1; }
+    for f in sea_core.js sea_core.d.ts sea_core_bg.wasm sea_core_bg.wasm.d.ts package.json; do \
+        test -f target/wasm-pkg/$$f || { echo "ERROR: missing $$f"; exit 1; }; \
+    done
+    @echo "WASM smoke test passed"
+
+enterprise-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "=== Enterprise Release Verification ==="
+    echo "1/6: Format check..."
+    cargo fmt --all --check
+    echo "2/6: Clippy..."
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    echo "3/6: Rust tests..."
+    cargo test --workspace --all-targets --all-features
+    echo "4/6: Doctests..."
+    cargo test -p sea-core --features cli --doc
+    echo "5/6: All language tests..."
+    just all-tests
+    echo "6/6: Audit..."
+    just audit
+    echo "=== Enterprise Verification PASSED ==="
+
 # ============================================================================
 # CI-specific recipes (used by GitHub Actions)
 # ============================================================================
@@ -118,7 +160,7 @@ ci-test-rust:
 # Run Python tests (CI variant)
 ci-test-python:
     @echo "Running Python tests (CI)..."
-    .venv/bin/pytest tests/
+    .venv/bin/python -m pytest tests/
 
 # Run TypeScript tests (CI variant)
 ci-test-ts:

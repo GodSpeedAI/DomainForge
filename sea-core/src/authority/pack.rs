@@ -1,7 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 use super::error::AuthorityError;
+use super::policy::AuthorityPolicy;
 use super::types::*;
+
+#[derive(Serialize)]
+struct PackHashPayload<'a> {
+    id: &'a str,
+    version: &'a str,
+    semantics_version: &'a str,
+    required_specificity_profile: &'a str,
+    policies: &'a [AuthorityPolicy],
+}
 
 pub fn compute_pack_hash(
     id: &str,
@@ -10,15 +20,6 @@ pub fn compute_pack_hash(
     required_specificity_profile: &str,
     policies: &[AuthorityPolicy],
 ) -> Result<String, AuthorityError> {
-    #[derive(Serialize)]
-    struct PackHashPayload<'a> {
-        id: &'a str,
-        version: &'a str,
-        semantics_version: &'a str,
-        required_specificity_profile: &'a str,
-        policies: &'a [AuthorityPolicy],
-    }
-
     let payload = PackHashPayload {
         id,
         version,
@@ -38,7 +39,6 @@ pub fn compute_pack_hash(
     })?;
     Ok(compute_deterministic_hash(&canonical))
 }
-use super::policy::AuthorityPolicy;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthorityPack {
@@ -88,15 +88,6 @@ impl AuthorityPack {
                 super::error::AuthorityErrorCode::InvalidPolicyPack,
                 format!("Pack '{}' hash is required", self.id),
             ));
-        }
-
-        #[derive(Serialize)]
-        struct PackHashPayload<'a> {
-            id: &'a str,
-            version: &'a str,
-            semantics_version: &'a str,
-            required_specificity_profile: &'a str,
-            policies: &'a [AuthorityPolicy],
         }
 
         let payload = PackHashPayload {

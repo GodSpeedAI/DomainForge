@@ -448,7 +448,7 @@ fn check_review_coverage(
     }
 }
 
-fn version_increased(old: &str, new: &str) -> Option<bool> {
+pub(crate) fn version_increased(old: &str, new: &str) -> Option<bool> {
     let parse = |s: &str| -> Option<Vec<u32>> {
         s.split('.')
             .map(|p| p.parse::<u32>().ok())

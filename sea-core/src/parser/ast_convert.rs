@@ -375,7 +375,7 @@ impl From<&ast::AstNode> for schema::AstNode {
                 annotations: annotations.clone(),
                 from_entity: from_entity.clone(),
                 to_entity: to_entity.clone(),
-                quantity: *quantity,
+                quantity: quantity.map(|d| d.to_string()),
             },
             ast::AstNode::Pattern { name, regex } => schema::AstNode::Pattern {
                 name: name.clone(),

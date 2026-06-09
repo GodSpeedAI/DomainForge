@@ -6,6 +6,8 @@ use super::diagnostics::{
 use super::resolver::{self, ResolveRequest};
 use super::schema::{ConceptStatus, PackRef, PackSetRef, SemanticPack, SignatureState, SourceRef};
 
+const CURRENT_SCHEMA_VERSION: &str = "0.3";
+
 /// Validate a semantic pack itself (internal consistency).
 pub fn validate_semantic_pack(
     pack: &SemanticPack,
@@ -14,19 +16,19 @@ pub fn validate_semantic_pack(
     let pack_ref = make_pack_ref(pack);
 
     // Schema version check
-    if pack.schema_version != "0.3" {
+    if pack.schema_version != CURRENT_SCHEMA_VERSION {
         diagnostics.push(SemanticDiagnostic {
             code: SemanticDiagnosticCode::PackSchemaMismatch,
             severity: DiagnosticSeverity::Error,
             semantic_truth: SemanticTruth::Invalid,
             message: format!(
-                "Expected schema_version '0.3', got '{}'",
-                pack.schema_version
+                "Expected schema_version '{}', got '{}'",
+                CURRENT_SCHEMA_VERSION, pack.schema_version
             ),
             source_ref: SourceRef::pack_uri(&pack.pack_id),
             pack_ref: pack_ref.clone(),
             suggestions: vec![],
-            recoverability_hint: "Update schema_version to 0.3".to_string(),
+            recoverability_hint: format!("Update schema_version to {}", CURRENT_SCHEMA_VERSION),
         });
     }
 
@@ -203,7 +205,7 @@ pub fn validate_semantic_pack(
 /// Validate a parsed graph against a semantic pack.
 pub fn validate_graph_with_pack(
     pack: &SemanticPack,
-    _source_uri: &str,
+    source_uri: &str,
     options: &ValidationOptions,
 ) -> SemanticValidationResult {
     let pack_ref = make_pack_ref(pack);
@@ -265,7 +267,10 @@ pub fn validate_graph_with_pack(
             merged_pack_hash: pack_ref.pack_content_hash.clone(),
             pack_refs: vec![pack_ref.clone()],
         },
-        input_hash: String::new(),
+        input_hash: canonical_json::hash_canonical_json(&serde_json::json!({
+            "source_uri": source_uri,
+            "pack_id": pack.pack_id,
+        })),
         validation_mode: options.mode,
         expected_hashes: vec![],
         unsigned_fixture_bypass_used: options.allow_unsigned_test_fixtures,

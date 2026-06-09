@@ -97,7 +97,15 @@ pub fn merge_packs(
     }
 
     let pack_refs: Vec<PackRef> = refs.into_iter().map(|(r, _)| r).collect();
-    let merged_hash = compute_merged_hash(&pack_refs);
+    let merged_hash = compute_merged_hash(&pack_refs).map_err(|e| {
+        vec![PackConflict {
+            conflict_type: ConflictType::InvalidPriorityOrder,
+            key: format!("hash computation failed: {}", e),
+            pack_a_id: String::new(),
+            pack_b_id: String::new(),
+            detail: e,
+        }]
+    })?;
     let precedence: Vec<String> = pack_refs.iter().map(|r| r.pack_id.clone()).collect();
 
     Ok(PackSet {
@@ -214,11 +222,11 @@ fn detect_conflicts(packs: &[SemanticPack], refs: &[(PackRef, usize)]) -> Vec<Pa
     conflicts
 }
 
-fn compute_merged_hash(refs: &[PackRef]) -> String {
+fn compute_merged_hash(refs: &[PackRef]) -> Result<String, String> {
     let mut sorted_refs: Vec<serde_json::Value> = refs
         .iter()
-        .map(|r| serde_json::to_value(r).expect("failed to serialize PackRef for hash computation"))
-        .collect();
+        .map(|r| serde_json::to_value(r).map_err(|e| format!("failed to serialize PackRef: {}", e)))
+        .collect::<Result<_, _>>()?;
     sorted_refs.sort_by(|a, b| {
         let a_id = a.get("pack_id").and_then(|v| v.as_str()).unwrap_or("");
         let b_id = b.get("pack_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -228,5 +236,5 @@ fn compute_merged_hash(refs: &[PackRef]) -> String {
         "pack_refs": sorted_refs,
         "conflict_policy": "error_on_conflict"
     });
-    super::canonical_json::hash_canonical_json(&input)
+    Ok(super::canonical_json::hash_canonical_json(&input))
 }

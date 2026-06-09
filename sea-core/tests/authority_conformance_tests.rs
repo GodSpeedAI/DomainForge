@@ -1053,7 +1053,8 @@ fn test_source_class_mismatch_rejected() {
         lineage: None,
     };
 
-    let (_, trust_decisions) = resolver.resolve_trusted_facts(&raw_facts, &[fake_fact]);
+    let (_, trust_decisions) =
+        resolver.resolve_trusted_facts(&raw_facts, &[fake_fact], chrono::Utc::now());
     assert_eq!(trust_decisions.len(), 1);
     assert!(!trust_decisions[0].trusted);
     assert_eq!(trust_decisions[0].reason, "source_class_mismatch");

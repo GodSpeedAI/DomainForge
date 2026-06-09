@@ -94,7 +94,7 @@ graph.addEntity(warehouse);
 graph.addEntity(factory);
 graph.addResource(cameras);
 
-const flow = new Flow(cameras.id(), warehouse.id(), factory.id(), "100");
+const flow = new Flow(cameras.id, warehouse.id, factory.id, "100");
 graph.addFlow(flow);
 
 console.log(`Graph has ${graph.entityCount()} entities`);
@@ -203,7 +203,7 @@ Graph.importCalm(calmJson);
 
 ### Prerequisites
 
-1. **Rust toolchain** (1.77+)
+1. **Rust toolchain** (1.92+)
 2. **wasm-pack**:
    ```bash
    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -215,9 +215,9 @@ Graph.importCalm(calmJson);
 # Quick build
 ./scripts/build-wasm.sh
 
-# Manual build
+# Manual build (output goes to target/wasm-pkg)
 cd sea-core
-wasm-pack build --target web --release --out-dir ../pkg --features wasm
+wasm-pack build --target web --release --out-dir ../target/wasm-pkg --features wasm
 ```
 
 ### Test
@@ -230,9 +230,8 @@ wasm-pack test --headless --firefox --features wasm
 ## Package Structure
 
 ```
-pkg/
+target/wasm-pkg/
 ├── package.json          # npm package metadata
-├── index.js              # JavaScript wrapper with lazy loading
 ├── sea_core.js           # Generated WASM bindings
 ├── sea_core.d.ts         # TypeScript definitions
 └── sea_core_bg.wasm      # Compiled WASM binary
@@ -249,6 +248,28 @@ pkg/
 | `Vec<T>`        | `T[]`           |
 | `HashMap<K, V>` | `object`        |
 
+## Target Environments
+
+The default build uses `--target web`, which produces **browser-first** ES module output. This is the recommended target for web applications and CDNs.
+
+### Node.js
+
+`--target web` output does **not** work directly in Node.js. For Node.js usage, choose one of:
+
+1. **Build with `--target nodejs`**:
+   ```bash
+   cd sea-core
+   wasm-pack build --target nodejs --release --out-dir ../target/wasm-pkg-node --features wasm
+   ```
+
+2. **Import the WASM bytes manually** using a loader like [`@aspect-build/wasm`](https://www.npmjs.com/package/@aspect-build/wasm) or the Node `fs` + `WebAssembly` API:
+   ```javascript
+   import { readFile } from 'node:fs/promises';
+   const { instance } = await WebAssembly.instantiate(
+     await readFile('./node_modules/@domainforge/sea-wasm/sea_core_bg.wasm'),
+   );
+   ```
+
 ## Related Packages
 
 | Package                                                                        | Registry  | Description                  |
@@ -260,8 +281,8 @@ pkg/
 
 ## Documentation
 
-- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/sea-dsl-syntax.md) — Language specification
-- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/architecture.md) — Design overview
+- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/grammar-spec.md) — Language specification
+- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/explanations/architecture-overview.md) — Design overview
 - 📚 [WASM Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/wasm-api.md) — Full WASM API
 
 ## Troubleshooting
@@ -278,7 +299,7 @@ pkg/
 
 ### TypeScript errors
 
-- Ensure `sea_core.d.ts` is present in `pkg/`
+- Ensure `sea_core.d.ts` is present in `target/wasm-pkg/`
 - Check TypeScript version compatibility (4.5+)
 
 ## Policy Authority

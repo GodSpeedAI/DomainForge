@@ -292,8 +292,8 @@ if (decision.finalDecision === FinalDecision.Deny) {
 
 ## Documentation
 
-- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/sea-dsl-syntax.md) — Language specification
-- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/architecture.md) — Design overview
+- 📖 [SEA DSL Guide](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/grammar-spec.md) — Language specification
+- 🏗️ [Architecture](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/explanations/architecture-overview.md) — Design overview
 - 📚 [API Reference](https://github.com/GodSpeedAI/DomainForge/blob/main/docs/reference/typescript-api.md) — Full TypeScript API
 
 ## License

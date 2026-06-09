@@ -175,6 +175,8 @@ pub fn run(args: ProjectArgs) -> Result<()> {
 
                 for (rel_path, proto) in &files {
                     let abs_path = args.output.join(rel_path);
+                    crate::projection::protobuf::validate_output_path(&args.output, &abs_path)
+                        .map_err(|e| anyhow::anyhow!("{}", e))?;
                     if let Some(parent) = abs_path.parent() {
                         std::fs::create_dir_all(parent)?;
                     }

@@ -367,7 +367,7 @@ impl NamespaceRegistry {
         for entry in &self.entries {
             for pattern in &entry.patterns {
                 let walker = GlobWalkerBuilder::from_patterns(&self.root, &[pattern.as_str()])
-                    .follow_links(true)
+                    .follow_links(false)
                     .file_type(globwalk::FileType::FILE)
                     .build()
                     .map_err(|err| RegistryError::InvalidGlob {

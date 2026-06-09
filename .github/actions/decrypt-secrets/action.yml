@@ -28,14 +28,17 @@ runs:
         case "$RUNNER_OS" in
           Linux)
             SOPS_BINARY="sops-v${SOPS_VERSION}.linux.amd64"
+            SOPS_SHA256="5488e32bc471de7982ad895dd054bbab3ab91c417a118426134551e9626e4e85"
             SOPS_EXT=""
             ;;
           macOS)
             SOPS_BINARY="sops-v${SOPS_VERSION}.darwin.amd64"
+            SOPS_SHA256="f48d73efc278326e54d0e6a056b285fd8f5f28549b19aff9b0fedbbdd846b20c"
             SOPS_EXT=""
             ;;
           Windows)
             SOPS_BINARY="sops-v${SOPS_VERSION}.exe"
+            SOPS_SHA256="bee270926fc55b5b89ed9ce87fb2569a36c74e99d63e6392090b3d0f0c2775eb"
             SOPS_EXT=".exe"
             ;;
           *)
@@ -43,22 +46,46 @@ runs:
             exit 1
             ;;
         esac
-        curl -sSLo "sops${SOPS_EXT}" "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/${SOPS_BINARY}"
-        chmod +x "sops${SOPS_EXT}"
         
-        # Use different paths for Windows vs Unix
+        DOWNLOAD_DIR="$RUNNER_TEMP/sops-download"
+        mkdir -p "$DOWNLOAD_DIR"
+        curl -sSLo "$DOWNLOAD_DIR/sops${SOPS_EXT}" "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/${SOPS_BINARY}"
+        
+        if command -v sha256sum >/dev/null 2>&1; then
+          ACTUAL_SHA256=$(sha256sum "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1)
+        elif command -v shasum >/dev/null 2>&1; then
+          ACTUAL_SHA256=$(shasum -a 256 "$DOWNLOAD_DIR/sops${SOPS_EXT}" | cut -d' ' -f1)
+        else
+          echo "::error::No SHA256 tool available on runner"
+          rm -f "$DOWNLOAD_DIR/sops${SOPS_EXT}"
+          exit 1
+        fi
+        if [ -z "$ACTUAL_SHA256" ]; then
+          echo "::error::SHA256 calculation failed for sops binary"
+          rm -f "$DOWNLOAD_DIR/sops${SOPS_EXT}"
+          exit 1
+        fi
+        if [ "$ACTUAL_SHA256" != "$SOPS_SHA256" ]; then
+          echo "::error::SHA256 mismatch for sops binary. Expected: $SOPS_SHA256, Got: $ACTUAL_SHA256"
+          rm -f "$DOWNLOAD_DIR/sops${SOPS_EXT}"
+          exit 1
+        fi
+        echo "SHA256 verified: $ACTUAL_SHA256"
+        chmod +x "$DOWNLOAD_DIR/sops${SOPS_EXT}"
+        
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           mkdir -p "$RUNNER_TEMP/bin"
-          mv "sops${SOPS_EXT}" "$RUNNER_TEMP/bin/sops${SOPS_EXT}"
+          mv "$DOWNLOAD_DIR/sops${SOPS_EXT}" "$RUNNER_TEMP/bin/sops${SOPS_EXT}"
           echo "$RUNNER_TEMP/bin" >> $GITHUB_PATH
           "$RUNNER_TEMP/bin/sops${SOPS_EXT}" --version
         else
           mkdir -p $HOME/.local/bin
-          mv sops $HOME/.local/bin/sops
+          mv "$DOWNLOAD_DIR/sops" $HOME/.local/bin/sops
           chmod +x $HOME/.local/bin/sops
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           $HOME/.local/bin/sops --version
         fi
+        rm -rf "$DOWNLOAD_DIR"
 
     - name: Decrypt secrets
       id: extract

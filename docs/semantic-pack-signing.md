@@ -64,6 +64,8 @@ Options:
 | `--key`       | Path to the Ed25519 private key (PEM format). |
 | `--out`       | (Optional) Output path for the signed pack.   |
 
+When `--out` is omitted, the signed pack is written to stdout. To overwrite the input file in-place, use `--out <pack-path>` (back up the original first).
+
 The command reads the pack, computes the content hash, signs the payload, and writes the signed pack with the `trust` fields updated:
 
 ```json

@@ -110,6 +110,7 @@ impl FactResolver {
         &self,
         raw_facts: &[FactEnvelope],
         provided_trusted: &[FactEnvelope],
+        now: chrono::DateTime<Utc>,
     ) -> (Vec<FactEnvelope>, Vec<FactTrustDecision>) {
         let mut resolved = raw_facts.to_vec();
         let mut trust_decisions = Vec::new();
@@ -190,7 +191,6 @@ impl FactResolver {
                 continue;
             }
 
-            let now = Utc::now();
             if !fact.is_fresh(now) {
                 trust_decisions.push(FactTrustDecision {
                     fact_path: fact.path.clone(),

@@ -17,7 +17,6 @@ bun.lockb
 .bun/
 
 # napi / native module build outputs
-sea-core/target/
 target/
 **/target/
 *.so
@@ -34,8 +33,6 @@ __pycache__/
 htmlcov/
 .coverage
 coverage.xml
-dist/
-build/
 eggs/
 *.egg-info/
 .maturin/
@@ -49,52 +46,22 @@ wheels/
 *.whl
 
 # WASM build outputs (wasm-pack)
-pkg/*.wasm
-pkg/*.wasm.gz
-pkg/*.wasm.map
+pkg/
+sea-core/pkg/
+
+# Release archives
+/sea*.tar.gz
+release-*.sh
+
+# Logs
+.logs/
+*.log
 
 # IDEs and editors
 .vscode/
 .idea/
 *.sublime-workspace
 *.sublime-project
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Temporary / cache
-.cache/
-npm-debug.log*
-
-# Misc
-coverage/
-.pytest_cache/
-
-
-# Auto-generated entries
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build outputs
-dist/
-build/
-*.log
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# IDE files
-.vscode/
-.idea/
 *.swp
 *.swo
 
@@ -102,32 +69,36 @@ build/
 .DS_Store
 Thumbs.db
 
-# Temporary files
+# Temporary / cache
+.cache/
 *.tmp
 *.temp
-.cache/
+*.bak
 
-# Sensitive files (auto-detected)
+# Environment files
+.env.*
+!.env.example
+
+# Sensitive files
 node_modules
 
 # Workspace
-*.bak
 *.bak.coderabbit.yml
-#docs/plans/
 /docs/archive/
+/docs/archives/
 
 # Secrets: keep unencrypted templates local; allow encrypted secrets.yaml to be committed
 secrets/*.template.yaml
 secrets/*.unencrypted.yaml
-# NOTE: secrets/secrets.yaml is sops-encrypted and safe to commit
 
 # Ignore CodeRabbit review output and docs archives
 /tmp/coderabbit_results.md
-/docs/archives/
 
-# Generated release scripts (from just release-preview)
-release-*.sh
+# Scratch/fix scripts (not part of release)
+fix_*.py
 
+# Coverage
+coverage/
 
-# Agent files
+# Agent working files
 .agent/
