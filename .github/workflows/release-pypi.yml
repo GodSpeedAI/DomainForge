@@ -50,6 +50,9 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
+      - name: Ensure Rust target is installed
+        run: rustup target add ${{ matrix.target }}
+
       - name: Install maturin
         run: pip install maturin==1.10.1
 
