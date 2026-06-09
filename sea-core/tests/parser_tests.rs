@@ -386,6 +386,22 @@ fn test_ast_to_graph_duplicate_resource_error() {
 }
 
 #[test]
+fn test_parse_to_graph_reports_ambiguous_unqualified_entity_reference() {
+    let source = r#"
+        Entity "Warehouse" in east
+        Entity "Warehouse" in west
+        Resource "Camera" units
+        Flow "Camera" from "Warehouse" to "Warehouse"
+    "#;
+
+    let error = parse_to_graph(source).expect_err("expected ambiguous reference error");
+    assert_eq!(
+        error.to_string(),
+        "Validation error: Ambiguous reference 'Warehouse' found in namespaces: east, west"
+    );
+}
+
+#[test]
 fn test_parse_to_graph_with_options_overrides_namespace() {
     let source = r#"
         Entity "Warehouse"

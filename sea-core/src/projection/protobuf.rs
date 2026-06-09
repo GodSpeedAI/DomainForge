@@ -1336,7 +1336,6 @@ impl ProtobufEngine {
     /// ```
     pub fn flows_to_services(graph: &Graph, namespace: &str) -> Vec<ProtoService> {
         let mut services: BTreeMap<String, ProtoService> = BTreeMap::new();
-        let mut response_types: HashSet<String> = HashSet::new();
 
         for flow in graph.all_flows() {
             if !namespace.is_empty() && flow.namespace() != namespace {
@@ -1357,8 +1356,6 @@ impl ProtobufEngine {
             let method_name = format!("Process{}", sanitize_proto_ident(resource.name()));
             let request_type = sanitize_proto_ident(resource.name());
             let response_type = format!("{}Response", sanitize_proto_ident(resource.name()));
-
-            response_types.insert(response_type.clone());
 
             let streaming = flow
                 .get_attribute("streaming")
@@ -1788,10 +1785,14 @@ pub fn validate_output_path(output_root: &Path, target: &Path) -> Result<(), Str
             target.display()
         )
     })?;
-    if rel.components().any(|c| matches!(
-        c,
-        std::path::Component::ParentDir | std::path::Component::RootDir | std::path::Component::Prefix(_)
-    )) {
+    if rel.components().any(|c| {
+        matches!(
+            c,
+            std::path::Component::ParentDir
+                | std::path::Component::RootDir
+                | std::path::Component::Prefix(_)
+        )
+    }) {
         return Err(format!(
             "Security: output path '{}' escapes output directory",
             target.display()

@@ -2196,21 +2196,34 @@ fn resolve_by_name(
     map: &HashMap<(String, String), crate::ConceptId>,
     name: &str,
     default_namespace: &str,
-) -> Option<crate::ConceptId> {
+) -> Result<Option<crate::ConceptId>, ParseError> {
     // Try exact match in default namespace first
     if let Some(id) = map.get(&(default_namespace.to_string(), name.to_string())) {
-        return Some(id.clone());
+        return Ok(Some(id.clone()));
     }
     // Fall back to any namespace with this name
-    let matches: Vec<&crate::ConceptId> = map
+    let matches: Vec<(&str, &crate::ConceptId)> = map
         .iter()
         .filter(|((_, n), _)| n == name)
-        .map(|(_, id)| id)
+        .map(|((namespace, _), id)| (namespace.as_str(), id))
         .collect();
     if matches.len() == 1 {
-        return Some(matches[0].clone());
+        return Ok(Some(matches[0].1.clone()));
     }
-    None
+    if matches.len() > 1 {
+        let mut namespaces: Vec<&str> = matches
+            .into_iter()
+            .map(|(namespace, _)| namespace)
+            .collect();
+        namespaces.sort_unstable();
+        namespaces.dedup();
+        return Err(ParseError::Validation(format!(
+            "Ambiguous reference '{}' found in namespaces: {}",
+            name,
+            namespaces.join(", ")
+        )));
+    }
+    Ok(None)
 }
 
 /// Convert AST to Graph
@@ -2463,13 +2476,13 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
             ..
         } = node
         {
-            let from_id = resolve_by_name(&entity_map, from_entity, &default_namespace)
+            let from_id = resolve_by_name(&entity_map, from_entity, &default_namespace)?
                 .ok_or_else(|| ParseError::undefined_entity_no_loc(from_entity))?;
 
-            let to_id = resolve_by_name(&entity_map, to_entity, &default_namespace)
+            let to_id = resolve_by_name(&entity_map, to_entity, &default_namespace)?
                 .ok_or_else(|| ParseError::undefined_entity_no_loc(to_entity))?;
 
-            let resource_id = resolve_by_name(&resource_map, resource_name, &default_namespace)
+            let resource_id = resolve_by_name(&resource_map, resource_name, &default_namespace)?
                 .ok_or_else(|| ParseError::undefined_resource_no_loc(resource_name))?;
 
             let qty = quantity.unwrap_or(Decimal::ZERO);
@@ -2505,19 +2518,19 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 )));
             }
 
-            let subject_id = resolve_by_name(&role_map, subject_role, &default_namespace)
+            let subject_id = resolve_by_name(&role_map, subject_role, &default_namespace)?
                 .ok_or_else(|| {
                     ParseError::GrammarError(format!("Undefined subject role '{}'", subject_role))
                 })?;
 
-            let object_id = resolve_by_name(&role_map, object_role, &default_namespace)
+            let object_id = resolve_by_name(&role_map, object_role, &default_namespace)?
                 .ok_or_else(|| {
                     ParseError::GrammarError(format!("Undefined object role '{}'", object_role))
                 })?;
 
             let via_flow_id = if let Some(flow_name) = via_flow {
                 Some(
-                    resolve_by_name(&resource_map, flow_name, &default_namespace)
+                    resolve_by_name(&resource_map, flow_name, &default_namespace)?
                         .ok_or_else(|| ParseError::undefined_resource_no_loc(flow_name))?,
                 )
             } else {
