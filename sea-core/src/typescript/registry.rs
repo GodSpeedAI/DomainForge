@@ -46,7 +46,7 @@ impl NamespaceRegistry {
     }
 
     #[napi]
-    pub fn discover(path: String) -> Result<Option<Self>> {
+    pub fn discover(path: String) -> Result<Option<NamespaceRegistry>> {
         let res = RustRegistry::discover(Path::new(&path))
             .map_err(|e| Error::from_reason(format!("{}", e)))?;
         Ok(res.map(|r| NamespaceRegistry { inner: r }))

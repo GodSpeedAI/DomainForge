@@ -38,6 +38,17 @@ jobs:
       - name: Build napi package
         run: npm run build
 
+      - name: Patch generated TypeScript declarations
+        run: python3 scripts/patch_napi_types.py
+
+      - name: Smoke test npm pack
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/npm-pack-output.txt
+          grep -q "index.d.ts" /tmp/npm-pack-output.txt || { echo "ERROR: index.d.ts missing from pack"; exit 1; }
+          grep -q "index.js" /tmp/npm-pack-output.txt || { echo "ERROR: index.js missing from pack"; exit 1; }
+          grep -q "sea-core.*.node" /tmp/npm-pack-output.txt || { echo "ERROR: native .node binary missing from pack"; exit 1; }
+          echo "npm pack smoke test passed"
+
       - name: Check if already published
         run: |
           if npm view "@domainforge/sea@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
@@ -82,6 +93,15 @@ jobs:
         run: |
           cd sea-core
           wasm-pack build --target web --release --scope domainforge -- --features wasm
+
+      - name: WASM smoke test
+        run: |
+          cd sea-core/pkg
+          for f in sea_core.js sea_core.d.ts sea_core_bg.wasm sea_core_bg.wasm.d.ts package.json; do
+            test -f "$f" || { echo "ERROR: missing $f in WASM pkg"; exit 1; }
+          done
+          node -e "const p=require('./package.json'); ['name','version','main','types'].forEach(k => { if(!p[k]) throw new Error('Missing field: ' + k) })"
+          echo "WASM smoke test passed"
 
       - name: Check if WASM already published
         run: |

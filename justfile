@@ -107,8 +107,21 @@ python-clean:
     if [ -d .venv ]; then rm -rf .venv || true; fi
 
 audit:
-    cargo audit 2>/dev/null || echo "cargo-audit: advisory DB not available, skipping"
-    cargo deny check 2>/dev/null || echo "cargo-deny: not installed, skipping"
+    cargo audit
+    cargo deny check
+
+smoke-test-npm:
+    @echo "Running npm pack smoke test..."
+    npm pack --dry-run 2>&1 | grep -E "index\.(js|d\.ts)|sea-core.*\.node|README\.md|LICENSE" || { echo "ERROR: npm pack missing expected files"; exit 1; }
+    @echo "npm pack smoke test passed"
+
+smoke-test-wasm:
+    @echo "Running WASM pkg smoke test..."
+    test -d target/wasm-pkg || { echo "ERROR: WASM pkg not built. Run scripts/build-wasm.sh first"; exit 1; }
+    for f in sea_core.js sea_core.d.ts sea_core_bg.wasm sea_core_bg.wasm.d.ts package.json; do \
+        test -f target/wasm-pkg/$$f || { echo "ERROR: missing $$f"; exit 1; }; \
+    done
+    @echo "WASM smoke test passed"
 
 enterprise-verify:
     #!/usr/bin/env bash

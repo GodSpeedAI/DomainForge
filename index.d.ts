@@ -313,7 +313,7 @@ export declare class Expression {
   /** Create an aggregation expression (e.g., COUNT(items)). */
   static aggregation(aggregateFunction: AggregateFunction, collection: Expression, field?: string | undefined | null, filter?: Expression | undefined | null): Expression
   /** Create an aggregation comprehension expression. */
-  static aggregationComprehension(function: AggregateFunction, variable: string, collection: Expression, predicate: Expression, projection: Expression, window?: WindowSpec | undefined | null, targetUnit?: string | undefined | null): Expression
+  static aggregationComprehension(aggregateFunction: AggregateFunction, variable: string, collection: Expression, predicate: Expression, projection: Expression, window?: WindowSpec | undefined | null, targetUnit?: string | undefined | null): Expression
   /** Create a group-by expression. */
   static groupBy(variable: string, collection: Expression, key: Expression, condition: Expression, filter?: Expression | undefined | null): Expression
   /** Normalize this expression to canonical form. */

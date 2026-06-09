@@ -5,8 +5,8 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "napi build --platform --release --cargo-cwd sea-core --features typescript,three_valued_logic",
-    "build:debug": "napi build --platform --cargo-cwd sea-core --features typescript,three_valued_logic",
+    "build": "napi build --platform --release --cargo-cwd sea-core --features typescript,three_valued_logic && python3 scripts/patch_napi_types.py",
+    "build:debug": "napi build --platform --cargo-cwd sea-core --features typescript,three_valued_logic && python3 scripts/patch_napi_types.py",
     "test": "bun vitest run",
     "test:watch": "bun vitest",
     "test:node": "npx vitest run",
