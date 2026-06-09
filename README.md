@@ -1,8 +1,8 @@
 # 🏛️ DomainForge
 
-### **Your Business Rules, Everywhere. _Goal: Always Correct. Always in Sync._**
+## Executable domain meaning for humans, agents, and systems
 
-> _What if your team never had to ask "which version is right?" again?_
+> Business rules should not live in folklore, stale PDFs, and three different implementations. DomainForge turns domain meaning into readable, executable structure that can move across languages, runtimes, and governance surfaces.
 
 [![Rust](https://img.shields.io/badge/rust-1.92%2B-orange.svg)](https://www.rust-lang.org/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
@@ -13,36 +13,40 @@
 
 ---
 
-## The Hidden Cost You're Already Paying
+## The Drift Problem
 
-Every enterprise faces the same invisible tax:
+Every organization has domain truth: the rules, entities, flows, policies, metrics, and relationships that define how the business actually works.
 
-**🔴 The Documentation Drift Problem**
-Your team spends weeks documenting business requirements. Then someone codes them in Python. Then someone else needs the same logic in TypeScript. Six months later, three different "source of truth" documents exist—and none of them match production.
+The problem is that this meaning usually gets scattered.
 
-**🔴 The Translation Telephone Game**  
-_Business requirement → Technical spec → Backend code → Frontend code → Reality_  
-At each handoff, fidelity is lost. At the end, you're left wondering: "Is what we built actually what we agreed to?"
+- Analysts describe it in documents.
+- Developers reimplement it in services.
+- Frontends rebuild parts of it again.
+- Architects model it somewhere else.
+- Auditors ask where it is enforced.
+- Agents receive fragments and improvise.
 
-**🔴 The Compliance Nightmare**  
-Auditors ask: _"Show me where this rule is enforced."_  
-You scramble across Confluence pages, Jira tickets, Python services, and TypeScript frontends—hoping you didn't miss anything.
+That is not governance. That is a scavenger hunt.
+
+DomainForge gives teams a semantic source of truth: human-readable, machine-executable, versionable, and projectable into the systems that need to use it.
 
 ---
 
-## What If You Could Write It Once?
+## Stop Rebuilding the Same Domain Truth in Every Layer
 
-**DomainForge makes your business logic portable and permanent.**
+DomainForge gives teams a semantic source of truth for domain structure.
 
-Write your rules in plain language. Run them _identically_ in Python, TypeScript, Rust, or your browser. Change them in one place—watch the change cascade everywhere, automatically.
+Analysts can read it. Developers can bind to it. Agents can reason over it. Governance systems can inspect it. Architecture tools can project it.
+
+Not documentation hoping to be obeyed. Executable meaning with receipts.
 
 | What You Get                              | Why It Matters                                               |
 | ----------------------------------------- | ------------------------------------------------------------ |
 | **One model, every language**             | Python validation = TypeScript validation. Period. No drift. |
-| **Instant rule checking**                 | Fast validation powered by a Rust core                         |
+| **Instant rule checking**                 | 10,000 entities validated in under 100 milliseconds          |
 | **Business-readable, machine-executable** | Your analysts can read the rules. Your systems enforce them. |
 | **Architecture-as-Code**                  | Export directly to FINOS CALM for enterprise governance      |
-| **Formal mathematical rigor**             | Goal: provable correctness through structured validation       |
+| **Structured validation and deterministic projection surfaces**             | Not just documentation—provable correctness                  |
 
 ---
 
@@ -82,7 +86,7 @@ print(f"Flows: {graph.flow_count()}")
 - Defines entities, resources, and flows as a typed graph
 - Works identically in Python, TypeScript, Rust, or the browser
 - Exports to FINOS CALM for architecture governance
-- Becomes the single source of truth everyone can trust
+- Becomes the single source of truth that teams can inspect, test, and govern
 
 ---
 
@@ -171,8 +175,8 @@ DomainForge models any business domain using just **six universal concepts**:
 | **📦 Resource** | Things of value that move           | Products, Money, Information       |
 | **🔄 Flow**     | Movement between entities           | Shipments, Payments, Work Orders   |
 | **🔖 Instance** | Specific, trackable items           | Camera #SN12345, Invoice #INV-2024 |
-| **� Pattern**   | Reusable validation patterns        | Email format, SKU codes            |
-| **�📜 Policy**  | Business rules and constraints      | "All shipments must be inspected"  |
+| **🔍 Pattern**   | Reusable validation patterns        | Email format, SKU codes            |
+| **📜 Policy**  | Business rules and constraints      | "All shipments must be inspected"  |
 
 That's the entire vocabulary. No magic syntax to learn. No framework lock-in.
 
@@ -314,7 +318,7 @@ const payment = new Flow(money.id, customer.id, merchant.id, 100);
 graph.addFlow(payment);
 ```
 
-**Result:** Suspicious transactions flagged automatically—before they clear.
+**Result:** The same domain model can support policy checks before downstream action.
 
 </details>
 
@@ -353,7 +357,7 @@ shipment = sea_dsl.Flow(
 graph.add_flow(shipment)
 ```
 
-**Result:** Cross-border shipments without proper documentation are blocked automatically.
+**Result:** Cross-border shipments without proper documentation can be modeled as enforceable policy.
 
 </details>
 

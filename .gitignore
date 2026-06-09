@@ -101,4 +101,4 @@ fix_*.py
 coverage/
 
 # Agent working files
-.agent/
+.agents/
