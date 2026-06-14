@@ -1,0 +1,5 @@
+Resource "Money" units
+Entity "Alice"
+Entity "Bob"
+Flow "Money" from "Alice" to "Bob" quantity 10
+policy MoneyCap per Constraint Obligation priority 1 as: forall f in flows: (f.quantity <= 100)

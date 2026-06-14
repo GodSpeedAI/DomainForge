@@ -42,6 +42,41 @@ pub struct Policy {
     cached_normalized_expr: std::sync::OnceLock<super::NormalizedExpression>,
 }
 
+/// Records which logic mode produced an [`EvaluationResult`].
+///
+/// Three-valued logic is the **canonical** semantics for the standard layer:
+/// every downstream consumer should treat [`EvaluationMode::ThreeValued`] as
+/// authoritative. [`EvaluationMode::Boolean`] exists only for backward
+/// compatibility and collapses NULL to `false`; it is recorded on every result
+/// so the result is always self-describing about how it was derived (closing the
+/// G1/G7 "two meanings for one model" gap from the semantic-infrastructure audit).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum EvaluationMode {
+    /// Canonical Kleene three-valued logic (True / False / NULL).
+    #[default]
+    ThreeValued,
+    /// Backward-compatible boolean logic (NULL coerced to `false`).
+    Boolean,
+}
+
+impl EvaluationMode {
+    /// Stable string identifier used in canonical JSON output.
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            EvaluationMode::ThreeValued => "three_valued",
+            EvaluationMode::Boolean => "boolean",
+        }
+    }
+}
+
+impl std::fmt::Display for EvaluationMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvaluationResult {
     /// Backwards compatible boolean representing whether a policy was satisfied.
@@ -49,6 +84,10 @@ pub struct EvaluationResult {
     pub is_satisfied: bool,
     /// Tri-state evaluation result: Some(true/false) or None when evaluation is unknown.
     pub is_satisfied_tristate: Option<bool>,
+    /// Which logic mode produced this result. Three-valued is canonical; boolean
+    /// mode is recorded so a NULL-collapsing result is never silently ambiguous.
+    #[serde(default)]
+    pub evaluation_mode: EvaluationMode,
     pub violations: Vec<Violation>,
 }
 
@@ -204,6 +243,12 @@ impl Policy {
 
         let is_satisfied = is_satisfied_tristate.unwrap_or(false);
 
+        let evaluation_mode = if use_three_valued_logic {
+            EvaluationMode::ThreeValued
+        } else {
+            EvaluationMode::Boolean
+        };
+
         let violations = if is_satisfied_tristate == Some(true) {
             vec![]
         } else if is_satisfied_tristate == Some(false) {
@@ -224,6 +269,7 @@ impl Policy {
         Ok(EvaluationResult {
             is_satisfied,
             is_satisfied_tristate,
+            evaluation_mode,
             violations,
         })
     }

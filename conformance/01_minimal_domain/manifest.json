@@ -1,0 +1,6 @@
+{
+  "description": "Minimal payment domain: 2 entities, 1 resource, 1 flow, 1 relation. Pins the canonical graph JSON (flow IDs normalized).",
+  "command": "parse",
+  "input": "input.sea",
+  "expected": "expected/graph.json"
+}

@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "343d1dc6-a022-532f-929a-5fc9d5065f39": {
+      "id": "343d1dc6-a022-532f-929a-5fc9d5065f39",
+      "name": "Vendor",
+      "namespace": "procurement",
+      "version": {
+        "major": 1,
+        "minor": 0,
+        "patch": 0
+      },
+      "replaces": null,
+      "changes": [],
+      "attributes": {}
+    },
+    "bf3c9fb0-ed00-5d65-86d0-bf87999cc43d": {
+      "id": "bf3c9fb0-ed00-5d65-86d0-bf87999cc43d",
+      "name": "VendorV2",
+      "namespace": "procurement",
+      "version": {
+        "major": 2,
+        "minor": 0,
+        "patch": 0
+      },
+      "replaces": "Vendor v1.0.0",
+      "changes": [
+        "added credit_limit field"
+      ],
+      "attributes": {}
+    }
+  },
+  "roles": {},
+  "resources": {},
+  "flows": {},
+  "relations": {},
+  "instances": {},
+  "entity_instances": {},
+  "policies": {},
+  "patterns": {},
+  "concept_changes": {
+    "3767da48-7cd9-5003-92e8-bf6a11dc6284": {
+      "id": "3767da48-7cd9-5003-92e8-bf6a11dc6284",
+      "name": "Vendor_v1_to_v2",
+      "from_version": "1.0.0",
+      "to_version": "2.0.0",
+      "migration_policy": "mandatory",
+      "breaking_change": true
+    }
+  },
+  "metrics": {},
+  "mappings": {},
+  "projections": {},
+  "entity_roles": {},
+  "config": {
+    "use_three_valued_logic": true
+  }
+}

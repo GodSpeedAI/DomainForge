@@ -1,0 +1,6 @@
+{
+  "description": "Resource measured in kg, policy threshold expressed in g (cross-unit comparison). Pins current behavior (cross-unit quantity-literal comparison yields NULL).",
+  "command": "validate",
+  "input": "input.sea",
+  "expected": "expected/validate.json"
+}

@@ -1,0 +1,26 @@
+{
+  "error_count": 1,
+  "evaluation_mode": "three_valued",
+  "policies": [
+    {
+      "evaluation_mode": "three_valued",
+      "is_satisfied": false,
+      "is_satisfied_tristate": null,
+      "kind": "constraint",
+      "modality": "obligation",
+      "name": "Ordered",
+      "namespace": "default",
+      "violations": [
+        "Policy 'Ordered' evaluation is UNKNOWN (NULL)"
+      ]
+    }
+  ],
+  "violations": [
+    {
+      "context": {},
+      "message": "Policy 'Ordered' evaluation is UNKNOWN (NULL)",
+      "policy_name": "Ordered",
+      "severity": "error"
+    }
+  ]
+}

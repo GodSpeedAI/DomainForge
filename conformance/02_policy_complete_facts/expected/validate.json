@@ -1,0 +1,17 @@
+{
+  "error_count": 0,
+  "evaluation_mode": "three_valued",
+  "policies": [
+    {
+      "evaluation_mode": "three_valued",
+      "is_satisfied": true,
+      "is_satisfied_tristate": true,
+      "kind": "constraint",
+      "modality": "obligation",
+      "name": "MoneyCap",
+      "namespace": "default",
+      "violations": []
+    }
+  ],
+  "violations": []
+}

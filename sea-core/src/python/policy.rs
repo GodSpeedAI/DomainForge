@@ -584,6 +584,9 @@ pub struct EvaluationResult {
     /// Tri-state evaluation result: True, False, or None (NULL)
     #[pyo3(get)]
     pub is_satisfied_tristate: Option<bool>,
+    /// Logic mode that produced this result ("three_valued" is canonical, "boolean" is legacy)
+    #[pyo3(get)]
+    pub evaluation_mode: String,
     /// List of violations
     #[pyo3(get)]
     pub violations: Vec<Violation>,
@@ -606,6 +609,7 @@ impl From<crate::policy::EvaluationResult> for EvaluationResult {
         Self {
             is_satisfied: result.is_satisfied,
             is_satisfied_tristate: result.is_satisfied_tristate,
+            evaluation_mode: result.evaluation_mode.as_str().to_string(),
             violations: result.violations.into_iter().map(|v| v.into()).collect(),
         }
     }

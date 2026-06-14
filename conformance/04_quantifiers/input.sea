@@ -1,0 +1,7 @@
+Resource "Money" units
+Entity "Alice"
+Entity "Bob"
+Flow "Money" from "Alice" to "Bob" quantity 10
+policy VacuousForall as: forall i in instances: (i.amount <= 1)
+policy ExistsNull as: exists f in flows: (f.category = "premium")
+policy ExistsUniqueFlow as: exists_unique f in flows: (f.quantity >= 0)

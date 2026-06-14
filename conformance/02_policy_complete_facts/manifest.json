@@ -1,0 +1,6 @@
+{
+  "description": "Obligation 'every Flow of Money <= 100' with all facts present. Expect tristate true, zero violations, mode three_valued.",
+  "command": "validate",
+  "input": "input.sea",
+  "expected": "expected/validate.json"
+}

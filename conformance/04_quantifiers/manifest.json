@@ -1,0 +1,6 @@
+{
+  "description": "Quantifier edge cases: vacuous forall over empty collection (True), exists over a NULL-only element (Null), exists_unique. Pins actual three-valued behavior.",
+  "command": "validate",
+  "input": "input.sea",
+  "expected": "expected/validate.json"
+}

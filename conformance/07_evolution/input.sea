@@ -1,0 +1,12 @@
+Entity "Vendor" v1.0.0 in procurement
+
+Entity "VendorV2" v2.0.0
+  @replaces "Vendor" v1.0.0
+  @changes ["added credit_limit field"]
+  in procurement
+
+ConceptChange "Vendor_v1_to_v2"
+  @from_version v1.0.0
+  @to_version v2.0.0
+  @migration_policy mandatory
+  @breaking_change true

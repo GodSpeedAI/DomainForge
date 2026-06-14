@@ -1,0 +1,5 @@
+Resource "Mass" kg
+Entity "Alice"
+Entity "Bob"
+Flow "Mass" from "Alice" to "Bob" quantity 2
+policy MassCap as: forall f in flows: (f.quantity <= 5000 "g")

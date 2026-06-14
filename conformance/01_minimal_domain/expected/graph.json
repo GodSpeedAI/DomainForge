@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "b97da0ff-3afb-5273-9de3-7ffff69110bc": {
+      "id": "b97da0ff-3afb-5273-9de3-7ffff69110bc",
+      "name": "Alice",
+      "namespace": "default",
+      "version": null,
+      "replaces": null,
+      "changes": [],
+      "attributes": {}
+    },
+    "cee3fcd3-7736-5a39-a0b2-0a8052fe9958": {
+      "id": "cee3fcd3-7736-5a39-a0b2-0a8052fe9958",
+      "name": "Bob",
+      "namespace": "default",
+      "version": null,
+      "replaces": null,
+      "changes": [],
+      "attributes": {}
+    }
+  },
+  "roles": {
+    "93b2b42a-d806-5f0b-acdc-69a0ac7a0620": {
+      "id": "93b2b42a-d806-5f0b-acdc-69a0ac7a0620",
+      "name": "Payer",
+      "namespace": "default",
+      "attributes": {}
+    },
+    "97f85b1b-0a09-5831-8801-ad06367536cc": {
+      "id": "97f85b1b-0a09-5831-8801-ad06367536cc",
+      "name": "Payee",
+      "namespace": "default",
+      "attributes": {}
+    }
+  },
+  "resources": {
+    "8b660042-c726-58a2-b954-61f587d47cdd": {
+      "id": "8b660042-c726-58a2-b954-61f587d47cdd",
+      "name": "Money",
+      "unit": {
+        "symbol": "units",
+        "name": "units",
+        "dimension": "Count",
+        "base_factor": "1",
+        "base_unit": "units"
+      },
+      "namespace": "default",
+      "attributes": {}
+    }
+  },
+  "flows": {
+    "0710b35e-e9c8-401f-a83c-5b67d23d16b3": {
+      "id": "0710b35e-e9c8-401f-a83c-5b67d23d16b3",
+      "resource_id": "8b660042-c726-58a2-b954-61f587d47cdd",
+      "from_id": "b97da0ff-3afb-5273-9de3-7ffff69110bc",
+      "to_id": "cee3fcd3-7736-5a39-a0b2-0a8052fe9958",
+      "quantity": "10",
+      "namespace": "default",
+      "attributes": {}
+    }
+  },
+  "relations": {
+    "57ba1c0e-957b-5910-a85e-ff8f393f3547": {
+      "id": "57ba1c0e-957b-5910-a85e-ff8f393f3547",
+      "name": "Payment",
+      "namespace": "default",
+      "subject_role": "93b2b42a-d806-5f0b-acdc-69a0ac7a0620",
+      "predicate": "pays",
+      "object_role": "97f85b1b-0a09-5831-8801-ad06367536cc",
+      "via_flow": "8b660042-c726-58a2-b954-61f587d47cdd"
+    }
+  },
+  "instances": {},
+  "entity_instances": {},
+  "policies": {},
+  "patterns": {},
+  "concept_changes": {},
+  "metrics": {},
+  "mappings": {},
+  "projections": {},
+  "entity_roles": {},
+  "config": {
+    "use_three_valued_logic": true
+  }
+}

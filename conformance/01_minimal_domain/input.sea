@@ -1,0 +1,15 @@
+Role "Payer"
+Role "Payee"
+
+Resource "Money" units
+
+Entity "Alice"
+Entity "Bob"
+
+Flow "Money" from "Alice" to "Bob" quantity 10
+
+Relation "Payment"
+  subject: "Payer"
+  predicate: "pays"
+  object: "Payee"
+  via: flow "Money"

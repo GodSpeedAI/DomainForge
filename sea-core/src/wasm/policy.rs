@@ -591,6 +591,10 @@ pub struct EvaluationResult {
     #[wasm_bindgen(readonly, js_name = isSatisfiedTristate)]
     pub is_satisfied_tristate: Option<bool>,
 
+    /// Logic mode that produced this result ("three_valued" is canonical, "boolean" is legacy)
+    #[wasm_bindgen(readonly, js_name = evaluationMode)]
+    pub evaluation_mode: String,
+
     /// List of violations
     #[wasm_bindgen(readonly)]
     pub violations: Vec<Violation>,
@@ -601,6 +605,7 @@ impl From<crate::policy::EvaluationResult> for EvaluationResult {
         Self {
             is_satisfied: result.is_satisfied,
             is_satisfied_tristate: result.is_satisfied_tristate,
+            evaluation_mode: result.evaluation_mode.as_str().to_string(),
             violations: result.violations.into_iter().map(|v| v.into()).collect(),
         }
     }

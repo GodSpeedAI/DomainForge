@@ -1,0 +1,5 @@
+Resource "Event" units
+Entity "Alice"
+Entity "Bob"
+Flow "Event" @start "2025-01-01T00:00:00Z" @end "2025-12-31T00:00:00Z" from "Alice" to "Bob" quantity 1
+policy Ordered as: forall f in flows: (f.start before f.end)

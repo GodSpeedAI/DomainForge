@@ -1,0 +1,46 @@
+{
+  "error_count": 1,
+  "evaluation_mode": "three_valued",
+  "policies": [
+    {
+      "evaluation_mode": "three_valued",
+      "is_satisfied": true,
+      "is_satisfied_tristate": true,
+      "kind": "constraint",
+      "modality": "obligation",
+      "name": "VacuousForall",
+      "namespace": "default",
+      "violations": []
+    },
+    {
+      "evaluation_mode": "three_valued",
+      "is_satisfied": false,
+      "is_satisfied_tristate": null,
+      "kind": "constraint",
+      "modality": "obligation",
+      "name": "ExistsNull",
+      "namespace": "default",
+      "violations": [
+        "Policy 'ExistsNull' evaluation is UNKNOWN (NULL)"
+      ]
+    },
+    {
+      "evaluation_mode": "three_valued",
+      "is_satisfied": true,
+      "is_satisfied_tristate": true,
+      "kind": "constraint",
+      "modality": "obligation",
+      "name": "ExistsUniqueFlow",
+      "namespace": "default",
+      "violations": []
+    }
+  ],
+  "violations": [
+    {
+      "context": {},
+      "message": "Policy 'ExistsNull' evaluation is UNKNOWN (NULL)",
+      "policy_name": "ExistsNull",
+      "severity": "error"
+    }
+  ]
+}

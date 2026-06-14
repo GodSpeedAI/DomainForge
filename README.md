@@ -480,11 +480,14 @@ Bindings are designed to preserve the same core semantics across runtimes, with 
 <summary><strong>🔧 CLI Usage</strong></summary>
 
 ```bash
-# Install the CLI
+# Install the CLI (the `sea` binary is feature-gated behind `cli`)
 cargo install --path sea-core --features cli
 
-# Validate a model
-sea validate model.sea
+# Canonical graph JSON (the reference oracle for structure)
+sea parse model.sea --format json
+
+# Canonical policy evaluation JSON (per-policy tri-state + logic mode)
+sea validate model.sea --format json
 
 # Export to FINOS CALM
 sea project --format calm model.sea architecture.json
@@ -498,6 +501,12 @@ sea normalize "b AND a"  # -> "(a AND b)"
 # Evaluate authority decisions
 sea authority config.json request.json --facts facts.json --json
 ```
+
+`sea parse --format json` and `sea validate --format json` are the **canonical
+entrypoints**: one documented way to get one canonical answer. Three-valued
+(Kleene) logic is the canonical policy semantics, and every result records its
+`evaluation_mode`. See [Canonical Entrypoints & Logic Mode](docs/specs/canonical_entrypoints.md)
+and the executable [`conformance/`](conformance/) corpus.
 
 [Full CLI Reference →](docs/reference/cli-commands.md)
 

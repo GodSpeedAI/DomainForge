@@ -1,0 +1,6 @@
+{
+  "description": "Same obligation shape but referencing a missing attribute => genuine NULL. Expect tristate null, is_satisfied false, UNKNOWN (NULL) violation.",
+  "command": "validate",
+  "input": "input.sea",
+  "expected": "expected/validate.json"
+}

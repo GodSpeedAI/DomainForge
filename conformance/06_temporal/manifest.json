@@ -1,0 +1,6 @@
+{
+  "description": "Temporal 'before' over flow timestamp attributes. Pins current behavior of the temporal comparison path.",
+  "command": "validate",
+  "input": "input.sea",
+  "expected": "expected/validate.json"
+}
