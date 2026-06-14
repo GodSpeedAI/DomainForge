@@ -119,6 +119,8 @@ When modifying **parser/grammar**:
 - **Units**: `Unit::new()` constructor; `sea_core::units::unit_from_string()` for parsing
 - **Namespaces**: `namespace()` returns `&str`, defaults to `"default"`
 - **Flows**: `Flow::new()` takes `ConceptId` for resource/from/to (IDs, not references)
+- **IDs determinism**: all concept IDs are content-derived (UUID v5) and stable EXCEPT flows, which are random v4 (event identity) — normalize flow IDs before byte-comparing graph JSON
+- **Logic mode**: three-valued (Kleene) logic is CANONICAL; read `is_satisfied_tristate`, not `is_satisfied`; every `EvaluationResult` records its `evaluation_mode` (`policy/core.rs`)
 
 ## Testing Patterns
 
@@ -126,6 +128,7 @@ When modifying **parser/grammar**:
 - **Round-trip tests**: CALM export/import (`cargo test calm_round_trip`) validates serialization
 - **Golden tests**: Check `sea-core/tests/` for expected output patterns
 - **Policy evaluation**: Three-valued logic tests in `three_valued_quantifiers_tests.rs`
+- **Conformance corpus**: `conformance/` is the cross-language spec, run by `cargo test --features cli --test conformance_corpus_tests` against the `sea` CLI oracle. A changed `expected/` file = a deliberate spec change.
 
 ## Key References
 
@@ -139,6 +142,9 @@ When modifying **parser/grammar**:
 | Implementation plans | `docs/plans/` (phase roadmaps, feature plans)                         |
 | DSL examples         | `examples/`, `sea-core/examples/`                                     |
 | Error codes          | `docs/specs/error_codes.md`, `sea-core/src/validation_error.rs`       |
+| Canonical oracles    | `docs/specs/canonical_entrypoints.md` (parse/validate)                |
+| Conformance corpus   | `conformance/` (frozen .sea + pinned CLI output)                      |
+| Module AGENTS.md     | `sea-core/src/AGENTS.md` (+ policy/parser/authority/cli)              |
 
 ## Feature Flags
 
