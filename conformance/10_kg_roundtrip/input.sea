@@ -1,0 +1,10 @@
+Unit "gram" of "Mass" factor 0.001 base "kilogram"
+
+Entity "Warehouse" in logistics
+Entity "Store" in retail
+
+Resource "Widget" units in inventory
+
+Flow "Widget" from "Warehouse" to "Store" quantity 100
+
+Policy max_qty as: quantity <= 50

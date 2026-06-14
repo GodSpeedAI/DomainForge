@@ -1,0 +1,10 @@
+{
+  "description": "Surviving constructs after KG round-trip (export to Turtle, re-import). Only entities, resources, and flows survive.",
+  "surviving": {
+    "entities": 2,
+    "resources": 1,
+    "flows": 1
+  },
+  "lost": ["Policy", "Unit"],
+  "loss_mode": "loud_error_on_import"
+}

@@ -352,6 +352,30 @@ impl Graph {
         self.concept_changes.values().collect()
     }
 
+    pub fn validate_concept_change_compatibility(&self) -> Result<(), String> {
+        let breaking: Vec<&ConceptChange> = self
+            .concept_changes
+            .values()
+            .filter(|c| c.is_breaking_change())
+            .collect();
+        if breaking.is_empty() {
+            return Ok(());
+        }
+        let policy_count = self.policies.len();
+        if policy_count == 0 {
+            return Ok(());
+        }
+        let names: Vec<&str> = breaking.iter().map(|c| c.name()).collect();
+        Err(format!(
+            "Breaking ConceptChange(s) [{}] declared alongside {} active policy/policies. \
+             Policies referencing the pre-change concept may produce incorrect results \
+             against post-change semantics. Review or remove the affected policies before \
+             proceeding.",
+            names.join(", "),
+            policy_count
+        ))
+    }
+
     pub fn has_flow(&self, id: &ConceptId) -> bool {
         self.flows.contains_key(id)
     }

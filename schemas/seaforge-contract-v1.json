@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://domainforge.ai/schemas/seaforge-contract-v1.json",
+  "title": "SEA-Forge Contract v1",
+  "description": "Versioned contract for the three artifacts SEA-Forge consumes: a semantic/authority pack, an authority trace, and a decision. DomainForge cannot change these shapes without a versioned schema bump.",
+  "type": "object",
+  "required": ["contract_version"],
+  "properties": {
+    "contract_version": {
+      "const": "v1",
+      "description": "Schema version. Must be 'v1' for this contract."
+    }
+  },
+  "$defs": {
+    "pack": {
+      "type": "object",
+      "required": ["id", "version", "semantics_version", "required_specificity_profile", "policies", "hash"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "semantics_version": { "type": "string", "minLength": 1 },
+        "required_specificity_profile": { "type": "string" },
+        "policies": { "type": "array" },
+        "hash": { "type": "string", "pattern": "^[0-9a-f]+$" },
+        "signature": { "type": ["string", "null"] },
+        "owner": { "type": ["string", "null"] },
+        "created_at": { "type": ["string", "null"] },
+        "approved_by": { "type": ["string", "null"] },
+        "evidence_ref": { "type": ["string", "null"] }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "required": [
+        "decision_id", "request_id", "ir_hash", "pack_hashes",
+        "resolver_version", "resolver_semantics_version", "resolver_semantics_hash",
+        "specificity_profile_id", "specificity_profile_hash",
+        "unknown_handling_config_hash", "compatibility_lowering_version",
+        "action_request_hash", "fact_envelopes", "fact_trust_decisions",
+        "derived_fact_lineage", "candidate_policies", "applicable_policies",
+        "incomparable_policies", "unknown_decisions",
+        "compatibility_lowering_decisions", "conflict_resolution_steps",
+        "final_decision", "claim_level", "created_at"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "decision_id": { "type": "string" },
+        "request_id": { "type": "string" },
+        "ir_hash": { "type": "string" },
+        "pack_hashes": { "type": "array", "items": { "type": "string" } },
+        "resolver_version": { "type": "string" },
+        "resolver_semantics_version": { "type": "string" },
+        "resolver_semantics_hash": { "type": "string" },
+        "specificity_profile_id": { "type": "string" },
+        "specificity_profile_hash": { "type": "string" },
+        "specificity_profile_source": { "type": "string" },
+        "specificity_profile_conflicts": { "type": "array", "items": { "type": "string" } },
+        "unknown_handling_config_hash": { "type": "string" },
+        "compatibility_lowering_version": { "type": "string" },
+        "action_request_hash": { "type": "string" },
+        "fact_envelopes": { "type": "array" },
+        "fact_trust_decisions": { "type": "array" },
+        "derived_fact_lineage": { "type": "array" },
+        "candidate_policies": { "type": "array", "items": { "type": "string" } },
+        "applicable_policies": { "type": "array", "items": { "type": "string" } },
+        "incomparable_policies": { "type": "array", "items": { "type": "string" } },
+        "unknown_decisions": { "type": "array" },
+        "compatibility_lowering_decisions": { "type": "array" },
+        "conflict_resolution_steps": { "type": "array" },
+        "final_decision": { "type": "string" },
+        "claim_level": { "type": "string" },
+        "validation_suite_ref": { "type": ["string", "null"] },
+        "created_at": { "type": "string" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["decision_id", "request_id", "final_decision", "reason_code", "trace_ref"],
+      "additionalProperties": true,
+      "properties": {
+        "decision_id": { "type": "string" },
+        "request_id": { "type": "string" },
+        "final_decision": {
+          "type": "string",
+          "enum": ["allow", "deny", "escalate", "not_applicable", "reject"]
+        },
+        "trace_ref": { "type": "string" },
+        "applicable_policies": { "type": "array" },
+        "unknown_handling_applied": { "type": "boolean" },
+        "unknown_handling_result": { "type": "string" }
+      }
+    }
+  }
+}

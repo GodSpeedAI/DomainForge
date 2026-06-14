@@ -1,22 +1,9 @@
+from pathlib import Path
+
 from sea_dsl import Graph
 
-PAYMENT_DSL = """
-Role "Payer"
-Role "Payee"
-
-Resource "Money" units
-
-Entity "Alice"
-Entity "Bob"
-
-Flow "Money" from "Alice" to "Bob" quantity 10
-
-Relation "Payment"
-  subject: "Payer"
-  predicate: "pays"
-  object: "Payee"
-  via: flow "Money"
-"""
+CONF_DIR = Path(__file__).resolve().parent.parent / "conformance"
+PAYMENT_DSL = (CONF_DIR / "01_minimal_domain" / "input.sea").read_text()
 
 
 def test_payment_flow_parity_from_dsl():

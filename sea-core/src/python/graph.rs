@@ -265,6 +265,11 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
     }
 
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
     fn export_calm(&self) -> PyResult<String> {
         crate::calm::export(&self.inner)
             .and_then(|value| {

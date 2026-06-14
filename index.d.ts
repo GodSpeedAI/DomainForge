@@ -142,6 +142,8 @@ export interface EvaluationResult {
   isSatisfied: boolean
   /** Tri-state evaluation result: true, false, or null (NULL) */
   isSatisfiedTristate?: boolean
+  /** Logic mode that produced this result ("three_valued" is canonical, "boolean" is legacy) */
+  evaluationMode: string
   /** List of violations */
   violations: Array<Violation>
 }
@@ -245,6 +247,7 @@ export declare class Graph {
   allRoles(): Array<Role>
   allRelations(): Array<Relation>
   static parse(source: string): Graph
+  toJson(): string
   exportCalm(): string
   static importCalm(calmJson: string): Graph
   /**

@@ -273,6 +273,12 @@ impl Graph {
     }
 
     #[napi]
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string_pretty(&self.inner)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    #[napi]
     pub fn export_calm(&self) -> Result<String> {
         crate::calm::export(&self.inner)
             .and_then(|value| {

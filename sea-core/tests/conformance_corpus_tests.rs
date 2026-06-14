@@ -175,6 +175,11 @@ fn conformance_corpus_matches_cli_oracle() {
         .expect("read conformance dir")
         .filter_map(|entry| entry.ok().map(|e| e.path()))
         .filter(|path| path.is_dir() && path.join("manifest.json").is_file())
+        .filter(|path| {
+            let manifest = read_json(&path.join("manifest.json"));
+            let cmd = manifest["command"].as_str().unwrap_or("");
+            cmd == "parse" || cmd == "validate"
+        })
         .collect();
     items.sort();
 

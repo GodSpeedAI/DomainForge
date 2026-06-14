@@ -310,6 +310,11 @@ jobs:
           cd sea-core
           wasm-pack build --target web --features wasm
 
+      - name: Run WASM tests (Phase 3 conformance)
+        run: |
+          cd sea-core
+          wasm-pack test --node --features wasm
+
       - name: Check bundle size
         run: |
           WASM_FILE="sea-core/pkg/sea_core_bg.wasm"

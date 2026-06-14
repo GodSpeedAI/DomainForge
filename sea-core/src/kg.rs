@@ -658,6 +658,34 @@ impl KnowledgeGraph {
         use crate::units::unit_from_string;
         use rust_decimal::Decimal;
 
+        let supported_types: &[&str] = &["sea:Entity", "sea:Resource", "sea:Flow"];
+        let unsupported_found: Vec<&str> = self
+            .triples
+            .iter()
+            .filter(|t| t.predicate == "rdf:type")
+            .filter_map(|t| {
+                let obj = t.object.as_str();
+                if obj.starts_with("sea:") && !supported_types.contains(&obj) {
+                    Some(obj)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<&str>>();
+        let mut seen = std::collections::HashSet::new();
+        let unsupported_unique: Vec<&str> = unsupported_found
+            .into_iter()
+            .filter(|s| seen.insert(*s))
+            .collect();
+        if !unsupported_unique.is_empty() {
+            return Err(KgError::SerializationError(format!(
+                "KG import cannot reconstruct the following domain construct(s): {}. \
+                 Only entities, resources, and flows survive round-trip. \
+                 See docs/specs/kg_projection_loss.md for the full loss manifest.",
+                unsupported_unique.join(", ")
+            )));
+        }
+
         let mut graph = Graph::new();
 
         let mut namespace_map: std::collections::HashMap<String, String> =

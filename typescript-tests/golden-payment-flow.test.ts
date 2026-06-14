@@ -1,23 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { Graph } from '../index';
 
-const PAYMENT_DSL = `
-Role "Payer"
-Role "Payee"
-
-Resource "Money" units
-
-Entity "Alice"
-Entity "Bob"
-
-Flow "Money" from "Alice" to "Bob" quantity 10
-
-Relation "Payment"
-  subject: "Payer"
-  predicate: "pays"
-  object: "Payee"
-  via: flow "Money"
-`;
+const PAYMENT_DSL = readFileSync(
+    resolve(__dirname, '..', 'conformance', '01_minimal_domain', 'input.sea'),
+    'utf-8'
+);
 
 describe('Payment role flow golden path', () => {
     it('parses roles, relations, and flows consistently', () => {

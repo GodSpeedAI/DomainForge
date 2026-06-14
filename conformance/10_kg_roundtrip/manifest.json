@@ -1,0 +1,6 @@
+{
+  "description": "KG round-trip honesty: entity+resource+flow survive; policy+unit trigger loud import error. See docs/specs/kg_projection_loss.md.",
+  "command": "kg_roundtrip",
+  "input": "input.sea",
+  "expected": "expected/surviving_subset.json"
+}

@@ -226,4 +226,48 @@ Flow "Materials" from "Warehouse" to "Factory" quantity 500
         let json_result = graph.to_json();
         assert!(json_result.is_ok());
     }
+
+    #[wasm_bindgen_test]
+    fn test_conformance_corpus_minimal_parse() {
+        let source = r#"
+Role "Payer"
+Role "Payee"
+
+Resource "Money" units
+
+Entity "Alice"
+Entity "Bob"
+
+Flow "Money" from "Alice" to "Bob" quantity 10
+
+Relation "Payment"
+  subject: "Payer"
+  predicate: "pays"
+  object: "Payee"
+  via: flow "Money"
+"#;
+        let result = Graph::parse(source.to_string());
+        assert!(result.is_ok(), "conformance corpus 01 must parse in WASM");
+
+        let graph = result.unwrap();
+        assert_eq!(graph.entity_count(), 2, "2 entities expected");
+        assert_eq!(graph.resource_count(), 1, "1 resource expected");
+        assert_eq!(graph.flow_count(), 1, "1 flow expected");
+
+        let json_result = graph.to_json();
+        assert!(
+            json_result.is_ok(),
+            "canonical JSON serialization must work in WASM"
+        );
+
+        let json = json_result.unwrap();
+        assert!(
+            json.contains("Alice"),
+            "canonical JSON must contain entity names"
+        );
+        assert!(
+            json.contains("Money"),
+            "canonical JSON must contain resource names"
+        );
+    }
 }
