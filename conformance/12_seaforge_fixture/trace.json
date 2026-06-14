@@ -1,0 +1,59 @@
+{
+  "decision_id": "cab706f4-e40d-4714-8969-ac68106a6477",
+  "request_id": "req-contract-001",
+  "ir_hash": "e594c49bcb107960",
+  "pack_hashes": [
+    "4092a4273b7f61e5"
+  ],
+  "resolver_version": "0.1.0",
+  "resolver_semantics_version": "0.4",
+  "resolver_semantics_hash": "457d20328041eeb1",
+  "specificity_profile_id": "default",
+  "specificity_profile_hash": "default_v1",
+  "specificity_profile_source": "environment",
+  "specificity_profile_conflicts": [],
+  "unknown_handling_config_hash": "d6168f4ccfce4bb0",
+  "compatibility_lowering_version": "bounded_compatibility_v1",
+  "action_request_hash": "b0e23461866dc5f7",
+  "fact_envelopes": [
+    {
+      "path": "customer.credit_status",
+      "source_class": "system_of_record",
+      "source_id": "credit-service",
+      "trusted": true
+    }
+  ],
+  "fact_trust_decisions": [
+    {
+      "fact_path": "customer.credit_status",
+      "required_sources": [
+        "system_of_record"
+      ],
+      "observed_source": "system_of_record",
+      "trusted": true,
+      "reason": "trusted",
+      "evidence_ref": "ref-1"
+    }
+  ],
+  "derived_fact_lineage": [],
+  "candidate_policies": [
+    "block_credit_hold"
+  ],
+  "applicable_policies": [
+    "block_credit_hold"
+  ],
+  "incomparable_policies": [],
+  "unknown_decisions": [],
+  "compatibility_lowering_decisions": [],
+  "conflict_resolution_steps": [
+    {
+      "step": "single_applicable",
+      "policy_id": "block_credit_hold",
+      "result": "Deny"
+    }
+  ],
+  "final_decision": "deny",
+  "claim_level": "AuditBacked",
+  "validation_suite_ref": null,
+  "created_at": "2026-06-14T15:09:56.889834681+00:00"
+}

@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use jsonschema::{Draft, JSONSchema};
 use serde_json::Value;
 use std::fs;

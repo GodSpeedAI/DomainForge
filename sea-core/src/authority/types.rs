@@ -128,7 +128,7 @@ impl AuthorityRequest {
             self.request_id,
             self.actor.id,
             self.operation,
-            serde_json::to_string(&self.resource).unwrap_or_default()
+            canonical_json_string(&self.resource).unwrap_or_default()
         )
     }
 }
@@ -600,6 +600,41 @@ pub fn validate_fact_path(path: &str) -> Result<(), AuthorityError> {
         )));
     }
     Ok(())
+}
+
+/// Serialize `value` to a JSON string with object keys sorted recursively, so the
+/// output is byte-stable regardless of `HashMap` iteration order (randomized per
+/// process) or the `serde_json` `preserve_order` feature (which differs between
+/// the production binary and `cfg(test)` builds via feature unification).
+///
+/// All content-addressed authority hashing (pack hash, action-request hash) flows
+/// through this helper so authority hashes are deterministic across processes and
+/// runtimes — the prerequisite for byte-pinning pack/trace/decision fixtures in
+/// the conformance corpus (audit Phase 5/6).
+pub fn canonical_json_string<T: serde::Serialize>(value: &T) -> Result<String, serde_json::Error> {
+    let v = serde_json::to_value(value)?;
+    Ok(sort_json_keys(v).to_string())
+}
+
+/// Recursively rebuild a [`serde_json::Value`] with every object's keys in sorted
+/// order. Insertion-ordered map backends (`preserve_order`/IndexMap) then iterate
+/// in sorted order; BTreeMap backends are already sorted — so `to_string` is
+/// deterministic under either feature configuration.
+fn sort_json_keys(value: serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut entries: Vec<(String, serde_json::Value)> = map
+                .into_iter()
+                .map(|(k, v)| (k, sort_json_keys(v)))
+                .collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            serde_json::Value::Object(entries.into_iter().collect())
+        }
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.into_iter().map(sort_json_keys).collect())
+        }
+        other => other,
+    }
 }
 
 pub fn compute_hash(data: &str) -> String {

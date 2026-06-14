@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use jsonschema::JSONSchema;
 use rust_decimal::Decimal;
 use sea_core::calm::export;

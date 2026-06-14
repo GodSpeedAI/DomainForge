@@ -1,0 +1,33 @@
+{
+  "id": "sp",
+  "version": "1.0.0",
+  "semantics_version": "0.4",
+  "required_specificity_profile": "default",
+  "policies": [
+    {
+      "policy_id": "block_credit_hold",
+      "modality": "Prohibition",
+      "priority": 100,
+      "applies_to": {
+        "action": "ShipOrder",
+        "resource.type": "Order"
+      },
+      "when": {
+        "customer.credit_status": "Hold"
+      },
+      "requires_fact": [
+        {
+          "fact_path": "customer.credit_status",
+          "allowed_source_classes": [
+            "system_of_record"
+          ],
+          "allowed_source_ids": [],
+          "evidence_ref_required": true,
+          "signature_required": false
+        }
+      ],
+      "semantics_version": "0.4"
+    }
+  ],
+  "hash": "4092a4273b7f61e5"
+}

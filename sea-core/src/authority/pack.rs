@@ -28,7 +28,7 @@ pub fn compute_pack_hash(
         policies,
     };
 
-    let canonical = serde_json::to_string(&payload).map_err(|e| {
+    let canonical = canonical_json_string(&payload).map_err(|e| {
         AuthorityError::new(
             super::error::AuthorityErrorCode::InvalidPolicyPack,
             format!(
@@ -98,7 +98,7 @@ impl AuthorityPack {
             policies: &self.policies,
         };
 
-        let canonical = serde_json::to_string(&payload).map_err(|e| {
+        let canonical = canonical_json_string(&payload).map_err(|e| {
             AuthorityError::new(
                 super::error::AuthorityErrorCode::InvalidPolicyPack,
                 format!(

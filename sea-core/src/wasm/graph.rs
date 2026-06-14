@@ -468,4 +468,17 @@ impl Graph {
         serde_wasm_bindgen::to_value(&self.inner)
             .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
+
+    #[wasm_bindgen(js_name = toCanonicalJson)]
+    pub fn to_canonical_json(&self) -> Result<String, JsValue> {
+        serde_json::to_string_pretty(&self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = validateJson)]
+    pub fn validate_json(&self) -> Result<String, JsValue> {
+        let value = crate::validation_result::validate_to_canonical_json(&self.inner);
+        serde_json::to_string_pretty(&value)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
 }

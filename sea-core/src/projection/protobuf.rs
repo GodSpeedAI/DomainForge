@@ -2314,6 +2314,7 @@ mod tests {
         assert!(validate_output_path(&linked_output, &target).is_ok());
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_validate_output_path_rejects_traversal() {
         let tmp = tempfile::tempdir().unwrap();

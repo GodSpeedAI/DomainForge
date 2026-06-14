@@ -95,7 +95,7 @@ pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};
 pub use validation_error::{ErrorCode, Position, SourceRange, ValidationError};
 pub use validation_result::ValidationResult;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod test_utils;
 
 #[cfg(test)]

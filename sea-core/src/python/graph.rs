@@ -270,6 +270,12 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
     }
 
+    fn validate_json(&self) -> PyResult<String> {
+        let value = crate::validation_result::validate_to_canonical_json(&self.inner);
+        serde_json::to_string_pretty(&value)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
     fn export_calm(&self) -> PyResult<String> {
         crate::calm::export(&self.inner)
             .and_then(|value| {

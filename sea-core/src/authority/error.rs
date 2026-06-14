@@ -34,7 +34,7 @@ pub struct AuthorityError {
     pub message: String,
     pub recoverable: bool,
     pub recoverability_hint: Option<String>,
-    pub context: serde_json::Value,
+    pub context: Box<serde_json::Value>,
 }
 
 impl AuthorityError {
@@ -44,7 +44,7 @@ impl AuthorityError {
             message: message.into(),
             recoverable: false,
             recoverability_hint: None,
-            context: serde_json::json!({}),
+            context: Box::new(serde_json::json!({})),
         }
     }
 
@@ -59,7 +59,7 @@ impl AuthorityError {
     }
 
     pub fn with_context(mut self, ctx: serde_json::Value) -> Self {
-        self.context = ctx;
+        self.context = Box::new(ctx);
         self
     }
 

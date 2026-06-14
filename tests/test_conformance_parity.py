@@ -1,13 +1,14 @@
 """Cross-language conformance parity (Phase 2 of the Semantic Infrastructure Audit).
 
-Loads the SHARED ``conformance/`` corpus, parses each ``parse`` item via the
-Python binding, serializes to canonical JSON, normalizes volatile flow UUIDs to
-positional placeholders, and byte-compares against the Rust-pinned ``expected/``
-files produced by ``sea parse --format json``.
+Loads the SHARED ``conformance/`` corpus, parses each ``parse`` and ``validate``
+item via the Python binding, serializes to canonical JSON, normalizes volatile
+flow UUIDs to positional placeholders, and byte-compares against the Rust-pinned
+``expected/`` files produced by ``sea parse --format json`` and
+``sea validate --format json``.
 
-This proves the Rust core produces identical canonical graph JSON through the
-PyO3 binding — closing the G5 "one engine, many wrappers" parity gap for the
-structural spine.
+This proves the Rust core produces identical canonical JSON through the PyO3
+binding for both the structural spine (``parse``) and the policy-evaluation
+aggregate (``validate``) — closing the G5 "one engine, many wrappers" parity gap.
 
 Run: pytest tests/test_conformance_parity.py
 """
@@ -42,35 +43,39 @@ def _load_corpus_items():
         if not manifest_path.is_file():
             continue
         manifest = json.loads(manifest_path.read_text())
-        if manifest.get("command") != "parse":
+        command = manifest.get("command")
+        if command not in ("parse", "validate"):
             continue
         expected_path = entry / manifest["expected"]
         input_path = entry / manifest["input"]
-        items.append((entry.name, input_path, expected_path))
+        items.append((entry.name, command, input_path, expected_path))
     return items
 
 
-@pytest.mark.parametrize("item_name,input_path,expected_path", _load_corpus_items())
-def test_parse_canonical_json_matches_rust(item_name, input_path, expected_path):
+@pytest.mark.parametrize("item_name,command,input_path,expected_path", _load_corpus_items())
+def test_canonical_json_matches_rust(item_name, command, input_path, expected_path):
     source = input_path.read_text()
     graph = Graph.parse(source)
-    actual_raw = graph.to_json()
-    actual = json.loads(actual_raw)
-    actual = _normalize_flow_ids(actual)
+    if command == "validate":
+        actual_raw = graph.validate_json()
+    else:
+        actual_raw = graph.to_json()
+    actual = _normalize_flow_ids(json.loads(actual_raw))
 
-    expected = json.loads(expected_path.read_text())
-    expected = _normalize_flow_ids(expected)
+    expected = _normalize_flow_ids(json.loads(expected_path.read_text()))
 
+    oracle_cmd = "validate" if command == "validate" else "parse"
     assert actual == expected, (
         f"Conformance parity drift in '{item_name}': "
-        f"Python binding Graph.to_json() does not match Rust-pinned expected file "
-        f"({expected_path.name}). If this change is intentional, regenerate the "
-        f"expected file with: sea parse {input_path} --format json > {expected_path}"
+        f"Python binding {'validate_json()' if command == 'validate' else 'to_json()'} "
+        f"does not match Rust-pinned expected file ({expected_path.name}). "
+        f"If this change is intentional, regenerate the expected file with: "
+        f"sea {oracle_cmd} {input_path} --format json > {expected_path}"
     )
 
 
-def test_corpus_has_at_least_one_parse_item():
+def test_corpus_has_at_least_one_item():
     items = _load_corpus_items()
     assert len(items) >= 1, (
-        f"Expected at least 1 parse conformance item in {CONF_DIR}, found {len(items)}"
+        f"Expected at least 1 conformance item in {CONF_DIR}, found {len(items)}"
     )

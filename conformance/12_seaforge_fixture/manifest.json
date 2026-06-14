@@ -1,0 +1,8 @@
+{
+  "description": "SEA-Forge contract v1 fixture: real AuthorityPack + AuthorityTrace + AuthorityDecision that validate against schemas/seaforge-contract-v1.json. Volatile fields (timestamps, hashes, IDs) are normalized to sentinels by the pinning test for byte-stable comparison.",
+  "command": "seaforge_contract",
+  "pack": "pack.json",
+  "trace": "trace.json",
+  "decision": "decision.json",
+  "schema": "../../schemas/seaforge-contract-v1.json"
+}

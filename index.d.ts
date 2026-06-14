@@ -248,6 +248,7 @@ export declare class Graph {
   allRelations(): Array<Relation>
   static parse(source: string): Graph
   toJson(): string
+  validateJson(): string
   exportCalm(): string
   static importCalm(calmJson: string): Graph
   /**

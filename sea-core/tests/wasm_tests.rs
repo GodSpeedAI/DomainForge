@@ -1,9 +1,7 @@
 #[cfg(feature = "wasm")]
 mod wasm_tests {
     use sea_core::wasm::{Entity, Flow, Graph, Instance, Resource};
-    use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
-
-    wasm_bindgen_test_configure!(run_in_browser);
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
     fn test_entity_creation() {
@@ -261,13 +259,114 @@ Relation "Payment"
         );
 
         let json = json_result.unwrap();
+        let value: serde_json::Value =
+            serde_wasm_bindgen::from_value(json).expect("JsValue round-trips to serde_json");
+        let text = serde_json::to_string(&value).expect("serialize to string");
         assert!(
-            json.contains("Alice"),
+            text.contains("Alice"),
             "canonical JSON must contain entity names"
         );
         assert!(
-            json.contains("Money"),
+            text.contains("Money"),
             "canonical JSON must contain resource names"
+        );
+    }
+
+    fn normalize_flow_uuids(value: serde_json::Value) -> serde_json::Value {
+        let replacements: Vec<(String, String)> =
+            match value.get("flows").and_then(|f| f.as_object()) {
+                Some(flows) => flows
+                    .keys()
+                    .enumerate()
+                    .map(|(i, key)| (key.clone(), format!("flow:{i}")))
+                    .collect(),
+                None => Vec::new(),
+            };
+        if replacements.is_empty() {
+            return value;
+        }
+        let mut serialized = serde_json::to_string(&value).expect("serialize JSON value");
+        for (uuid, token) in &replacements {
+            serialized = serialized.replace(uuid, token);
+        }
+        serde_json::from_str(&serialized).expect("re-parse normalized JSON")
+    }
+
+    #[wasm_bindgen_test]
+    fn test_conformance_01_parse_canonical_json() {
+        let input = include_str!("../../conformance/01_minimal_domain/input.sea");
+        let expected = include_str!("../../conformance/01_minimal_domain/expected/graph.json");
+
+        let graph = Graph::parse(input.to_string()).expect("item 01 must parse in WASM");
+        let actual_text = graph.to_canonical_json().expect("canonical JSON string");
+        let actual: serde_json::Value = serde_json::from_str(&actual_text).expect("parse actual");
+        let expected: serde_json::Value = serde_json::from_str(expected).expect("parse expected");
+
+        let actual_norm = normalize_flow_uuids(actual);
+        let expected_norm = normalize_flow_uuids(expected);
+        assert_eq!(
+            actual_norm, expected_norm,
+            "WASM parse output must byte-match the Rust expected graph.json (flow IDs normalized)"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_conformance_02_validate_tristate_true() {
+        let input = include_str!("../../conformance/02_policy_complete_facts/input.sea");
+        let expected =
+            include_str!("../../conformance/02_policy_complete_facts/expected/validate.json");
+
+        let graph = Graph::parse(input.to_string()).expect("item 02 must parse in WASM");
+        let actual_text = graph.validate_json().expect("validate JSON string");
+        let actual: serde_json::Value = serde_json::from_str(&actual_text).expect("parse actual");
+        let expected: serde_json::Value = serde_json::from_str(expected).expect("parse expected");
+
+        assert_eq!(
+            actual, expected,
+            "WASM validate output must byte-match the Rust expected validate.json for item 02"
+        );
+
+        let tristate = &actual["policies"][0]["is_satisfied_tristate"];
+        assert_eq!(
+            tristate.as_bool(),
+            Some(true),
+            "item 02 must report tristate=true (all facts present)"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_conformance_03_validate_tristate_null() {
+        let input = include_str!("../../conformance/03_policy_null_facts/input.sea");
+        let expected =
+            include_str!("../../conformance/03_policy_null_facts/expected/validate.json");
+
+        let graph = Graph::parse(input.to_string()).expect("item 03 must parse in WASM");
+        let actual_text = graph.validate_json().expect("validate JSON string");
+        let actual: serde_json::Value = serde_json::from_str(&actual_text).expect("parse actual");
+        let expected: serde_json::Value = serde_json::from_str(expected).expect("parse expected");
+
+        assert_eq!(
+            actual, expected,
+            "WASM validate output must byte-match the Rust expected validate.json for item 03"
+        );
+
+        let tristate = &actual["policies"][0]["is_satisfied_tristate"];
+        assert!(
+            tristate.is_null(),
+            "item 03 must report tristate=null (genuine NULL from missing attribute)"
+        );
+
+        let violations = actual["policies"][0]["violations"]
+            .as_array()
+            .expect("violations array");
+        assert!(
+            !violations.is_empty(),
+            "item 03 must have at least one violation"
+        );
+        let msg = violations[0].as_str().unwrap_or("");
+        assert!(
+            msg.contains("UNKNOWN"),
+            "violation text must contain UNKNOWN, got: {msg}"
         );
     }
 }

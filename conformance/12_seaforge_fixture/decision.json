@@ -1,0 +1,7 @@
+{
+  "decision_id": "cab706f4-e40d-4714-8969-ac68106a6477",
+  "request_id": "req-contract-001",
+  "final_decision": "deny",
+  "reason_code": "denied_by_block_credit_hold",
+  "trace_ref": "cab706f4-e40d-4714-8969-ac68106a6477"
+}

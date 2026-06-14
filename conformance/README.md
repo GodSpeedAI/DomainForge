@@ -57,25 +57,23 @@ A change to any expected file must be a deliberate, reviewed spec change.
 |---|---|---|
 | `08_authority` | Pending corpus fixture — Phase 6 provenance proofs live as Rust tests (`sea-core/tests/golden_trace_stability_tests.rs`, `provenance_tamper_tests.rs`, `derived_fact_null_poisoning_tests.rs`, `order_permutation_hash_tests.rs`, `evolution_enforcement_tests.rs`) | Phase 6 / G6 |
 | `10_kg_roundtrip` | **Wired** — surviving subset + loud-error assertions | Phase 4 ✅ |
-| `11_parity` | **Partial** — `parse`-command items (`01`, `07`) produce identical canonical graph JSON across Rust/Python/TS (flow IDs normalized). `validate`/tristate items (`02`–`06`) are **not yet** parity-checked cross-language. | Phase 2 ◑ |
-| `12_seaforge_fixture` | **Schema wired** — `schemas/seaforge-contract-v1.json` + `sea-core/tests/seaforge_contract_tests.rs` validate a real pack/trace/decision against the contract. A pinned corpus fixture directory for SEA-Forge to import is the remaining (joint) Phase 5 step. | Phase 5 ◑ |
+| `11_parity` | **Wired** — both `parse` items (`01`, `07`) and `validate` items (`02`–`06`) produce byte-identical canonical JSON across Rust/Python/TS (flow IDs normalized). The single core producer `validate_to_canonical_json` in `validation_result.rs` is wrapped by every binding. | Phase 2 ✅ |
+| `12_seaforge_fixture` | **Wired** — `conformance/12_seaforge_fixture/{pack,trace,decision}.json` are committed, schema-valid against `schemas/seaforge-contract-v1.json`, and byte-pinned by `sea-core/tests/seaforge_fixture_tests.rs`. | Phase 5 ✅ |
 
-WASM conformance (Phase 3): `wasm_tests.rs` runs under `wasm-pack test --node` in CI
-(closing the "WASM untested in CI" gap), including a corpus-minimal parse + canonical
-JSON test. WASM is not yet in the **byte-compared** parity matrix — running policy
-evaluation / tristate / pack-hash on the shared corpus and comparing canonical JSON
-against the Rust `expected/` files is the remaining Phase 3 step.
+WASM conformance (Phase 3): `wasm_tests.rs` runs under `wasm-pack test --node` in CI.
+WASM is now in the **byte-compared** parity matrix: items `01` (parse), `02`
+(validate, tristate `true`), and `03` (validate, tristate `null`) are parsed,
+evaluated, and byte-compared against the Rust `expected/` files (flow IDs
+normalized for `01`). Three new `#[wasm_bindgen_test]` functions cover parse
+canonical JSON, validate tristate-true, and validate tristate-null.
 
 Cross-language parity (Phase 2): Python (`tests/test_conformance_parity.py`) and
 TypeScript (`typescript-tests/conformance-parity.test.ts`) load the shared corpus,
-select the `parse`-command items, parse via bindings, serialize canonical graph
+select both `parse` and `validate` items, parse via bindings, serialize canonical
 JSON, normalize volatile flow UUIDs, and byte-compare against these `expected/`
-files. This proves the **structural spine** (`.sea` → canonical graph JSON) is
-identical across Rust/Python/TS. Policy-result (tristate) parity for the `validate`
-items (`02`–`06`) is the remaining Phase 2 step: it needs a binding method that emits
-the aggregate `validate` JSON the CLI oracle produces, so it is intentionally not
-claimed here yet. The inlined `PAYMENT_DSL` fixtures were removed; both golden tests
-now load from `conformance/01_minimal_domain/input.sea`.
+files. This proves the **structural spine** (`.sea` → canonical graph JSON) AND the
+**policy-evaluation aggregate** (`sea validate --format json`) are identical across
+Rust/Python/TS. Both suites parametrize over all 7 items (`01`–`07`).
 
 ## Notes on pinned behavior
 

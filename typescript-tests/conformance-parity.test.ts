@@ -1,10 +1,11 @@
 /**
  * Cross-language conformance parity (Phase 2 of the Semantic Infrastructure Audit).
  *
- * Loads the SHARED `conformance/` corpus, parses each `parse` item via the
- * TypeScript binding, serializes to canonical JSON, normalizes volatile flow
- * UUIDs to positional placeholders, and byte-compares against the Rust-pinned
- * `expected/` files produced by `sea parse --format json`.
+ * Loads the SHARED `conformance/` corpus, parses each `parse` and `validate`
+ * item via the TypeScript binding, serializes to canonical JSON, normalizes
+ * volatile flow UUIDs to positional placeholders, and byte-compares against
+ * the Rust-pinned `expected/` files produced by `sea parse --format json` and
+ * `sea validate --format json`.
  *
  * Run: bun test typescript-tests/conformance-parity.test.ts
  */
@@ -28,8 +29,8 @@ function normalizeFlowIds(value: any): any {
     return value;
 }
 
-function loadCorpusItems(): Array<{ name: string; input: string; expected: string }> {
-    const items: Array<{ name: string; input: string; expected: string }> = [];
+function loadCorpusItems(): Array<{ name: string; command: string; input: string; expected: string }> {
+    const items: Array<{ name: string; command: string; input: string; expected: string }> = [];
     if (!existsSync(CONF_DIR)) return items;
     for (const entry of readdirSync(CONF_DIR).sort()) {
         const dir = join(CONF_DIR, entry);
@@ -37,9 +38,10 @@ function loadCorpusItems(): Array<{ name: string; input: string; expected: strin
         const manifestPath = join(dir, 'manifest.json');
         if (!existsSync(manifestPath)) continue;
         const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-        if (manifest.command !== 'parse') continue;
+        if (manifest.command !== 'parse' && manifest.command !== 'validate') continue;
         items.push({
             name: entry,
+            command: manifest.command,
             input: join(dir, manifest.input),
             expected: join(dir, manifest.expected),
         });
@@ -49,11 +51,12 @@ function loadCorpusItems(): Array<{ name: string; input: string; expected: strin
 
 describe.each(loadCorpusItems())(
     'Conformance parity: $name',
-    ({ name, input, expected }) => {
-        it(`produces canonical graph JSON matching the Rust oracle`, () => {
+    ({ name, command, input, expected }) => {
+        it(`produces canonical JSON matching the Rust oracle`, () => {
             const source = readFileSync(input, 'utf-8');
             const graph = Graph.parse(source);
-            const actual = normalizeFlowIds(JSON.parse(graph.toJson()));
+            const raw = command === 'validate' ? graph.validateJson() : graph.toJson();
+            const actual = normalizeFlowIds(JSON.parse(raw));
             const expectedData = normalizeFlowIds(JSON.parse(readFileSync(expected, 'utf-8')));
             expect(actual).toEqual(expectedData);
         });
@@ -61,7 +64,7 @@ describe.each(loadCorpusItems())(
 );
 
 describe('Conformance parity corpus', () => {
-    it('has at least one parse item', () => {
+    it('has at least one item', () => {
         expect(loadCorpusItems().length).toBeGreaterThanOrEqual(1);
     });
 });

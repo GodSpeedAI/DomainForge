@@ -428,5 +428,5 @@ fn normalize_path(path: &Path) -> String {
     repr.trim_start_matches("./").to_string()
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

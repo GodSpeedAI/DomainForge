@@ -279,6 +279,13 @@ impl Graph {
     }
 
     #[napi]
+    pub fn validate_json(&self) -> Result<String> {
+        let value = crate::validation_result::validate_to_canonical_json(&self.inner);
+        serde_json::to_string_pretty(&value)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    #[napi]
     pub fn export_calm(&self) -> Result<String> {
         crate::calm::export(&self.inner)
             .and_then(|value| {

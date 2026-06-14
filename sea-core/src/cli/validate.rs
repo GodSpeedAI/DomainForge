@@ -125,61 +125,11 @@ fn report_validation(
     match format {
         OutputFormat::Json => {
             // Per-policy evaluation results make `sea validate --format json` the
-            // canonical reference oracle: every policy reports its tri-state result
-            // AND the logic mode that produced it (three-valued is canonical, boolean
-            // is legacy). See docs/specs/canonical_entrypoints.md.
-            let graph_mode = if graph.use_three_valued_logic() {
-                "three_valued"
-            } else {
-                "boolean"
-            };
-            let policy_results: Vec<serde_json::Value> = graph
-                .all_policies()
-                .iter()
-                .map(|policy| {
-                    match policy.evaluate_with_mode(&graph, graph.use_three_valued_logic()) {
-                        Ok(eval) => serde_json::json!({
-                            "name": policy.name,
-                            "namespace": policy.namespace,
-                            "modality": modality_str(&policy.modality),
-                            "kind": kind_str(policy.kind()),
-                            "is_satisfied": eval.is_satisfied,
-                            "is_satisfied_tristate": eval.is_satisfied_tristate,
-                            "evaluation_mode": eval.evaluation_mode.as_str(),
-                            "violations": eval
-                                .violations
-                                .iter()
-                                .map(|v| v.message.clone())
-                                .collect::<Vec<_>>(),
-                        }),
-                        Err(err) => serde_json::json!({
-                            "name": policy.name,
-                            "namespace": policy.namespace,
-                            "modality": modality_str(&policy.modality),
-                            "kind": kind_str(policy.kind()),
-                            "error": err,
-                        }),
-                    }
-                })
-                .collect();
-
-            let json_output = serde_json::json!({
-                "evaluation_mode": graph_mode,
-                "error_count": result.error_count,
-                "policies": policy_results,
-                "violations": result.violations.iter().map(|v| {
-                    serde_json::json!({
-                        "severity": match v.severity {
-                            crate::policy::Severity::Error => "error",
-                            crate::policy::Severity::Warning => "warning",
-                            crate::policy::Severity::Info => "info",
-                        },
-                        "policy_name": v.policy_name,
-                        "message": v.message,
-                        "context": v.context,
-                    })
-                }).collect::<Vec<_>>(),
-            });
+            // canonical reference oracle. The canonical aggregate is produced by
+            // the single shared producer in `validation_result.rs` so that every
+            // binding (Python / TypeScript / WASM) can emit byte-identical JSON.
+            // See docs/specs/canonical_entrypoints.md.
+            let json_output = crate::validation_result::validate_to_canonical_json(&graph);
             println!(
                 "{}",
                 serde_json::to_string_pretty(&json_output).context("Failed to serialize output")?
@@ -232,23 +182,5 @@ fn report_validation(
         Err(anyhow::anyhow!("Validation errors detected"))
     } else {
         Ok(())
-    }
-}
-
-/// Stable lowercase string for a policy modality used in canonical JSON output.
-fn modality_str(m: &crate::policy::PolicyModality) -> &'static str {
-    match m {
-        crate::policy::PolicyModality::Obligation => "obligation",
-        crate::policy::PolicyModality::Prohibition => "prohibition",
-        crate::policy::PolicyModality::Permission => "permission",
-    }
-}
-
-/// Stable lowercase string for a policy kind used in canonical JSON output.
-fn kind_str(k: &crate::policy::PolicyKind) -> &'static str {
-    match k {
-        crate::policy::PolicyKind::Constraint => "constraint",
-        crate::policy::PolicyKind::Derivation => "derivation",
-        crate::policy::PolicyKind::Obligation => "obligation",
     }
 }
