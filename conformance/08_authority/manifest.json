@@ -1,0 +1,11 @@
+{
+  "description": "Authority provenance golden (audit §5 item 8, Phase 6): two policies of differing specificity (prohibition p100 + permission p50) are loaded; a ShipOrder request on a credit-Hold order denies via the prohibition while the permission is a candidate excluded by its when-condition. The full AuthorityTrace is pinned with all seven hashes byte-stable (deterministic via canonical_json_string). Volatile fields (timestamps, decision_id, trace_ref) are normalized by the pinning test. The shared evaluation inputs (config, request, facts) are committed so every binding drives identical inputs and byte-matches the same golden.",
+  "command": "authority_trace",
+  "packs": "packs.json",
+  "config": "config.json",
+  "request": "request.json",
+  "facts": "facts.json",
+  "trace": "trace.json",
+  "decision": "decision.json",
+  "schema": "../../schemas/seaforge-contract-v1.json"
+}

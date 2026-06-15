@@ -1,0 +1,72 @@
+[
+  {
+    "id": "shipping-policy",
+    "version": "1.0.0",
+    "semantics_version": "0.4",
+    "required_specificity_profile": "default",
+    "policies": [
+      {
+        "policy_id": "block_credit_hold_shipping",
+        "modality": "Prohibition",
+        "priority": 100,
+        "applies_to": {
+          "resource.type": "Order",
+          "action": "ShipOrder"
+        },
+        "when": {
+          "customer.credit_status": "Hold"
+        },
+        "requires_fact": [
+          {
+            "fact_path": "customer.credit_status",
+            "allowed_source_classes": [
+              "system_of_record",
+              "derived"
+            ],
+            "allowed_source_ids": [],
+            "evidence_ref_required": true,
+            "signature_required": false
+          }
+        ],
+        "semantics_version": "0.4",
+        "description": "Block shipping for credit hold orders"
+      }
+    ],
+    "hash": "46a2efded0bc7f31"
+  },
+  {
+    "id": "shipping-permission",
+    "version": "1.0.0",
+    "semantics_version": "0.4",
+    "required_specificity_profile": "default",
+    "policies": [
+      {
+        "policy_id": "allow_clear_order_shipping",
+        "modality": "Permission",
+        "priority": 50,
+        "applies_to": {
+          "resource.type": "Order",
+          "actor.role": "WarehouseOperator",
+          "action": "ShipOrder"
+        },
+        "when": {
+          "customer.credit_status": "Clear"
+        },
+        "requires_fact": [
+          {
+            "fact_path": "customer.credit_status",
+            "allowed_source_classes": [
+              "system_of_record",
+              "derived"
+            ],
+            "allowed_source_ids": [],
+            "evidence_ref_required": false,
+            "signature_required": false
+          }
+        ],
+        "semantics_version": "0.4"
+      }
+    ],
+    "hash": "998e701c2a442103"
+  }
+]

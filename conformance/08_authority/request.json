@@ -1,0 +1,15 @@
+{
+  "request_id": "req-authority-001",
+  "actor": {
+    "id": "user-1",
+    "role": "WarehouseOperator",
+    "groups": []
+  },
+  "operation": "ShipOrder",
+  "resource": {
+    "type": "Order"
+  },
+  "context": {},
+  "requested_at": "2026-06-14T19:31:16.304420007Z",
+  "metadata": {}
+}

@@ -1,0 +1,7 @@
+{
+  "decision_id": "b0541af5-dfd8-4983-a389-8f0038325321",
+  "request_id": "req-authority-001",
+  "final_decision": "deny",
+  "reason_code": "denied_by_block_credit_hold_shipping",
+  "trace_ref": "b0541af5-dfd8-4983-a389-8f0038325321"
+}

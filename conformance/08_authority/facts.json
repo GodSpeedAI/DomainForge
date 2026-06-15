@@ -1,0 +1,11 @@
+[
+  {
+    "path": "customer.credit_status",
+    "value": "Hold",
+    "source_class": "system_of_record",
+    "source_id": "credit-service",
+    "observed_at": "2026-06-14T19:31:16.304423593Z",
+    "expires_at": "2026-06-14T20:31:16.304423734Z",
+    "evidence_ref": "ref-1"
+  }
+]

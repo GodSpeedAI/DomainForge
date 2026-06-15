@@ -292,6 +292,27 @@ Relation "Payment"
         serde_json::from_str(&serialized).expect("re-parse normalized JSON")
     }
 
+    fn normalize_authority_volatile(value: serde_json::Value) -> serde_json::Value {
+        const VOLATILE: &[&str] = &["created_at", "decision_id", "trace_ref"];
+        match value {
+            serde_json::Value::Object(map) => {
+                let mut out = serde_json::Map::new();
+                for (key, val) in map {
+                    if VOLATILE.contains(&key.as_str()) {
+                        out.insert(key, serde_json::Value::String("<volatile>".to_string()));
+                    } else {
+                        out.insert(key, normalize_authority_volatile(val));
+                    }
+                }
+                serde_json::Value::Object(out)
+            }
+            serde_json::Value::Array(items) => {
+                serde_json::Value::Array(items.into_iter().map(normalize_authority_volatile).collect())
+            }
+            other => other,
+        }
+    }
+
     #[wasm_bindgen_test]
     fn test_conformance_01_parse_canonical_json() {
         let input = include_str!("../../conformance/01_minimal_domain/input.sea");
@@ -367,6 +388,67 @@ Relation "Payment"
         assert!(
             msg.contains("UNKNOWN"),
             "violation text must contain UNKNOWN, got: {msg}"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_authority_08_trace_parity() {
+        let config = include_str!("../../conformance/08_authority/config.json");
+        let request = include_str!("../../conformance/08_authority/request.json");
+        let facts = include_str!("../../conformance/08_authority/facts.json");
+        let trace_golden = include_str!("../../conformance/08_authority/trace.json");
+        let decision_golden = include_str!("../../conformance/08_authority/decision.json");
+
+        let result = sea_core::wasm::evaluate_authority(
+            config,
+            request,
+            Some(facts.to_string()),
+        )
+        .expect("WASM evaluateAuthority must succeed");
+
+        let result_obj: serde_json::Value =
+            serde_wasm_bindgen::from_value(result).expect("JsValue round-trips to serde_json");
+        let actual_trace = result_obj
+            .get("trace")
+            .expect("result has trace")
+            .clone();
+        let actual_decision = result_obj
+            .get("decision")
+            .expect("result has decision")
+            .clone();
+
+        let expected_trace: serde_json::Value =
+            serde_json::from_str(trace_golden).expect("parse trace golden");
+        let expected_decision: serde_json::Value =
+            serde_json::from_str(decision_golden).expect("parse decision golden");
+
+        assert_eq!(
+            normalize_authority_volatile(actual_trace),
+            normalize_authority_volatile(expected_trace),
+            "WASM authority trace must byte-match the Rust golden (volatile-normalized)"
+        );
+        assert_eq!(
+            normalize_authority_volatile(actual_decision.clone()),
+            normalize_authority_volatile(expected_decision),
+            "WASM authority decision must byte-match the Rust golden (volatile-normalized)"
+        );
+
+        assert_eq!(
+            actual_decision["final_decision"].as_str().unwrap_or(""),
+            "deny",
+            "08_authority must deny the credit-Hold shipment"
+        );
+
+        let trace_obj = serde_json::from_str::<serde_json::Value>(trace_golden)
+            .expect("parse trace golden for pack_hashes check");
+        let pack_hashes = trace_obj
+            .get("pack_hashes")
+            .and_then(|h| h.as_array())
+            .expect("trace has pack_hashes array");
+        assert_eq!(
+            pack_hashes.len(),
+            2,
+            "08_authority pins exactly two pack hashes"
         );
     }
 }
