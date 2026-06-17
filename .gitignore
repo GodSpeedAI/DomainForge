@@ -102,3 +102,4 @@ coverage/
 
 # Agent working files
 .agents/
+.omc/

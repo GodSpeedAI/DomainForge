@@ -60,7 +60,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
    print(result.violations)
    ```
 
-   - Enable three-valued logic for partial data: `graph.set_evaluation_mode(True)`.
+   - Partial data evaluates to `Unknown` automatically: read `result.is_satisfied_tristate` (`None` = Unknown) under the canonical three-valued logic.
 
 5. **Evaluate a policy in TypeScript**
 

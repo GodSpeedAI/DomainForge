@@ -36,8 +36,9 @@ Pinned end-to-end by `../../conformance/` (see `docs/specs/canonical_entrypoints
 
 ## Notes
 
-- Three-valued logic is **canonical**; every `EvaluationResult` records its
-  `evaluation_mode` (`policy/core.rs`). Boolean mode is legacy.
+- Three-valued logic is the **only** evaluation mode; every `EvaluationResult`
+  records its `evaluation_mode` (`policy/core.rs`, always `three_valued`). The legacy
+  boolean toggle was removed (audit G1).
 - Flow IDs are random UUID v4 (event identity); all other concept IDs are
   content-derived v5 and stable. Normalize flow IDs before byte-comparing graphs.
 - Largest/most-careful files: `projection/protobuf.rs` (3.3k), `parser/ast.rs` (2.9k),

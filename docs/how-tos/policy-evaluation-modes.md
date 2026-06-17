@@ -1,30 +1,38 @@
-# Policy Evaluation Modes (Three-Valued vs Boolean)
+# Policy Evaluation Mode (Canonical Three-Valued Logic)
 
-Goal: choose and troubleshoot the runtime evaluation mode for policies.
+Goal: understand how policies are evaluated and how to handle `Unknown` results.
 
-## Defaults and toggle
+## Single canonical mode
 
-- Three-valued logic is **enabled by default** (returns `Unknown` when data is missing).
-- Switch to strict boolean mode when you need binary pass/fail:
-  - Rust: `graph.set_evaluation_mode(false)`
-  - Python: `graph.set_evaluation_mode(False)`
-  - TypeScript/WASM: `graph.setEvaluationMode(false)`
+Policy evaluation uses **three-valued (Kleene) logic** as the one and only
+semantics. There is no runtime toggle: the legacy boolean mode was removed so a
+model cannot have two different meanings (semantic-infrastructure audit, G1).
 
-Return to three-valued logic with `true/True`.
+- Missing or `Null` data evaluates to **`Unknown`** (`is_satisfied_tristate = None`).
+- Every `EvaluationResult` carries `evaluation_mode = "three_valued"` so output is
+  self-describing.
+- `is_satisfied` is a **fail-closed** convenience boolean: it is `false` whenever the
+  tristate result is `Unknown` or `False`. Consumers that must distinguish
+  "violated" from "couldn't tell" should read `is_satisfied_tristate`, not `is_satisfied`.
 
-## When to use which mode
+## Reading results
 
-- **Three-valued (default)**: modeling in-progress systems; want Unknown instead of false negatives.
-- **Boolean**: production gates that must fail on any missing data; CI pipelines that treat Unknown as failure.
+- Rust: `result.is_satisfied_tristate` (`Option<bool>`) and `result.evaluation_mode`.
+- Python: `result.is_satisfied_tristate` (`bool | None`) and `result.evaluation_mode` (str).
+- TypeScript/WASM: `result.isSatisfiedTristate` (`boolean | undefined`) and
+  `result.evaluationMode` (string).
 
 ## Symptoms and fixes
 
-- Seeing `Unknown` results when you expect pass/fail: enable boolean mode for that run or complete the missing fields.
-- Tests failing after switching modes: ensure fixtures set `graph.set_evaluation_mode(true/false)` explicitly.
-- Performance concerns: toggling is runtime-only; no rebuild needed.
+- Seeing `Unknown` when you expect pass/fail: the model is missing the data the
+  policy references. Complete the missing fields — do not coerce `Unknown` to a
+  boolean, as that silently hides incomplete evidence.
+- Treating `Unknown` as failure in a gate: check `is_satisfied` (already fail-closed)
+  or treat a `None`/`undefined` tristate as a failed gate explicitly.
 
 ## See also
 
 - [Policy Evaluation Logic](../explanations/policy-evaluation-logic.md)
 - [Three-Valued Logic](../explanations/three-valued-logic.md)
+- [Canonical Entrypoints](../specs/canonical_entrypoints.md)
 - [CLI Commands](../reference/cli-commands.md) (`--allow-unknown` parallels three-valued behavior)

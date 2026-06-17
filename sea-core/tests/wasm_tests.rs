@@ -306,9 +306,12 @@ Relation "Payment"
                 }
                 serde_json::Value::Object(out)
             }
-            serde_json::Value::Array(items) => {
-                serde_json::Value::Array(items.into_iter().map(normalize_authority_volatile).collect())
-            }
+            serde_json::Value::Array(items) => serde_json::Value::Array(
+                items
+                    .into_iter()
+                    .map(normalize_authority_volatile)
+                    .collect(),
+            ),
             other => other,
         }
     }
@@ -399,19 +402,12 @@ Relation "Payment"
         let trace_golden = include_str!("../../conformance/08_authority/trace.json");
         let decision_golden = include_str!("../../conformance/08_authority/decision.json");
 
-        let result = sea_core::wasm::evaluate_authority(
-            config,
-            request,
-            Some(facts.to_string()),
-        )
-        .expect("WASM evaluateAuthority must succeed");
+        let result = sea_core::wasm::evaluate_authority(config, request, Some(facts.to_string()))
+            .expect("WASM evaluateAuthority must succeed");
 
         let result_obj: serde_json::Value =
             serde_wasm_bindgen::from_value(result).expect("JsValue round-trips to serde_json");
-        let actual_trace = result_obj
-            .get("trace")
-            .expect("result has trace")
-            .clone();
+        let actual_trace = result_obj.get("trace").expect("result has trace").clone();
         let actual_decision = result_obj
             .get("decision")
             .expect("result has decision")

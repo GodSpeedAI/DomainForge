@@ -13,6 +13,7 @@ the `final_decision` — byte-stable.
 | `packs.json` | The two input packs: a prohibition (`shipping-policy`, priority 100) and a permission (`shipping-permission`, priority 50) of differing specificity. |
 | `trace.json` | The full `AuthorityTrace` for a `ShipOrder` request on a credit-`Hold` order. The prohibition applies and **denies**; the permission is a structural *candidate* excluded by its `when` condition (`credit_status == Clear`). `pack_hashes` has two entries, both policies appear in `candidate_policies`, and `conflict_resolution_steps` records the resolution. |
 | `decision.json` | The `AuthorityDecision` (`deny`, `reason_code = denied_by_block_credit_hold_shipping`). |
+| `config.json`, `request.json`, `facts.json` | The shared cross-binding evaluation inputs. `facts.json` intentionally omits `expires_at` so the committed trusted fact does not drift into `stale_fact` as wall-clock time advances. |
 | `manifest.json` | `command: "authority_trace"` — skipped by the `parse`/`validate` loaders (Rust corpus runner, Python and TS parity), like `10_kg_roundtrip` and `12_seaforge_fixture`. |
 
 ## How it is enforced
@@ -52,3 +53,5 @@ Each test loads the committed inputs, calls the binding, parses the emitted
 `trace`/`decision` JSON, normalizes only the genuinely volatile fields
 (`created_at`, `decision_id`, `trace_ref`), and asserts structural equality
 with the golden. All seven hashes and every policy/decision field stay pinned.
+The shared trusted fact is non-expiring, so these parity checks are stable across
+calendar time.

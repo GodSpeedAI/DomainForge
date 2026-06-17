@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Three-valued logic is now the only policy evaluation mode (BREAKING).** Closing
+  semantic-infrastructure audit gap G1, the legacy boolean evaluation mode and its
+  runtime toggle were removed. `Graph::set_evaluation_mode` / `use_three_valued_logic`,
+  `GraphConfig`, `Policy::evaluate_with_mode`, the boolean expression evaluator, and
+  `EvaluationMode::Boolean` no longer exist in `sea-core`, and the corresponding
+  `setEvaluationMode` / `useThreeValuedLogic` methods were dropped from the Python,
+  TypeScript, and WASM bindings. Policies always evaluate under canonical Kleene
+  three-valued logic; `EvaluationResult.evaluation_mode` is always `"three_valued"`.
+  `is_satisfied` remains a fail-closed convenience boolean — read
+  `is_satisfied_tristate` to distinguish `Unknown` from `False`.
+
 ## [0.11.0] - 2026-06-09
 
 ### Added

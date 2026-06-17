@@ -1,8 +1,10 @@
 """
-Test runtime toggle for three-valued logic evaluation.
+Canonical evaluation-mode tests (Python binding).
 
-This test validates that the Graph.set_evaluation_mode() and
-Graph.use_three_valued_logic() methods work correctly.
+The legacy runtime logic toggle (boolean vs three-valued) was removed per the
+semantic-infrastructure audit (G1). Three-valued (Kleene) logic is now the single
+authoritative semantics, so the binding no longer exposes set_evaluation_mode /
+use_three_valued_logic. These tests pin the canonical behavior cross-language.
 """
 
 import json
@@ -10,34 +12,10 @@ import pytest
 from sea_dsl import Graph, Severity
 
 
-def test_default_evaluation_mode_is_three_valued():
-    """Test that the default evaluation mode is three-valued logic."""
-    graph = Graph()
-    assert graph.use_three_valued_logic() is True
-
-
-def test_can_toggle_evaluation_mode():
-    """Test that we can toggle between three-valued and boolean logic."""
+def test_indeterminate_member_access_returns_null():
+    """Missing data evaluates to NULL (None) under canonical three-valued logic."""
     graph = Graph()
 
-    # Start with default (three-valued enabled)
-    assert graph.use_three_valued_logic() is True
-
-    # Disable three-valued logic
-    graph.set_evaluation_mode(False)
-    assert graph.use_three_valued_logic() is False
-
-    # Re-enable three-valued logic
-    graph.set_evaluation_mode(True)
-    assert graph.use_three_valued_logic() is True
-
-
-def test_three_valued_mode_returns_null():
-    """Test that three-valued mode returns None for indeterminate evaluations."""
-    graph = Graph()
-    graph.set_evaluation_mode(True)  # Enable three-valued logic
-
-    # Create a policy that references a non-existent entity
     policy = {
         "id": "00000000-0000-0000-0000-000000000001",
         "name": "TestPolicy",
@@ -53,45 +31,18 @@ def test_three_valued_mode_returns_null():
 
     result = graph.evaluate_policy(json.dumps(policy))
 
-    # Should return None (NULL) for tristate
+    # NULL is never silently coerced to False: tristate is None, the fail-closed
+    # boolean is False, and a violation is emitted at the policy's severity.
     assert result.is_satisfied_tristate is None
     assert result.is_satisfied is False
     assert len(result.violations) == 1
     assert result.violations[0].severity == Severity.Error
 
 
-def test_boolean_mode_coerces_indeterminate_to_false():
-    """Boolean mode turns indeterminate member access into a false result with a violation."""
+def test_satisfied_policy_has_no_violations():
+    """A trivially true policy is satisfied with no violations under canonical logic."""
     graph = Graph()
-    graph.set_evaluation_mode(False)
 
-    policy = {
-        "id": "00000000-0000-0000-0000-000000000004",
-        "name": "MissingDataPolicy",
-        "namespace": "test",
-        "version": {"major": 1, "minor": 0, "patch": 0},
-        "expression": {"MemberAccess": {"object": "NonExistent", "member": "attr"}},
-        "modality": "Obligation",
-        "kind": "Constraint",
-        "priority": 0,
-        "rationale": None,
-        "tags": [],
-    }
-
-    result = graph.evaluate_policy(json.dumps(policy))
-
-    assert result.is_satisfied_tristate is False
-    assert result.is_satisfied is False
-    assert len(result.violations) > 0
-    assert result.violations[0].severity == Severity.Error
-
-
-def test_boolean_mode_behavior():
-    """Test that boolean mode uses strict boolean logic."""
-    graph = Graph()
-    graph.set_evaluation_mode(False)  # Disable three-valued logic
-
-    # Simple policy that always evaluates to true
     policy = {
         "id": "00000000-0000-0000-0000-000000000002",
         "name": "AlwaysTrue",
@@ -107,49 +58,16 @@ def test_boolean_mode_behavior():
 
     result = graph.evaluate_policy(json.dumps(policy))
 
-    # Should return True for tristate in boolean mode
     assert result.is_satisfied_tristate is True
     assert result.is_satisfied is True
     assert len(result.violations) == 0
 
 
-def test_mode_persists_across_evaluations():
-    """Test that the evaluation mode persists across multiple policy evaluations."""
+def test_no_evaluation_mode_toggle_exposed():
+    """The boolean-mode toggle must no longer exist on the binding (audit G1)."""
     graph = Graph()
-
-    policy_true = {
-        "id": "00000000-0000-0000-0000-000000000003",
-        "name": "TruePolicy",
-        "namespace": "test",
-        "version": {"major": 1, "minor": 0, "patch": 0},
-        "expression": {"Literal": True},
-        "modality": "Obligation",
-        "kind": "Constraint",
-        "priority": 0,
-        "rationale": None,
-        "tags": [],
-    }
-
-    # Set to boolean mode
-    graph.set_evaluation_mode(False)
-
-    # Evaluate first policy
-    result1 = graph.evaluate_policy(json.dumps(policy_true))
-    assert graph.use_three_valued_logic() is False
-    assert result1.is_satisfied is True
-
-    # Evaluate second policy - mode should still be boolean
-    result2 = graph.evaluate_policy(json.dumps(policy_true))
-    assert graph.use_three_valued_logic() is False
-    assert result2.is_satisfied is True
-
-    # Switch to three-valued mode
-    graph.set_evaluation_mode(True)
-
-    # Evaluate third policy
-    result3 = graph.evaluate_policy(json.dumps(policy_true))
-    assert graph.use_three_valued_logic() is True
-    assert result3.is_satisfied is True
+    assert not hasattr(graph, "set_evaluation_mode")
+    assert not hasattr(graph, "use_three_valued_logic")
 
 
 if __name__ == "__main__":

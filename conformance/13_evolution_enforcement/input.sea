@@ -1,0 +1,13 @@
+Entity "Vendor" v1.0.0 in procurement
+
+Resource "Payment" USD in finance
+
+Flow "Payment" from "Vendor" to "Vendor" quantity 100
+
+policy vendor_policy per Constraint Obligation priority 1 as: forall f in flows: (f.quantity <= 100)
+
+ConceptChange "VendorMigration"
+  @from_version v1.0.0
+  @to_version v2.0.0
+  @migration_policy mandatory
+  @breaking_change true

@@ -397,9 +397,8 @@ graph_api:
     all_accessors: "all_entities(), all_resources(), all_flows(), all_instances(), all_roles(), all_relations(), all_patterns()"
 
   policy_evaluation:
-    set_mode: "set_evaluation_mode(use_three_valued_logic: bool)"
-    check_mode: "use_three_valued_logic() -> bool"
-    evaluate: "evaluate_policy(policy) -> EvaluationResult"
+    logic: "Canonical three-valued (Kleene) logic only; no mode toggle. Missing data -> Unknown (tristate None/undefined)."
+    evaluate: "evaluate_policy(policy) -> EvaluationResult (read is_satisfied_tristate to distinguish Unknown from False)"
 
   parsing:
     from_source:

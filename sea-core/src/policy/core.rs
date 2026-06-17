@@ -44,20 +44,17 @@ pub struct Policy {
 
 /// Records which logic mode produced an [`EvaluationResult`].
 ///
-/// Three-valued logic is the **canonical** semantics for the standard layer:
-/// every downstream consumer should treat [`EvaluationMode::ThreeValued`] as
-/// authoritative. [`EvaluationMode::Boolean`] exists only for backward
-/// compatibility and collapses NULL to `false`; it is recorded on every result
-/// so the result is always self-describing about how it was derived (closing the
-/// G1/G7 "two meanings for one model" gap from the semantic-infrastructure audit).
+/// Three-valued (Kleene) logic is the **only** semantics for the standard layer.
+/// The legacy boolean mode was removed (semantic-infrastructure audit G1): a model
+/// can no longer be evaluated under two different meanings. The mode is still
+/// recorded on every result so canonical JSON is self-describing and the output
+/// schema remains stable for downstream consumers (e.g. SEA-Forge, G10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum EvaluationMode {
     /// Canonical Kleene three-valued logic (True / False / NULL).
     #[default]
     ThreeValued,
-    /// Backward-compatible boolean logic (NULL coerced to `false`).
-    Boolean,
 }
 
 impl EvaluationMode {
@@ -66,7 +63,6 @@ impl EvaluationMode {
     pub fn as_str(&self) -> &'static str {
         match self {
             EvaluationMode::ThreeValued => "three_valued",
-            EvaluationMode::Boolean => "boolean",
         }
     }
 }
@@ -216,38 +212,25 @@ impl Policy {
         &self.kind
     }
 
+    /// Evaluate this policy against the graph using canonical three-valued
+    /// (Kleene) logic. This is the single, authoritative evaluation path; the
+    /// legacy boolean mode was removed (audit G1).
     pub fn evaluate(&self, graph: &Graph) -> Result<EvaluationResult, String> {
-        self.evaluate_with_mode(graph, graph.use_three_valued_logic())
-    }
-
-    pub fn evaluate_with_mode(
-        &self,
-        graph: &Graph,
-        use_three_valued_logic: bool,
-    ) -> Result<EvaluationResult, String> {
         Self::validate_aggregation_usage(&self.expression, true)?;
 
         let expanded = self.expression.expand(graph)?;
 
-        // Evaluate expression; runtime toggle chooses three-valued vs boolean path.
-        // We compute the tri-state result and derive a backward-compatible boolean (false when Null).
-        let is_satisfied_tristate: Option<bool> = if use_three_valued_logic {
+        // Compute the tri-state result and derive a fail-closed boolean (false when Null).
+        let is_satisfied_tristate: Option<bool> =
             match self.evaluate_expression_three_valued(&expanded, graph)? {
                 ThreeValuedBool::True => Some(true),
                 ThreeValuedBool::False => Some(false),
                 ThreeValuedBool::Null => None,
-            }
-        } else {
-            Some(self.evaluate_expression_boolean(&expanded, graph)?)
-        };
+            };
 
         let is_satisfied = is_satisfied_tristate.unwrap_or(false);
 
-        let evaluation_mode = if use_three_valued_logic {
-            EvaluationMode::ThreeValued
-        } else {
-            EvaluationMode::Boolean
-        };
+        let evaluation_mode = EvaluationMode::ThreeValued;
 
         let violations = if is_satisfied_tristate == Some(true) {
             vec![]
@@ -319,132 +302,6 @@ impl Policy {
                 Self::validate_aggregation_usage(condition, true)
             }
             _ => Ok(()),
-        }
-    }
-
-    fn evaluate_expression_boolean(
-        &self,
-        expr: &Expression,
-        graph: &Graph,
-    ) -> Result<bool, String> {
-        match expr {
-            Expression::Literal(v) => v
-                .as_bool()
-                .ok_or_else(|| format!("Expected boolean literal, got: {}", v)),
-            Expression::Variable(name) => {
-                Err(format!("Cannot evaluate unexpanded variable: {}", name))
-            }
-            Expression::Cast { .. } => {
-                let val = Self::get_runtime_value(expr, graph)?;
-                val.as_bool()
-                    .ok_or_else(|| format!("Expected boolean from cast, got: {}", val))
-            }
-            Expression::Binary { op, left, right } => match op {
-                BinaryOp::And | BinaryOp::Or => {
-                    let left_val = self.evaluate_expression_boolean(left, graph)?;
-                    let right_val = self.evaluate_expression_boolean(right, graph)?;
-
-                    Ok(match op {
-                        BinaryOp::And => left_val && right_val,
-                        BinaryOp::Or => left_val || right_val,
-                        _ => unreachable!(),
-                    })
-                }
-                BinaryOp::Equal | BinaryOp::NotEqual => {
-                    self.compare_values(left, right, graph, |l, r| match op {
-                        BinaryOp::Equal => l == r,
-                        BinaryOp::NotEqual => l != r,
-                        _ => unreachable!(),
-                    })
-                }
-                BinaryOp::GreaterThan
-                | BinaryOp::LessThan
-                | BinaryOp::GreaterThanOrEqual
-                | BinaryOp::LessThanOrEqual => {
-                    self.compare_numeric(left, right, graph, |l, r| match op {
-                        BinaryOp::GreaterThan => l > r,
-                        BinaryOp::LessThan => l < r,
-                        BinaryOp::GreaterThanOrEqual => l >= r,
-                        BinaryOp::LessThanOrEqual => l <= r,
-                        _ => unreachable!(),
-                    })
-                }
-                BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Multiply | BinaryOp::Divide => {
-                    Err("Arithmetic operations not supported in boolean context".to_string())
-                }
-                BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => self
-                    .compare_strings(left, right, graph, |l, r| match op {
-                        BinaryOp::Contains => l.contains(r),
-                        BinaryOp::StartsWith => l.starts_with(r),
-                        BinaryOp::EndsWith => l.ends_with(r),
-                        _ => unreachable!(),
-                    }),
-                BinaryOp::HasRole => self.evaluate_has_role(left, right, graph),
-                BinaryOp::Matches => self.evaluate_pattern_match(left, right, graph),
-                BinaryOp::Before | BinaryOp::After | BinaryOp::During => {
-                    // Temporal operators - parse and compare ISO 8601 timestamps
-                    let left_str = self.get_string_value(left, graph)?;
-                    let right_str = self.get_string_value(right, graph)?;
-
-                    // Parse timestamps using chrono
-                    let left_dt = chrono::DateTime::parse_from_rfc3339(&left_str).map_err(|e| {
-                        format!("Failed to parse left timestamp '{}': {}", left_str, e)
-                    })?;
-                    let right_dt =
-                        chrono::DateTime::parse_from_rfc3339(&right_str).map_err(|e| {
-                            format!("Failed to parse right timestamp '{}': {}", right_str, e)
-                        })?;
-
-                    let result = match op {
-                        BinaryOp::Before => left_dt < right_dt,
-                        BinaryOp::After => left_dt > right_dt,
-                        BinaryOp::During => {
-                            return Err("'during' operator requires interval semantics which are not yet implemented. Use 'before' and 'after' for timestamp comparisons.".to_string())
-                        }
-                        _ => unreachable!(),
-                    };
-                    Ok(result)
-                }
-            },
-            Expression::Unary { op, operand } => {
-                let val = self.evaluate_expression_boolean(operand, graph)?;
-                Ok(match op {
-                    UnaryOp::Not => !val,
-                    UnaryOp::Negate => {
-                        return Err("Negate operator not supported in boolean context".to_string())
-                    }
-                })
-            }
-            Expression::Quantifier { .. } => {
-                Err("Cannot evaluate non-expanded quantifier".to_string())
-            }
-            Expression::MemberAccess { object, member } => {
-                let value = Self::get_runtime_value(expr, graph)?;
-                match value {
-                    serde_json::Value::Bool(v) => Ok(v),
-                    serde_json::Value::Null => Ok(false),
-                    _ => Err(format!(
-                        "Expected boolean value for member '{}.{}', but found {:?}",
-                        object, member, value
-                    )),
-                }
-            }
-            Expression::Aggregation { .. } => {
-                Err("Cannot evaluate non-expanded aggregation".to_string())
-            }
-            Expression::AggregationComprehension { .. } => {
-                Err("Cannot evaluate non-expanded aggregation comprehension".to_string())
-            }
-            Expression::QuantityLiteral { .. } => {
-                Err("Cannot evaluate quantity literal in boolean context".to_string())
-            }
-            Expression::TimeLiteral(_) => {
-                Err("Cannot evaluate time literal in boolean context".to_string())
-            }
-            Expression::IntervalLiteral { .. } => {
-                Err("Cannot evaluate interval literal in boolean context".to_string())
-            }
-            Expression::GroupBy { .. } => Err("Cannot evaluate non-expanded group_by".to_string()),
         }
     }
 
@@ -709,79 +566,6 @@ impl Policy {
         }
     }
 
-    fn compare_values<F>(
-        &self,
-        left: &Expression,
-        right: &Expression,
-        graph: &Graph,
-        op: F,
-    ) -> Result<bool, String>
-    where
-        F: Fn(&serde_json::Value, &serde_json::Value) -> bool,
-    {
-        let left_val = self
-            .get_literal_value(left)
-            .or_else(|_| Self::get_runtime_value(left, graph))?;
-        let right_val = self
-            .get_literal_value(right)
-            .or_else(|_| Self::get_runtime_value(right, graph))?;
-        Ok(op(&left_val, &right_val))
-    }
-
-    fn compare_numeric<F>(
-        &self,
-        left: &Expression,
-        right: &Expression,
-        graph: &Graph,
-        op: F,
-    ) -> Result<bool, String>
-    where
-        F: Fn(Decimal, Decimal) -> bool,
-    {
-        let left_val = self.resolve_numeric_with_unit(left, graph)?;
-        let right_val = self.resolve_numeric_with_unit(right, graph)?;
-        let (left_aligned, right_aligned) = self.normalize_units_strict(left_val, right_val)?;
-        Ok(op(left_aligned, right_aligned))
-    }
-
-    fn compare_strings<F>(
-        &self,
-        left: &Expression,
-        right: &Expression,
-        graph: &Graph,
-        op: F,
-    ) -> Result<bool, String>
-    where
-        F: Fn(&str, &str) -> bool,
-    {
-        let left_val = self.get_string_value(left, graph)?;
-        let right_val = self.get_string_value(right, graph)?;
-        Ok(op(&left_val, &right_val))
-    }
-
-    fn evaluate_pattern_match(
-        &self,
-        left: &Expression,
-        right: &Expression,
-        graph: &Graph,
-    ) -> Result<bool, String> {
-        let candidate = self.get_string_value(left, graph)?;
-        let pattern_name = self.get_string_value(right, graph)?;
-
-        let pattern = graph
-            .find_pattern(&pattern_name, Some(&self.namespace))
-            .ok_or_else(|| {
-                format!(
-                    "Pattern '{}' not found in namespace '{}'",
-                    pattern_name, self.namespace
-                )
-            })?;
-
-        pattern
-            .is_match(&candidate)
-            .map_err(|e| format!("Pattern '{}' failed to evaluate: {}", pattern_name, e))
-    }
-
     fn evaluate_has_role(
         &self,
         left: &Expression,
@@ -888,57 +672,6 @@ impl Policy {
         }
 
         Ok(None)
-    }
-
-    fn resolve_numeric_with_unit(
-        &self,
-        expr: &Expression,
-        graph: &Graph,
-    ) -> Result<(Decimal, Option<String>), String> {
-        let value = self
-            .get_literal_value(expr)
-            .or_else(|_| Self::get_runtime_value(expr, graph))?;
-        Self::parse_numeric_with_unit_value(&value)?
-            .ok_or_else(|| format!("Expected numeric value, got: {}", value))
-    }
-
-    fn normalize_units_strict(
-        &self,
-        left: (Decimal, Option<String>),
-        right: (Decimal, Option<String>),
-    ) -> Result<(Decimal, Decimal), String> {
-        match (left.1, right.1) {
-            (Some(l_unit), Some(r_unit)) => {
-                let registry = get_default_registry();
-                let registry = registry
-                    .read()
-                    .map_err(|e| format!("Failed to lock unit registry: {}", e))?;
-
-                if l_unit == r_unit {
-                    Ok((left.0, right.0))
-                } else {
-                    let from = registry
-                        .get_unit(&r_unit)
-                        .map_err(|e| format!("Invalid unit '{}': {}", r_unit, e))?;
-                    let to = registry
-                        .get_unit(&l_unit)
-                        .map_err(|e| format!("Invalid unit '{}': {}", l_unit, e))?;
-                    let converted = registry
-                        .convert(right.0, from, to)
-                        .map_err(|e| format!("Unit conversion failed: {}", e))?;
-                    Ok((left.0, converted))
-                }
-            }
-            (None, None) => Ok((left.0, right.0)),
-            (Some(l_unit), None) => Err(format!(
-                "Cannot compare quantity with unit '{}' to unitless value",
-                l_unit
-            )),
-            (None, Some(r_unit)) => Err(format!(
-                "Cannot compare unitless value to quantity with unit '{}'",
-                r_unit
-            )),
-        }
     }
 
     fn normalize_units_nullable(

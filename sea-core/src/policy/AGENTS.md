@@ -22,10 +22,11 @@ The semantic heart. Evaluates policy expressions against a `Graph` under
   read the tristate, not the bool.
 - NULL is produced by member access to a missing/Null attribute (e.g. `f.tag` where
   flow has no `tag`). Built-in `flow.quantity` defaults to `0`, never NULL.
-- `evaluate()` uses the graph's mode flag; `evaluate_with_mode(graph, three_valued)`
-  forces it. Every result stamps `evaluation_mode` so it is self-describing.
-- Aggregation in boolean context errors pre-eval (`validate_aggregation_usage`) —
-  must be wrapped in a comparison (`count(...) > 0`).
+- `evaluate(graph)` is the single evaluation path; it always uses canonical
+  three-valued logic (the boolean-mode toggle was removed, audit G1). Every result
+  stamps `evaluation_mode = ThreeValued` so it is self-describing.
+- Aggregation in a boolean-typed expression context errors pre-eval
+  (`validate_aggregation_usage`) — must be wrapped in a comparison (`count(...) > 0`).
 
 ## Gotchas
 

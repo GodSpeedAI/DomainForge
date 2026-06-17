@@ -1,0 +1,24 @@
+{
+  "error_count": 1,
+  "evaluation_mode": "three_valued",
+  "policies": [
+    {
+      "evaluation_mode": "three_valued",
+      "is_satisfied": true,
+      "is_satisfied_tristate": true,
+      "kind": "constraint",
+      "modality": "obligation",
+      "name": "vendor_policy",
+      "namespace": "default",
+      "violations": []
+    }
+  ],
+  "violations": [
+    {
+      "context": {},
+      "message": "Breaking ConceptChange(s) [VendorMigration] declared alongside 1 active policy/policies. Policies referencing the pre-change concept may produce incorrect results against post-change semantics. Review or remove the affected policies before proceeding.",
+      "policy_name": "concept_change_compatibility",
+      "severity": "error"
+    }
+  ]
+}

@@ -146,8 +146,7 @@ graph.all_flows()
 
 # Policy evaluation
 graph.add_policy(policy)
-graph.evaluate_policy(policy_json)
-graph.set_evaluation_mode(use_three_valued=True)
+graph.evaluate_policy(policy_json)  # always canonical three-valued logic
 
 # CALM integration
 graph.export_calm()

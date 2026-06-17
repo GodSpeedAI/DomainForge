@@ -79,22 +79,22 @@ backward compatibility — consumers of the standard layer **must** read
 The audit flagged a runtime toggle (`Graph::use_three_valued_logic`) that gave one
 model two possible meanings, with no record of which semantics applied.
 
-**Decision (settled): three-valued (Kleene) logic is the canonical semantics of the
-standard layer.** Boolean mode is legacy/back-compat only.
+**Decision (settled and enforced): three-valued (Kleene) logic is the only
+semantics of the standard layer.** The legacy boolean mode and its toggle
+(`set_evaluation_mode` / `use_three_valued_logic`, exposed in Rust and all three
+bindings) have been **removed**. A model can no longer be evaluated under two
+different meanings.
 
-To make a result self-describing rather than removing the toggle outright (which
-would be a breaking change to existing consumers), every `EvaluationResult` now
-carries an `evaluation_mode` field (`crate::policy::EvaluationMode`):
+Every `EvaluationResult` still carries an `evaluation_mode` field
+(`crate::policy::EvaluationMode`) so canonical JSON stays self-describing and the
+output schema is stable for downstream consumers (e.g. SEA-Forge, G10):
 
-- `EvaluationMode::ThreeValued` → serialized as `"three_valued"` (canonical, the
-  default for new `Graph`s).
-- `EvaluationMode::Boolean` → serialized as `"boolean"` (legacy; collapses NULL to
-  `false` with no NULL semantics).
+- `EvaluationMode::ThreeValued` → serialized as `"three_valued"` — the sole value.
 
-This closes the G1/G7 gap: the same pack evaluated under different toggle settings
-now yields results that each declare which semantics produced them. The authority
-path already hashed `unknown_handling_config`; plain policy evaluation now records
-its mode too.
+This closes the G1/G7 gap at the root: there is no alternate semantics to disagree
+about. `Unknown` is never silently coerced; `is_satisfied` is a fail-closed
+convenience boolean and consumers needing to distinguish "violated" from "unknown"
+read `is_satisfied_tristate`.
 
 `EvaluationMode` is surfaced identically across all four runtimes:
 

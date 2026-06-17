@@ -11,23 +11,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod to_ast;
 
-/// Configuration for graph evaluation behavior
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphConfig {
-    /// Enable three-valued logic (True, False, NULL) for policy evaluation.
-    /// When false, uses strict boolean logic (True, False).
-    pub use_three_valued_logic: bool,
-}
-
-impl Default for GraphConfig {
-    fn default() -> Self {
-        Self {
-            // Default to three-valued logic for backward compatibility with the feature flag
-            use_three_valued_logic: true,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Graph {
     entities: IndexMap<ConceptId, Entity>,
@@ -51,8 +34,6 @@ pub struct Graph {
     projections: IndexMap<ConceptId, ProjectionContract>,
     #[serde(default)]
     entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
-    #[serde(default)]
-    config: GraphConfig,
 }
 
 impl Graph {
@@ -75,26 +56,6 @@ impl Graph {
             && self.metrics.is_empty()
             && self.mappings.is_empty()
             && self.projections.is_empty()
-    }
-
-    /// Set the evaluation mode for policy evaluation.
-    /// When `use_three_valued_logic` is true, policies will use three-valued logic (True, False, NULL).
-    /// When false, policies will use strict boolean logic (True, False).
-    pub fn set_evaluation_mode(&mut self, use_three_valued_logic: bool) {
-        self.config.use_three_valued_logic = use_three_valued_logic;
-    }
-
-    /// Get the current evaluation mode.
-    pub fn use_three_valued_logic(&self) -> bool {
-        self.config.use_three_valued_logic
-    }
-
-    pub fn config(&self) -> &GraphConfig {
-        &self.config
-    }
-
-    pub fn config_mut(&mut self) -> &mut GraphConfig {
-        &mut self.config
     }
 
     pub fn entity_count(&self) -> usize {
@@ -788,7 +749,6 @@ impl Graph {
             mappings,
             projections,
             entity_roles,
-            config: _,
         } = other;
 
         for entity in entities.into_values() {
@@ -856,10 +816,9 @@ impl Graph {
     /// collecting any violations produced. Returns a `ValidationResult`.
     pub fn validate(&self) -> ValidationResult {
         let mut all_violations: Vec<Violation> = Vec::new();
-        let use_three_valued_logic = self.config.use_three_valued_logic;
 
         for policy in self.policies.values() {
-            match policy.evaluate_with_mode(self, use_three_valued_logic) {
+            match policy.evaluate(self) {
                 Ok(eval) => {
                     all_violations.extend(eval.violations);
                 }
@@ -875,6 +834,14 @@ impl Graph {
                     all_violations.push(v);
                 }
             }
+        }
+
+        if let Err(err) = self.validate_concept_change_compatibility() {
+            all_violations.push(Violation::new(
+                "concept_change_compatibility",
+                err,
+                Severity::Error,
+            ));
         }
 
         ValidationResult::new(self.policies.len(), all_violations)

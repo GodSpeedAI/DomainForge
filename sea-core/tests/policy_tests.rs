@@ -316,16 +316,18 @@ fn test_evaluate_not_false() {
 }
 
 #[test]
-fn member_access_missing_in_boolean_mode_returns_false_with_violation() {
-    let mut graph = build_sample_graph();
-    graph.set_evaluation_mode(false); // strict boolean path
+fn member_access_missing_returns_unknown_with_violation() {
+    let graph = build_sample_graph();
 
     let expr = Expression::member_access("Unknown", "attr");
     let policy = Policy::new("Missing Member", expr);
 
     let result = policy.evaluate(&graph).unwrap();
 
+    // Missing member evaluates to NULL under canonical three-valued logic:
+    // tristate is None, the fail-closed boolean is false, and one violation is emitted.
     assert!(!result.is_satisfied);
+    assert_eq!(result.is_satisfied_tristate, None);
     assert_eq!(result.violations.len(), 1);
 }
 

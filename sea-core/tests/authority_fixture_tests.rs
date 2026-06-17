@@ -74,7 +74,7 @@ fn make_trusted_fact(path: &str, value: Value) -> FactEnvelope {
         source_class: SourceClass::SystemOfRecord,
         source_id: "credit-service".to_string(),
         observed_at: chrono::Utc::now(),
-        expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
+        expires_at: None,
         evidence_ref: Some("ref-1".to_string()),
         signature: None,
         confidence: None,
@@ -302,7 +302,9 @@ fn normalize_volatile_inner(value: Value) -> Value {
             }
             Value::Object(out)
         }
-        Value::Array(items) => Value::Array(items.into_iter().map(normalize_volatile_inner).collect()),
+        Value::Array(items) => {
+            Value::Array(items.into_iter().map(normalize_volatile_inner).collect())
+        }
         other => other,
     }
 }
@@ -379,7 +381,8 @@ fn trace_fixture_is_schema_valid_and_byte_pinned() {
 #[test]
 fn decision_fixture_is_schema_valid_and_byte_pinned() {
     let committed = load_committed("decision.json");
-    validate_against_schema(&committed, "decision").expect("decision must conform to $defs/decision");
+    validate_against_schema(&committed, "decision")
+        .expect("decision must conform to $defs/decision");
 
     let fixture = generate_raw_fixture();
     assert_eq!(

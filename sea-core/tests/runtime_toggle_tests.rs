@@ -1,17 +1,23 @@
+//! Canonical evaluation-mode tests.
+//!
+//! The legacy runtime logic toggle (boolean vs three-valued) was removed per the
+//! semantic-infrastructure audit (G1): three-valued (Kleene) logic is now the
+//! single, authoritative semantics. These tests pin that there is exactly one
+//! evaluation mode and that NULL attributes produce an indeterminate result
+//! rather than silently coercing to `false`.
+
 use sea_core::graph::Graph;
-use sea_core::policy::{BinaryOp, Expression, Policy, Severity};
+use sea_core::policy::{BinaryOp, EvaluationMode, Expression, Policy, Severity};
 use sea_core::primitives::Entity;
 
 #[test]
-fn test_runtime_toggle_three_valued_logic() {
-    // Create a graph with an entity that has a null attribute
+fn null_attribute_evaluates_to_unknown_under_canonical_logic() {
     let mut graph = Graph::new();
 
     let mut entity = Entity::new_with_namespace("TestEntity".to_string(), "default".to_string());
     entity.set_attribute("status", serde_json::Value::Null);
     graph.add_entity(entity).unwrap();
 
-    // Create a policy that inspects the null status attribute so modes diverge
     let policy = Policy::new(
         "TestPolicy",
         Expression::binary(
@@ -21,50 +27,23 @@ fn test_runtime_toggle_three_valued_logic() {
         ),
     );
 
-    // Test with three-valued logic enabled (default)
-    graph.set_evaluation_mode(true);
-    let result_with_tristate = policy.evaluate(&graph).unwrap();
+    let result = policy.evaluate(&graph).unwrap();
 
-    // NULL attribute bubbles up to an indeterminate result
-    assert_eq!(result_with_tristate.is_satisfied_tristate, None);
-    assert!(!result_with_tristate.is_satisfied);
-    assert_eq!(result_with_tristate.violations.len(), 1);
-    assert_eq!(result_with_tristate.violations[0].severity, Severity::Error);
-
-    // Test with three-valued logic disabled
-    graph.set_evaluation_mode(false);
-    let result_without_tristate = policy.evaluate(&graph).unwrap();
-
-    // Boolean mode treats missing data as false
-    assert_eq!(result_without_tristate.is_satisfied_tristate, Some(false));
-    assert!(!result_without_tristate.is_satisfied);
-    assert_eq!(result_without_tristate.violations.len(), 1);
-    assert_eq!(
-        result_without_tristate.violations[0].severity,
-        Severity::Error
-    );
+    // NULL attribute bubbles up to an indeterminate (UNKNOWN) result.
+    assert_eq!(result.is_satisfied_tristate, None);
+    assert!(!result.is_satisfied, "fail-closed boolean must be false");
+    assert_eq!(result.violations.len(), 1);
+    assert_eq!(result.violations[0].severity, Severity::Error);
 }
 
 #[test]
-fn test_runtime_toggle_default_is_three_valued() {
+fn evaluation_mode_is_always_three_valued() {
     let graph = Graph::new();
+    let policy = Policy::new("Trivial", Expression::literal(true));
 
-    // Default should be three-valued logic enabled
-    assert!(graph.use_three_valued_logic());
-}
+    let result = policy.evaluate(&graph).unwrap();
 
-#[test]
-fn test_runtime_toggle_can_be_changed() {
-    let mut graph = Graph::new();
-
-    // Start with default (three-valued enabled)
-    assert!(graph.use_three_valued_logic());
-
-    // Disable three-valued logic
-    graph.set_evaluation_mode(false);
-    assert!(!graph.use_three_valued_logic());
-
-    // Re-enable three-valued logic
-    graph.set_evaluation_mode(true);
-    assert!(graph.use_three_valued_logic());
+    // There is only one canonical mode; every result self-describes as three-valued.
+    assert_eq!(result.evaluation_mode, EvaluationMode::ThreeValued);
+    assert_eq!(result.evaluation_mode.as_str(), "three_valued");
 }

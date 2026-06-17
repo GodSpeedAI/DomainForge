@@ -51,13 +51,14 @@ The engine uses Kleene's three-valued logic (`True`, `False`, `Unknown`).
 - If a property is missing (e.g., `f.encryption`), the comparison returns `Unknown` rather than crashing or defaulting to false.
 - This allows policies to distinguish between "bad architecture" (False) and "incomplete architecture" (Unknown).
 
-### Runtime toggle
+### Single canonical mode
 
-- Three-valued logic is **on by default**. Switch to strict boolean evaluation via:
-  - Rust: `graph.set_evaluation_mode(false)`
-  - Python: `graph.set_evaluation_mode(False)`
-  - TypeScript/WASM: `graph.setEvaluationMode(false)`
-- Use this only for environments that require binary pass/fail semantics; unknown facts will then be treated as errors.
+- Three-valued logic is the **only** evaluation mode. The legacy boolean toggle
+  (`set_evaluation_mode` / `use_three_valued_logic`) was removed so a model cannot be
+  evaluated under two different meanings (semantic-infrastructure audit, G1).
+- `Unknown` is never silently coerced to `False`. The `is_satisfied` boolean on a
+  result is fail-closed (`false` for both `False` and `Unknown`); read
+  `is_satisfied_tristate` to distinguish the two.
 
 ## Side Effects
 

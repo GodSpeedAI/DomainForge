@@ -321,18 +321,11 @@ pub struct ViolationContext {
 
 ## 6. Configuration
 
-```rust
-pub struct GraphConfig {
-    /// Enable three-valued logic (True, False, NULL) for policy evaluation.
-    pub use_three_valued_logic: bool,
-}
-
-impl Graph {
-    pub fn set_evaluation_mode(&mut self, use_three_valued_logic: bool) {
-        self.config.use_three_valued_logic = use_three_valued_logic;
-    }
-}
-```
+Policy evaluation has **no configurable logic mode**. Three-valued (Kleene) logic
+is the single canonical semantics (semantic-infrastructure audit G1); the legacy
+boolean toggle and `GraphConfig` were removed. `Policy::evaluate(&graph)` always
+uses three-valued logic, and `EvaluationResult::evaluation_mode` is always
+`EvaluationMode::ThreeValued`.
 
 ---
 

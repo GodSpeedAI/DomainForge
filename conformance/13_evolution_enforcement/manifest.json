@@ -1,0 +1,6 @@
+{
+  "description": "Breaking ConceptChange alongside an active policy must be reported by canonical validation (G8 enforcement).",
+  "command": "validate",
+  "input": "input.sea",
+  "expected": "expected/validate.json"
+}

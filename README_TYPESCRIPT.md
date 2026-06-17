@@ -207,8 +207,7 @@ class Graph {
 
   // Policy evaluation
   addPolicy(policyJson: string): void;
-  evaluatePolicy(policyJson: string): EvaluationResult;
-  setEvaluationMode(useThreeValuedLogic: boolean): void;
+  evaluatePolicy(policyJson: string): EvaluationResult; // always canonical three-valued logic
 }
 ```
 

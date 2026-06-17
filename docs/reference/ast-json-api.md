@@ -283,10 +283,7 @@ When serializing a `Graph` to JSON, the structure includes all domain primitives
   "metrics": {},
   "mappings": {},
   "projections": {},
-  "entity_roles": {},
-  "config": {
-    "use_three_valued_logic": true
-  }
+  "entity_roles": {}
 }
 ```
 

@@ -42,7 +42,7 @@ impl ValidationResult {
 /// The shape is:
 /// ```json
 /// {
-///   "evaluation_mode": "three_valued" | "boolean",
+///   "evaluation_mode": "three_valued",
 ///   "error_count": <usize>,
 ///   "policies": [ { name, namespace, modality, kind, is_satisfied,
 ///                    is_satisfied_tristate, evaluation_mode, violations },
@@ -52,40 +52,34 @@ impl ValidationResult {
 /// ```
 pub fn validate_to_canonical_json(graph: &Graph) -> serde_json::Value {
     let result = graph.validate();
-    let graph_mode = if graph.use_three_valued_logic() {
-        "three_valued"
-    } else {
-        "boolean"
-    };
+    let graph_mode = crate::policy::EvaluationMode::default().as_str();
 
     let policy_results: Vec<serde_json::Value> = graph
         .all_policies()
         .iter()
-        .map(
-            |policy| match policy.evaluate_with_mode(graph, graph.use_three_valued_logic()) {
-                Ok(eval) => serde_json::json!({
-                    "name": policy.name,
-                    "namespace": policy.namespace,
-                    "modality": modality_str(&policy.modality),
-                    "kind": kind_str(policy.kind()),
-                    "is_satisfied": eval.is_satisfied,
-                    "is_satisfied_tristate": eval.is_satisfied_tristate,
-                    "evaluation_mode": eval.evaluation_mode.as_str(),
-                    "violations": eval
-                        .violations
-                        .iter()
-                        .map(|v| v.message.clone())
-                        .collect::<Vec<_>>(),
-                }),
-                Err(err) => serde_json::json!({
-                    "name": policy.name,
-                    "namespace": policy.namespace,
-                    "modality": modality_str(&policy.modality),
-                    "kind": kind_str(policy.kind()),
-                    "error": err,
-                }),
-            },
-        )
+        .map(|policy| match policy.evaluate(graph) {
+            Ok(eval) => serde_json::json!({
+                "name": policy.name,
+                "namespace": policy.namespace,
+                "modality": modality_str(&policy.modality),
+                "kind": kind_str(policy.kind()),
+                "is_satisfied": eval.is_satisfied,
+                "is_satisfied_tristate": eval.is_satisfied_tristate,
+                "evaluation_mode": eval.evaluation_mode.as_str(),
+                "violations": eval
+                    .violations
+                    .iter()
+                    .map(|v| v.message.clone())
+                    .collect::<Vec<_>>(),
+            }),
+            Err(err) => serde_json::json!({
+                "name": policy.name,
+                "namespace": policy.namespace,
+                "modality": modality_str(&policy.modality),
+                "kind": kind_str(policy.kind()),
+                "error": err,
+            }),
+        })
         .collect();
 
     serde_json::json!({
