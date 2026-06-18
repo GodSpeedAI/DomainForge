@@ -214,3 +214,31 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Direct workflow_call (not `release: published`) because GITHUB_TOKEN-created
+  # releases do not propagate events to downstream workflow triggers.
+  publish-pypi:
+    name: Publish to PyPI
+    needs: create-release
+    uses: ./.github/workflows/release-pypi.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+
+  publish-npm:
+    name: Publish to npm
+    needs: create-release
+    uses: ./.github/workflows/release-npm.yml
+    secrets: inherit
+    permissions:
+      contents: read
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: create-release
+    uses: ./.github/workflows/release-crates.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write

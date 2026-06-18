@@ -200,11 +200,11 @@ docs(how-tos): add export-to-protobuf guide
 
 ## Pull Request Process
 
-1. **Create a feature branch** from `dev`:
+1. **Create a feature branch** from `main`:
 
    ```bash
-   git checkout dev
-   git pull upstream dev
+   git checkout main
+   git pull upstream main
    git checkout -b feature/my-feature
    ```
 
@@ -229,7 +229,7 @@ docs(how-tos): add export-to-protobuf guide
    git push origin feature/my-feature
    ```
 
-6. **Open a Pull Request** against the `dev` branch
+6. **Open a Pull Request** against the `main` branch
 
 7. **Address review feedback** promptly
 

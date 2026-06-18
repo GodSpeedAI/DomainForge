@@ -4,7 +4,7 @@
 #
 # Validates the repository is ready for a release:
 # - No uncommitted changes
-# - On correct branch (main, dev, release/*)
+# - On correct branch (main, release/*)
 # - All tests pass
 # - Version files are in sync
 # - CHANGELOG.md is up to date
@@ -65,7 +65,7 @@ OPTIONS:
 
 CHECKS PERFORMED:
     1. Git status - no uncommitted changes
-    2. Branch validation - must be main, dev, or release/*
+    2. Branch validation - must be main or release/*
     3. Latest changes pulled from remote
     4. All test suites pass (Rust, Python, TypeScript)
     5. Version consistency across Cargo.toml, pyproject.toml, package.json
@@ -148,16 +148,16 @@ fi
 # Check 2: Branch validation
 log_step "Validating current branch..."
 if $DRY_RUN; then
-    log_info "Would check if branch matches: main, dev, or release/*"
+    log_info "Would check if branch matches: main or release/*"
 else
     BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    if [[ "$BRANCH" =~ ^(main|dev|release/.*)$ ]]; then
+    if [[ "$BRANCH" =~ ^(main|release/.*)$ ]]; then
         log_success "On valid branch: $BRANCH"
         if [[ "$BRANCH" != "main" ]]; then
             log_warn "Release preparation is allowed on $BRANCH, but scripts/release.sh must be run from main after promotion."
         fi
     else
-        log_warn "On branch '$BRANCH' - releases typically done from main, dev, or release/*"
+        log_warn "On branch '$BRANCH' - releases typically done from main or release/*"
         # Not a hard failure, just a warning
     fi
 fi

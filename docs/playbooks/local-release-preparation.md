@@ -26,10 +26,10 @@ Where `[bump]` is one of: `patch`, `minor`, `major`
 Always create a dedicated branch for the release. This allows you to group the changelog updates, version bumps, and any other release-related changes (like updating this playbook!) into a single PR.
 
 ```bash
-# From dev
-git checkout -b release/x.y.z dev
+# From main
+git checkout -b release/x.y.z main
 # Example
-git checkout -b release/0.7.0 dev
+git checkout -b release/0.7.0 main
 ```
 
 ### 2. Preview Changes (Recommended)
@@ -86,7 +86,7 @@ git commit -m "chore: bump version to 0.5.0"
 
 After preparing locally, you can either:
 
-1. **Push and let CI handle it**: Push to `dev`, merge to `main`, create a tag
+1. **Push and let CI handle it**: Push the release branch, merge to `main`, create a tag
 2. **Use the GitHub workflow**: Trigger `prepare-release.yml` which will create a PR
 
 ## Pre-release Versions

@@ -4,7 +4,7 @@ This document describes how to create releases for DomainForge.
 
 ## Quick Start
 
-Run the full release from `main` after the release commit has been merged or fast-forwarded from `dev`.
+Run the full release from `main` after the release commit has been merged into `main`.
 
 ```bash
 # Patch release (e.g., 0.6.2 -> 0.6.3)
@@ -26,8 +26,8 @@ Run the full release from `main` after the release commit has been merged or fas
 
 Use the shell scripts for full control over the release process:
 
-1. Prepare the release changes on `dev` or `release/*`.
-2. Merge or fast-forward those changes onto `main`.
+1. Prepare the release changes on a `release/*` branch off `main`.
+2. Merge those changes into `main`.
 3. Run `./scripts/release.sh ...` from `main`.
 
 ```bash
@@ -87,7 +87,7 @@ Options:
 
 Checks:
   ✓ No uncommitted changes
-  ✓ On valid branch (main, dev, release/*)
+  ✓ On valid branch (main, release/*)
   ✓ Up to date with remote
   ✓ All tests pass
   ✓ Version sync across files

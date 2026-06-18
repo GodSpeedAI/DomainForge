@@ -4,22 +4,22 @@ This directory contains the CI/CD workflows for the DomainForge project.
 
 ## Workflows Overview
 
-| Workflow                   | Trigger                  | Purpose                                   |
-| -------------------------- | ------------------------ | ----------------------------------------- |
-| `ci.yml`                   | Push to main/dev, PRs    | Continuous Integration                    |
-| `release.yml`              | Tag `v*.*.*`             | Build release artifacts for all platforms |
-| `release-npm.yml`          | GitHub Release published | Publish napi + WASM to npm                |
-| `release-pypi.yml`         | GitHub Release published | Publish Python wheels to PyPI             |
-| `release-crates.yml`       | GitHub Release published | Publish to crates.io                      |
-| `prepare-release.yml`      | Manual trigger           | Automate version bump and release PR      |
-| `dependabot-automerge.yml` | Dependabot PRs           | Auto-merge safe dependency updates        |
-| `dependency-review.yml`    | PRs                      | Review dependency changes for security    |
+| Workflow                   | Trigger                          | Purpose                                   |
+| -------------------------- | -------------------------------- | ----------------------------------------- |
+| `ci.yml`                   | Push to main/release/**, PRs     | Continuous Integration                    |
+| `release.yml`              | Tag `v*.*.*`                     | Build artifacts, create release, dispatch publishes |
+| `release-npm.yml`          | `workflow_call` from release.yml | Publish napi + WASM to npm                |
+| `release-pypi.yml`         | `workflow_call` from release.yml | Publish Python wheels to PyPI             |
+| `release-crates.yml`       | `workflow_call` from release.yml | Publish to crates.io                      |
+| `prepare-release.yml`      | Manual trigger                   | Automate version bump and release PR      |
+| `dependabot-automerge.yml` | Dependabot PRs                   | Auto-merge safe dependency updates        |
+| `dependency-review.yml`    | PRs                              | Review dependency changes for security    |
 
 ## Workflow Details
 
 ### `ci.yml` - Continuous Integration
 
-Main CI pipeline that runs on pushes to `main`, `dev`, and `release/**` branches, as well as pull requests.
+Main CI pipeline that runs on pushes to `main` and `release/**` branches, as well as pull requests targeting `main`.
 
 **Jobs:**
 
@@ -51,6 +51,9 @@ Triggered on version tags (`v*.*.*`). Builds release artifacts for all platforms
 - **build-python-wheels**: Builds Python wheels for all targets
 - **build-wasm-release**: Builds optimized WASM bundle
 - **create-release**: Creates GitHub release with all artifacts
+- **publish-pypi**: Calls `release-pypi.yml` to publish wheels to PyPI
+- **publish-npm**: Calls `release-npm.yml` to publish napi + WASM to npm
+- **publish-crates**: Calls `release-crates.yml` to publish `sea-core` to crates.io
 
 ### `prepare-release.yml` - Release Automation
 
@@ -115,13 +118,9 @@ cargo clippy --all-targets --all-features -- -D warnings
 2. Select version bump type (patch/minor/major)
 3. Review and merge the created PR
 4. Create and push tag: `git tag v<version> && git push --tags`
-5. Create a GitHub Release from the tag:
-   - Go to Releases → Draft a new release
-   - Select the tag you just pushed
-   - Click "Publish release"
-6. Publishing workflows trigger automatically when the release is published
+5. `release.yml` runs automatically on the tag: it builds artifacts, creates the GitHub Release, and then calls the three publish workflows (`release-pypi.yml`, `release-npm.yml`, `release-crates.yml`) via `workflow_call`.
 
-> **Note**: Publishing workflows are triggered by the `release: published` event, not by tags alone. You must create and publish a GitHub Release for the npm, PyPI, and crates.io workflows to run.
+> **Note:** Publishing is dispatched by `release.yml` via `workflow_call`, not by the `release: published` event. This is intentional: events produced by the default `GITHUB_TOKEN` do not trigger downstream workflows, so relying on `release: published` would silently skip publishing when the release is created automatically. Calling the publish workflows directly from `release.yml` is deterministic and requires no extra tokens.
 
 ### Manual
 
@@ -129,8 +128,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 2. Update `CHANGELOG.md`
 3. Commit and push
 4. Create and push tag: `git tag v<version> && git push --tags`
-5. Create GitHub Release from the tag
-6. Publishing workflows trigger automatically
+5. `release.yml` builds, creates the release, and dispatches publishes automatically
 
 ## Cache Management
 
