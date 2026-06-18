@@ -87,13 +87,9 @@ The deploy jobs contain `TODO` placeholders for the real build and deploy comman
 | `sea-dsl` (Python) | `sea-dsl` | python | `sea-dsl-vX.Y.Z` |
 | `@domainforge/sea` (TypeScript) | `sea` | node | `sea-vX.Y.Z` |
 
-### Known issue: release-please trigger
+### Release-please trigger
 
-`.github/workflows/release-please.yml` currently triggers on `push: branches: [dev]`. The `dev` branch was retired and no longer exists on origin. As a result, release-please will not fire until the trigger is updated.
-
-To activate release-please, either:
-1. Change the trigger to `branches: [main]` and move the release-please workflow to run on the protected branch.
-2. Reactivate `dev` as a dedicated integration branch that feeds release-please.
+`.github/workflows/release-please.yml` triggers on `push: branches: [main]` and opens/updates release PRs for each configured package.
 
 ## Conventional Commits Enforcement
 
