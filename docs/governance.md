@@ -13,7 +13,7 @@ Branch protection, deployment environments, and release routing for DomainForge.
 | Dismiss stale reviews | Yes |
 | Require code owner reviews | No |
 | Enforce for admins | Yes |
-| Linear history | Required (merge commits or rebase, no merge-commit bubbles) |
+| Linear history | Required (squash-merge or rebase-merge; no merge commits) |
 | Force pushes | Blocked |
 | Branch deletions | Blocked |
 | Branch must be up to date | Yes (`strict: true`) |
