@@ -30,15 +30,15 @@
       "release-type": "python",
       "package-name": "sea-dsl",
       "component": "sea-dsl",
-      "path": ".",
-      "changelog-path": "CHANGELOG-python.md"
+      "changelog-path": "CHANGELOG-python.md",
+      "extra-files": ["pyproject.toml"]
     },
     "sea-typescript": {
       "release-type": "node",
       "package-name": "@domainforge/sea",
       "component": "sea",
-      "path": ".",
-      "changelog-path": "CHANGELOG-typescript.md"
+      "changelog-path": "CHANGELOG-typescript.md",
+      "extra-files": ["package.json"]
     }
   }
 }

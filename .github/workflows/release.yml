@@ -121,14 +121,14 @@ jobs:
         run: pip install maturin==1.10.1
 
       - name: Build wheels
+        working-directory: sea-dsl
         run: maturin build --release --features python --target ${{ matrix.target }} --out dist
-        working-directory: sea-core
 
       - name: Upload wheels
         uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.target }}
-          path: sea-core/dist/*.whl
+          path: sea-dsl/dist/*.whl
 
   build-wasm-release:
     name: Build WASM Release

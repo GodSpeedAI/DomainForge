@@ -67,8 +67,10 @@ python-setup:
     if [ -f requirements-dev.txt ]; then .venv/bin/python -m pip install -r requirements-dev.txt || true; fi
     # Install dev/test tooling
     .venv/bin/python -m pip install -U pytest maturin
-    # Build & install the Python bindings into the venv
-    .venv/bin/maturin develop --manifest-path sea-core/Cargo.toml --release || .venv/bin/maturin develop --manifest-path sea-core/Cargo.toml
+    # Build & install the Python bindings into the venv.
+    # pyproject.toml lives in sea-dsl/ and references sea-core/Cargo.toml via a
+    # relative path, so maturin must be invoked from sea-dsl/.
+    cd sea-dsl && ../.venv/bin/maturin develop --manifest-path ../sea-core/Cargo.toml --release || (cd sea-dsl && ../.venv/bin/maturin develop --manifest-path ../sea-core/Cargo.toml)
 
 install-just:
     @echo "Checking if 'just' is already installed..."
@@ -115,7 +117,7 @@ audit:
 
 smoke-test-npm:
     @echo "Running npm pack smoke test..."
-    @output=$$(npm pack --dry-run 2>&1); \
+    @output=$$(cd sea-typescript && npm pack --dry-run 2>&1); \
     echo "$$output"; \
     echo "$$output" | grep -q "index\.js" || { echo "ERROR: index.js missing from pack"; exit 1; }; \
     echo "$$output" | grep -q "index\.d\.ts" || { echo "ERROR: index.d.ts missing from pack"; exit 1; }; \

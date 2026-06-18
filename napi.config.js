@@ -4,6 +4,6 @@ module.exports = {
         cargoFeatures: ['typescript', 'three_valued_logic'],
     },
     packageName: '@domainforge/sea',
-    packageJsonPath: './package.json',
+    packageJsonPath: './sea-typescript/package.json',
     name: 'sea_core',
 }

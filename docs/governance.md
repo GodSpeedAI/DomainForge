@@ -46,21 +46,18 @@ this is currently a solo-maintainer repository; CI remains the merge gate.
 
 ## Environments
 
-### `prod`
+This repository does not use GitHub deployment environments. There is no
+`stage` or `prod` environment gate.
 
-Production deployment gate. Used by the `deploy-prod` job in `deploy.yml`.
+Publishing is triggered directly by component tag pushes. The publish
+workflows (`release-crates.yml`, `release-pypi.yml`, `release-npm.yml`)
+handle their own idempotency:
+- crates.io: detects "already published" from cargo output
+- PyPI: `--skip-existing` flag on maturin
+- npm: `npm view <pkg>@<version>` pre-check
 
-| Rule | Setting |
-|---|---|
-| Required reviewer | `SPRIME01` |
-| Wait timer | 60 seconds |
-| Deployment branch policy | Protected branches only |
-
-When a tag matching a component prefix (e.g. `sea-core-v0.12.0`) is pushed, the `deploy-prod` job pauses until `SPRIME01` approves the deployment review and the 60-second timer elapses.
-
-### `stage` (not configured)
-
-The `deploy-stage` job in `deploy.yml` runs build and smoke tests without a GitHub environment gate. There is no `stage` environment in repo settings. This is intentional: stage is a build-and-verify waypoint, not a governance boundary.
+This matches the solo-maintainer model: CI on `main` is the merge gate, and
+a component tag push is the publish signal.
 
 ## Deploy Pipeline
 
@@ -68,19 +65,20 @@ The `deploy-stage` job in `deploy.yml` runs build and smoke tests without a GitH
 tag push (sea-core-v*, sea-dsl-v*, sea-v*)
   │
   ▼
-deploy.yml
+deploy.yml (router)
   ├── identify    (parse tag → component + version)
-  ├── deploy-stage (build, smoke test, fail-closed)
-  └── deploy-prod  (needs: identify + deploy-stage, environment: prod, reviewer gate)
+  └── dispatch to publish workflow based on component:
+      ├── sea-core → release-crates.yml  (crates.io)
+      ├── sea-dsl  → release-pypi.yml    (PyPI, multi-platform matrix)
+      └── sea      → release-npm.yml     (npm + WASM)
 ```
 
 Tag shape: `<component>-v<version>` where component is one of `sea-core`, `sea-dsl`, `sea`.
 
-The deploy jobs contain `TODO` placeholders for the real build and deploy commands. They do not publish to registries (PyPI, npm, crates.io) — that is handled separately by the `release.yml` build-and-publish chain triggered by `v*.*.*` tags.
-
-The smoke gate is intentionally documented as a known limitation until real
-stage health checks exist. Replace the stub with component-specific assertions
-before the first production release.
+`deploy.yml` does NOT contain build or publish logic itself. It dispatches to
+the same reusable publish workflows that the legacy `release.yml` uses. This
+avoids duplication and keeps a single source of truth for each registry's
+publish process.
 
 ## Release Routing (release-please)
 
@@ -121,9 +119,26 @@ before the first production release.
 
 **Historical (from commit history):** `bindings`, `calm`, `cli`, `code`, `core`, `docs`, `format`, `grammar`, `graph`, `new_docs`, `parser`, `pkg`, `pyo3`, `policy`, `python`, `registry`, `release`, `semantic-pack`, `authority`, `test`, `tests`, `units`, `wasm`
 
+**Note:** commitlint uses `scope-case: kebab-case` enforcement only (no static allowlist). The components above reflect the release-please package keys and historical usage.
+
 ### Bypass
 
 The hook is local-only (lefthook installs to `.git/hooks/`). CI does not run commitlint. To bypass locally, use `git commit --no-verify` (discouraged).
+
+## Package Layout
+
+release-please v4 manifest mode resolves file paths as `<package-key>/<file>`.
+Each package's version file must live in a directory matching its key:
+
+| Package | Directory | Version file |
+|---|---|---|
+| `sea-core` | `sea-core/` | `Cargo.toml` |
+| `sea-dsl` | `sea-dsl/` | `pyproject.toml` |
+| `sea-typescript` | `sea-typescript/` | `package.json` |
+
+The root `package.json` is a private workspace root for dev dependencies
+(commitlint, lefthook, vitest). It is NOT published. The root `Cargo.toml`
+defines the Rust workspace; `sea-core/Cargo.toml` is the sole published crate.
 
 ## Secrets
 

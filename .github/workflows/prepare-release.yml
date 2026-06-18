@@ -86,14 +86,14 @@ jobs:
       - name: Sync Python version (pyproject.toml)
         run: |
           NEW_VERSION="${{ steps.newversion.outputs.version }}"
-          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
-          echo "Updated pyproject.toml to version $NEW_VERSION"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" sea-dsl/pyproject.toml
+          echo "Updated sea-dsl/pyproject.toml to version $NEW_VERSION"
 
       - name: Sync NPM version (package.json)
         run: |
           NEW_VERSION="${{ steps.newversion.outputs.version }}"
-          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
-          echo "Updated package.json to version $NEW_VERSION"
+          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version --prefix sea-typescript
+          echo "Updated sea-typescript/package.json to version $NEW_VERSION"
 
       - name: Update CHANGELOG.md
         run: |
