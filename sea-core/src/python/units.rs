@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Dimension {
     inner: RustDimension,
@@ -38,7 +38,7 @@ impl Dimension {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Unit {
     inner: RustUnit,

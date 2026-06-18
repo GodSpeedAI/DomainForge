@@ -1,7 +1,7 @@
 use crate::registry::{NamespaceBinding as RustBinding, NamespaceRegistry as RustRegistry};
 use pyo3::prelude::*;
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct NamespaceBinding {
     pub inner: RustBinding,

@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::primitives::{Entity, Flow, Relation, Resource, ResourceInstance, Role};
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Graph {
     inner: RustGraph,

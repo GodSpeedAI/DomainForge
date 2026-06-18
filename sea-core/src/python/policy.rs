@@ -13,7 +13,7 @@ use std::str::FromStr;
 // Enums
 // =============================================================================
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum AggregateFunction {
     Count,
@@ -47,7 +47,7 @@ impl From<RustAggregateFunction> for AggregateFunction {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum BinaryOp {
     And,
@@ -126,7 +126,7 @@ impl From<RustBinaryOp> for BinaryOp {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum UnaryOp {
     Not,
@@ -151,7 +151,7 @@ impl From<RustUnaryOp> for UnaryOp {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum Quantifier {
     ForAll,
@@ -180,7 +180,7 @@ impl From<RustQuantifier> for Quantifier {
 }
 
 /// Severity level for policy violations
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Severity {
     Error,
@@ -202,7 +202,7 @@ impl From<crate::policy::Severity> for Severity {
 // WindowSpec
 // =============================================================================
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct WindowSpec {
     #[pyo3(get)]
@@ -249,7 +249,7 @@ impl From<RustWindowSpec> for WindowSpec {
 // =============================================================================
 
 /// A policy expression that can be normalized and compared for equivalence.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Expression {
     inner: RustExpression,
@@ -497,7 +497,7 @@ impl Expression {
 // =============================================================================
 
 /// A normalized expression with a stable hash for caching and equivalence checks.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct NormalizedExpression {
     inner: RustNormalizedExpression,
@@ -543,7 +543,7 @@ impl NormalizedExpression {
 // =============================================================================
 
 /// A policy violation
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct Violation {
     #[pyo3(get)]
@@ -575,7 +575,7 @@ impl From<crate::policy::Violation> for Violation {
 }
 
 /// Result of evaluating a policy against a graph
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct EvaluationResult {
     /// Backwards compatible boolean: false if evaluation is unknown (NULL)
@@ -629,13 +629,13 @@ fn python_to_json(value: &Bound<'_, pyo3::types::PyAny>) -> PyResult<serde_json:
             .ok_or_else(|| PyValueError::new_err("Invalid float value (NaN or Infinity)"))
     } else if let Ok(s) = value.extract::<String>() {
         Ok(serde_json::Value::String(s))
-    } else if let Ok(list) = value.downcast::<pyo3::types::PyList>() {
+    } else if let Ok(list) = value.cast::<pyo3::types::PyList>() {
         let arr: Result<Vec<_>, _> = list.iter().map(|v| python_to_json(&v)).collect();
         Ok(serde_json::Value::Array(arr?))
-    } else if let Ok(tuple) = value.downcast::<pyo3::types::PyTuple>() {
+    } else if let Ok(tuple) = value.cast::<pyo3::types::PyTuple>() {
         let arr: Result<Vec<_>, _> = tuple.iter().map(|v| python_to_json(&v)).collect();
         Ok(serde_json::Value::Array(arr?))
-    } else if let Ok(dict) = value.downcast::<pyo3::types::PyDict>() {
+    } else if let Ok(dict) = value.cast::<pyo3::types::PyDict>() {
         let mut map = serde_json::Map::new();
         for (k, v) in dict.iter() {
             let key: String = k.extract()?;

@@ -13,7 +13,7 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Entity {
     inner: RustEntity,
@@ -57,11 +57,11 @@ impl Entity {
         Ok(())
     }
 
-    fn get_attribute(&self, key: String, py: Python) -> PyResult<PyObject> {
+    fn get_attribute(&self, key: String, py: Python) -> PyResult<Py<PyAny>> {
         match self.inner.get_attribute(&key) {
             Some(value) => {
                 let py_value = pythonize::pythonize(py, &value)?;
-                Ok(py_value.into())
+                Ok(py_value.unbind())
             }
             None => Err(PyKeyError::new_err(format!(
                 "Attribute '{}' not found",
@@ -94,7 +94,7 @@ impl Entity {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Resource {
     inner: RustResource,
@@ -144,11 +144,11 @@ impl Resource {
         Ok(())
     }
 
-    fn get_attribute(&self, key: String, py: Python) -> PyResult<PyObject> {
+    fn get_attribute(&self, key: String, py: Python) -> PyResult<Py<PyAny>> {
         match self.inner.get_attribute(&key) {
             Some(value) => {
                 let py_value = pythonize::pythonize(py, &value)?;
-                Ok(py_value.into())
+                Ok(py_value.unbind())
             }
             None => Err(PyKeyError::new_err(format!(
                 "Attribute '{}' not found",
@@ -182,7 +182,7 @@ impl Resource {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Flow {
     inner: RustFlow,
@@ -256,11 +256,11 @@ impl Flow {
         Ok(())
     }
 
-    fn get_attribute(&self, key: String, py: Python) -> PyResult<PyObject> {
+    fn get_attribute(&self, key: String, py: Python) -> PyResult<Py<PyAny>> {
         match self.inner.get_attribute(&key) {
             Some(value) => {
                 let py_value = pythonize::pythonize(py, &value)?;
-                Ok(py_value.into())
+                Ok(py_value.unbind())
             }
             None => Err(PyKeyError::new_err(format!(
                 "Attribute '{}' not found",
@@ -291,7 +291,7 @@ impl Flow {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct ResourceInstance {
     inner: RustResourceInstance,
@@ -354,11 +354,11 @@ impl ResourceInstance {
         Ok(())
     }
 
-    fn get_attribute(&self, key: String, py: Python) -> PyResult<PyObject> {
+    fn get_attribute(&self, key: String, py: Python) -> PyResult<Py<PyAny>> {
         match self.inner.get_attribute(&key) {
             Some(value) => {
                 let py_value = pythonize::pythonize(py, &value)?;
-                Ok(py_value.into())
+                Ok(py_value.unbind())
             }
             None => Err(PyKeyError::new_err(format!(
                 "Attribute '{}' not found",
@@ -388,7 +388,7 @@ impl ResourceInstance {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Instance {
     inner: crate::primitives::Instance,
@@ -441,11 +441,11 @@ impl Instance {
         Ok(())
     }
 
-    fn get_field(&self, key: String, py: Python) -> PyResult<PyObject> {
+    fn get_field(&self, key: String, py: Python) -> PyResult<Py<PyAny>> {
         match self.inner.get_field(&key) {
             Some(value) => {
                 let py_value = pythonize::pythonize(py, &value)?;
-                Ok(py_value.into())
+                Ok(py_value.unbind())
             }
             None => Err(PyKeyError::new_err(format!("Field '{}' not found", key))),
         }
@@ -472,7 +472,7 @@ impl Instance {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Metric {
     inner: RustMetric,
@@ -539,7 +539,7 @@ impl Metric {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Mapping {
     inner: RustMapping,
@@ -576,7 +576,7 @@ impl Mapping {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Projection {
     inner: RustProjection,
@@ -613,7 +613,7 @@ impl Projection {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Role {
     inner: RustRole,
@@ -657,11 +657,11 @@ impl Role {
         Ok(())
     }
 
-    fn get_attribute(&self, key: String, py: Python) -> PyResult<PyObject> {
+    fn get_attribute(&self, key: String, py: Python) -> PyResult<Py<PyAny>> {
         match self.inner.attributes().get(&key) {
             Some(value) => {
                 let py_value = pythonize::pythonize(py, value)?;
-                Ok(py_value.into())
+                Ok(py_value.unbind())
             }
             None => Err(PyKeyError::new_err(format!(
                 "Attribute '{}' not found",
@@ -690,7 +690,7 @@ impl Role {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Relation {
     inner: RustRelation,

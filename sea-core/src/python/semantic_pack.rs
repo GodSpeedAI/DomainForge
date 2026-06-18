@@ -23,7 +23,7 @@ use pyo3::prelude::*;
 // Enums
 // =============================================================================
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum SemanticTruth {
     Valid,
@@ -51,7 +51,7 @@ impl From<RustSemanticTruth> for SemanticTruth {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum DiagnosticSeverity {
     Error,
@@ -82,7 +82,7 @@ impl From<RustDiagnosticSeverity> for DiagnosticSeverity {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum ValidationMode {
     Off,
@@ -110,7 +110,7 @@ impl From<RustValidationMode> for ValidationMode {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum ApprovalState {
     Candidate,
@@ -138,7 +138,7 @@ impl From<RustApprovalState> for ApprovalState {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum SignatureState {
     Unsigned,
@@ -166,7 +166,7 @@ impl From<RustSignatureState> for SignatureState {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum ConceptStatus {
     Active,
@@ -200,7 +200,7 @@ impl From<RustConceptStatus> for ConceptStatus {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum ConceptKind {
     Entity,
@@ -246,7 +246,7 @@ impl From<RustConceptKind> for ConceptKind {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum AliasStatus {
     Approved,
@@ -277,7 +277,7 @@ impl From<RustAliasStatus> for AliasStatus {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum UnknownConceptPolicy {
     Ignore,
@@ -305,7 +305,7 @@ impl From<RustUnknownConceptPolicy> for UnknownConceptPolicy {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum DeprecatedPolicy {
     Allow,
@@ -336,7 +336,7 @@ impl From<RustDeprecatedPolicy> for DeprecatedPolicy {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum SemanticValidationStatus {
     Passed,
@@ -371,7 +371,7 @@ impl From<RustSemanticValidationStatus> for SemanticValidationStatus {
 // Structs
 // =============================================================================
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct SemanticPack {
     inner: RustSemanticPack,
 }
@@ -431,7 +431,7 @@ impl SemanticPack {
     }
 }
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct SemanticValidationResult {
     inner: RustSemanticValidationResult,
 }

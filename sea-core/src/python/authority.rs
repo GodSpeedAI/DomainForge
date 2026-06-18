@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 // Enums
 // =============================================================================
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum FinalDecision {
     Allow,
@@ -45,7 +45,7 @@ impl From<RustFinalDecision> for FinalDecision {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum PolicyModality {
     Permission,
@@ -76,7 +76,7 @@ impl From<RustPolicyModality> for PolicyModality {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum SourceClass {
     CallerSupplied,
@@ -116,7 +116,7 @@ impl From<RustSourceClass> for SourceClass {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum ClaimLevel {
     AuditBacked,
@@ -148,7 +148,7 @@ impl From<RustClaimLevel> for ClaimLevel {
 // Structs
 // =============================================================================
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct AuthorityEnvironment {
     inner: RustAuthorityEnvironment,
 }
@@ -192,7 +192,7 @@ impl AuthorityEnvironment {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct AuthorityErrorCode {
     #[pyo3(get)]
