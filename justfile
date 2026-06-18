@@ -100,6 +100,8 @@ install-just:
 setup:
     @echo "Installing TypeScript dependencies and Python dev dependencies..."
     npm ci || npm install
+    # Install Git hooks if lefthook is available from local dependencies or PATH
+    npx --yes lefthook install || true
     # Prepare a Python virtualenv and install dev dependencies if possible
     just python-setup || true
 

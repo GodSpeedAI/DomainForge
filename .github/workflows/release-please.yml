@@ -1,0 +1,29 @@
+name: Release Please
+
+# Triggered on every push to main (the integration branch).
+# release-please scans conventional commits and opens/updates release PRs.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071
+        with:
+          # PAT (not GITHUB_TOKEN) so that tags created on release-PR merge
+          # propagate `push: tags` events to deploy.yml. GITHUB_TOKEN-created
+          # refs do not trigger downstream workflows.
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

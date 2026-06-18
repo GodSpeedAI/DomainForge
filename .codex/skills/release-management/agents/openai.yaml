@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Management"
+  short_description: "Run DomainForge releases safely"
+  default_prompt: "Use $release-management to inspect release readiness for DomainForge."

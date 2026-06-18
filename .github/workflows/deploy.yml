@@ -1,0 +1,146 @@
+name: Deploy
+
+# Triggered by component-prefixed tags produced by release-please:
+#   sea-core-vX.Y.Z   (Rust crate)
+#   sea-dsl-vX.Y.Z    (Python package)
+#   sea-vX.Y.Z        (TypeScript @domainforge/sea)
+on:
+  push:
+    tags:
+      - 'sea-core-v*'
+      - 'sea-dsl-v*'
+      - 'sea-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  identify:
+    name: Identify Component
+    runs-on: ubuntu-latest
+    outputs:
+      component: ${{ steps.parse.outputs.component }}
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Parse tag into component and version
+        id: parse
+        shell: bash
+        run: |
+          # GITHUB_REF_NAME on a tag push = the tag name, e.g. "sea-core-v0.12.0"
+          # component = everything before the last "-v"
+          # version   = everything after the last "-v"
+          tag="${GITHUB_REF_NAME}"
+          component="${tag%-v*}"
+          version="${tag##*-v}"
+          echo "Parsed tag: $tag"
+          echo "  component: $component"
+          echo "  version:   $version"
+          # Validate version matches semver pattern
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "::error::Invalid version format '$version' (expected semver X.Y.Z or X.Y.Z-prerelease)" >&2
+            exit 1
+          fi
+          case "$component" in
+            sea-core|sea-dsl|sea) ;;
+            *) echo "::error::Unknown component '$component' (expected sea-core|sea-dsl|sea)" >&2; exit 1 ;;
+          esac
+          echo "component=$component" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  deploy-stage:
+    name: Deploy to Stage (${{ needs.identify.outputs.component }})
+    needs: identify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-stage-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Build component
+        shell: bash
+        run: |
+          comp="${{ needs.identify.outputs.component }}"
+          ver="${{ needs.identify.outputs.version }}"
+          echo "Building $comp v$ver"
+          case "$comp" in
+            sea-core)
+              # TODO: Replace with real Rust build command (e.g. cargo build --release --features cli)
+              echo "[stub] cargo build --release --features cli"
+              ;;
+            sea-dsl)
+              # TODO: Replace with real Python build command (e.g. maturin build --release --features python)
+              echo "[stub] maturin build --release --features python"
+              ;;
+            sea)
+              # TODO: Replace with real TypeScript build command (e.g. bun run build)
+              echo "[stub] bun run build"
+              ;;
+            *)
+              echo "::error::No build defined for component '$comp'" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Deploy to stage
+        shell: bash
+        run: |
+          comp="${{ needs.identify.outputs.component }}"
+          ver="${{ needs.identify.outputs.version }}"
+          echo "Deploying $comp v$ver to stage environment"
+          # TODO: Replace with real stage deploy command for the identified component.
+          # Examples (infra-dependent — do NOT assume these are correct):
+          #   sea-core: publish artifact to internal registry / copy to artifact store
+          #   sea-dsl:  upload wheel to stage PyPI / deploy to stage lambda
+          #   sea:      publish to stage npm tag / deploy to stage CDN
+          echo "[stub] stage deploy for $comp"
+
+      - name: Smoke / QA gate (fail-closed)
+        shell: bash
+        run: |
+          comp="${{ needs.identify.outputs.component }}"
+          ver="${{ needs.identify.outputs.version }}"
+          echo "Running smoke tests for $comp v$ver against stage"
+          # TODO: Replace with real smoke test invocation.
+          # Gate is fail-closed: any non-zero exit blocks deploy-prod.
+          # Examples:
+          #   curl -fsS https://stage.example.com/health || exit 1
+          #   sea validate conformance/ --format json | jq -e '.summary.passed == true'
+          echo "[stub] smoke test for $comp — replace with real assertion"
+          echo "::warning::Smoke gate is a documented stub until real stage checks exist"
+
+  deploy-prod:
+    name: Deploy to Prod (${{ needs.identify.outputs.component }})
+    needs: [identify, deploy-stage]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment: prod  # configure required reviewers for this env in GitHub settings
+    concurrency:
+      group: deploy-prod-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Deploy to prod
+        shell: bash
+        run: |
+          comp="${{ needs.identify.outputs.component }}"
+          ver="${{ needs.identify.outputs.version }}"
+          echo "Deploying $comp v$ver to prod environment"
+          # TODO: Replace with real prod deploy command for the identified component.
+          # This job only runs after stage smoke tests pass AND a human approves
+          # the prod deployment via GitHub environment required reviewers.
+          echo "[stub] prod deploy for $comp"
