@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "include-component-in-tag": true,
+  "tag-separator": "-",
+  "component-no-space": true,
+  "pull-request-title-pattern": "chore: release ${component} ${version}",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "revert", "section": "Reverts" },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "refactor", "section": "Refactoring", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true },
+    { "type": "build", "section": "Build System", "hidden": true },
+    { "type": "ci", "section": "Continuous Integration", "hidden": true }
+  ],
+  "packages": {
+    "sea-core": {
+      "release-type": "rust",
+      "package-name": "sea-core",
+      "component": "sea-core",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": ["Cargo.lock"]
+    },
+    "sea-dsl": {
+      "release-type": "python",
+      "package-name": "sea-dsl",
+      "component": "sea-dsl",
+      "path": ".",
+      "changelog-path": "CHANGELOG-python.md"
+    },
+    "sea-typescript": {
+      "release-type": "node",
+      "package-name": "@domainforge/sea",
+      "component": "sea",
+      "path": ".",
+      "changelog-path": "CHANGELOG-typescript.md"
+    }
+  }
+}
