@@ -1,10 +1,10 @@
 pre-commit:
   commands:
     cargo-fmt:
-      glob: "*.rs"
+      glob: "**/*.rs"
       run: cargo fmt --all -- --check
     cargo-clippy:
-      glob: "*.rs"
+      glob: "**/*.rs"
       run: cargo clippy --all-targets --all-features -- -D warnings
 
 commit-msg:
