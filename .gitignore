@@ -102,8 +102,5 @@ coverage/
 
 # Agent working files
 .agents/
-<<<<<<< Updated upstream
-=======
 .omo/
 .omc/
->>>>>>> Stashed changes
