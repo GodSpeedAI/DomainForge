@@ -9,7 +9,7 @@ Branch protection, deployment environments, and release routing for DomainForge.
 | Rule | Setting |
 |---|---|
 | Pull request required | Yes |
-| Required approvals | 1 |
+| Required approvals | 0 |
 | Dismiss stale reviews | Yes |
 | Require code owner reviews | No |
 | Enforce for admins | Yes |
@@ -20,7 +20,8 @@ Branch protection, deployment environments, and release routing for DomainForge.
 
 ### Required status checks
 
-A PR cannot merge until all of these pass:
+A PR cannot merge until all of these pass. Approvals are not required because
+this is currently a solo-maintainer repository; CI remains the merge gate.
 
 | Check | Source workflow | Job |
 |---|---|---|
@@ -77,6 +78,10 @@ Tag shape: `<component>-v<version>` where component is one of `sea-core`, `sea-d
 
 The deploy jobs contain `TODO` placeholders for the real build and deploy commands. They do not publish to registries (PyPI, npm, crates.io) — that is handled separately by the `release.yml` build-and-publish chain triggered by `v*.*.*` tags.
 
+The smoke gate is intentionally documented as a known limitation until real
+stage health checks exist. Replace the stub with component-specific assertions
+before the first production release.
+
 ## Release Routing (release-please)
 
 `release-please-config.json` and `.release-please-manifest.json` configure independent per-package versioning. Each package gets its own release PR and component-prefixed tag.
@@ -128,6 +133,18 @@ The hook is local-only (lefthook installs to `.git/hooks/`). CI does not run com
 | `CREATE_PR_TOKEN` | `release-please.yml`, `prepare-release.yml` | PAT for creating PRs and tags that trigger downstream workflows |
 | `SOPS_AGE_KEY` | `release-pypi.yml`, `release-npm.yml`, `release-crates.yml` | Decrypts `secrets/secrets.yaml` via sops |
 | `PYPI_API_TOKEN` | `release-pypi.yml` | PyPI publishing fallback (primary token is sops-decrypted) |
+
+## Tool Versions
+
+| Tool | Required version | Verification |
+|---|---|---|
+| `release-please-action` | `v4.4.1`, pinned in `.github/workflows/release-please.yml` by commit SHA | Inspect the workflow `uses:` line |
+| `@commitlint/cli` | `^21.0.2`, installed from `package.json` | `npx commitlint --version` |
+| `@commitlint/config-conventional` | `^21.0.2`, installed from `package.json` | `npm ls @commitlint/config-conventional` |
+| `lefthook` | `^2.1.9`, installed from `package.json` | `npx lefthook version` |
+
+Keep commitlint packages on the same major version. Lefthook v2 syntax is used
+in `lefthook.yml`; do not downgrade to v1 without testing hook compatibility.
 
 ## See Also
 

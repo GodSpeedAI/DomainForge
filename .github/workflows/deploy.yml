@@ -59,7 +59,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           ref: ${{ github.ref }}
           persist-credentials: false
@@ -114,8 +114,7 @@ jobs:
           #   curl -fsS https://stage.example.com/health || exit 1
           #   sea validate conformance/ --format json | jq -e '.summary.passed == true'
           echo "[stub] smoke test for $comp — replace with real assertion"
-          # Fail-closed placeholder: uncomment the next line to enforce a real check
-          # exit 1
+          echo "::warning::Smoke gate is a documented stub until real stage checks exist"
 
   deploy-prod:
     name: Deploy to Prod (${{ needs.identify.outputs.component }})
@@ -130,7 +129,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           ref: ${{ github.ref }}
           persist-credentials: false
