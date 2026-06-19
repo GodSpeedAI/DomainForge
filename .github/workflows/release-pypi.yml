@@ -75,7 +75,6 @@ jobs:
         working-directory: sea-dsl
         run: |
           python -m maturin publish \
-            --manifest-path ../sea-core/Cargo.toml \
             --features python \
             --target ${{ matrix.target }} \
             --skip-existing
@@ -88,7 +87,6 @@ jobs:
         working-directory: sea-dsl
         run: |
           python -m maturin publish \
-            --manifest-path ../sea-core/Cargo.toml \
             --features python \
             --target ${{ matrix.target }} \
             --skip-existing \

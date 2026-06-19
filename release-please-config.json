@@ -1,10 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "separate-pull-requests": true,
   "include-component-in-tag": true,
   "tag-separator": "-",
   "component-no-space": true,
   "pull-request-title-pattern": "chore: release ${component} ${version}",
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "domainforge",
+      "components": ["sea-core", "sea-dsl", "sea"]
+    }
+  ],
   "changelog-sections": [
     { "type": "feat", "section": "Features" },
     { "type": "fix", "section": "Bug Fixes" },
