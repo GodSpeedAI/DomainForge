@@ -68,9 +68,11 @@ python-setup:
     # Install dev/test tooling
     .venv/bin/python -m pip install -U pytest maturin
     # Build & install the Python bindings into the venv.
-    # pyproject.toml lives in sea-dsl/ and references sea-core/Cargo.toml via a
-    # relative path, so maturin must be invoked from sea-dsl/.
-    cd sea-dsl && ../.venv/bin/maturin develop --manifest-path ../sea-core/Cargo.toml --release || (cd sea-dsl && ../.venv/bin/maturin develop --manifest-path ../sea-core/Cargo.toml)
+    # pyproject.toml lives in sea-dsl/ and declares manifest-path = "../sea-core/Cargo.toml",
+    # so maturin must be invoked from sea-dsl/ WITHOUT a CLI --manifest-path (passing it on the
+    # CLI relocates the project root to sea-core/, hiding pyproject.toml and falling back to
+    # Cargo defaults: wrong module name + cffi instead of pyo3).
+    cd sea-dsl && ../.venv/bin/maturin develop --release || (cd sea-dsl && ../.venv/bin/maturin develop)
 
 install-just:
     @echo "Checking if 'just' is already installed..."

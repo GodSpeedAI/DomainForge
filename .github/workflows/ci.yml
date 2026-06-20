@@ -204,7 +204,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build TypeScript bindings
-        run: bun run build
+        run: cd sea-typescript && bun run build
 
       - name: Run TypeScript tests
         run: just ci-test-ts
@@ -236,7 +236,7 @@ jobs:
       - name: Build TypeScript bindings (minimal)
         run: |
           bun install --frozen-lockfile
-          bun run build
+          cd sea-typescript && bun run build
 
       - name: Minimal registry ambiguity check
         shell: bash
