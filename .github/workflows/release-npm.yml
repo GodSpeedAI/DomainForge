@@ -40,12 +40,15 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build napi package
+        working-directory: sea-typescript
         run: npm run build
 
       - name: Patch generated TypeScript declarations
-        run: python3 scripts/patch_napi_types.py
+        working-directory: sea-typescript
+        run: python3 ../scripts/patch_napi_types.py
 
       - name: Smoke test npm pack
+        working-directory: sea-typescript
         run: |
           npm pack --dry-run 2>&1 | tee /tmp/npm-pack-output.txt
           grep -q "index.d.ts" /tmp/npm-pack-output.txt || { echo "ERROR: index.d.ts missing from pack"; exit 1; }
@@ -54,6 +57,7 @@ jobs:
           echo "npm pack smoke test passed"
 
       - name: Check if already published
+        working-directory: sea-typescript
         run: |
           if npm view "@domainforge/sea@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
             echo "Already published, skipping"
@@ -62,6 +66,7 @@ jobs:
 
       - name: Publish to npm
         if: env.SKIP_PUBLISH != '1'
+        working-directory: sea-typescript
         run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}

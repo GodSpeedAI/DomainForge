@@ -4,8 +4,8 @@
 #
 # Updates version in:
 # - sea-core/Cargo.toml
-# - pyproject.toml  
-# - package.json
+# - sea-dsl/pyproject.toml
+# - sea-typescript/package.json
 
 set -euo pipefail
 
@@ -54,8 +54,8 @@ OPTIONS:
 
 FILES UPDATED:
     - sea-core/Cargo.toml
-    - pyproject.toml
-    - package.json
+    - sea-dsl/pyproject.toml
+    - sea-typescript/package.json
 
 EXAMPLES:
     $(basename "$0") patch                    # 0.6.2 -> 0.6.3
@@ -126,8 +126,8 @@ update_pyproject_toml() {
     if $DRY_RUN; then
         log_info "Would update pyproject.toml: $current -> $new"
     else
-        sed -i "s/^version = \"$current\"/version = \"$new\"/" "$PROJECT_ROOT/pyproject.toml"
-        log_success "Updated pyproject.toml"
+        sed -i "s/^version = \"$current\"/version = \"$new\"/" "$PROJECT_ROOT/sea-dsl/pyproject.toml"
+        log_success "Updated sea-dsl/pyproject.toml"
     fi
 }
 
@@ -139,8 +139,8 @@ update_package_json() {
     else
         # Use jq to update version (avoids npm dependency issues)
         cd "$PROJECT_ROOT"
-        jq --arg v "$new" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
-        log_success "Updated package.json"
+        jq --arg v "$new" '.version = $v' sea-typescript/package.json > sea-typescript/package.json.tmp && mv sea-typescript/package.json.tmp sea-typescript/package.json
+        log_success "Updated sea-typescript/package.json"
     fi
 }
 
@@ -227,7 +227,7 @@ update_package_json "$NEW_VERSION"
 if ! $DRY_RUN && ! $NO_COMMIT; then
     echo ""
     log_info "Creating git commit..."
-    git add sea-core/Cargo.toml pyproject.toml package.json
+    git add sea-core/Cargo.toml sea-dsl/pyproject.toml sea-typescript/package.json
     git commit -m "chore: bump version to v$NEW_VERSION" --quiet
     log_success "Created commit: chore: bump version to v$NEW_VERSION"
 fi

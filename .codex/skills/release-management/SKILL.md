@@ -1,6 +1,6 @@
 ---
 name: release-management
-description: Use when cutting, shipping, promoting, diagnosing, or previewing DomainForge releases, release-please PRs, component tags, deploy triggers, prod approval gates, or release readiness.
+description: Use when cutting, shipping, promoting, diagnosing, or previewing DomainForge releases, release-please PRs, component tags, deploy triggers, or release readiness.
 ---
 
 # Release Management
@@ -9,20 +9,31 @@ description: Use when cutting, shipping, promoting, diagnosing, or previewing Do
 
 DomainForge releases use release-please manifest mode on `main`, independent
 per-package versions, component-prefixed tags, and a tag-triggered deploy
-workflow. All protected-branch checks on `main` must pass.
+workflow that dispatches to existing publish workflows. All protected-branch
+checks on `main` must pass.
 
 ## Current Release Model
 
-| Package key | Component | Tag |
-|---|---|---|
-| `sea-core` | `sea-core` | `sea-core-vX.Y.Z` |
-| `sea-dsl` | `sea-dsl` | `sea-dsl-vX.Y.Z` |
-| `sea-typescript` | `sea` | `sea-vX.Y.Z` |
+| Package key | Component | Tag | Layout |
+|---|---|---|---|
+| `sea-core` | `sea-core` | `sea-core-vX.Y.Z` | `sea-core/` |
+| `sea-dsl` | `sea-dsl` | `sea-dsl-vX.Y.Z` | `sea-dsl/` |
+| `sea-typescript` | `sea` | `sea-vX.Y.Z` | `sea-typescript/` |
 
 Release PRs are opened or updated by `.github/workflows/release-please.yml`
 after pushes to `main`. Merging a release-please PR creates the matching
-component tag. Component tags start `.github/workflows/deploy.yml`; `prod`
-waits for the GitHub environment approval by `SPRIME01`.
+component tag. Component tags trigger `.github/workflows/deploy.yml`, which
+parses the tag and dispatches to the appropriate reusable publish workflow:
+
+- `sea-core-v*` → `release-crates.yml` (crates.io)
+- `sea-dsl-v*` → `release-pypi.yml` (PyPI wheels, multi-platform matrix)
+- `sea-v*` → `release-npm.yml` (npm + WASM)
+
+There is intentionally no separate `prod` GitHub environment gate. This is a
+solo-maintainer repository: CI on `main` is the merge gate, and a component
+tag push is the publish signal. The publish workflows handle their own
+idempotency (`--skip-existing`, `npm view` checks, cargo "already published"
+detection).
 
 Treat older `v*.*.*` release scripts and `docs/RELEASE_PROCESS.md` as legacy
 unless the user explicitly asks for that path.
@@ -32,10 +43,11 @@ unless the user explicitly asks for that path.
 1. Never hand-edit changelogs, manifests, or package versions for a release.
    release-please owns those files.
 2. Never push release tags manually. Tags come from merging release-please PRs.
-3. Never bypass the `prod` environment gate.
-4. Always run a dry-run before saying what a release will contain.
-5. Check commit scopes before blaming release-please. Invalid scopes can place
+3. Always run a dry-run before saying what a release will contain.
+4. Check commit scopes before blaming release-please. Invalid scopes can place
    changes in the wrong package or hide them from a component changelog.
+5. Do not assume a `prod` environment or branch exists. This repo only has
+   `main`. Tag push → publish workflow → registry.
 
 ## Quick Commands
 
@@ -62,15 +74,11 @@ version, proposed version, bump reason, and changelog delta. Do not commit.
    `CREATE_PR_TOKEN`; `GITHUB_TOKEN` cannot trigger downstream tag workflows.
 4. If the user explicitly authorizes merging, merge the release PR. Otherwise
    tell the user which release PR to merge.
-5. After merge, verify the component tag exists and `deploy.yml` started.
+5. After merge, verify the component tag exists and the expected publish
+   workflow (`release-crates.yml` / `release-pypi.yml` / `release-npm.yml`)
+   started via `deploy.yml`.
 
-### Promote to prod or explain a paused deploy
-
-Stage deploy is automatic after the component tag. Prod waits on the `prod`
-environment approval and 60-second timer. If the run is paused for approval,
-surface that state; do not bypass it.
-
-### Deploy did not trigger
+### Publish did not trigger
 
 Check in order:
 
@@ -78,28 +86,39 @@ Check in order:
 2. Tag matches `deploy.yml`: `sea-core-v*`, `sea-dsl-v*`, or `sea-v*`.
 3. Tag came from release-please using `CREATE_PR_TOKEN`, not `GITHUB_TOKEN`.
 4. `deploy.yml` has not been disabled and Actions permissions are healthy.
+5. The dispatchable publish workflow file exists and is not disabled.
 
 ### Add a package to release-please
 
 1. Add package config to `release-please-config.json`.
 2. Add current version to `.release-please-manifest.json`.
-3. Add a component tag trigger to `.github/workflows/deploy.yml`.
-4. Add the component to `commitlint.config.cjs` `scope-enum`.
-5. Update `docs/governance.md`.
-6. Run the dry-run and focused workflow validation.
+3. Create a directory at repo root named after the package key (release-please
+   resolves file paths as `<package-key>/<file>`).
+4. Move the package's version file (pyproject.toml, package.json, Cargo.toml)
+   into that directory with relative paths adjusted to reach `sea-core/`.
+5. Add a `deploy-<component>` job to `deploy.yml` that dispatches to the
+   appropriate publish workflow, gated by `if: needs.identify.outputs.component == '<component>'`.
+6. Add the component to `commitlint.config.cjs` scope-enum (if you maintain one).
+7. Update `docs/governance.md`.
+8. Run the dry-run and focused workflow validation.
 
 ## Common Mistakes
 
 | Mistake | Correction |
 |---|---|
-| Looking for `dev` or `stage` branches | Use `main`; `stage` is a deploy job, not a branch or environment. |
+| Looking for `dev`, `stage`, or `prod` branches | Use `main`; this repo has only `main`. Tags trigger publish directly. |
+| Looking for `prod` environment gate | None exists. Publish workflows are dispatched by `deploy.yml` on tag push. |
 | Asking for approval before merge | Required approvals are `0`; required checks still block merge. |
-| Manually creating tags to unblock deploy | Fix release-please or merge the release PR. |
+| Manually creating tags to unblock publish | Fix release-please or merge the release PR. |
 | Treating old local release scripts as canonical | Use release-please unless the user requests legacy scripts. |
+| Putting package version files at repo root | release-please requires them under `<package-key>/`. Root-level packages must have a directory. |
+| Treating `deploy.yml` as a builder | `deploy.yml` is a router. The publish workflows own build + publish logic. |
 
 ## References
 
 - Config: `release-please-config.json`, `.release-please-manifest.json`
-- Workflows: `.github/workflows/release-please.yml`, `.github/workflows/deploy.yml`
+- Router: `.github/workflows/deploy.yml`
+- Publish workflows: `.github/workflows/release-crates.yml`, `release-pypi.yml`, `release-npm.yml`
+- Release-please trigger: `.github/workflows/release-please.yml`
 - Governance: `docs/governance.md`
 - Commit rules: `commitlint.config.cjs`
