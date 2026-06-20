@@ -47,22 +47,22 @@ Not documentation hoping to be obeyed. Executable meaning with receipts.
 ## See It Working: 60 Seconds
 
 ```python
-import sea_dsl
+import domainforge
 
-graph = sea_dsl.Graph()
+graph = domainforge.Graph()
 
 # Define WHO does the work
-warehouse = sea_dsl.Entity("Warehouse", "logistics")
-assembly_line = sea_dsl.Entity("Assembly Line A", "manufacturing")
+warehouse = domainforge.Entity("Warehouse", "logistics")
+assembly_line = domainforge.Entity("Assembly Line A", "manufacturing")
 graph.add_entity(warehouse)
 graph.add_entity(assembly_line)
 
 # Define WHAT moves between them
-cameras = sea_dsl.Resource("Camera", "units")
+cameras = domainforge.Resource("Camera", "units")
 graph.add_resource(cameras)
 
 # Define HOW much moves
-flow = sea_dsl.Flow(
+flow = domainforge.Flow(
     cameras.id(),
     assembly_line.id(),
     warehouse.id(),
@@ -88,16 +88,16 @@ print(f"Flows: {graph.flow_count()}")
 
 ```bash
 # Python
-pip install sea-dsl
+pip install domainforge
 
 # TypeScript / Node.js
-npm install @domainforge/sea
+npm install @godspeedai/domainforge
 
 # Rust
-cargo add sea-core
+cargo add domainforge-core
 
 # Verify it works
-python -c "import sea_dsl; print('✅ Ready:', sea_dsl.__version__)"
+python -c "import domainforge; print('✅ Ready:', domainforge.__version__)"
 ```
 
 > 💡 Pre-built packages for PyPI, npm, and Crates.io. Build from source if pre-built wheels/binaries are not yet available for your platform.
@@ -291,28 +291,28 @@ Policy all_shipments_inspected as:
 <summary><strong>🏭 Manufacturing: Assembly Line Control</strong> (click to expand)</summary>
 
 ```python
-import sea_dsl
+import domainforge
 
-graph = sea_dsl.Graph()
+graph = domainforge.Graph()
 
 # Define the supply chain
-supplier = sea_dsl.Entity("Component Supplier", "supply")
-assembly = sea_dsl.Entity("Assembly Line A", "manufacturing")
-quality_control = sea_dsl.Entity("QC Department", "quality")
-finished_goods = sea_dsl.Entity("Finished Goods Warehouse", "logistics")
+supplier = domainforge.Entity("Component Supplier", "supply")
+assembly = domainforge.Entity("Assembly Line A", "manufacturing")
+quality_control = domainforge.Entity("QC Department", "quality")
+finished_goods = domainforge.Entity("Finished Goods Warehouse", "logistics")
 graph.add_entity(supplier)
 graph.add_entity(assembly)
 graph.add_entity(quality_control)
 graph.add_entity(finished_goods)
 
 # Define what's being built
-pcb_board = sea_dsl.Resource("PCB Board", "pieces")
-camera_module = sea_dsl.Resource("Camera Module", "units")
+pcb_board = domainforge.Resource("PCB Board", "pieces")
+camera_module = domainforge.Resource("Camera Module", "units")
 graph.add_resource(pcb_board)
 graph.add_resource(camera_module)
 
 # Define the flow of components
-component_delivery = sea_dsl.Flow(
+component_delivery = domainforge.Flow(
     pcb_board.id(),
     supplier.id(),
     assembly.id(),
@@ -329,7 +329,7 @@ graph.add_flow(component_delivery)
 <summary><strong>💰 Finance: Payment Fraud Detection</strong> (click to expand)</summary>
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from "@domainforge/sea";
+import { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge";
 
 const graph = new Graph();
 
@@ -356,29 +356,29 @@ graph.addFlow(payment);
 <summary><strong>🚚 Logistics: Cross-Border Compliance</strong> (click to expand)</summary>
 
 ```python
-import sea_dsl
+import domainforge
 
-graph = sea_dsl.Graph()
+graph = domainforge.Graph()
 
 # Multi-location warehouses
-warehouse_us = sea_dsl.Entity("US Distribution Center", "logistics")
+warehouse_us = domainforge.Entity("US Distribution Center", "logistics")
 warehouse_us.set_attribute("location", "USA")
 
-warehouse_eu = sea_dsl.Entity("EU Distribution Center", "logistics")
+warehouse_eu = domainforge.Entity("EU Distribution Center", "logistics")
 warehouse_eu.set_attribute("location", "Germany")
 
-retail_store = sea_dsl.Entity("Retail Store", "logistics")
+retail_store = domainforge.Entity("Retail Store", "logistics")
 retail_store.set_attribute("location", "France")
 
 graph.add_entity(warehouse_us)
 graph.add_entity(warehouse_eu)
 graph.add_entity(retail_store)
 
-product = sea_dsl.Resource("Widget", "boxes")
+product = domainforge.Resource("Widget", "boxes")
 graph.add_resource(product)
 
 # Create cross-border flow
-shipment = sea_dsl.Flow(
+shipment = domainforge.Flow(
     product.id(),
     warehouse_eu.id(),
     retail_store.id(),
@@ -412,16 +412,16 @@ See [benchmarks](docs/explanations/performance-benchmarks.md) for measured resul
 **Python (PyO3):**
 
 ```python
-import sea_dsl
+import domainforge
 
-d = sea_dsl.Dimension.parse("currency")
-u = sea_dsl.Unit("USD", "US Dollar", "Currency", 1.0, "USD")
+d = domainforge.Dimension.parse("currency")
+u = domainforge.Unit("USD", "US Dollar", "Currency", 1.0, "USD")
 ```
 
 **TypeScript (napi-rs):**
 
 ```typescript
-import { Dimension, Unit } from "@domainforge/sea";
+import { Dimension, Unit } from "@godspeedai/domainforge";
 
 const d = Dimension.parse("currency");
 const u = new Unit("USD", "US Dollar", "Currency", 1.0, "USD");
@@ -430,7 +430,7 @@ const u = new Unit("USD", "US Dollar", "Currency", 1.0, "USD");
 **WASM (browser):**
 
 ```javascript
-import init, { Dimension, Unit } from "./sea_core.js";
+import init, { Dimension, Unit } from "./domainforge_core.js";
 await init();
 
 const d = new Dimension("currency");
@@ -459,7 +459,7 @@ Bindings are designed to preserve the same core semantics across runtimes, with 
 │ Python API        │ TypeScript        │ WASM           │
 │ (PyO3)            │ (napi-rs)         │ (wasm-bindgen) │
 ├───────────────────────────────────────────────────────┤
-│ Rust Core Engine (sea-core)                           │
+│ Rust Core Engine (domainforge-core)                           │
 │ ┌─────────────┬──────────────┬─────────────────┐      │
 │ │ Primitives  │ Graph Store  │ Policy Engine   │      │
 │ │ Parser      │ Validator    │ CALM Export     │      │
@@ -481,22 +481,22 @@ Bindings are designed to preserve the same core semantics across runtimes, with 
 
 ```bash
 # Install the CLI
-cargo install --path sea-core --features cli
+cargo install --path domainforge-core --features cli
 
 # Validate a model
-sea validate model.sea
+domainforge validate model.sea
 
 # Export to FINOS CALM
-sea project --format calm model.sea architecture.json
+domainforge project --format calm model.sea architecture.json
 
 # Import from Knowledge Graph
-sea import --format kg model.ttl
+domainforge import --format kg model.ttl
 
 # Normalize Expressions
-sea normalize "b AND a"  # -> "(a AND b)"
+domainforge normalize "b AND a"  # -> "(a AND b)"
 
 # Evaluate authority decisions
-sea authority config.json request.json --facts facts.json --json
+domainforge authority config.json request.json --facts facts.json --json
 ```
 
 [Full CLI Reference →](docs/reference/cli-commands.md)
@@ -517,7 +517,7 @@ DomainForge includes a **Policy Authority** system that makes business authority
 - **Replayable audit traces:** Every decision produces a complete `AuthorityTrace`
 
 ```python
-from sea_dsl import AuthorityEnvironment
+from domainforge import AuthorityEnvironment
 
 # Create environment from config
 env = AuthorityEnvironment(config_json)
@@ -528,7 +528,7 @@ trace_json, decision_json = env.evaluate(request_json, facts_json)
 ```
 
 ```typescript
-import { evaluateAuthority } from '@domainforge/sea';
+import { evaluateAuthority } from '@godspeedai/domainforge';
 
 const result = evaluateAuthority(configJson, requestJson, factsJson);
 console.log(result.decisionJson);
@@ -620,7 +620,7 @@ npm install && npm run build
 | --- | --- |
 | 📘 [**Copilot Instructions**](.github/copilot-instructions.md) | Essential guide for AI coding agents |
 | 📗 [**Product Requirements**](docs/specs/PRD-001-sea-projection-framework.md) | PRD with success metrics |
-| 📕 [**System Design**](docs/specs/SDS-002-sea-core-architecture.md) | Technical specifications |
+| 📕 [**System Design**](docs/specs/SDS-002-domainforge-core-architecture.md) | Technical specifications |
 | 🏛️ [**Architecture Decisions**](docs/specs/ADR-001-sea-dsl-semantic-source-of-truth.md) | Key architectural choices |
 | 🗺️ [**CALM Mapping**](docs/reference/calm-mapping.md) | SEA ↔ CALM conversion |
 | 📖 [**Error Codes**](docs/reference/error-codes.md) | Validation error reference |

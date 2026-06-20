@@ -99,13 +99,13 @@ jobs:
 
       - name: Build release CLI binary (verify)
         run: |
-          cd sea-core
+          cd domainforge-core
           cargo build --release --target ${{ matrix.target }} --features cli
 
       - name: Resolve CLI binary path
         if: matrix.os != 'windows-2025-vs2026'
         run: |
-          CLI_BIN=$(python3 scripts/resolve_rust_binary.py --workspace "$(pwd)" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable)
+          CLI_BIN=$(python3 scripts/resolve_rust_binary.py --workspace "$(pwd)" --name domainforge --profile release --target-triple ${{ matrix.target }} --require-executable)
           echo "Resolved CLI binary: $CLI_BIN"
           echo "CLI_BIN=$CLI_BIN" >> "$GITHUB_ENV"
 
@@ -114,7 +114,7 @@ jobs:
         shell: pwsh
         run: |
           $workspace = (Get-Location).Path
-          $cliBin = python scripts/resolve_rust_binary.py --workspace "$workspace" --name sea --profile release --target-triple ${{ matrix.target }} --require-executable
+          $cliBin = python scripts/resolve_rust_binary.py --workspace "$workspace" --name domainforge --profile release --target-triple ${{ matrix.target }} --require-executable
           Write-Host "Resolved CLI binary: $cliBin"
           "CLI_BIN=$cliBin" >> $env:GITHUB_ENV
 
@@ -204,12 +204,10 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build TypeScript bindings
-        # Build inside sea-typescript/ (where the napi package + config live),
-        # then expose the native binary at the repo root so the test loader
-        # (root index.js, imported by tests via '../index') can resolve it.
-        run: |
-          cd sea-typescript && bun run build
-          cp sea-core.*.node ..
+        # Build inside domainforge-typescript/ (where the napi package + config live).
+        # Root index.js re-exports domainforge-typescript/index.js, so the test loader
+        # (imported by tests via '../index') resolves the native binary in place.
+        run: cd domainforge-typescript && bun run build
 
       - name: Run TypeScript tests
         run: just ci-test-ts
@@ -235,14 +233,13 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Build Sea binary
-        run: cargo build -p sea-core --bin sea --features cli
+      - name: Build domainforge binary
+        run: cargo build -p domainforge-core --bin domainforge --features cli
 
       - name: Build TypeScript bindings (minimal)
         run: |
           bun install --frozen-lockfile
-          cd sea-typescript && bun run build
-          cp sea-core.*.node ..
+          cd domainforge-typescript && bun run build
 
       - name: Minimal registry ambiguity check
         shell: bash
@@ -266,7 +263,7 @@ jobs:
           # Test that --fail-on-ambiguity properly detects ambiguous matches
           # The command should fail and output an error message
           set +e  # Temporarily disable exit on error
-          output=$(./target/debug/sea registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
+          output=$(./target/debug/domainforge registry resolve --fail-on-ambiguity "$tmpdir/domains/logistics/warehouse.sea" 2>&1)
           exit_code=$?
           set -e  # Re-enable exit on error
 
@@ -313,12 +310,12 @@ jobs:
 
       - name: Build WASM
         run: |
-          cd sea-core
+          cd domainforge-core
           wasm-pack build --target web --features wasm
 
       - name: Check bundle size
         run: |
-          WASM_FILE="sea-core/pkg/sea_core_bg.wasm"
+          WASM_FILE="domainforge-core/pkg/domainforge_core_bg.wasm"
           python3 scripts/ci_tasks.py check-size --file "$WASM_FILE" --max-bytes "${{ env.WASM_MAX_BYTES }}" --label "WASM bundle"
 
   security:

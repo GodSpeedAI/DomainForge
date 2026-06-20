@@ -21,7 +21,7 @@ just setup
 
 ## 3. Codebase Tour
 
-- **`sea-core/`**: The brain. Start here.
+- **`domainforge-core/`**: The brain. Start here.
   - `grammar/`: The syntax definition.
   - `primitives/`: The data structures.
 - **`tests/`**: Integration tests.

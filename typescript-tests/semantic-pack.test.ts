@@ -48,7 +48,7 @@ function makeMinimalPackJson(): string {
         build_config_hash: 'sha256:cfg',
         review_manifest_hash: 'sha256:rev',
         created_at: '2026-06-07T00:00:00Z',
-        generator: { name: 'sea-core', version: '0.3' },
+        generator: { name: 'domainforge-core', version: '0.3' },
         trust: { approval_state: 'candidate', signature_state: 'unsigned' },
         concepts: [
             {

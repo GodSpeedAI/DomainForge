@@ -47,7 +47,7 @@ wheels/
 
 # WASM build outputs (wasm-pack)
 pkg/
-sea-core/pkg/
+domainforge-core/pkg/
 
 # Release archives
 /sea*.tar.gz

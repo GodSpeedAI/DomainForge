@@ -69,13 +69,13 @@ bun install  # or: npm install
 
 ```bash
 # Build the library
-cargo build -p sea-core
+cargo build -p domainforge-core
 
 # Build with CLI feature
-cargo build -p sea-core --features cli
+cargo build -p domainforge-core --features cli
 
 # Build in release mode
-cargo build -p sea-core --release --features cli
+cargo build -p domainforge-core --release --features cli
 ```
 
 ### Python Bindings
@@ -100,7 +100,7 @@ bun run build
 
 ```bash
 # Build WASM package
-cd sea-core
+cd domainforge-core
 wasm-pack build --target web --release --features wasm
 ```
 
@@ -129,7 +129,7 @@ just all-tests
 ```bash
 # Rust tests
 just ci-test-rust
-# or: cargo test -p sea-core --all-features
+# or: cargo test -p domainforge-core --all-features
 
 # Python tests
 just ci-test-python
@@ -144,10 +144,10 @@ just ci-test-ts
 
 ```bash
 # Run a specific Rust test
-cargo test -p sea-core test_name
+cargo test -p domainforge-core test_name
 
 # Run tests with output
-cargo test -p sea-core -- --nocapture
+cargo test -p domainforge-core -- --nocapture
 ```
 
 ## Code Style
@@ -278,7 +278,7 @@ markdown-link-check docs/**/*.md
 
 Include:
 
-- DomainForge version (`sea --version`)
+- DomainForge version (`domainforge --version`)
 - OS and version
 - Minimal reproduction steps
 - Expected vs actual behavior
@@ -296,7 +296,7 @@ Include:
 
 ```
 DomainForge/
-├── sea-core/              # Rust core library
+├── domainforge-core/              # Rust core library
 │   ├── src/
 │   │   ├── bin/           # CLI binary
 │   │   ├── cli/           # CLI command implementations

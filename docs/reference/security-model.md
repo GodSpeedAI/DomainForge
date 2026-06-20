@@ -22,7 +22,7 @@ The Pest-based parser processes input through a PEG grammar. Known behaviors:
 - **Null bytes**: Input containing null bytes is handled gracefully and produces a parse error.
 - **Long strings**: Individual string literals up to at least 1 MB are processed without panicking.
 
-Test coverage for these limits lives in `sea-core/tests/parser_resource_limits_tests.rs`.
+Test coverage for these limits lives in `domainforge-core/tests/parser_resource_limits_tests.rs`.
 
 ## Namespace and Import Path Restrictions
 
@@ -33,7 +33,7 @@ The module resolver enforces the following restrictions:
 - **No absolute paths** in namespace declarations.
 - **Circular imports** are detected and reported as `E505: CircularDependency` with the full cycle path.
 
-These checks are implemented in `sea_core::projection::protobuf::validate_proto_package_namespace` and `sea_core::module::resolver::ModuleResolver`.
+These checks are implemented in `domainforge_core::projection::protobuf::validate_proto_package_namespace` and `domainforge_core::module::resolver::ModuleResolver`.
 
 ## Safe Archive Extraction
 

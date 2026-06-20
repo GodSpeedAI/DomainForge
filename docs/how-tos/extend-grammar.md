@@ -1,11 +1,11 @@
 # Extend Grammar
 
-Goal: Extend the SEA grammar in `sea-core/grammar/sea.pest`, update the parser/AST, and refresh tests across languages.
+Goal: Extend the SEA grammar in `domainforge-core/grammar/sea.pest`, update the parser/AST, and refresh tests across languages.
 
 ## Prerequisites
 
 - Rust toolchain with `cargo` and `just` available.
-- Familiarity with Pest grammar syntax and the existing rules in `sea-core/grammar/sea.pest`.
+- Familiarity with Pest grammar syntax and the existing rules in `domainforge-core/grammar/sea.pest`.
 - Ability to run Rust/Python/TypeScript tests (`just all-tests`) to ensure binding parity.
 
 ## Steps (be concise)
@@ -19,7 +19,7 @@ Goal: Extend the SEA grammar in `sea-core/grammar/sea.pest`, update the parser/A
 2. **Update the grammar**
 
    ```bash
-   sed -n '1,160p' sea-core/grammar/sea.pest  # review nearby rules
+   sed -n '1,160p' domainforge-core/grammar/sea.pest  # review nearby rules
    ```
 
    - Add or modify rules using Pest syntax. Prefer `silent` rules (`_`) for whitespace handling.
@@ -27,27 +27,27 @@ Goal: Extend the SEA grammar in `sea-core/grammar/sea.pest`, update the parser/A
 
 3. **Regenerate parser expectations**
 
-   - If the change affects parsing order, adjust combinators in `sea-core/src/parser.rs` or helpers in `sea-core/src/ast.rs`.
+   - If the change affects parsing order, adjust combinators in `domainforge-core/src/parser.rs` or helpers in `domainforge-core/src/ast.rs`.
    - Update AST types to include new fields (e.g., add `Annotation` struct) and ensure `FromStr` implementations parse them.
 
 4. **Propagate to projections**
 
-   - **CALM/KG/SBVR**: Update projectors (`sea-core/src/calm/mod.rs`, `sea-core/src/kg.rs`, `sea-core/src/sbvr.rs`) so the new construct is emitted.
-   - **Validation**: Add semantic checks in `sea-core/src/validator.rs` to keep error reporting meaningful.
+   - **CALM/KG/SBVR**: Update projectors (`domainforge-core/src/calm/mod.rs`, `domainforge-core/src/kg.rs`, `domainforge-core/src/sbvr.rs`) so the new construct is emitted.
+   - **Validation**: Add semantic checks in `domainforge-core/src/validator.rs` to keep error reporting meaningful.
 
 5. **Expose through bindings**
 
-   - Python: Add new fields/classes in `sea-core/src/python/primitives.rs` and wire them into `sea-core/src/python/lib.rs` or `graph.rs` if they are part of the `Graph` API.
-   - TypeScript: Mirror changes in `sea-core/src/typescript/primitives.rs` and adjust `sea-core/src/typescript/index.d.ts` typing.
-   - WASM: Update `sea-core/src/wasm/mod.rs` (or `sea-core/src/wasm/lib.rs`) exports to expose the new types if browser consumers need the feature.
+   - Python: Add new fields/classes in `domainforge-core/src/python/primitives.rs` and wire them into `domainforge-core/src/python/lib.rs` or `graph.rs` if they are part of the `Graph` API.
+   - TypeScript: Mirror changes in `domainforge-core/src/typescript/primitives.rs` and adjust `domainforge-core/src/typescript/index.d.ts` typing.
+   - WASM: Update `domainforge-core/src/wasm/mod.rs` (or `domainforge-core/src/wasm/lib.rs`) exports to expose the new types if browser consumers need the feature.
 
 6. **Add parser tests (Rust)**
 
    ```bash
-   cargo test -p sea-core parser_tests -- --nocapture
+   cargo test -p domainforge-core parser_tests -- --nocapture
    ```
 
-   - Create or edit fixtures under `sea-core/tests/` or `sea-core/examples/` to cover the new syntax and failure cases.
+   - Create or edit fixtures under `domainforge-core/tests/` or `domainforge-core/examples/` to cover the new syntax and failure cases.
    - Add golden tests if the construct affects export formats.
 
 7. **Add binding tests (Python + TypeScript)**
@@ -80,7 +80,7 @@ Goal: Extend the SEA grammar in `sea-core/grammar/sea.pest`, update the parser/A
 
 - Write minimal DSL examples that highlight the new rule with and without namespaces.
 - Add negative tests for malformed input to ensure errors are descriptive (use error codes from `validation_error.rs`).
-- If the rule impacts policies, add evaluation tests in `sea-core/src/policy` or binding-specific test suites.
+- If the rule impacts policies, add evaluation tests in `domainforge-core/src/policy` or binding-specific test suites.
 
 ## Common Pitfalls / Troubleshooting
 

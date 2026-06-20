@@ -16,7 +16,7 @@ FAILED=0
 
 # Rust tests
 echo "==> Running Rust tests..."
-if cargo test --manifest-path sea-core/Cargo.toml; then
+if cargo test --manifest-path domainforge-core/Cargo.toml; then
     echo -e "${GREEN}✓ Rust tests passed${NC}"
 else
     echo -e "${RED}✗ Rust tests failed${NC}"
@@ -28,7 +28,7 @@ echo ""
 echo "==> Running Python tests..."
 if [ -f "tests/test_primitives.py" ]; then
     # Build Python bindings if not already built
-    if [ ! -d ".venv" ] || ! .venv/bin/python -c "import sea_dsl" 2>/dev/null; then
+    if [ ! -d ".venv" ] || ! .venv/bin/python -c "import domainforge" 2>/dev/null; then
         echo "Building Python bindings..."
         bash scripts/build-python.sh
     fi
@@ -51,7 +51,7 @@ echo ""
 echo "==> Running TypeScript tests..."
 if [ -f "vitest.config.ts" ]; then
     # Build TypeScript bindings if not already built
-    if [ ! -f "sea-core.linux-x64-gnu.node" ] && [ ! -f "index.node" ]; then
+    if [ ! -f "domainforge-core.linux-x64-gnu.node" ] && [ ! -f "index.node" ]; then
         echo "Building TypeScript bindings..."
         bash scripts/build-typescript.sh
     fi

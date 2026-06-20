@@ -12,7 +12,7 @@ DomainForge can run entirely client-side using WebAssembly. This allows for buil
 ```bash
 # From the project root, build the WASM bundle into an example folder
 mkdir -p examples/wasm-demo
-wasm-pack build sea-core --target web --out-dir examples/wasm-demo/pkg --features wasm
+wasm-pack build domainforge-core --target web --out-dir examples/wasm-demo/pkg --features wasm
 ```
 
 ## Step 2: HTML Setup
@@ -34,7 +34,7 @@ entity Web { type = "service" }
     <pre id="output"></pre>
 
     <script type="module">
-        import init, { Graph } from './pkg/sea_core.js';
+        import init, { Graph } from './pkg/domainforge_core.js';
 
         async function run() {
             await init(); // Initialize WASM module

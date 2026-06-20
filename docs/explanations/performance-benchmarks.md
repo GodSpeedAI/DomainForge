@@ -11,7 +11,7 @@ Policy evaluation defaults to three-valued logic. Benchmarks show the runtime ov
 - **Criterion suite (recommended)**: statistical results and HTML reports.
 
   ```bash
-  cd sea-core
+  cd domainforge-core
   cargo bench --bench null_overhead
   # view reports under target/criterion/
   ```
@@ -19,7 +19,7 @@ Policy evaluation defaults to three-valued logic. Benchmarks show the runtime ov
 - **Quick micro-benchmark (sanity)**:
 
   ```bash
-  cargo test --release -p sea-core --lib -- --ignored bench_microbench --nocapture
+  cargo test --release -p domainforge-core --lib -- --ignored bench_microbench --nocapture
   ```
 
 ## Results snapshot
@@ -44,8 +44,8 @@ Policy evaluation defaults to three-valued logic. Benchmarks show the runtime ov
 
 ## Appendix: raw outputs and files
 
-- Benchmark code: `sea-core/benches/null_overhead.rs`
-- Micro-bench: `sea-core/src/policy/three_valued_microbench.rs`
+- Benchmark code: `domainforge-core/benches/null_overhead.rs`
+- Micro-bench: `domainforge-core/src/policy/three_valued_microbench.rs`
 - Sample raw Criterion output:
 
   ```

@@ -1,5 +1,5 @@
 import pytest
-import sea_dsl
+import domainforge
 
 
 def test_parse_basic():
@@ -9,7 +9,7 @@ def test_parse_basic():
         Resource "Cameras" units
     '''
     
-    graph = sea_dsl.Graph.parse(source)
+    graph = domainforge.Graph.parse(source)
     assert graph.entity_count() == 2
     assert graph.resource_count() == 1
 
@@ -22,7 +22,7 @@ def test_parse_with_flow():
         Flow "Cameras" from "Warehouse" to "Factory" quantity 100
     '''
     
-    graph = sea_dsl.Graph.parse(source)
+    graph = domainforge.Graph.parse(source)
     assert graph.entity_count() == 2
     assert graph.resource_count() == 1
     assert graph.flow_count() == 1
@@ -42,7 +42,7 @@ def test_parse_complex():
         Flow "Gadgets" from "Supplier" to "Warehouse" quantity 200
     '''
     
-    graph = sea_dsl.Graph.parse(source)
+    graph = domainforge.Graph.parse(source)
     assert graph.entity_count() == 3
     assert graph.resource_count() == 2
     assert graph.flow_count() == 3
@@ -55,12 +55,12 @@ def test_parse_invalid_syntax():
     '''
     
     with pytest.raises(ValueError, match="Parse error"):
-        sea_dsl.Graph.parse(source)
+        domainforge.Graph.parse(source)
 
 
 def test_parse_empty():
     source = ""
-    graph = sea_dsl.Graph.parse(source)
+    graph = domainforge.Graph.parse(source)
     assert graph.entity_count() == 0
 
 
@@ -72,7 +72,7 @@ def test_parsed_graph_query():
         Flow "Steel" from "Warehouse" to "Factory" quantity 50
     '''
     
-    graph = sea_dsl.Graph.parse(source)
+    graph = domainforge.Graph.parse(source)
     
     warehouse_id = graph.find_entity_by_name("Warehouse")
     assert warehouse_id is not None

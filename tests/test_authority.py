@@ -9,7 +9,7 @@ Covers:
 
 import json
 import pytest
-import sea_dsl
+import domainforge
 
 
 # ---------------------------------------------------------------------------
@@ -58,50 +58,50 @@ def make_minimal_request_json(operation="TestAction", resource_type="Order") -> 
 # ---------------------------------------------------------------------------
 
 def test_final_decision_enum_importable():
-    """FinalDecision enum is importable from sea_dsl."""
-    assert hasattr(sea_dsl, "FinalDecision")
+    """FinalDecision enum is importable from domainforge."""
+    assert hasattr(domainforge, "FinalDecision")
 
 
 def test_final_decision_enum_values():
     """FinalDecision has Allow, Deny, Escalate, NotApplicable, Reject members."""
-    assert hasattr(sea_dsl.FinalDecision, "Allow")
-    assert hasattr(sea_dsl.FinalDecision, "Deny")
-    assert hasattr(sea_dsl.FinalDecision, "Escalate")
-    assert hasattr(sea_dsl.FinalDecision, "NotApplicable")
-    assert hasattr(sea_dsl.FinalDecision, "Reject")
+    assert hasattr(domainforge.FinalDecision, "Allow")
+    assert hasattr(domainforge.FinalDecision, "Deny")
+    assert hasattr(domainforge.FinalDecision, "Escalate")
+    assert hasattr(domainforge.FinalDecision, "NotApplicable")
+    assert hasattr(domainforge.FinalDecision, "Reject")
 
 
 def test_final_decision_members_are_distinct():
     """FinalDecision enum members are not equal to each other."""
-    assert sea_dsl.FinalDecision.Allow != sea_dsl.FinalDecision.Deny
-    assert sea_dsl.FinalDecision.Allow != sea_dsl.FinalDecision.Escalate
-    assert sea_dsl.FinalDecision.Allow != sea_dsl.FinalDecision.NotApplicable
-    assert sea_dsl.FinalDecision.Allow != sea_dsl.FinalDecision.Reject
-    assert sea_dsl.FinalDecision.Deny != sea_dsl.FinalDecision.Reject
+    assert domainforge.FinalDecision.Allow != domainforge.FinalDecision.Deny
+    assert domainforge.FinalDecision.Allow != domainforge.FinalDecision.Escalate
+    assert domainforge.FinalDecision.Allow != domainforge.FinalDecision.NotApplicable
+    assert domainforge.FinalDecision.Allow != domainforge.FinalDecision.Reject
+    assert domainforge.FinalDecision.Deny != domainforge.FinalDecision.Reject
 
 
 def test_policy_modality_enum_importable():
-    """PolicyModality enum is importable from sea_dsl."""
-    assert hasattr(sea_dsl, "PolicyModality")
+    """PolicyModality enum is importable from domainforge."""
+    assert hasattr(domainforge, "PolicyModality")
 
 
 def test_policy_modality_enum_values():
     """PolicyModality has Permission, Prohibition, Obligation, Override members."""
-    assert hasattr(sea_dsl.PolicyModality, "Permission")
-    assert hasattr(sea_dsl.PolicyModality, "Prohibition")
-    assert hasattr(sea_dsl.PolicyModality, "Obligation")
-    assert hasattr(sea_dsl.PolicyModality, "Override")
+    assert hasattr(domainforge.PolicyModality, "Permission")
+    assert hasattr(domainforge.PolicyModality, "Prohibition")
+    assert hasattr(domainforge.PolicyModality, "Obligation")
+    assert hasattr(domainforge.PolicyModality, "Override")
 
 
 def test_policy_modality_members_are_distinct():
     """PolicyModality enum members are not equal to each other."""
-    assert sea_dsl.PolicyModality.Permission != sea_dsl.PolicyModality.Prohibition
-    assert sea_dsl.PolicyModality.Obligation != sea_dsl.PolicyModality.Override
+    assert domainforge.PolicyModality.Permission != domainforge.PolicyModality.Prohibition
+    assert domainforge.PolicyModality.Obligation != domainforge.PolicyModality.Override
 
 
 def test_source_class_enum_importable():
-    """SourceClass enum is importable from sea_dsl."""
-    assert hasattr(sea_dsl, "SourceClass")
+    """SourceClass enum is importable from domainforge."""
+    assert hasattr(domainforge, "SourceClass")
 
 
 def test_source_class_enum_values():
@@ -110,31 +110,31 @@ def test_source_class_enum_values():
         "CallerSupplied", "RuntimeObserved", "SystemOfRecord",
         "Attested", "ManualApproval", "Derived", "UnknownSource",
     ]:
-        assert hasattr(sea_dsl.SourceClass, member), f"Missing SourceClass.{member}"
+        assert hasattr(domainforge.SourceClass, member), f"Missing SourceClass.{member}"
 
 
 def test_source_class_members_are_distinct():
     """SourceClass enum members are not equal to each other."""
-    assert sea_dsl.SourceClass.CallerSupplied != sea_dsl.SourceClass.SystemOfRecord
-    assert sea_dsl.SourceClass.Derived != sea_dsl.SourceClass.UnknownSource
+    assert domainforge.SourceClass.CallerSupplied != domainforge.SourceClass.SystemOfRecord
+    assert domainforge.SourceClass.Derived != domainforge.SourceClass.UnknownSource
 
 
 def test_claim_level_enum_importable():
-    """ClaimLevel enum is importable from sea_dsl."""
-    assert hasattr(sea_dsl, "ClaimLevel")
+    """ClaimLevel enum is importable from domainforge."""
+    assert hasattr(domainforge, "ClaimLevel")
 
 
 def test_claim_level_enum_values():
     """ClaimLevel has AuditBacked, Validated, FormallyProven members."""
-    assert hasattr(sea_dsl.ClaimLevel, "AuditBacked")
-    assert hasattr(sea_dsl.ClaimLevel, "Validated")
-    assert hasattr(sea_dsl.ClaimLevel, "FormallyProven")
+    assert hasattr(domainforge.ClaimLevel, "AuditBacked")
+    assert hasattr(domainforge.ClaimLevel, "Validated")
+    assert hasattr(domainforge.ClaimLevel, "FormallyProven")
 
 
 def test_claim_level_members_are_distinct():
     """ClaimLevel enum members are not equal to each other."""
-    assert sea_dsl.ClaimLevel.AuditBacked != sea_dsl.ClaimLevel.Validated
-    assert sea_dsl.ClaimLevel.Validated != sea_dsl.ClaimLevel.FormallyProven
+    assert domainforge.ClaimLevel.AuditBacked != domainforge.ClaimLevel.Validated
+    assert domainforge.ClaimLevel.Validated != domainforge.ClaimLevel.FormallyProven
 
 
 # ---------------------------------------------------------------------------
@@ -142,32 +142,32 @@ def test_claim_level_members_are_distinct():
 # ---------------------------------------------------------------------------
 
 def test_authority_environment_class_importable():
-    """AuthorityEnvironment class is importable from sea_dsl."""
-    assert hasattr(sea_dsl, "AuthorityEnvironment")
+    """AuthorityEnvironment class is importable from domainforge."""
+    assert hasattr(domainforge, "AuthorityEnvironment")
 
 
 def test_authority_environment_instantiation():
     """AuthorityEnvironment can be instantiated from a minimal config JSON."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     assert env is not None
 
 
 def test_authority_environment_raises_on_invalid_config():
     """AuthorityEnvironment raises ValueError on invalid config JSON."""
     with pytest.raises((ValueError, Exception)):
-        sea_dsl.AuthorityEnvironment("not valid json")
+        domainforge.AuthorityEnvironment("not valid json")
 
 
 def test_authority_environment_validate():
     """AuthorityEnvironment.validate() succeeds for a valid config."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     # Should not raise
     env.validate()
 
 
 def test_authority_environment_evaluate_returns_tuple():
     """AuthorityEnvironment.evaluate() returns a (trace_json, decision_json) tuple."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     env.validate()
     result = env.evaluate(make_minimal_request_json())
     assert isinstance(result, tuple)
@@ -176,7 +176,7 @@ def test_authority_environment_evaluate_returns_tuple():
 
 def test_authority_environment_evaluate_returns_valid_json():
     """AuthorityEnvironment.evaluate() returns valid JSON strings."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     env.validate()
     trace_json, decision_json = env.evaluate(make_minimal_request_json())
     json.loads(trace_json)   # must parse
@@ -185,7 +185,7 @@ def test_authority_environment_evaluate_returns_valid_json():
 
 def test_authority_environment_evaluate_raises_on_invalid_request():
     """AuthorityEnvironment.evaluate() raises on invalid request JSON."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     env.validate()
     with pytest.raises((ValueError, Exception)):
         env.evaluate("not valid json")
@@ -193,7 +193,7 @@ def test_authority_environment_evaluate_raises_on_invalid_request():
 
 def test_authority_environment_evaluate_with_empty_facts():
     """AuthorityEnvironment.evaluate() accepts empty facts array."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     env.validate()
     trace_json, decision_json = env.evaluate(make_minimal_request_json(), "[]")
     decision = json.loads(decision_json)
@@ -202,7 +202,7 @@ def test_authority_environment_evaluate_with_empty_facts():
 
 def test_authority_environment_not_applicable_with_no_packs():
     """AuthorityEnvironment returns not_applicable when no packs are loaded."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json([]))
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json([]))
     env.validate()
     _, decision_json = env.evaluate(make_minimal_request_json())
     decision = json.loads(decision_json)
@@ -211,7 +211,7 @@ def test_authority_environment_not_applicable_with_no_packs():
 
 def test_authority_environment_repr():
     """AuthorityEnvironment has a string representation."""
-    env = sea_dsl.AuthorityEnvironment(make_minimal_config_json())
+    env = domainforge.AuthorityEnvironment(make_minimal_config_json())
     assert isinstance(str(env), str)
 
 
@@ -220,13 +220,13 @@ def test_authority_environment_repr():
 # ---------------------------------------------------------------------------
 
 def test_evaluate_authority_is_callable():
-    """evaluate_authority is a callable function in sea_dsl."""
-    assert callable(sea_dsl.evaluate_authority)
+    """evaluate_authority is a callable function in domainforge."""
+    assert callable(domainforge.evaluate_authority)
 
 
 def test_evaluate_authority_returns_tuple():
     """evaluate_authority returns a (trace_json, decision_json) tuple."""
-    result = sea_dsl.evaluate_authority(
+    result = domainforge.evaluate_authority(
         make_minimal_config_json(),
         make_minimal_request_json(),
     )
@@ -236,7 +236,7 @@ def test_evaluate_authority_returns_tuple():
 
 def test_evaluate_authority_returns_valid_json():
     """evaluate_authority returns valid JSON strings in both elements."""
-    trace_json, decision_json = sea_dsl.evaluate_authority(
+    trace_json, decision_json = domainforge.evaluate_authority(
         make_minimal_config_json(),
         make_minimal_request_json(),
     )
@@ -247,19 +247,19 @@ def test_evaluate_authority_returns_valid_json():
 def test_evaluate_authority_raises_on_invalid_config():
     """evaluate_authority raises on invalid config JSON."""
     with pytest.raises((ValueError, Exception)):
-        sea_dsl.evaluate_authority("not valid json", make_minimal_request_json())
+        domainforge.evaluate_authority("not valid json", make_minimal_request_json())
 
 
 def test_evaluate_authority_raises_on_invalid_request():
     """evaluate_authority raises on invalid request JSON."""
     with pytest.raises((ValueError, Exception)):
-        sea_dsl.evaluate_authority(make_minimal_config_json(), "not valid json")
+        domainforge.evaluate_authority(make_minimal_config_json(), "not valid json")
 
 
 def test_evaluate_authority_raises_on_invalid_facts():
     """evaluate_authority raises on invalid facts JSON."""
     with pytest.raises((ValueError, Exception)):
-        sea_dsl.evaluate_authority(
+        domainforge.evaluate_authority(
             make_minimal_config_json(),
             make_minimal_request_json(),
             "not valid json",
@@ -268,7 +268,7 @@ def test_evaluate_authority_raises_on_invalid_facts():
 
 def test_evaluate_authority_not_applicable_with_no_packs():
     """evaluate_authority returns not_applicable when no packs are loaded."""
-    _, decision_json = sea_dsl.evaluate_authority(
+    _, decision_json = domainforge.evaluate_authority(
         make_minimal_config_json([]),
         make_minimal_request_json(),
     )
@@ -278,7 +278,7 @@ def test_evaluate_authority_not_applicable_with_no_packs():
 
 def test_evaluate_authority_decision_has_final_decision_field():
     """evaluate_authority decision contains a final_decision field."""
-    _, decision_json = sea_dsl.evaluate_authority(
+    _, decision_json = domainforge.evaluate_authority(
         make_minimal_config_json(),
         make_minimal_request_json(),
     )
@@ -290,7 +290,7 @@ def test_evaluate_authority_decision_has_final_decision_field():
 
 def test_evaluate_authority_trace_references_request_id():
     """evaluate_authority trace references the request_id from the request."""
-    trace_json, _ = sea_dsl.evaluate_authority(
+    trace_json, _ = domainforge.evaluate_authority(
         make_minimal_config_json(),
         make_minimal_request_json(),
     )
@@ -299,7 +299,7 @@ def test_evaluate_authority_trace_references_request_id():
 
 def test_evaluate_authority_with_explicit_empty_facts():
     """evaluate_authority accepts explicit empty facts JSON array."""
-    trace_json, decision_json = sea_dsl.evaluate_authority(
+    trace_json, decision_json = domainforge.evaluate_authority(
         make_minimal_config_json(),
         make_minimal_request_json(),
         "[]",
@@ -312,15 +312,15 @@ def test_evaluate_authority_is_deterministic():
     """Two calls with identical inputs produce the same final_decision."""
     config = make_minimal_config_json()
     request = make_minimal_request_json()
-    _, d1 = sea_dsl.evaluate_authority(config, request)
-    _, d2 = sea_dsl.evaluate_authority(config, request)
+    _, d1 = domainforge.evaluate_authority(config, request)
+    _, d2 = domainforge.evaluate_authority(config, request)
     assert json.loads(d1)["final_decision"] == json.loads(d2)["final_decision"]
 
 
 def test_evaluate_authority_handles_different_operations():
     """evaluate_authority processes requests with different operations."""
     for operation in ["CreateOrder", "DeleteOrder", "UpdateOrder"]:
-        _, decision_json = sea_dsl.evaluate_authority(
+        _, decision_json = domainforge.evaluate_authority(
             make_minimal_config_json(),
             make_minimal_request_json(operation=operation),
         )

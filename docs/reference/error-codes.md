@@ -565,19 +565,19 @@ import "a"
 
 ```bash
 # Get detailed error information
-sea validate myfile.sea
+domainforge validate myfile.sea
 
 # JSON output with error codes
-sea validate --format json myfile.sea
+domainforge validate --format json myfile.sea
 
 # LSP format for IDE integration
-sea validate --format lsp myfile.sea
+domainforge validate --format lsp myfile.sea
 ```
 
 ### In Python
 
 ```python
-from sea_dsl import Graph
+from domainforge import Graph
 
 try:
     graph = Graph.parse(source)
@@ -590,7 +590,7 @@ except Exception as e:
 ### In TypeScript
 
 ```typescript
-import { Graph } from "sea-dsl";
+import { Graph } from "@godspeedai/domainforge";
 
 try {
   const graph = Graph.parse(source);
@@ -606,7 +606,7 @@ try {
 ### In WASM/JavaScript
 
 ```javascript
-import { Graph } from "sea-dsl-wasm";
+import { Graph } from "@godspeedai/domainforge-wasm";
 
 try {
   const graph = Graph.parse(source);

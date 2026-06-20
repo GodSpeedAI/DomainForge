@@ -3,7 +3,7 @@
 Locate a compiled Rust binary under the workspace `target/` directories.
 
 Supports both workspace-level targets (e.g., `target/x86_64-unknown-linux-gnu/release/sea`)
-and crate-local targets (e.g., `sea-core/target/release/sea`). The script can match
+and crate-local targets (e.g., `domainforge-core/target/release/domainforge`). The script can match
 by exact name, prefix, or substring and falls back to alternate match modes when
 requested. Designed for both CI (finding the built CLI) and editor automation
 (finding hashed test binaries for codelldb).
@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 MATCH_CHOICES = ("exact", "prefix", "contains")
-DEFAULT_SEARCH_ROOTS = ["target", os.path.join("sea-core", "target")]
+DEFAULT_SEARCH_ROOTS = ["target", os.path.join("domainforge-core", "target")]
 
 
 @dataclass(frozen=True)
@@ -74,7 +74,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Override search roots (relative to workspace). Provide multiple times "
             "to search several directories. Defaults to workspace 'target/' and "
-            "'sea-core/target/'."
+            "'domainforge-core/target/'."
         ),
     )
     parser.add_argument(

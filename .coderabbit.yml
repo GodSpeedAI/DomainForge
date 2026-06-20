@@ -35,8 +35,8 @@ knowledge_base:
     enabled: true
     filePatterns:
       - "docs/**/*.md"
-      - "sea-core/**/*.rs"
-      - "sea-core/**/*.py"
+      - "domainforge-core/**/*.rs"
+      - "domainforge-core/**/*.py"
       - "tests/**/*.rs"
       - "tests/**/*.py"
 chat:

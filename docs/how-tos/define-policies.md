@@ -38,7 +38,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 3. **Validate the policy with the CLI**
 
    ```bash
-   sea validate --format human examples/policies.sea
+   domainforge validate --format human examples/policies.sea
    ```
 
    - Reports semantic errors (unknown identifiers, unit mismatches) with line/column.
@@ -47,7 +47,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 4. **Evaluate a policy in Python**
 
    ```python
-   from sea_dsl import Graph
+   from domainforge import Graph
    from pathlib import Path
 
    graph = Graph.parse(Path("examples/policies.sea").read_text())
@@ -65,7 +65,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 5. **Evaluate a policy in TypeScript**
 
    ```ts
-   import { Graph } from "@domainforge/sea";
+   import { Graph } from "@godspeedai/domainforge";
    import { readFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("examples/policies.sea", "utf8"));
@@ -79,7 +79,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 
 6. **Test policies as part of CI**
 
-   - Add a Rust test under `sea-core/tests/` that parses the DSL and calls `graph.evaluate_policy` on representative inputs.
+   - Add a Rust test under `domainforge-core/tests/` that parses the DSL and calls `graph.evaluate_policy` on representative inputs.
    - Mirror the test in Python/TypeScript to maintain parity. Use the same DSL snippet to avoid drift.
    - Run `just all-tests` before merging changes.
 
@@ -108,7 +108,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 
 ## Verification Checklist
 
-- [ ] `sea validate` passes for the policy file.
+- [ ] `domainforge validate` passes for the policy file.
 - [ ] Policy evaluates consistently in Rust, Python, and TypeScript for the same input.
 - [ ] Unit conversions behave as expected where used.
 - [ ] Documentation and examples updated when adding new operators or predicates.

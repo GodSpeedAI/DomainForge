@@ -1,7 +1,7 @@
 import uuid
 
 import pytest
-from sea_dsl import Relation, Role
+from domainforge import Relation, Role
 
 
 def test_role_creation():

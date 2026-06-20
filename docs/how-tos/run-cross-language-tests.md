@@ -18,7 +18,7 @@ Goal: Execute and maintain Rust, Python, and TypeScript tests to ensure the DSL,
    just all-tests
    ```
 
-   - Executes Rust (`cargo test -p sea-core --features cli`), Python (`pytest`), and TypeScript (Vitest) in order.
+   - Executes Rust (`cargo test -p domainforge-core --features cli`), Python (`pytest`), and TypeScript (Vitest) in order.
    - Fails fast on the first failing command; rerun individual suites for debugging.
 
 2. **Run Rust tests only**
@@ -27,8 +27,8 @@ Goal: Execute and maintain Rust, Python, and TypeScript tests to ensure the DSL,
    just rust-test
    ```
 
-   - Includes CLI tests and parser/projection coverage under `sea-core/tests/`.
-   - Use `cargo test -p sea-core --features "cli shacl"` if you need SHACL validation paths.
+   - Includes CLI tests and parser/projection coverage under `domainforge-core/tests/`.
+   - Use `cargo test -p domainforge-core --features "cli shacl"` if you need SHACL validation paths.
 
 3. **Run Python tests only**
 
@@ -50,7 +50,7 @@ Goal: Execute and maintain Rust, Python, and TypeScript tests to ensure the DSL,
 
 5. **Add a cross-language golden scenario**
 
-   - Define the scenario in Rust tests under `sea-core/tests/` (e.g., roles/relations payment flow).
+   - Define the scenario in Rust tests under `domainforge-core/tests/` (e.g., roles/relations payment flow).
    - Mirror the scenario in `tests/` (Python) and `typescript-tests/` with equivalent assertions.
    - Keep DSL snippets identical to catch serialization and parsing differences.
 

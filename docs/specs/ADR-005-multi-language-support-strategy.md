@@ -21,7 +21,7 @@ Maintaining separate implementations for each language would lead to:
 
 ## Decision
 
-Implement a **single Rust core** (`sea-core`) that exposes bindings to other languages via FFI:
+Implement a **single Rust core** (`domainforge-core`) that exposes bindings to other languages via FFI:
 
 | Target             | Binding Technology | Feature Flag |
 | ------------------ | ------------------ | ------------ |
@@ -34,7 +34,7 @@ Implement a **single Rust core** (`sea-core`) that exposes bindings to other lan
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    sea-core (Rust)                  │
+│                    domainforge-core (Rust)                  │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐  │
 │  │ Parser  │ │  Graph  │ │ Policy  │ │Projection│  │
 │  └─────────┘ └─────────┘ └─────────┘ └──────────┘  │
@@ -47,7 +47,7 @@ Implement a **single Rust core** (`sea-core`) that exposes bindings to other lan
          │              │              │
     ┌────┴────┐    ┌────┴────┐    ┌────┴────┐
     │ Python  │    │  Node   │    │ Browser │
-    │  sea_dsl│    │  @sea   │    │  @sea   │
+    │  domainforge│    │  @sea   │    │  @sea   │
     └─────────┘    └─────────┘    └─────────┘
 ```
 
@@ -56,7 +56,7 @@ Implement a **single Rust core** (`sea-core`) that exposes bindings to other lan
 Each binding module wraps core Rust types with language-idiomatic APIs:
 
 ```rust
-// Python binding example (sea-core/src/python/primitives.rs)
+// Python binding example (domainforge-core/src/python/primitives.rs)
 #[pyclass]
 pub struct Entity {
     inner: crate::primitives::Entity,
@@ -109,4 +109,4 @@ wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 ## Related
 
 - [ADR-006: Error Handling Strategy](./ADR-006-error-handling-strategy.md)
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)

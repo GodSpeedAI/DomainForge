@@ -21,7 +21,7 @@ This creates challenges for:
 
 ## Decision
 
-Implement a canonical normalizer in `sea_core::policy` that transforms any `Expression` into a deterministic, minimal, canonical form.
+Implement a canonical normalizer in `domainforge_core::policy` that transforms any `Expression` into a deterministic, minimal, canonical form.
 
 ## Design
 
@@ -39,7 +39,7 @@ Implement a canonical normalizer in `sea_core::policy` that transforms any `Expr
 ### 2. API
 
 ```rust
-// In sea_core::policy::expression
+// In domainforge_core::policy::expression
 impl Expression {
     /// Returns a canonical form of this expression
     pub fn normalize(&self) -> NormalizedExpression;
@@ -83,15 +83,15 @@ impl Display for NormalizedExpression {
 
 - [ ] Use in LSP hover signature generation
 - [ ] Add `Policy::normalized_expression()` helper
-- [ ] Add CLI option: `sea normalize <expr>`
+- [ ] Add CLI option: `domainforge normalize <expr>`
 
 ### 4. Files to Modify
 
 | File                                           | Changes                          |
 | ---------------------------------------------- | -------------------------------- |
-| `sea-core/src/policy/mod.rs`                   | Add `mod normalize;`             |
-| `sea-core/src/policy/normalize.rs`             | **NEW** - Normalization logic    |
-| `sea-core/src/policy/expression.rs`            | Add `normalize()` method         |
+| `domainforge-core/src/policy/mod.rs`                   | Add `mod normalize;`             |
+| `domainforge-core/src/policy/normalize.rs`             | **NEW** - Normalization logic    |
+| `domainforge-core/src/policy/expression.rs`            | Add `normalize()` method         |
 | `domainforge-lsp/src/hover/symbol_resolver.rs` | Use normalized form in signature |
 
 ## Consequences

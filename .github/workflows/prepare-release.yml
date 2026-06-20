@@ -41,7 +41,7 @@ jobs:
       - name: Get current version
         id: current
         run: |
-          CURRENT=$(cargo metadata --manifest-path sea-core/Cargo.toml --format-version 1 | jq -r '.packages[] | select(.name == "sea-core") | .version')
+          CURRENT=$(cargo metadata --manifest-path domainforge-core/Cargo.toml --format-version 1 | jq -r '.packages[] | select(.name == "domainforge-core") | .version')
           echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
           echo "Current version: $CURRENT"
 
@@ -81,19 +81,19 @@ jobs:
 
       - name: Bump Cargo.toml version
         run: |
-          cargo set-version --manifest-path sea-core/Cargo.toml "${{ steps.newversion.outputs.version }}"
+          cargo set-version --manifest-path domainforge-core/Cargo.toml "${{ steps.newversion.outputs.version }}"
 
       - name: Sync Python version (pyproject.toml)
         run: |
           NEW_VERSION="${{ steps.newversion.outputs.version }}"
-          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" sea-dsl/pyproject.toml
-          echo "Updated sea-dsl/pyproject.toml to version $NEW_VERSION"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" domainforge-python/pyproject.toml
+          echo "Updated domainforge-python/pyproject.toml to version $NEW_VERSION"
 
       - name: Sync NPM version (package.json)
         run: |
           NEW_VERSION="${{ steps.newversion.outputs.version }}"
-          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version --prefix sea-typescript
-          echo "Updated sea-typescript/package.json to version $NEW_VERSION"
+          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version --prefix domainforge-typescript
+          echo "Updated domainforge-typescript/package.json to version $NEW_VERSION"
 
       - name: Update CHANGELOG.md
         run: |
@@ -152,7 +152,7 @@ jobs:
             
             ### Checklist
             - [ ] Update CHANGELOG.md with actual changes
-            - [ ] Review version bump in `sea-core/Cargo.toml`
+            - [ ] Review version bump in `domainforge-core/Cargo.toml`
             - [ ] Run `just all-tests` locally
             - [ ] Merge this PR
             - [ ] Create and push tag: `git tag v${{ steps.newversion.outputs.version }} && git push --tags`

@@ -72,7 +72,7 @@ jobs:
       - name: Build and publish wheels (native)
         if: matrix.use_zig != true
         shell: bash
-        working-directory: sea-dsl
+        working-directory: domainforge-python
         run: |
           python -m maturin publish \
             --features python \
@@ -84,7 +84,7 @@ jobs:
       - name: Build and publish wheels (cross-compile with Zig)
         if: matrix.use_zig == true
         shell: bash
-        working-directory: sea-dsl
+        working-directory: domainforge-python
         run: |
           python -m maturin publish \
             --features python \

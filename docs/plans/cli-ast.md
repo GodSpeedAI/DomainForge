@@ -15,7 +15,7 @@ The current `sea` CLI emits **AST v2** (legacy map-based structure). SEA consume
 **Goal:** Update CLI to emit **AST v3** directly with full annotations on flows.
 
 Steps:
-1. Update `sea-core` parser/serializer to expose flow annotations in the AST (not just entities/resources).
+1. Update `domainforge-core` parser/serializer to expose flow annotations in the AST (not just entities/resources).
 2. Add a CLI flag or default output mode for **AST v3**.
 3. Ensure emitted AST schema matches `tools/schemas/ast-v3.schema.json` in SEA.
 4. Add regression tests: parse a SEA file with `@cqrs`, `@tx`, `@idempotency`, `@read_model` and verify they appear in flow annotations.

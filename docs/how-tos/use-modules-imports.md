@@ -58,7 +58,7 @@ domain = "domain/index.sea"
 ### 3. Use Imports
 
 ```bash
-sea validate domain/customer.sea --registry .sea-registry.toml
+domainforge validate domain/customer.sea --registry .sea-registry.toml
 ```
 
 ## Import Syntax
@@ -108,9 +108,9 @@ The `.sea-registry.toml` file maps namespace prefixes to file paths:
 paths = ["./src", "./vendor"]
 
 [namespaces]
-core = "sea-core/std/core.sea"
-http = "sea-core/std/http.sea"
-aws = "sea-core/std/aws.sea"
+core = "domainforge-core/std/core.sea"
+http = "domainforge-core/std/http.sea"
+aws = "domainforge-core/std/aws.sea"
 domain = "src/domain/index.sea"
 ```
 
@@ -212,19 +212,19 @@ my-project/
 ### Validate with Registry
 
 ```bash
-sea validate main.sea --registry .sea-registry.toml
+domainforge validate main.sea --registry .sea-registry.toml
 ```
 
 ### Specify Additional Paths
 
 ```bash
-sea validate main.sea --include ./vendor --include ./lib
+domainforge validate main.sea --include ./vendor --include ./lib
 ```
 
 ### Verbose Module Loading
 
 ```bash
-SEA_LOG=debug sea validate main.sea
+SEA_LOG=debug domainforge validate main.sea
 ```
 
 ## Programmatic Usage
@@ -232,8 +232,8 @@ SEA_LOG=debug sea validate main.sea
 ### Rust
 
 ```rust
-use sea_core::registry::NamespaceRegistry;
-use sea_core::parser::parse_with_registry;
+use domainforge_core::registry::NamespaceRegistry;
+use domainforge_core::parser::parse_with_registry;
 
 let registry = NamespaceRegistry::from_file(".sea-registry.toml")?;
 let graph = parse_with_registry("main.sea", &registry)?;
@@ -242,7 +242,7 @@ let graph = parse_with_registry("main.sea", &registry)?;
 ### Python
 
 ```python
-from sea_dsl import Graph, NamespaceRegistry
+from domainforge import Graph, NamespaceRegistry
 
 registry = NamespaceRegistry.from_file(".sea-registry.toml")
 graph = Graph.parse_with_registry(open("main.sea").read(), registry)

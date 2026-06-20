@@ -102,5 +102,5 @@ impl UnitRegistry {
 
 ## Related
 
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)
 - [PRD-003: DSL Core Capabilities](./PRD-003-dsl-core-capabilities.md)

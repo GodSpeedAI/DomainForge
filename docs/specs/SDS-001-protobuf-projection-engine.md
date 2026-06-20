@@ -38,7 +38,7 @@ Projection Engine (Protobuf)
 
 ### 2.1 Projection Resolver
 
-**Location:** `sea-core/src/projection/resolver.rs`
+**Location:** `domainforge-core/src/projection/resolver.rs`
 
 **Responsibilities:**
 
@@ -83,7 +83,7 @@ pub enum Stability {
 
 ### 2.2 Protobuf Projection Engine
 
-**Location:** `sea-core/src/projection/protobuf/engine.rs`
+**Location:** `domainforge-core/src/projection/protobuf/engine.rs`
 
 **Responsibilities:**
 
@@ -116,7 +116,7 @@ impl ProjectionEngine for ProtobufEngine {
 
 ## 3. Protobuf Intermediate Representation (IR)
 
-**Location:** `sea-core/src/projection/protobuf/ir.rs`
+**Location:** `domainforge-core/src/projection/protobuf/ir.rs`
 
 ```rust
 pub struct ProtoFile {
@@ -260,7 +260,7 @@ message MetricEvent {
 
 ## 5. Compatibility Enforcement Algorithm
 
-**Location:** `sea-core/src/projection/protobuf/compatibility.rs`
+**Location:** `domainforge-core/src/projection/protobuf/compatibility.rs`
 
 ```rust
 pub struct CompatibilityChecker {

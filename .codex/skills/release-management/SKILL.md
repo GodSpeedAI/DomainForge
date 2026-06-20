@@ -16,18 +16,18 @@ checks on `main` must pass.
 
 | Package key | Component | Tag | Layout |
 |---|---|---|---|
-| `sea-core` | `sea-core` | `sea-core-vX.Y.Z` | `sea-core/` |
-| `sea-dsl` | `sea-dsl` | `sea-dsl-vX.Y.Z` | `sea-dsl/` |
-| `sea-typescript` | `sea` | `sea-vX.Y.Z` | `sea-typescript/` |
+| `domainforge-core` | `domainforge-core` | `domainforge-core-vX.Y.Z` | `domainforge-core/` |
+| `domainforge-python` | `domainforge` | `domainforge-vX.Y.Z` | `domainforge-python/` |
+| `domainforge-typescript` | `domainforge-typescript` | `domainforge-typescript-vX.Y.Z` | `domainforge-typescript/` |
 
 Release PRs are opened or updated by `.github/workflows/release-please.yml`
 after pushes to `main`. Merging a release-please PR creates the matching
 component tag. Component tags trigger `.github/workflows/deploy.yml`, which
 parses the tag and dispatches to the appropriate reusable publish workflow:
 
-- `sea-core-v*` → `release-crates.yml` (crates.io)
-- `sea-dsl-v*` → `release-pypi.yml` (PyPI wheels, multi-platform matrix)
-- `sea-v*` → `release-npm.yml` (npm + WASM)
+- `domainforge-core-v*` → `release-crates.yml` (crates.io)
+- `domainforge-v*` → `release-pypi.yml` (PyPI wheels, multi-platform matrix)
+- `domainforge-typescript-v*` → `release-npm.yml` (npm + WASM)
 
 There is intentionally no separate `prod` GitHub environment gate. This is a
 solo-maintainer repository: CI on `main` is the merge gate, and a component
@@ -83,7 +83,7 @@ version, proposed version, bump reason, and changelog delta. Do not commit.
 Check in order:
 
 1. Tag exists: `git ls-remote --tags origin 'refs/tags/*-v*'`.
-2. Tag matches `deploy.yml`: `sea-core-v*`, `sea-dsl-v*`, or `sea-v*`.
+2. Tag matches `deploy.yml`: `domainforge-core-v*`, `domainforge-v*`, or `domainforge-typescript-v*`.
 3. Tag came from release-please using `CREATE_PR_TOKEN`, not `GITHUB_TOKEN`.
 4. `deploy.yml` has not been disabled and Actions permissions are healthy.
 5. The dispatchable publish workflow file exists and is not disabled.
@@ -95,7 +95,7 @@ Check in order:
 3. Create a directory at repo root named after the package key (release-please
    resolves file paths as `<package-key>/<file>`).
 4. Move the package's version file (pyproject.toml, package.json, Cargo.toml)
-   into that directory with relative paths adjusted to reach `sea-core/`.
+   into that directory with relative paths adjusted to reach `domainforge-core/`.
 5. Add a `deploy-<component>` job to `deploy.yml` that dispatches to the
    appropriate publish workflow, gated by `if: needs.identify.outputs.component == '<component>'`.
 6. Add the component to `commitlint.config.cjs` scope-enum (if you maintain one).

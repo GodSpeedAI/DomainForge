@@ -3,28 +3,28 @@ cargo := `if command -v cargo >/dev/null 2>&1; then printf 'cargo'; elif command
 
 # Run all validation checks required for CI and AI agents
 ai-validate:
-    {{cargo}} test -p sea-core --features cli
+    {{cargo}} test -p domainforge-core --features cli
 
 # Test tasks - run per-language test suites
 rust-test:
     @echo "Running Rust tests..."
-    {{cargo}} test -p sea-core --features cli
+    {{cargo}} test -p domainforge-core --features cli
 
 # Test all CLI commands
 cli-test:
-    {{cargo}} test -p sea-core --test cli_tests --features cli
+    {{cargo}} test -p domainforge-core --test cli_tests --features cli
 
 # Run CLI validation examples
 cli-validate:
-    cd sea-core/examples/cli && ./validate_example.sh
+    cd domainforge-core/examples/cli && ./validate_example.sh
 
 # Run CLI import/export workflow
 cli-workflow:
-    cd sea-core/examples/cli && ./import_export_workflow.sh
+    cd domainforge-core/examples/cli && ./import_export_workflow.sh
 
 build-rust-tests:
     @echo "Build Rust tests without running them (to prepare debug binaries)"
-    {{cargo}} test -p sea-core --features cli --no-run
+    {{cargo}} test -p domainforge-core --features cli --no-run
 
 python-test:
     @echo "Running Python tests..."
@@ -50,9 +50,9 @@ all-tests:
     just ts-test
 prepare-rust-debug:
     @echo "Prepare a Rust test binary for codelldb debugging (build & symlink)"
-    if [ -z "$${RUST_TEST_NAME-}" ]; then RUST_TEST_NAME="entity_tests"; fi
-    echo "Using RUST_TEST_NAME=$${RUST_TEST_NAME}"
-    ./scripts/prepare_rust_debug.sh "$${RUST_TEST_NAME}"
+    if [ -z "${RUST_TEST_NAME-}" ]; then RUST_TEST_NAME="entity_tests"; fi
+    echo "Using RUST_TEST_NAME=${RUST_TEST_NAME}"
+    ./scripts/prepare_rust_debug.sh "${RUST_TEST_NAME}"
 clear-rust-debug:
     @echo "Clear symlink created for rust debug binary"
     ./scripts/clear_debug_test.sh || true
@@ -68,11 +68,12 @@ python-setup:
     # Install dev/test tooling
     .venv/bin/python -m pip install -U pytest maturin
     # Build & install the Python bindings into the venv.
-    # pyproject.toml lives in sea-dsl/ and declares manifest-path = "../sea-core/Cargo.toml",
-    # so maturin must be invoked from sea-dsl/ WITHOUT a CLI --manifest-path (passing it on the
-    # CLI relocates the project root to sea-core/, hiding pyproject.toml and falling back to
-    # Cargo defaults: wrong module name + cffi instead of pyo3).
-    cd sea-dsl && ../.venv/bin/maturin develop --release || (cd sea-dsl && ../.venv/bin/maturin develop)
+    # pyproject.toml lives in domainforge-python/ and declares manifest-path, features,
+    # and module-name under [tool.maturin]. Do NOT pass --manifest-path on the CLI:
+    # maturin resolves the pyproject from the manifest dir when it's given, which makes
+    # it ignore [tool.maturin] (features/module-name) and fall back to cffi. Invoke from
+    # domainforge-python/ so maturin reads the pyproject next to it.
+    cd domainforge-python && ../.venv/bin/maturin develop --release || (cd domainforge-python && ../.venv/bin/maturin develop)
 
 install-just:
     @echo "Checking if 'just' is already installed..."
@@ -119,20 +120,20 @@ audit:
 
 smoke-test-npm:
     @echo "Running npm pack smoke test..."
-    @output=$$(cd sea-typescript && npm pack --dry-run 2>&1); \
-    echo "$$output"; \
-    echo "$$output" | grep -q "index\.js" || { echo "ERROR: index.js missing from pack"; exit 1; }; \
-    echo "$$output" | grep -q "index\.d\.ts" || { echo "ERROR: index.d.ts missing from pack"; exit 1; }; \
-    echo "$$output" | grep -q "sea-core.*\.node" || { echo "ERROR: native .node binary missing from pack"; exit 1; }; \
-    echo "$$output" | grep -q "README\.md" || { echo "ERROR: README.md missing from pack"; exit 1; }; \
-    echo "$$output" | grep -q "LICENSE" || { echo "ERROR: LICENSE missing from pack"; exit 1; }; \
+    @output=$(cd domainforge-typescript && npm pack --dry-run 2>&1); \
+    echo "$output"; \
+    echo "$output" | grep -q "index\.js" || { echo "ERROR: index.js missing from pack"; exit 1; }; \
+    echo "$output" | grep -q "index\.d\.ts" || { echo "ERROR: index.d.ts missing from pack"; exit 1; }; \
+    echo "$output" | grep -q "domainforge-core.*\.node" || { echo "ERROR: native .node binary missing from pack"; exit 1; }; \
+    echo "$output" | grep -q "README\.md" || { echo "ERROR: README.md missing from pack"; exit 1; }; \
+    echo "$output" | grep -q "LICENSE" || { echo "ERROR: LICENSE missing from pack"; exit 1; }; \
     echo "npm pack smoke test passed"
 
 smoke-test-wasm:
     @echo "Running WASM pkg smoke test..."
     test -d target/wasm-pkg || { echo "ERROR: WASM pkg not built. Run scripts/build-wasm.sh first"; exit 1; }
-    for f in sea_core.js sea_core.d.ts sea_core_bg.wasm sea_core_bg.wasm.d.ts package.json; do \
-        test -f target/wasm-pkg/$$f || { echo "ERROR: missing $$f"; exit 1; }; \
+    for f in domainforge_core.js domainforge_core.d.ts domainforge_core_bg.wasm domainforge_core_bg.wasm.d.ts package.json; do \
+        test -f target/wasm-pkg/$f || { echo "ERROR: missing $f"; exit 1; }; \
     done
     @echo "WASM smoke test passed"
 
@@ -147,7 +148,7 @@ enterprise-verify:
     echo "3/6: Rust tests..."
     cargo test --workspace --all-targets --all-features
     echo "4/6: Doctests..."
-    cargo test -p sea-core --features cli --doc
+    cargo test -p domainforge-core --features cli --doc
     echo "5/6: All language tests..."
     just all-tests
     echo "6/6: Audit..."
@@ -189,7 +190,7 @@ ci-package-binary BINARY_PATH OUTPUT_PATH:
     python3 scripts/ci_tasks.py package --input "{{BINARY_PATH}}" --output "{{OUTPUT_PATH}}"
 
 # Verify packaged archive
-ci-verify-package ARCHIVE_PATH BINARY_NAME="sea":
+ci-verify-package ARCHIVE_PATH BINARY_NAME="domainforge":
     @echo "Verifying packaged archive: {{ARCHIVE_PATH}}"
     python3 scripts/ci_tasks.py unpack-verify --archive "{{ARCHIVE_PATH}}" --binary-name "{{BINARY_NAME}}"
 

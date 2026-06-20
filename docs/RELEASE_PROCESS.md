@@ -113,7 +113,7 @@ Options:
   --no-commit     Update files without committing
 
 Files updated:
-  - sea-core/Cargo.toml
+  - domainforge-core/Cargo.toml
   - pyproject.toml
   - package.json
 ```
@@ -186,8 +186,8 @@ Options:
 Output:
   dist/
   ├── sea-0.7.0-linux-x86_64.tar.gz
-  ├── sea_dsl-0.7.0-cp312-*.whl
-  ├── sea-core-wasm-0.7.0.tar.gz
+  ├── domainforge-0.7.0-cp312-*.whl
+  ├── domainforge-core-wasm-0.7.0.tar.gz
   └── SHA256SUMS.txt
 ```
 
@@ -273,7 +273,7 @@ git stash
 
 ```bash
 # Check versions
-grep '^version' sea-core/Cargo.toml pyproject.toml
+grep '^version' domainforge-core/Cargo.toml pyproject.toml
 grep '"version"' package.json
 
 # Sync manually or run bump-version
@@ -353,7 +353,7 @@ DomainForge follows [Semantic Versioning](https://semver.org/):
 
 | File                  | Field                | Example                   |
 | --------------------- | -------------------- | ------------------------- |
-| `sea-core/Cargo.toml` | `version = "X.Y.Z"`  | `version = "0.7.0"`       |
+| `domainforge-core/Cargo.toml` | `version = "X.Y.Z"`  | `version = "0.7.0"`       |
 | `pyproject.toml`      | `version = "X.Y.Z"`  | `version = "0.7.0"`       |
 | `package.json`        | `"version": "X.Y.Z"` | `"version": "0.7.0"`      |
 | `CHANGELOG.md`        | New version section  | `## [0.7.0] - 2025-12-23` |

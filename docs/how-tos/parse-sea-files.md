@@ -6,18 +6,18 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 
 - Rust toolchain 1.77+ and the SEA CLI installed.
 
-  - For developers building from this repo: `cargo install --path sea-core --features cli` (produces the `sea` binary).
-  - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `sea --version`.
+  - For developers building from this repo: `cargo install --path domainforge-core --features cli` (produces the `sea` binary).
+  - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `domainforge --version`.
 
-- Optional: Python bindings (install locally via `maturin develop --features python` or via PyPI when published) and TypeScript package (`npm install @domainforge/sea` then `npm run build`).
-- A `.sea` source file. Use `sea-core/examples/basic.sea` or any model under `examples/` to follow along.
+- Optional: Python bindings (install locally via `maturin develop --features python` or via PyPI when published) and TypeScript package (`npm install @godspeedai/domainforge` then `npm run build`).
+- A `.sea` source file. Use `domainforge-core/examples/basic.sea` or any model under `examples/` to follow along.
 
 ## Steps (be concise)
 
 1. **Validate and parse a single file (CLI)**
 
    ```bash
-   sea validate --format human sea-core/examples/basic.sea
+   domainforge validate --format human domainforge-core/examples/basic.sea
    ```
 
    - The command parses the file, resolves namespaces from `.sea-registry.toml` when present, and reports semantic errors (unknown entities/resources, unit mismatches).
@@ -26,7 +26,7 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 2. **Parse and project to an intermediate representation (CLI)**
 
    ```bash
-   sea project --format calm sea-core/examples/basic.sea /tmp/basic.calm.json
+   domainforge project --format calm domainforge-core/examples/basic.sea /tmp/basic.calm.json
    ```
 
    - `project` parses the DSL, builds a `Graph`, then exports to CALM JSON. Swap `--format calm` with `--format kg` to emit RDF/Turtle or RDF/XML (auto-detected by extension).
@@ -37,7 +37,7 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
    ```bash
    for f in examples/*.sea; do
      echo "Checking $f"
-     sea validate --format human "$f" || exit 1
+     domainforge validate --format human "$f" || exit 1
    done
    ```
 
@@ -46,7 +46,7 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 4. **Generate AST JSON (CLI)**
 
    ```bash
-   sea parse --ast --format json sea-core/examples/basic.sea > basic.ast.json
+   domainforge parse --ast --format json domainforge-core/examples/basic.sea > basic.ast.json
    ```
 
    - Produces raw AST JSON preserving source structure and location info.
@@ -55,10 +55,10 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 5. **Parse programmatically in Rust**
 
    ```rust
-   use sea_core::parser::parse_to_graph;
+   use domainforge_core::parser::parse_to_graph;
    ```
 
-let source = std::fs::read_to_string("sea-core/examples/basic.sea")?;
+let source = std::fs::read_to_string("domainforge-core/examples/basic.sea")?;
 let graph = parse_to_graph(&source)?;
 assert!(graph.entity_count() >= 1);
 
@@ -70,9 +70,9 @@ assert!(graph.entity_count() >= 1);
 
 ```python
 from pathlib import Path
-from sea_dsl import Graph
+from domainforge import Graph
 
-text = Path("sea-core/examples/basic.sea").read_text()
+text = Path("domainforge-core/examples/basic.sea").read_text()
 
 # Semantic graph parsing
 graph = Graph.parse(text)
@@ -89,9 +89,9 @@ ast_json = Graph.parse_to_ast_json(text)
 
    ```ts
    import { readFileSync } from "fs";
-   import { Graph } from "@domainforge/sea";
+   import { Graph } from "@godspeedai/domainforge";
 
-   const source = readFileSync("sea-core/examples/basic.sea", "utf8");
+   const source = readFileSync("domainforge-core/examples/basic.sea", "utf8");
 
    // Semantic graph parsing
    const graph = Graph.parse(source);
@@ -112,12 +112,12 @@ ast_json = Graph.parse_to_ast_json(text)
 9. **Integrate parsing into CI**
 
    ```bash
-   just rust-test  # runs `cargo test -p sea-core --features cli` and exercises parser paths
+   just rust-test  # runs `cargo test -p domainforge-core --features cli` and exercises parser paths
    just python-test  # rebuilds bindings (maturin develop) and parses DSL fixtures
    just ts-test  # runs Vitest against `Graph.parse`
    ```
 
-   - Combine with `cargo fmt --all -- --check` and `cargo clippy -p sea-core -- -D warnings` for full validation.
+   - Combine with `cargo fmt --all -- --check` and `cargo clippy -p domainforge-core -- -D warnings` for full validation.
 
 ## Common Pitfalls / Troubleshooting
 

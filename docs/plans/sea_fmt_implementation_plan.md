@@ -27,7 +27,7 @@ The `sea fmt` command currently:
 - Parses the file to verify syntax validity
 - Returns an error: "Formatting not yet implemented"
 
-**File:** `sea-core/src/cli/format.rs` (23 lines)
+**File:** `domainforge-core/src/cli/format.rs` (23 lines)
 
 ---
 
@@ -61,7 +61,7 @@ The `sea fmt` command currently:
 
 ### Phase 1: Core Formatter Module
 
-#### [NEW] `sea-core/src/formatter/mod.rs`
+#### [NEW] `domainforge-core/src/formatter/mod.rs`
 
 ```rust
 pub mod config;
@@ -71,7 +71,7 @@ pub use config::FormatConfig;
 pub use printer::Formatter;
 ```
 
-#### [NEW] `sea-core/src/formatter/config.rs`
+#### [NEW] `domainforge-core/src/formatter/config.rs`
 
 Formatter configuration:
 
@@ -102,7 +102,7 @@ impl Default for FormatConfig {
 }
 ```
 
-#### [NEW] `sea-core/src/formatter/printer.rs`
+#### [NEW] `domainforge-core/src/formatter/printer.rs`
 
 Core formatter logic:
 
@@ -131,7 +131,7 @@ impl Formatter {
 
 ### Phase 2: Comment Preservation
 
-#### [MODIFY] `sea-core/grammar/sea.pest`
+#### [MODIFY] `domainforge-core/grammar/sea.pest`
 
 Update COMMENT rule to capture (not discard):
 
@@ -140,7 +140,7 @@ Update COMMENT rule to capture (not discard):
 +COMMENT = { "//" ~ (!"\n" ~ ANY)* }
 ```
 
-#### [MODIFY] `sea-core/src/parser/ast.rs`
+#### [MODIFY] `domainforge-core/src/parser/ast.rs`
 
 Add comment attachment to AST nodes:
 
@@ -156,7 +156,7 @@ pub struct CommentedNode<T> {
 
 ### Phase 3: CLI Integration
 
-#### [MODIFY] `sea-core/src/cli/format.rs`
+#### [MODIFY] `domainforge-core/src/cli/format.rs`
 
 ```rust
 use crate::formatter::{FormatConfig, Formatter};
@@ -289,7 +289,7 @@ Expose formatter API to Python, TypeScript, and WASM for programmatic access.
 - Browser-based playground
 - CI/CD pipeline integration without shelling out
 
-#### [NEW] `sea-core/src/python/formatter.rs`
+#### [NEW] `domainforge-core/src/python/formatter.rs`
 
 ```rust
 use crate::formatter::{format, FormatConfig};
@@ -310,13 +310,13 @@ pub fn format_source(source: &str, indent_width: usize, use_tabs: bool) -> PyRes
 **Python usage:**
 
 ```python
-from sea_dsl import format_source
+from domainforge import format_source
 
 formatted = format_source("""Entity   "Foo"  in    bar""")
 print(formatted)  # Entity "Foo" in bar
 ```
 
-#### [NEW] `sea-core/src/typescript/formatter.rs`
+#### [NEW] `domainforge-core/src/typescript/formatter.rs`
 
 ```rust
 use crate::formatter::{format, FormatConfig};
@@ -337,13 +337,13 @@ pub fn format_source(source: String, indent_width: Option<u32>, use_tabs: Option
 **TypeScript usage:**
 
 ```typescript
-import { formatSource } from "@domainforge/sea";
+import { formatSource } from "@godspeedai/domainforge";
 
 const formatted = formatSource(`Entity   "Foo"  in    bar`);
 console.log(formatted); // Entity "Foo" in bar
 ```
 
-#### [NEW] `sea-core/src/wasm/formatter.rs`
+#### [NEW] `domainforge-core/src/wasm/formatter.rs`
 
 ```rust
 use crate::formatter::{format, FormatConfig};
@@ -363,7 +363,7 @@ pub fn format_source(source: &str, indent_width: Option<usize>, use_tabs: Option
 **Browser usage:**
 
 ```javascript
-import { formatSource } from "@domainforge/sea-wasm";
+import { formatSource } from "@godspeedai/domainforge-wasm";
 
 const formatted = formatSource(`Entity   "Foo"  in    bar`);
 document.getElementById("output").textContent = formatted;
@@ -384,7 +384,7 @@ document.getElementById("output").textContent = formatted;
 
 ### Unit Tests
 
-Create `sea-core/tests/formatter_tests.rs`:
+Create `domainforge-core/tests/formatter_tests.rs`:
 
 ```rust
 #[test]
@@ -413,7 +413,7 @@ fn test_format_idempotent() {
 **Run tests:**
 
 ```bash
-cargo test -p sea-core formatter
+cargo test -p domainforge-core formatter
 ```
 
 ### Integration Tests
@@ -423,7 +423,7 @@ Test against example files:
 ```bash
 # Format and verify output is valid
 sea fmt examples/basic.sea > /tmp/formatted.sea
-sea validate /tmp/formatted.sea
+domainforge validate /tmp/formatted.sea
 
 # Check mode for CI
 sea fmt --check examples/basic.sea
@@ -434,14 +434,14 @@ sea fmt --check examples/basic.sea
 ```python
 # tests/test_formatter.py
 def test_format_source():
-    from sea_dsl import format_source
+    from domainforge import format_source
     result = format_source('Entity   "Foo"')
     assert result == 'Entity "Foo"\n'
 ```
 
 ```typescript
 // typescript-tests/formatter.test.ts
-import { formatSource } from "@domainforge/sea";
+import { formatSource } from "@godspeedai/domainforge";
 import { expect, test } from "vitest";
 
 test("formatSource normalizes whitespace", () => {
@@ -455,9 +455,9 @@ test("formatSource normalizes whitespace", () => {
 2. Compare before/after visually
 3. Verify semantics unchanged via:
    ```bash
-   sea project --format calm before.sea > before.json
+   domainforge project --format calm before.sea > before.json
    sea fmt before.sea --out after.sea
-   sea project --format calm after.sea > after.json
+   domainforge project --format calm after.sea > after.json
    diff before.json after.json  # Should be identical
    ```
 
@@ -509,8 +509,8 @@ test("formatSource normalizes whitespace", () => {
 
 ### Bindings (Phase 5) ✅
 
-- [x] Python: `format_source()` function available in `sea_dsl` module
-- [x] TypeScript: `formatSource()` function exported from `@domainforge/sea`
+- [x] Python: `format_source()` function available in `domainforge` module
+- [x] TypeScript: `formatSource()` function exported from `@godspeedai/domainforge`
 - [x] WASM: `formatSource()` function available in browser bundle
 - [x] All bindings produce identical output for same input (shared core)
 - [ ] Cross-language formatter tests pass (deferred - requires E2E test infrastructure)

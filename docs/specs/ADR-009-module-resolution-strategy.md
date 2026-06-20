@@ -34,9 +34,9 @@ A `.sea-registry.toml` file at the project root maps namespace prefixes to file 
 
 ```toml
 [namespaces]
-core = "sea-core/std/core.sea"
-http = "sea-core/std/http.sea"
-aws = "sea-core/std/aws.sea"
+core = "domainforge-core/std/core.sea"
+http = "domainforge-core/std/http.sea"
+aws = "domainforge-core/std/aws.sea"
 domain = "src/domain/index.sea"
 ```
 

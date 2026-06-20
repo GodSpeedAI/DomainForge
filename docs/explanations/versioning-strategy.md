@@ -17,7 +17,7 @@ DomainForge follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### 2. Core API (Rust)
 
-- **Breaking**: Changing public struct fields, altering function signatures in `sea-core`.
+- **Breaking**: Changing public struct fields, altering function signatures in `domainforge-core`.
 - **Non-Breaking**: Adding new methods, internal performance improvements.
 
 ### 3. Bindings (Python/TS)
@@ -27,9 +27,9 @@ DomainForge follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## Release Coordination
 
-Because `sea-core` and the bindings are in the same repository (monorepo style), they share a version number.
+Because `domainforge-core` and the bindings are in the same repository (monorepo style), they share a version number.
 
-- When `sea-core` bumps to `0.5.0`, the Python package `domainforge` and NPM package `domainforge` also bump to `0.5.0`.
+- When `domainforge-core` bumps to `0.5.0`, the Python package `domainforge` and NPM package `domainforge` also bump to `0.5.0`.
 
 ## Deprecation Policy
 

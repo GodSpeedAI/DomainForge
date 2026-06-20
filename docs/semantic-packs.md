@@ -85,7 +85,7 @@ The build system enforces that `meaning_version` increases whenever `meaning_fin
 Build a candidate pack from .sea source files:
 
 ```bash
-sea pack build \
+domainforge pack build \
   --source "models/**/*.sea" \
   --org acme \
   --domain logistics \
@@ -98,7 +98,7 @@ sea pack build \
 Build an approved pack with review records:
 
 ```bash
-sea pack build \
+domainforge pack build \
   --source "models/**/*.sea" \
   --org acme \
   --domain logistics \
@@ -113,7 +113,7 @@ sea pack build \
 For the first approved pack in a domain, use `--allow-first-approved-version`:
 
 ```bash
-sea pack build \
+domainforge pack build \
   --source "models/**/*.sea" \
   --org acme \
   --domain logistics \
@@ -130,7 +130,7 @@ sea pack build \
 Validate .sea files against a pack in warn mode:
 
 ```bash
-sea pack validate \
+domainforge pack validate \
   --pack packs/acme-logistics-1.1.0.json \
   --mode warn \
   models/payment.sea models/shipping.sea
@@ -139,7 +139,7 @@ sea pack validate \
 Validate in strict mode with signature required:
 
 ```bash
-sea pack validate \
+domainforge pack validate \
   --pack packs/acme-logistics-1.1.0.json \
   --mode strict \
   --require-signature \
@@ -150,21 +150,21 @@ sea pack validate \
 ### Inspecting a Pack
 
 ```bash
-sea pack inspect --pack packs/acme-logistics-1.1.0.json
+domainforge pack inspect --pack packs/acme-logistics-1.1.0.json
 
 # JSON output for tooling
-sea pack inspect --pack packs/acme-logistics-1.1.0.json --format json
+domainforge pack inspect --pack packs/acme-logistics-1.1.0.json --format json
 ```
 
 ### Diffing Two Packs
 
 ```bash
-sea pack diff \
+domainforge pack diff \
   --old packs/acme-logistics-1.0.0.json \
   --new packs/acme-logistics-1.1.0.json
 
 # JSON output
-sea pack diff \
+domainforge pack diff \
   --old packs/acme-logistics-1.0.0.json \
   --new packs/acme-logistics-1.1.0.json \
   --format json
@@ -185,10 +185,10 @@ Diff classifications:
 
 ```bash
 # Sign a pack
-sea pack sign packs/acme-logistics-1.1.0.json --key keys/acme-private.pem --out packs/acme-logistics-1.1.0-signed.json
+domainforge pack sign packs/acme-logistics-1.1.0.json --key keys/acme-private.pem --out packs/acme-logistics-1.1.0-signed.json
 
 # Verify a pack signature
-sea pack verify packs/acme-logistics-1.1.0-signed.json --key keys/acme-public.pem
+domainforge pack verify packs/acme-logistics-1.1.0-signed.json --key keys/acme-public.pem
 ```
 
 ## Workspace Configuration
@@ -224,7 +224,7 @@ For CI pipelines that enforce semantic correctness:
 set -euo pipefail
 
 # Build and sign the pack
-sea pack build \
+domainforge pack build \
   --source "models/**/*.sea" \
   --org "$ORG" \
   --domain "$DOMAIN" \
@@ -235,12 +235,12 @@ sea pack build \
   --previous-pack "packs/previous.json" \
   --out "packs/current-unsigned.json"
 
-sea pack sign "packs/current-unsigned.json" \
+domainforge pack sign "packs/current-unsigned.json" \
   --key "$SIGNING_KEY_PATH" \
   --out "packs/current.json"
 
 # Validate all source files in strict mode
-sea pack validate \
+domainforge pack validate \
   --pack "packs/current.json" \
   --mode strict \
   --require-signature \

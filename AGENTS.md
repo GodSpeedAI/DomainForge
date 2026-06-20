@@ -51,7 +51,7 @@ Rules for `.agents/next_steps.md`:
 ## Architecture Overview
 
 ```text
-sea-core/                    # Canonical Rust implementation (authoritative)
+domainforge-core/                    # Canonical Rust implementation (authoritative)
 ├── grammar/sea.pest         # PEG grammar (Pest) - ALL syntax changes start here
 ├── src/
 │   ├── primitives/          # Core domain types: Entity, Resource, Flow, Instance, Policy
@@ -76,7 +76,7 @@ typescript-tests/            # TypeScript/Vitest integration tests
 ```bash
 # Essential commands (use just task runner)
 just all-tests              # Run Rust + Python + TypeScript tests (recommended)
-just rust-test              # Rust tests with CLI: cargo test -p sea-core --features cli
+just rust-test              # Rust tests with CLI: cargo test -p domainforge-core --features cli
 just python-test            # Python tests (uses .venv if present)
 just ts-test                # TypeScript tests via Vitest (uses Bun, falls back to npm)
 just bun-test               # TypeScript tests via Bun explicitly (faster)
@@ -99,16 +99,16 @@ cargo clippy -- -D warnings && cargo fmt
 
 When modifying **core data structures or primitives**, you MUST update ALL of:
 
-1. Rust core (`sea-core/src/primitives/`, `graph/`, `policy/`) + tests
-2. PyO3 bindings (`sea-core/src/python/`) + Python tests (`tests/test_*.py`)
-3. napi-rs bindings (`sea-core/src/typescript/`) + TypeScript tests (`typescript-tests/`)
-4. WASM bindings if applicable (`sea-core/src/wasm/`)
+1. Rust core (`domainforge-core/src/primitives/`, `graph/`, `policy/`) + tests
+2. PyO3 bindings (`domainforge-core/src/python/`) + Python tests (`tests/test_*.py`)
+3. napi-rs bindings (`domainforge-core/src/typescript/`) + TypeScript tests (`typescript-tests/`)
+4. WASM bindings if applicable (`domainforge-core/src/wasm/`)
 
 When modifying **parser/grammar**:
 
-1. Update `sea-core/grammar/sea.pest` first
-2. Update AST in `sea-core/src/parser/ast.rs`
-3. Add parser tests in `sea-core/tests/parser_*.rs`
+1. Update `domainforge-core/grammar/sea.pest` first
+2. Update AST in `domainforge-core/src/parser/ast.rs`
+3. Add parser tests in `domainforge-core/tests/parser_*.rs`
 4. Update projections (CALM, KG) if the change affects export format
 
 ## Code Conventions
@@ -116,7 +116,7 @@ When modifying **parser/grammar**:
 - **Deterministic iteration**: Use `IndexMap` (not `HashMap`) in `graph/mod.rs` for policy-relevant collections
 - **IDs**: `ConceptId` from namespace+name; `Uuid::new_v4()` for unique identifiers
 - **Quantities**: `rust_decimal::Decimal` for precise calculations
-- **Units**: `Unit::new()` constructor; `sea_core::units::unit_from_string()` for parsing
+- **Units**: `Unit::new()` constructor; `domainforge_core::units::unit_from_string()` for parsing
 - **Namespaces**: `namespace()` returns `&str`, defaults to `"default"`
 - **Flows**: `Flow::new()` takes `ConceptId` for resource/from/to (IDs, not references)
 
@@ -124,21 +124,21 @@ When modifying **parser/grammar**:
 
 - **Cross-language parity**: Changes to core must pass all three test suites
 - **Round-trip tests**: CALM export/import (`cargo test calm_round_trip`) validates serialization
-- **Golden tests**: Check `sea-core/tests/` for expected output patterns
+- **Golden tests**: Check `domainforge-core/tests/` for expected output patterns
 - **Policy evaluation**: Three-valued logic tests in `three_valued_quantifiers_tests.rs`
 
 ## Key References
 
 | What                 | Where                                                                 |
 | -------------------- | --------------------------------------------------------------------- |
-| Grammar syntax       | `sea-core/grammar/sea.pest`                                           |
-| Primitives           | `sea-core/src/primitives/` (Entity, Resource, Flow, Instance, Policy) |
-| Graph operations     | `sea-core/src/graph/mod.rs`                                           |
-| Policy expressions   | `sea-core/src/policy/expression.rs`                                   |
+| Grammar syntax       | `domainforge-core/grammar/sea.pest`                                           |
+| Primitives           | `domainforge-core/src/primitives/` (Entity, Resource, Flow, Instance, Policy) |
+| Graph operations     | `domainforge-core/src/graph/mod.rs`                                           |
+| Policy expressions   | `domainforge-core/src/policy/expression.rs`                                   |
 | CALM mapping spec    | `docs/reference/specs/calm-mapping.md`                                |
 | Implementation plans | `docs/plans/` (phase roadmaps, feature plans)                         |
-| DSL examples         | `examples/`, `sea-core/examples/`                                     |
-| Error codes          | `docs/specs/error_codes.md`, `sea-core/src/validation_error.rs`       |
+| DSL examples         | `examples/`, `domainforge-core/examples/`                                     |
+| Error codes          | `docs/specs/error_codes.md`, `domainforge-core/src/validation_error.rs`       |
 
 ## Feature Flags
 
@@ -176,16 +176,16 @@ Flow::new(resource.concept_id(), from.concept_id(), to.concept_id())
 // Editing src/parser/ast.rs first
 
 // ✅ CORRECT: Grammar-first workflow
-// 1. sea-core/grammar/sea.pest
+// 1. domainforge-core/grammar/sea.pest
 // 2. src/parser/ast.rs
 // 3. tests/parser_*.rs
 ```
 
-**Cross-binding rule**: If you touch `sea-core/src/primitives/*.rs`, you MUST also update:
+**Cross-binding rule**: If you touch `domainforge-core/src/primitives/*.rs`, you MUST also update:
 
-- `sea-core/src/python/primitives.rs`
-- `sea-core/src/typescript/primitives.rs`
-- `sea-core/src/wasm/primitives.rs` (if public API)
+- `domainforge-core/src/python/primitives.rs`
+- `domainforge-core/src/typescript/primitives.rs`
+- `domainforge-core/src/wasm/primitives.rs` (if public API)
 
 Run `just all-tests` to verify all bindings remain in sync.
 

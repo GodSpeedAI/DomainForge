@@ -132,7 +132,7 @@ pub struct EntityNode {
 ### 4.1 Basic Parsing
 
 ```rust
-use sea_core::parser::{parse, parse_to_graph};
+use domainforge_core::parser::{parse, parse_to_graph};
 
 // Parse to AST only
 let ast = parse(source)?;
@@ -144,7 +144,7 @@ let graph = parse_to_graph(source)?;
 ### 4.2 Parsing with Options
 
 ```rust
-use sea_core::parser::{parse_to_graph_with_options, ParseOptions};
+use domainforge_core::parser::{parse_to_graph_with_options, ParseOptions};
 
 let options = ParseOptions {
     default_namespace: Some("my.namespace".to_string()),
@@ -244,7 +244,7 @@ fn resolve_entity_reference(
 ### 6.2 Lint API
 
 ```rust
-use sea_core::parser::lint::{lint_ast, LintConfig};
+use domainforge_core::parser::lint::{lint_ast, LintConfig};
 
 let config = LintConfig::default();
 let warnings = lint_ast(&ast, &config);
@@ -322,9 +322,9 @@ impl NamespaceRegistry {
 ```toml
 # .sea-registry.toml
 [namespaces]
-core = "sea-core/std/core.sea"
-http = "sea-core/std/http.sea"
-aws = "sea-core/std/aws.sea"
+core = "domainforge-core/std/core.sea"
+http = "domainforge-core/std/http.sea"
+aws = "domainforge-core/std/aws.sea"
 ```
 
 ---
@@ -334,7 +334,7 @@ aws = "sea-core/std/aws.sea"
 Round-trip formatting from Graph back to SEA source:
 
 ```rust
-use sea_core::parser::PrettyPrinter;
+use domainforge_core::parser::PrettyPrinter;
 
 let printer = PrettyPrinter::new();
 let formatted = printer.print(&graph);
@@ -372,6 +372,6 @@ error[E2000]: undefined entity
 
 ## Related Documents
 
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)
 - [ADR-001: SEA-DSL as Semantic Source of Truth](./ADR-001-sea-dsl-semantic-source-of-truth.md)
 - [ADR-006: Error Handling Strategy](./ADR-006-error-handling-strategy.md)

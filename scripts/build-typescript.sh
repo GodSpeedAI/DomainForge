@@ -6,8 +6,8 @@ cd "$ROOT_DIR"
 
 echo "==> Building TypeScript bindings..."
 
-# package.json with the napi build config lives in sea-typescript/.
-# The build script there uses --cargo-cwd ../sea-core to locate the Rust crate.
-cd sea-typescript && npm run build
+# package.json with the napi build config lives in domainforge-typescript/.
+# The build script there uses --cargo-cwd ../domainforge-core to locate the Rust crate.
+cd domainforge-typescript && npm run build
 
 echo "✓ TypeScript bindings built successfully"

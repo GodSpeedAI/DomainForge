@@ -270,6 +270,6 @@ Restrict allowed constructs for specific use cases:
 
 ## Related Documents
 
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)
 - [SDS-003: Parser and Semantic Graph](./SDS-003-parser-semantic-graph.md)
 - [ADR-007: Policy Evaluation Engine](./ADR-007-policy-evaluation-engine.md)

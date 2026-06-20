@@ -360,5 +360,5 @@ Projection "Logistics KG" target kg {
 ## Related Documents
 
 - [ADR-008: Knowledge Graph Integration](./ADR-008-knowledge-graph-integration.md)
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)
 - [SDS-001: Protobuf Projection Engine](./SDS-001-protobuf-projection-engine.md)

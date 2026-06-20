@@ -61,7 +61,7 @@ EOF
 }
 
 get_current_version() {
-    grep -m1 '^version = ' "$PROJECT_ROOT/sea-core/Cargo.toml" | sed 's/version = "\(.*\)"/\1/'
+    grep -m1 '^version = ' "$PROJECT_ROOT/domainforge-core/Cargo.toml" | sed 's/version = "\(.*\)"/\1/'
 }
 
 detect_platform() {
@@ -153,16 +153,16 @@ fi
 if ! $SKIP_CLI; then
     log_info "Building CLI binary..."
     if $DRY_RUN; then
-        log_info "Would run: cargo build -p sea-core --release --features cli"
+        log_info "Would run: cargo build -p domainforge-core --release --features cli"
     else
-        cargo build -p sea-core --release --features cli
+        cargo build -p domainforge-core --release --features cli
         
         # Find and copy binary
         if [[ "$PLATFORM" == "windows" ]]; then
-            CLI_BIN="target/release/sea.exe"
+            CLI_BIN="target/release/domainforge.exe"
             CLI_OUT="$DIST_DIR/sea-$VERSION-$PLATFORM-$ARCH.exe"
         else
-            CLI_BIN="target/release/sea"
+            CLI_BIN="target/release/domainforge"
             CLI_OUT="$DIST_DIR/sea-$VERSION-$PLATFORM-$ARCH"
         fi
         
@@ -223,11 +223,11 @@ if ! $SKIP_WASM; then
         log_info "Would run: wasm-pack build --target web --release --features wasm"
     else
         if command -v wasm-pack &>/dev/null; then
-            cd sea-core
+            cd domainforge-core
             wasm-pack build --target web --release --features wasm
             
             # Package WASM artifacts
-            WASM_ARCHIVE="$DIST_DIR/sea-core-wasm-$VERSION.tar.gz"
+            WASM_ARCHIVE="$DIST_DIR/domainforge-core-wasm-$VERSION.tar.gz"
             cd pkg
             tar czf "$WASM_ARCHIVE" *
             cd "$PROJECT_ROOT"

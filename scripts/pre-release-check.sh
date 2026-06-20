@@ -186,11 +186,11 @@ fi
 log_step "Checking version consistency across files..."
 if $DRY_RUN; then
     log_info "Would compare versions in:"
-    log_info "  - sea-core/Cargo.toml"
+    log_info "  - domainforge-core/Cargo.toml"
     log_info "  - pyproject.toml"
     log_info "  - package.json"
 else
-    CARGO_VERSION=$(grep -m1 '^version = ' sea-core/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+    CARGO_VERSION=$(grep -m1 '^version = ' domainforge-core/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
     PYPROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/' | tr -d '\r')
     PKG_VERSION=$(grep -m1 '"version"' package.json | sed 's/.*"\([0-9][^"]*\)".*/\1/')
 
@@ -250,7 +250,7 @@ else
 
             # Try Rust tests
             log_info "Running Rust tests..."
-            if cargo test -p sea-core --features cli; then
+            if cargo test -p domainforge-core --features cli; then
                 log_success "Rust tests passed"
             else
                 log_error "Rust tests failed"
@@ -263,9 +263,9 @@ fi
 # Check 7: Verify build works
 log_step "Verifying release build..."
 if $DRY_RUN; then
-    log_info "Would run: cargo build -p sea-core --release --features cli"
+    log_info "Would run: cargo build -p domainforge-core --release --features cli"
 else
-    if cargo build -p sea-core --release --features cli 2>/dev/null; then
+    if cargo build -p domainforge-core --release --features cli 2>/dev/null; then
         log_success "Release build successful"
     else
         log_error "Release build failed"

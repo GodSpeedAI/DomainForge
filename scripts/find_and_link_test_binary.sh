@@ -22,7 +22,7 @@ if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
 fi
 
 TEST_NAME="$1"
-CRATE_PATH="sea-core"
+CRATE_PATH="domainforge-core"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPTS_DIR="${ROOT_DIR}/scripts"
 STABLE_DEST_DIR="${ROOT_DIR}/target/debug/deps"

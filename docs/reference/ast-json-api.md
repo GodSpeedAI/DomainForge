@@ -49,7 +49,7 @@ The JSON schema for AST output is defined in `schemas/ast-v3.schema.json`. This 
 To regenerate the AST JSON schema from the Rust type definitions:
 
 ```bash
-cd sea-core
+cd domainforge-core
 cargo test --lib generate_ast_schema -- --ignored --nocapture
 ```
 
@@ -59,11 +59,11 @@ This runs the schema generation test which:
 2. Writes the output to `schemas/ast-v3.schema.json`
 
 > [!TIP]
-> Run this command after modifying any AST-related types in `sea-core/src/parser/ast.rs` or `sea-core/src/policy/expression.rs`.
+> Run this command after modifying any AST-related types in `domainforge-core/src/parser/ast.rs` or `domainforge-core/src/policy/expression.rs`.
 
 ### Schema Generation Implementation
 
-The schema is generated from types defined in `sea-core/src/parser/ast_schema.rs`. This module mirrors the AST types with `JsonSchema` derives:
+The schema is generated from types defined in `domainforge-core/src/parser/ast_schema.rs`. This module mirrors the AST types with `JsonSchema` derives:
 
 ```rust
 use schemars::{schema_for, JsonSchema};
@@ -134,7 +134,7 @@ Policy and metric expressions use a rich expression language:
 The `Graph` struct implements `Serialize` from serde, enabling direct JSON serialization:
 
 ```rust
-use sea_core::parser::parse_to_graph;
+use domainforge_core::parser::parse_to_graph;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source = r#"
@@ -152,7 +152,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // OR: Serialize the AST directly (preserves source structure)
     // using the new stable schema types
-    let ast_json = sea_core::parser::parse_to_ast_json(source)?;
+    let ast_json = domainforge_core::parser::parse_to_ast_json(source)?;
     println!("{}", ast_json);
 
     Ok(())
@@ -162,7 +162,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 To convert a `Graph` back to an `Ast` structure:
 
 ```rust
-use sea_core::Graph;
+use domainforge_core::Graph;
 
 let ast = graph.to_ast();
 // The Ast can then be used for code generation or formatting
@@ -173,7 +173,7 @@ let ast = graph.to_ast();
 The WASM bindings expose a `toJSON()` method on the `Graph` class:
 
 ```typescript
-import init, { Graph } from "sea_core";
+import init, { Graph } from "domainforge_core";
 
 async function parseAndSerialize() {
   await init();
@@ -200,7 +200,7 @@ The SEA CLI provides multiple commands for JSON output:
 
 ```bash
 # Validate and output results as JSON
-sea validate --format json input.sea
+domainforge validate --format json input.sea
 ```
 
 Output structure:
@@ -216,7 +216,7 @@ Output structure:
 
 ```bash
 # Export graph to CALM JSON format
-sea project --format calm input.sea output.json
+domainforge project --format calm input.sea output.json
 ```
 
 #### Export AST as JSON
@@ -224,7 +224,7 @@ sea project --format calm input.sea output.json
 To export the raw Abstract Syntax Tree (useful for tools that need source preservation):
 
 ```bash
-sea parse --ast --format json input.sea > output.ast.json
+domainforge parse --ast --format json input.sea > output.ast.json
 ```
 
 This output conforms to `ast-v3.schema.json` and preserves all declarations, comments, and line/column numbers.
@@ -233,8 +233,8 @@ This output conforms to `ast-v3.schema.json` and preserves all declarations, com
 
 ```bash
 # Export to RDF/Turtle or XML
-sea project --format kg input.sea output.ttl
-sea project --format kg input.sea output.xml
+domainforge project --format kg input.sea output.ttl
+domainforge project --format kg input.sea output.xml
 ```
 
 ## Graph JSON Structure
@@ -331,7 +331,7 @@ This enables precise error messages and IDE integration with accurate source pos
 The standard parsing pipeline converts source code to a `Graph`:
 
 ```rust
-use sea_core::parser::{parse_to_graph, parse_to_graph_with_options, ParseOptions};
+use domainforge_core::parser::{parse_to_graph, parse_to_graph_with_options, ParseOptions};
 
 // Simple parsing
 let graph = parse_to_graph(source)?;
@@ -369,7 +369,7 @@ SEA supports projecting graphs to various external formats:
 ### CALM Export Example
 
 ```bash
-sea project --format calm domains/finance.sea output/finance.calm.json
+domainforge project --format calm domains/finance.sea output/finance.calm.json
 ```
 
 Produces FINOS CALM-compatible JSON following the schema in `schemas/calm-v1.schema.json`.
@@ -414,7 +414,7 @@ JSON output from validation includes structured error information:
 | `ast-v2.schema.json` | 2.0.0   | Deprecated (lacks Resource/Flow annotations)            |
 | `ast-v1.schema.json` | 1.0.0   | Deprecated (hand-written)                               |
 
-- Minimum sea-core version: `0.6.0`
+- Minimum domainforge-core version: `0.6.0`
 - JSON output is stable across minor versions
 
 ## See Also

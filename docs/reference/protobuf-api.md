@@ -1,11 +1,11 @@
 # Protobuf Projection API Reference
 
-This reference documents the public API for the Protobuf projection engine in `sea-core`.
+This reference documents the public API for the Protobuf projection engine in `domainforge-core`.
 
 ## Module Location
 
 ```
-sea-core/src/projection/protobuf.rs
+domainforge-core/src/projection/protobuf.rs
 ```
 
 ## Core Types
@@ -228,7 +228,7 @@ impl ProtobufEngine {
 **Example:**
 
 ```rust
-use sea_core::projection::protobuf::ProtobufEngine;
+use domainforge_core::projection::protobuf::ProtobufEngine;
 
 let proto = ProtobufEngine::project(&graph, "payments", "com.example.payments");
 println!("{}", proto.to_proto_string());

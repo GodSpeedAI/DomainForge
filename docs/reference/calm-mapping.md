@@ -507,9 +507,9 @@ All exports must validate against the FINOS CALM v1.0 JSON Schema:
 
 ## Implementation pointers
 
-- Export logic: `sea-core/src/calm/export.rs`
-- Import logic: `sea-core/src/calm/import.rs`
-- Round-trip tests: `sea-core/tests/calm_round_trip_tests.rs`
+- Export logic: `domainforge-core/src/calm/export.rs`
+- Import logic: `domainforge-core/src/calm/import.rs`
+- Round-trip tests: `domainforge-core/tests/calm_round_trip_tests.rs`
 
 Bindings expose these projections via `Graph.export_calm()` (Python) and `graph.exportCalm()` (TypeScript). Validation codes mirror those in `error-codes.md` when CALM payloads lack required fields.
 

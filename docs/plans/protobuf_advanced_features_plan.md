@@ -1,6 +1,6 @@
 # Protobuf Advanced Features Implementation Plan
 
-This plan covers the implementation of advanced Protobuf projection features for `sea-core`.
+This plan covers the implementation of advanced Protobuf projection features for `domainforge-core`.
 
 ## Overview
 
@@ -25,7 +25,7 @@ Map SEA types to Google's well-known types (WKT) for better interoperability.
 
 ### Changes
 
-#### [MODIFY] [protobuf.rs](file:///home/sprime01/projects/domainforge/sea-core/src/projection/protobuf.rs)
+#### [MODIFY] [protobuf.rs](file:///home/sprime01/projects/domainforge/domainforge-core/src/projection/protobuf.rs)
 
 1. **Add WKT imports automatically**:
 
@@ -105,7 +105,7 @@ Generate gRPC service definitions from SEA Flow patterns, where:
 
 ### New IR Types
 
-#### [MODIFY] [protobuf.rs](file:///home/sprime01/projects/domainforge/sea-core/src/projection/protobuf.rs)
+#### [MODIFY] [protobuf.rs](file:///home/sprime01/projects/domainforge/domainforge-core/src/projection/protobuf.rs)
 
 ```rust
 /// Represents a gRPC service definition.
@@ -204,7 +204,7 @@ message PaymentRequestResponse {
 ### CLI Flag
 
 ```bash
-sea project --format protobuf --include-services model.sea output.proto
+domainforge project --format protobuf --include-services model.sea output.proto
 ```
 
 ### Tests
@@ -223,7 +223,7 @@ Allow users to specify custom proto options via SEA projections or attributes.
 
 ### Grammar Extension
 
-#### [MODIFY] [sea.pest](file:///home/sprime01/projects/domainforge/sea-core/grammar/sea.pest)
+#### [MODIFY] [sea.pest](file:///home/sprime01/projects/domainforge/domainforge-core/grammar/sea.pest)
 
 ```pest
 proto_option = {
@@ -278,7 +278,7 @@ Integrate with [buf.build](https://buf.build) CLI for linting, breaking change d
 
 ### Components
 
-#### [NEW] [buf.rs](file:///home/sprime01/projects/domainforge/sea-core/src/projection/buf.rs)
+#### [NEW] [buf.rs](file:///home/sprime01/projects/domainforge/domainforge-core/src/projection/buf.rs)
 
 ```rust
 /// Buf.build integration for proto linting and management.
@@ -305,13 +305,13 @@ impl BufIntegration {
 
 ```bash
 # Lint generated protos
-sea project --format protobuf --buf-lint model.sea output.proto
+domainforge project --format protobuf --buf-lint model.sea output.proto
 
 # Check breaking changes
-sea project --format protobuf --buf-breaking --against ./previous model.sea output.proto
+domainforge project --format protobuf --buf-breaking --against ./previous model.sea output.proto
 
 # Full buf workflow
-sea project --format protobuf --buf-generate --languages rust,go,ts model.sea output/
+domainforge project --format protobuf --buf-generate --languages rust,go,ts model.sea output/
 ```
 
 ### Buf Configuration Generation
@@ -339,7 +339,7 @@ Generate separate `.proto` files per namespace for better organization.
 
 ### Changes
 
-#### [MODIFY] [protobuf.rs](file:///home/sprime01/projects/domainforge/sea-core/src/projection/protobuf.rs)
+#### [MODIFY] [protobuf.rs](file:///home/sprime01/projects/domainforge/domainforge-core/src/projection/protobuf.rs)
 
 ```rust
 impl ProtobufEngine {
@@ -388,7 +388,7 @@ output/
 ### CLI Flag
 
 ```bash
-sea project --format protobuf --multi-file --output-dir ./proto model.sea
+domainforge project --format protobuf --multi-file --output-dir ./proto model.sea
 ```
 
 ---
@@ -499,11 +499,11 @@ service OrderManagerService { ... }
 
 ```bash
 # If buf is installed - runs linting
-sea project --format protobuf --buf-lint input.sea output.proto
+domainforge project --format protobuf --buf-lint input.sea output.proto
 # Output: "✓ buf lint passed (12 files, 0 issues)"
 
 # If buf is NOT installed - warns and continues
-sea project --format protobuf --buf-lint input.sea output.proto
+domainforge project --format protobuf --buf-lint input.sea output.proto
 # Output: "⚠ buf CLI not found. Skipping lint. Install: https://buf.build/docs/installation"
 ```
 
@@ -559,7 +559,7 @@ message PaymentRequest {
 
 ## Grammar Changes for Streaming
 
-#### [MODIFY] [sea.pest](file:///home/sprime01/projects/domainforge/sea-core/grammar/sea.pest)
+#### [MODIFY] [sea.pest](file:///home/sprime01/projects/domainforge/domainforge-core/grammar/sea.pest)
 
 ```pest
 flow_modifier = @{ "@" ~ ("streaming" | "client_streaming" | "bidirectional") }

@@ -7,7 +7,7 @@ Graph.use_three_valued_logic() methods work correctly.
 
 import json
 import pytest
-from sea_dsl import Graph, Severity
+from domainforge import Graph, Severity
 
 
 def test_default_evaluation_mode_is_three_valued():

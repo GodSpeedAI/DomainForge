@@ -9,7 +9,7 @@ This test validates that the EvaluationResult correctly handles:
 
 import json
 import pytest
-from sea_dsl import Graph, EvaluationResult, Severity
+from domainforge import Graph, EvaluationResult, Severity
 
 
 def test_policy_evaluates_to_true():

@@ -37,13 +37,13 @@ chmod +x scripts/build-wasm.sh
 ### Manual Build
 
 ```bash
-cd sea-core
+cd domainforge-core
 wasm-pack build --target web --release --out-dir ../pkg --features wasm
 cd ..
 
 # Optional: Optimize with wasm-opt
-wasm-opt -Oz -o pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
-mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
+wasm-opt -Oz -o pkg/domainforge_core_bg_opt.wasm pkg/domainforge_core_bg.wasm
+mv pkg/domainforge_core_bg_opt.wasm pkg/domainforge_core_bg.wasm
 ```
 
 ## Testing
@@ -51,7 +51,7 @@ mv pkg/sea_core_bg_opt.wasm pkg/sea_core_bg.wasm
 ### Unit Tests
 
 ```bash
-cd sea-core
+cd domainforge-core
 wasm-pack test --headless --firefox --features wasm
 ```
 
@@ -78,9 +78,9 @@ pkg/
 ├── package.json          # npm package metadata
 ├── index.js              # JavaScript wrapper with lazy loading
 ├── README.md             # Package documentation
-├── sea_core.js           # Generated WASM bindings
-├── sea_core.d.ts         # TypeScript definitions
-└── sea_core_bg.wasm      # Compiled WASM binary
+├── domainforge_core.js           # Generated WASM bindings
+├── domainforge_core.d.ts         # TypeScript definitions
+└── domainforge_core_bg.wasm      # Compiled WASM binary
 ```
 
 ## API
@@ -134,7 +134,7 @@ const flow = Flow.new(resourceId.clone(), fromId.clone(), toId.clone(), 100);
 ### Parse from DSL
 
 ```javascript
-import { Graph } from "@domainforge/sea-wasm";
+import { Graph } from "@godspeedai/domainforge-wasm";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -157,7 +157,7 @@ console.log(astJson);
 ### Build Programmatically
 
 ```javascript
-import { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
+import { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge-wasm";
 
 const graph = new Graph();
 
@@ -187,7 +187,7 @@ console.log(factory.namespace()); // "manufacturing"
 ### Formatting Source Code
 
 ```javascript
-import { formatSource, checkFormat } from "@domainforge/sea-wasm";
+import { formatSource, checkFormat } from "@godspeedai/domainforge-wasm";
 
 const source = 'Entity   "Foo"  in    bar';
 
@@ -222,7 +222,7 @@ The WASM module is optimized for size:
 2. **wasm-opt** post-processing:
 
    ```bash
-   wasm-opt -Oz pkg/sea_core_bg.wasm
+   wasm-opt -Oz pkg/domainforge_core_bg.wasm
    ```
 
 3. **Feature flags** to reduce dependencies:
@@ -253,7 +253,7 @@ npm publish --access public
 
 ### TypeScript errors
 
-- Ensure `sea_core.d.ts` is present in `pkg/`
+- Ensure `domainforge_core.d.ts` is present in `pkg/`
 - Check TypeScript version compatibility (4.5+)
 
 ## Architecture
@@ -265,9 +265,9 @@ JavaScript/TypeScript
        ↓
 index.js (Wrapper + lazy loading)
        ↓
-sea_core.js (wasm-bindgen generated)
+domainforge_core.js (wasm-bindgen generated)
        ↓
-sea_core_bg.wasm (Compiled Rust)
+domainforge_core_bg.wasm (Compiled Rust)
        ↓
 Rust Core (primitives, graph, parser)
 ```
@@ -297,7 +297,7 @@ Rust Core (primitives, graph, parser)
 Export/import graphs to/from FINOS CALM format:
 
 ```javascript
-import { Graph } from "@domainforge/sea-wasm";
+import { Graph } from "@godspeedai/domainforge-wasm";
 
 // Build your model
 const graph = new Graph();
@@ -328,7 +328,7 @@ import {
   ConceptKind,                // Entity = 0, Resource = 1, Role = 2, Flow = 3, Policy = 4, Metric = 5, Dimension = 6, Unit = 7, External = 8
   AliasStatus,                // Approved = 0, Deprecated = 1, Ambiguous = 2, Blocked = 3
   SemanticValidationStatus,   // Passed = 0, Failed = 1, Unknown = 2, Blocked = 3
-} from "@domainforge/sea-wasm";
+} from "@godspeedai/domainforge-wasm";
 ```
 
 ### Functions
