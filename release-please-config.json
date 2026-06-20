@@ -29,24 +29,21 @@
       "release-type": "rust",
       "package-name": "domainforge-core",
       "component": "domainforge-core",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.13.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "domainforge-python": {
       "release-type": "python",
       "package-name": "domainforge",
       "component": "domainforge",
       "changelog-path": "CHANGELOG-python.md",
-      "extra-files": ["pyproject.toml"],
-      "release-as": "0.13.0"
+      "extra-files": ["pyproject.toml"]
     },
     "domainforge-typescript": {
       "release-type": "node",
       "package-name": "@godspeedai/domainforge",
       "component": "domainforge-typescript",
       "changelog-path": "CHANGELOG-typescript.md",
-      "extra-files": ["package.json"],
-      "release-as": "0.13.0"
+      "extra-files": ["package.json"]
     }
   }
 }

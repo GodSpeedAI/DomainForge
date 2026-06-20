@@ -31,7 +31,6 @@ dev = [
 ]
 
 [tool.maturin]
-python-source = "../python"
 module-name = "domainforge"
 features = ["python", "three_valued_logic"]
 manifest-path = "../domainforge-core/Cargo.toml"
