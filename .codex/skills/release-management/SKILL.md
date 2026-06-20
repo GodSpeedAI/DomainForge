@@ -138,7 +138,7 @@ To cut the first release under the new names:
 | Treating old local release scripts as canonical | Use release-please unless the user requests legacy scripts. |
 | Putting package version files at repo root | release-please requires them under `<package-key>/`. Root-level packages must have a directory. |
 | Treating `deploy.yml` as a builder | `deploy.yml` is a router. The publish workflows own build + publish logic. |
-| `extra-files` referencing the workspace-root `Cargo.lock` as `"Cargo.lock"` | release-please resolves `extra-files` relative to the package dir, so for the `domainforge-core` crate use `"../Cargo.lock"` (the lockfile lives at the workspace root). |
+| Listing the workspace-root `Cargo.lock` in a package's `extra-files` | release-please resolves `extra-files` relative to the package dir and **rejects `..`** (`illegal pathing characters`). For `domainforge-core` (whose lockfile lives at the workspace root), omit `Cargo.lock` from `extra-files` — the rust strategy bumps `Cargo.toml`, and the lockfile regenerates during the publish build. |
 | Leaving `release-as` in the config after the bootstrap release | `release-as` pins the version. Add it to force the first release of a renamed component, then remove it once the tag lands. |
 
 ## References

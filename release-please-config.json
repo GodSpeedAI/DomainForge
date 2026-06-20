@@ -30,7 +30,6 @@
       "package-name": "domainforge-core",
       "component": "domainforge-core",
       "changelog-path": "CHANGELOG.md",
-      "extra-files": ["../Cargo.lock"],
       "release-as": "0.13.0"
     },
     "domainforge-python": {
