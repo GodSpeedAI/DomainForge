@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/GodSpeedAI/DomainForge/compare/sea-core-v0.12.0...sea-core-v0.12.1) (2026-06-20)
+
+
+### Miscellaneous
+
+* **sea-core:** Synchronize domainforge versions
+
 ## [0.12.0](https://github.com/GodSpeedAI/DomainForge/compare/sea-core-v0.11.0...sea-core-v0.12.0) (2026-06-18)
 
 
