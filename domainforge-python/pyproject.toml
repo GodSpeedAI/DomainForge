@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "domainforge"
 version = "0.13.0"
 description = "SEA DSL - Semantic Enterprise Architecture Domain Specific Language"
-readme = "../README_PYTHON.md"
+readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
