@@ -1,6 +1,6 @@
 # Primitives API Reference
 
-This reference documents the core data structures used throughout DomainForge across Rust, Python, and TypeScript bindings. It mirrors the definitions in `sea-core/src/primitives/` and the exposed binding classes in `sea-core/src/python/` and `sea-core/src/typescript/`.
+This reference documents the core data structures used throughout DomainForge across Rust, Python, and TypeScript bindings. It mirrors the definitions in `domainforge-core/src/primitives/` and the exposed binding classes in `domainforge-core/src/python/` and `domainforge-core/src/typescript/`.
 
 ## Types
 
@@ -271,7 +271,7 @@ See `calm-mapping.md` for full mapping tables.
 ### Creating primitives in Python
 
 ```python
-from sea_dsl import Graph, Entity, Resource, Flow, Role, Relation
+from domainforge import Graph, Entity, Resource, Flow, Role, Relation
 
 graph = Graph()
 user = Entity("User")
@@ -292,7 +292,7 @@ graph.add_relation(relation)
 ### Creating primitives in TypeScript
 
 ```ts
-import { Graph, Entity, Resource, Flow, Role, Relation } from "@domainforge/sea";
+import { Graph, Entity, Resource, Flow, Role, Relation } from "@godspeedai/domainforge";
 
 const graph = new Graph();
 const user = new Entity("User");

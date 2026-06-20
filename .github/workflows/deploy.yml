@@ -1,9 +1,9 @@
 name: Deploy
 
 # Triggered by component-prefixed tags produced by release-please:
-#   sea-core-vX.Y.Z   (Rust crate)      -> release-crates.yml
-#   sea-dsl-vX.Y.Z     (Python package)  -> release-pypi.yml
-#   sea-vX.Y.Z         (TypeScript @domainforge/sea) -> release-npm.yml
+#   domainforge-core-vX.Y.Z   (Rust crate)      -> release-crates.yml
+#   domainforge-vX.Y.Z     (Python package)  -> release-pypi.yml
+#   domainforge-typescript-vX.Y.Z (TypeScript @godspeedai/domainforge) -> release-npm.yml
 #
 # This workflow is a router: it parses the tag, then dispatches to the
 # already-tested, reusable publish workflow that owns the build + publish
@@ -13,9 +13,9 @@ name: Deploy
 on:
   push:
     tags:
-      - 'sea-core-v*'
-      - 'sea-dsl-v*'
-      - 'sea-v*'
+      - 'domainforge-core-v*'
+      - 'domainforge-v*'
+      - 'domainforge-typescript-v*'
 
 permissions:
   contents: read
@@ -36,7 +36,7 @@ jobs:
         id: parse
         shell: bash
         run: |
-          # GITHUB_REF_NAME on a tag push = the tag name, e.g. "sea-core-v0.12.0"
+          # GITHUB_REF_NAME on a tag push = the tag name, e.g. "domainforge-core-v0.12.0"
           # component = everything before the last "-v"
           # version   = everything after the last "-v"
           tag="${GITHUB_REF_NAME}"
@@ -51,15 +51,15 @@ jobs:
             exit 1
           fi
           case "$component" in
-            sea-core|sea-dsl|sea) ;;
-            *) echo "::error::Unknown component '$component' (expected sea-core|sea-dsl|sea)" >&2; exit 1 ;;
+            domainforge-core|domainforge|domainforge-typescript) ;;
+            *) echo "::error::Unknown component '$component' (expected domainforge-core|domainforge|domainforge-typescript)" >&2; exit 1 ;;
           esac
           echo "component=$component" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   deploy-crates:
-    name: Publish sea-core to crates.io
-    if: needs.identify.outputs.component == 'sea-core'
+    name: Publish domainforge-core to crates.io
+    if: needs.identify.outputs.component == 'domainforge-core'
     needs: identify
     uses: ./.github/workflows/release-crates.yml
     secrets: inherit
@@ -68,8 +68,8 @@ jobs:
       packages: write
 
   deploy-pypi:
-    name: Publish sea-dsl wheels to PyPI
-    if: needs.identify.outputs.component == 'sea-dsl'
+    name: Publish domainforge wheels to PyPI
+    if: needs.identify.outputs.component == 'domainforge'
     needs: identify
     uses: ./.github/workflows/release-pypi.yml
     secrets: inherit
@@ -78,8 +78,8 @@ jobs:
       packages: write
 
   deploy-npm:
-    name: Publish @domainforge/sea to npm
-    if: needs.identify.outputs.component == 'sea'
+    name: Publish @godspeedai/domainforge to npm
+    if: needs.identify.outputs.component == 'domainforge-typescript'
     needs: identify
     uses: ./.github/workflows/release-npm.yml
     secrets: inherit

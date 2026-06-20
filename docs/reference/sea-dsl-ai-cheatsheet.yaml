@@ -9,9 +9,9 @@ meta:
   purpose: Model enterprise systems as typed semantic graphs with entities, resources, flows, and policies
   paradigm: Declarative, domain-driven, multi-target projection (CALM, RDF/KG, SBVR, Protobuf)
   implementation:
-    core: Rust (canonical, in sea-core/)
+    core: Rust (canonical, in domainforge-core/)
     bindings: [Python/PyO3, TypeScript/napi-rs, WASM/wasm-bindgen]
-    parser: PEG grammar via Pest (sea-core/grammar/sea.pest)
+    parser: PEG grammar via Pest (domainforge-core/grammar/sea.pest)
   key_principle: Rust core is authoritative; bindings wrap types without duplicating logic
 
 ---
@@ -622,22 +622,22 @@ projections:
 development_workflow:
   grammar_changes:
     steps:
-      1: "Update sea-core/grammar/sea.pest"
-      2: "Update AST in sea-core/src/parser/ast.rs"
-      3: "Add parser tests in sea-core/tests/parser_*.rs"
+      1: "Update domainforge-core/grammar/sea.pest"
+      2: "Update AST in domainforge-core/src/parser/ast.rs"
+      3: "Add parser tests in domainforge-core/tests/parser_*.rs"
       4: "Update projections (CALM/KG) if affected"
       5: "Refresh documentation"
 
   primitive_changes:
     mandatory_updates:
-      - "sea-core/src/primitives/*.rs (Rust core)"
-      - "sea-core/src/python/primitives.rs (PyO3 bindings)"
-      - "sea-core/src/typescript/primitives.rs (napi-rs bindings)"
-      - "sea-core/src/wasm/primitives.rs (if public API)"
+      - "domainforge-core/src/primitives/*.rs (Rust core)"
+      - "domainforge-core/src/python/primitives.rs (PyO3 bindings)"
+      - "domainforge-core/src/typescript/primitives.rs (napi-rs bindings)"
+      - "domainforge-core/src/wasm/primitives.rs (if public API)"
     test_suites:
       - "tests/ (Python integration)"
       - "typescript-tests/ (TypeScript/Vitest)"
-      - "sea-core/tests/ (Rust unit/integration)"
+      - "domainforge-core/tests/ (Rust unit/integration)"
 
   verification:
     all_tests: "just all-tests"
@@ -665,17 +665,17 @@ anti_patterns:
   parser_modification:
     wrong: "Edit src/parser/ast.rs first"
     correct: |
-      1. sea-core/grammar/sea.pest
+      1. domainforge-core/grammar/sea.pest
       2. src/parser/ast.rs
       3. tests/parser_*.rs
     reason: "Grammar is the source of truth for syntax"
 
   binding_sync:
-    rule: "If touching sea-core/src/primitives/*.rs, MUST update all bindings"
+    rule: "If touching domainforge-core/src/primitives/*.rs, MUST update all bindings"
     files:
-      - "sea-core/src/python/primitives.rs"
-      - "sea-core/src/typescript/primitives.rs"
-      - "sea-core/src/wasm/primitives.rs"
+      - "domainforge-core/src/python/primitives.rs"
+      - "domainforge-core/src/typescript/primitives.rs"
+      - "domainforge-core/src/wasm/primitives.rs"
     verify: "just all-tests"
 
 ---
@@ -861,11 +861,11 @@ cli_commands:
       - "Sorted imports"
       - "--check flag for CI validation (returns non-zero if changes needed)"
     rust_api:
-      format: "sea_core::formatter::format(source, config) -> Result<String, FormatError>"
+      format: "domainforge_core::formatter::format(source, config) -> Result<String, FormatError>"
       config: "FormatConfig { indent_style: IndentStyle, indent_size: usize }"
     python_api:
-      format: "sea_dsl.format_source(source: str) -> str"
-      check: "sea_dsl.check_format(source: str) -> bool"
+      format: "domainforge.format_source(source: str) -> str"
+      check: "domainforge.check_format(source: str) -> bool"
     typescript_api:
       format: "formatSource(source: string): string"
       check: "checkFormat(source: string): boolean"
@@ -887,24 +887,24 @@ feature_flags:
 
 ---
 key_files:
-  grammar: "sea-core/grammar/sea.pest"
-  primitives: "sea-core/src/primitives/"
-  graph: "sea-core/src/graph/mod.rs"
-  policy: "sea-core/src/policy/expression.rs"
-  calm: "sea-core/src/calm/"
-  kg: "sea-core/src/kg.rs"
-  protobuf: "sea-core/src/projection/protobuf.rs"
-  buf_integration: "sea-core/src/projection/buf.rs"
-  python_bindings: "sea-core/src/python/"
-  typescript_bindings: "sea-core/src/typescript/"
-  wasm_bindings: "sea-core/src/wasm/"
+  grammar: "domainforge-core/grammar/sea.pest"
+  primitives: "domainforge-core/src/primitives/"
+  graph: "domainforge-core/src/graph/mod.rs"
+  policy: "domainforge-core/src/policy/expression.rs"
+  calm: "domainforge-core/src/calm/"
+  kg: "domainforge-core/src/kg.rs"
+  protobuf: "domainforge-core/src/projection/protobuf.rs"
+  buf_integration: "domainforge-core/src/projection/buf.rs"
+  python_bindings: "domainforge-core/src/python/"
+  typescript_bindings: "domainforge-core/src/typescript/"
+  wasm_bindings: "domainforge-core/src/wasm/"
   tests:
-    rust: "sea-core/tests/"
+    rust: "domainforge-core/tests/"
     python: "tests/"
     typescript: "typescript-tests/"
-    protobuf: "sea-core/tests/protobuf_projection_tests.rs"
-  examples: "examples/, sea-core/examples/"
-  stdlib: "sea-core/std/"
+    protobuf: "domainforge-core/tests/protobuf_projection_tests.rs"
+  examples: "examples/, domainforge-core/examples/"
+  stdlib: "domainforge-core/std/"
   documentation:
     how_tos: "docs/how-tos/"
     reference: "docs/reference/"

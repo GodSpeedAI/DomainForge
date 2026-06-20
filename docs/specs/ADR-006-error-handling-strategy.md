@@ -112,4 +112,4 @@ if let Some(suggestion) = fuzzy::did_you_mean("Wharehouse", known_entities) {
 ## Related
 
 - [ADR-005: Multi-Language Support Strategy](./ADR-005-multi-language-support-strategy.md)
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)

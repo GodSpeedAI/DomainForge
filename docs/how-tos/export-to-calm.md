@@ -4,7 +4,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 
 ## Prerequisites
 
-- SEA CLI installed (`cargo install --path sea-core --features cli`).
+- SEA CLI installed (`cargo install --path domainforge-core --features cli`).
 - A validated `.sea` model file with entities/resources/flows (and optional roles/relations).
 - Optional: Python/TypeScript bindings for programmatic export.
 - JSON tooling such as `jq` for inspection.
@@ -14,7 +14,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 1. **Validate the model first (CLI)**
 
    ```bash
-   sea validate --format human path/to/model.sea
+   domainforge validate --format human path/to/model.sea
    ```
 
    - Fails fast on syntax/semantic errors; fix these before exporting.
@@ -22,7 +22,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 2. **Export to CALM JSON (CLI)**
 
    ```bash
-   sea project --format calm path/to/model.sea calm.json
+   domainforge project --format calm path/to/model.sea calm.json
    ```
 
    - On success, the command prints `Projected to CALM: calm.json`.
@@ -39,7 +39,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 4. **Re-import to double-check**
 
    ```bash
-   sea import --format kg calm.json
+   domainforge import --format kg calm.json
    ```
 
    - Uses the KG importer to ensure the CALM payload can be transformed back into a graph.
@@ -47,7 +47,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 5. **Export programmatically in Python**
 
    ```python
-   from sea_dsl import Graph
+   from domainforge import Graph
 
    with open("path/to/model.sea") as f:
        graph = Graph.parse(f.read())
@@ -61,7 +61,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 6. **Export programmatically in TypeScript**
 
    ```ts
-   import { Graph } from "@domainforge/sea";
+   import { Graph } from "@godspeedai/domainforge";
    import { readFileSync, writeFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("path/to/model.sea", "utf8"));
@@ -88,20 +88,20 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 
 - Use `jq` to spot-check key sections (roles, relations, flows) and ensure UUIDs are present.
 - If a relation references a flow ID, confirm the flow exists and carries a valid UUID; missing IDs cause export failures.
-- For large models, prefer `sea project --format calm input.sea | gzip > calm.json.gz` to stream-compress during export (portable across Bourne-like shells and Windows with compatible tools).
+- For large models, prefer `domainforge project --format calm input.sea | gzip > calm.json.gz` to stream-compress during export (portable across Bourne-like shells and Windows with compatible tools).
 
 ## Troubleshooting
 
-- **Parse errors**: Run `sea validate` before exporting; export stops on parse failure.
+- **Parse errors**: Run `domainforge validate` before exporting; export stops on parse failure.
 - **Missing roles/relations**: Ensure they are declared in the DSL; empty arrays in CALM indicate nothing was declared.
 - **Schema validation failures**: Align with the official CALM schema and update your DSL model to supply required fields (e.g., `id`, `name`).
 - **Version drift**: If consumers require a specific SEA version, check `metadata["sea:version"]` and consider pinning the toolchain.
 
 ## Verification Checklist
 
-- [ ] `sea validate` passes on the source `.sea` file.
-- [ ] `sea project --format calm` succeeds and outputs metadata with `sea:version`.
-- [ ] CALM payload re-imports through `sea import --format kg` without losing entities/resources/roles/relations.
+- [ ] `domainforge validate` passes on the source `.sea` file.
+- [ ] `domainforge project --format calm` succeeds and outputs metadata with `sea:version`.
+- [ ] CALM payload re-imports through `domainforge import --format kg` without losing entities/resources/roles/relations.
 - [ ] Optional schema validation (AJV) passes when required by downstream systems.
 
 ## Links

@@ -53,7 +53,7 @@ The canonicalization process sorts all keys, arrays, and sub-objects determinist
 ### Signing a Pack
 
 ```bash
-sea pack sign <pack-path> --key <private-key.pem>
+domainforge pack sign <pack-path> --key <private-key.pem>
 ```
 
 Options:
@@ -83,7 +83,7 @@ The command reads the pack, computes the content hash, signs the payload, and wr
 Example:
 
 ```bash
-sea pack sign packs/acme-logistics-1.1.0.json \
+domainforge pack sign packs/acme-logistics-1.1.0.json \
   --key keys/acme-private.pem \
   --out packs/acme-logistics-1.1.0-signed.json
 ```
@@ -91,7 +91,7 @@ sea pack sign packs/acme-logistics-1.1.0.json \
 ### Verifying a Pack Signature
 
 ```bash
-sea pack verify <pack-path> --key <public-key.pem>
+domainforge pack verify <pack-path> --key <public-key.pem>
 ```
 
 Options:
@@ -112,7 +112,7 @@ The command:
 Example:
 
 ```bash
-sea pack verify packs/acme-logistics-1.1.0-signed.json \
+domainforge pack verify packs/acme-logistics-1.1.0-signed.json \
   --key keys/acme-public.pem
 ```
 
@@ -124,14 +124,14 @@ sea pack verify packs/acme-logistics-1.1.0-signed.json \
 | 3    | Pack is unsigned (no signature present).|
 | 4    | Signature is invalid or has been tampered with. |
 
-The `sea pack validate` command uses these same codes when `--require-signature` is set:
+The `domainforge pack validate` command uses these same codes when `--require-signature` is set:
 
 ```bash
 # Exit 3 if unsigned
-sea pack validate --pack packs/unsigned.json --require-signature models/*.sea
+domainforge pack validate --pack packs/unsigned.json --require-signature models/*.sea
 
 # Exit 4 if signature is invalid
-sea pack validate --pack packs/tampered.json --require-signature models/*.sea
+domainforge pack validate --pack packs/tampered.json --require-signature models/*.sea
 ```
 
 ## LSP Behavior
@@ -155,7 +155,7 @@ When `--mode strict --require-signature` is set:
 - The `--expected-hash` flag provides additional tamper protection by pinning the expected content hash.
 
 ```bash
-sea pack validate \
+domainforge pack validate \
   --pack packs/acme-logistics-1.1.0-signed.json \
   --mode strict \
   --require-signature \
@@ -200,13 +200,13 @@ Public keys should be in SPKI PEM format:
 For environments where defense-in-depth is required, the `--expected-hash` flag pins the expected content hash of the pack. This provides tamper protection even if the signing key is compromised:
 
 ```bash
-EXPECTED_HASH=$(sea pack inspect --pack packs/acme-logistics-1.1.0.json --format json | jq -r '.content_hash')
+EXPECTED_HASH=$(domainforge pack inspect --pack packs/acme-logistics-1.1.0.json --format json | jq -r '.content_hash')
 
 # Store the hash in CI configuration
 echo "PACK_HASH=$EXPECTED_HASH" >> ci.env
 
 # Later, in CI:
-sea pack validate \
+domainforge pack validate \
   --pack packs/acme-logistics-1.1.0-signed.json \
   --require-signature \
   --expected-hash "$PACK_HASH" \

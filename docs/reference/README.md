@@ -107,7 +107,7 @@ MECE checklist:
 ## Sample workflow tying references together
 
 1. Review `grammar-spec.md` to model a payments domain with roles and relations.
-2. Use `cli-commands.md` to parse and validate the DSL: `sea validate payments.sea --format human`.
+2. Use `cli-commands.md` to parse and validate the DSL: `domainforge validate payments.sea --format human`.
 3. If errors appear, look up codes in `error-codes.md` and adjust accordingly.
 4. Export to CALM using `cli-commands.md` guidance, then cross-check fields using `calm-mapping.md`.
 5. Embed the graph into your runtime using `python-api.md` or `typescript-api.md` examples.
@@ -133,7 +133,7 @@ MECE checklist:
 
 ## Quality bar for reference updates
 
-- **Accuracy**: validate examples against current code. Run `cargo test -p sea-core --features "cli,python,typescript"` when modifying APIs.
+- **Accuracy**: validate examples against current code. Run `cargo test -p domainforge-core --features "cli,python,typescript"` when modifying APIs.
 - **Completeness**: ensure new primitives or flags are reflected across all relevant reference files.
 - **Clarity**: prefer short code snippets with expected outputs; avoid pseudocode.
 - **Traceability**: link to source files and tests that define behavior.
@@ -160,13 +160,13 @@ When adding or editing reference files:
 ## Frequently asked questions
 
 - **Where do the binding APIs come from?**
-  - Python: `sea-core/src/python/` via PyO3 classes.
-  - TypeScript: `sea-core/src/typescript/` via napi-rs.
-  - WASM: `sea-core/src/wasm/` via wasm-bindgen.
+  - Python: `domainforge-core/src/python/` via PyO3 classes.
+  - TypeScript: `domainforge-core/src/typescript/` via napi-rs.
+  - WASM: `domainforge-core/src/wasm/` via wasm-bindgen.
 - **How stable is the CLI?**
   - Semantic versioning applies; minor releases add flags, major releases break.
 - **Can I generate docs automatically?**
-  - Use `sea --help` and bindings’ docstrings as sources; this reference is hand-curated to stay concise.
+  - Use `domainforge --help` and bindings’ docstrings as sources; this reference is hand-curated to stay concise.
 
 ## Example contribution workflow
 

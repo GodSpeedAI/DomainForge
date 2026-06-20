@@ -1,6 +1,6 @@
 # Grammar Specification
 
-Canonical reference for the SEA DSL grammar. This mirrors `sea-core/grammar/sea.pest` and demonstrates the supported syntax with copy/pasteable examples. Keywords are case-insensitive in the parser (`^"keyword"`), but documentation and pretty-printing use capitalized forms (e.g., `Entity`, `Resource`, `Flow`).
+Canonical reference for the SEA DSL grammar. This mirrors `domainforge-core/grammar/sea.pest` and demonstrates the supported syntax with copy/pasteable examples. Keywords are case-insensitive in the parser (`^"keyword"`), but documentation and pretty-printing use capitalized forms (e.g., `Entity`, `Resource`, `Flow`).
 
 ## File shape
 
@@ -248,8 +248,8 @@ Examples such as `1000 "ms" as "s"` rely on these built-ins. Projects can still 
 
 ## Workflow for grammar changes
 
-1. Update `sea-core/grammar/sea.pest`.
-2. Update AST and parser in `sea-core/src/parser/`.
-3. Add parser tests in `sea-core/tests/parser_*.rs`.
+1. Update `domainforge-core/grammar/sea.pest`.
+2. Update AST and parser in `domainforge-core/src/parser/`.
+3. Add parser tests in `domainforge-core/tests/parser_*.rs`.
 4. Update projections (CALM/KG) if affected.
 5. Refresh this document and relevant examples.

@@ -62,18 +62,18 @@ a component tag push is the publish signal.
 ## Deploy Pipeline
 
 ```
-tag push (sea-core-v*, sea-dsl-v*, sea-v*)
+tag push (domainforge-core-v*, domainforge-v*, domainforge-typescript-v*)
   │
   ▼
 deploy.yml (router)
   ├── identify    (parse tag → component + version)
   └── dispatch to publish workflow based on component:
-      ├── sea-core → release-crates.yml  (crates.io)
-      ├── sea-dsl  → release-pypi.yml    (PyPI, multi-platform matrix)
-      └── sea      → release-npm.yml     (npm + WASM)
+      ├── domainforge-core → release-crates.yml  (crates.io)
+      ├── domainforge      → release-pypi.yml    (PyPI, multi-platform matrix)
+      └── domainforge-typescript → release-npm.yml     (npm + WASM)
 ```
 
-Tag shape: `<component>-v<version>` where component is one of `sea-core`, `sea-dsl`, `sea`.
+Tag shape: `<component>-v<version>` where component is one of `domainforge-core`, `domainforge`, `domainforge-typescript`.
 
 `deploy.yml` does NOT contain build or publish logic itself. It dispatches to
 the same reusable publish workflows that the legacy `release.yml` uses. This
@@ -86,9 +86,9 @@ publish process.
 
 | Package | Component | Release type | Tag form |
 |---|---|---|---|
-| `sea-core` (Rust) | `sea-core` | rust | `sea-core-vX.Y.Z` |
-| `sea-dsl` (Python) | `sea-dsl` | python | `sea-dsl-vX.Y.Z` |
-| `@domainforge/sea` (TypeScript) | `sea` | node | `sea-vX.Y.Z` |
+| `domainforge-core` (Rust) | `domainforge-core` | rust | `domainforge-core-vX.Y.Z` |
+| `domainforge` (Python) | `domainforge` | python | `domainforge-vX.Y.Z` |
+| `@godspeedai/domainforge` (TypeScript) | `domainforge-typescript` | node | `domainforge-typescript-vX.Y.Z` |
 
 ### Release-please trigger
 
@@ -113,7 +113,7 @@ publish process.
 
 ### Allowed scopes
 
-**Release-please components:** `sea-core`, `sea-dsl`, `sea`
+**Release-please components:** `domainforge-core`, `domainforge`, `domainforge-typescript`
 
 **Meta:** `ci`, `deps`, `repo`
 
@@ -132,13 +132,13 @@ Each package's version file must live in a directory matching its key:
 
 | Package | Directory | Version file |
 |---|---|---|
-| `sea-core` | `sea-core/` | `Cargo.toml` |
-| `sea-dsl` | `sea-dsl/` | `pyproject.toml` |
-| `sea-typescript` | `sea-typescript/` | `package.json` |
+| `domainforge-core` | `domainforge-core/` | `Cargo.toml` |
+| `domainforge` | `domainforge-python/` | `pyproject.toml` |
+| `domainforge-typescript` | `domainforge-typescript/` | `package.json` |
 
 The root `package.json` is a private workspace root for dev dependencies
 (commitlint, lefthook, vitest). It is NOT published. The root `Cargo.toml`
-defines the Rust workspace; `sea-core/Cargo.toml` is the sole published crate.
+defines the Rust workspace; `domainforge-core/Cargo.toml` is the sole published crate.
 
 ## Secrets
 

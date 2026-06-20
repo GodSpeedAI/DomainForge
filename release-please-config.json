@@ -8,7 +8,7 @@
     {
       "type": "linked-versions",
       "groupName": "domainforge",
-      "components": ["sea-core", "sea-dsl", "sea"]
+      "components": ["domainforge-core", "domainforge", "domainforge-typescript"]
     }
   ],
   "changelog-sections": [
@@ -25,24 +25,24 @@
     { "type": "ci", "section": "Continuous Integration", "hidden": true }
   ],
   "packages": {
-    "sea-core": {
+    "domainforge-core": {
       "release-type": "rust",
-      "package-name": "sea-core",
-      "component": "sea-core",
+      "package-name": "domainforge-core",
+      "component": "domainforge-core",
       "changelog-path": "CHANGELOG.md",
       "extra-files": ["Cargo.lock"]
     },
-    "sea-dsl": {
+    "domainforge-python": {
       "release-type": "python",
-      "package-name": "sea-dsl",
-      "component": "sea-dsl",
+      "package-name": "domainforge",
+      "component": "domainforge",
       "changelog-path": "CHANGELOG-python.md",
       "extra-files": ["pyproject.toml"]
     },
-    "sea-typescript": {
+    "domainforge-typescript": {
       "release-type": "node",
-      "package-name": "@domainforge/sea",
-      "component": "sea",
+      "package-name": "@godspeedai/domainforge",
+      "component": "domainforge-typescript",
       "changelog-path": "CHANGELOG-typescript.md",
       "extra-files": ["package.json"]
     }

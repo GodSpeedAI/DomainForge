@@ -31,7 +31,7 @@ patterns = ["examples/namespaces/finance/**/*.sea"]
 ## CLI usage
 
 ```bash
-sea validate --registry .sea-registry.toml models/payments/payment.sea
+domainforge validate --registry .sea-registry.toml models/payments/payment.sea
 sea graph --registry .sea-registry.toml models/**/*.sea
 ```
 

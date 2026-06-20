@@ -53,7 +53,7 @@ Triggered on version tags (`v*.*.*`). Builds release artifacts for all platforms
 - **create-release**: Creates GitHub release with all artifacts
 - **publish-pypi**: Calls `release-pypi.yml` to publish wheels to PyPI
 - **publish-npm**: Calls `release-npm.yml` to publish napi + WASM to npm
-- **publish-crates**: Calls `release-crates.yml` to publish `sea-core` to crates.io
+- **publish-crates**: Calls `release-crates.yml` to publish `domainforge-core` to crates.io
 
 ### `prepare-release.yml` - Release Automation
 
@@ -67,7 +67,7 @@ Manually triggered workflow to automate version bumping and release PR creation.
 **What it does:**
 
 1. Calculates new version based on bump type
-2. Updates `sea-core/Cargo.toml` with new version
+2. Updates `domainforge-core/Cargo.toml` with new version
 3. Prepares CHANGELOG.md entry
 4. Creates a release PR with checklist
 
@@ -77,7 +77,7 @@ Manually triggered workflow to automate version bumping and release PR creation.
 | -------------------- | --------- | ------------------------------------------------ |
 | `release-npm.yml`    | npm       | Publishes both napi bindings AND WASM package    |
 | `release-pypi.yml`   | PyPI      | Publishes wheels for all platforms including ARM |
-| `release-crates.yml` | crates.io | Publishes `sea-core` crate                       |
+| `release-crates.yml` | crates.io | Publishes `domainforge-core` crate                       |
 
 ## Bundle Size Thresholds
 
@@ -99,9 +99,9 @@ just python-test
 just ts-test
 
 # WASM build and size check
-cd sea-core
+cd domainforge-core
 wasm-pack build --target web --features wasm
-SIZE=$(python3 -c "import os; print(os.path.getsize('pkg/sea_core_bg.wasm'))")
+SIZE=$(python3 -c "import os; print(os.path.getsize('pkg/domainforge_core_bg.wasm'))")
 echo "WASM bundle size: $SIZE bytes (threshold: 2621440)"
 [ "$SIZE" -lt 2621440 ] && echo "PASS" || echo "FAIL"
 
@@ -124,7 +124,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 ### Manual
 
-1. Bump version in `sea-core/Cargo.toml`
+1. Bump version in `domainforge-core/Cargo.toml`
 2. Update `CHANGELOG.md`
 3. Commit and push
 4. Create and push tag: `git tag v<version> && git push --tags`

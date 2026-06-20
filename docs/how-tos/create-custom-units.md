@@ -6,9 +6,9 @@ Goal: Define custom dimensions/units and validate quantities using them in SEA m
 
 - SEA CLI installed.
 
-   - For developers building from source: `cargo install --path sea-core --features cli` (produces the `sea` binary).
+   - For developers building from source: `cargo install --path domainforge-core --features cli` (produces the `sea` binary).
    - Recommended: install the official GitHub Releases binary for your platform.
-   - Alternates: `cargo install sea-core` from crates.io when published, or use the packaged release/installer provided for your OS.
+   - Alternates: `cargo install domainforge-core` from crates.io when published, or use the packaged release/installer provided for your OS.
 - Familiarity with resources and flows in the SEA DSL.
 - Optional: Python/TypeScript bindings if you want to assert units programmatically.
 
@@ -67,7 +67,7 @@ SEA
    Now validate the file with the CLI:
 
    ```bash
-   sea validate --format human examples/custom_units.sea
+   domainforge validate --format human examples/custom_units.sea
    ```
 
    This validation will fail if a unit or dimension is missing, duplicated, or forms a circular base chain.
@@ -75,7 +75,7 @@ SEA
 5. **Inspect units in Python (re-using examples/custom_units.sea)**
 
 ```python
-from sea_dsl import Graph
+from domainforge import Graph
 
 with open("examples/custom_units.sea") as f:
     graph = Graph.parse(f.read())
@@ -86,7 +86,7 @@ assert resource.unit == "USD"
 6. **Inspect units in TypeScript (re-using examples/custom_units.sea)**
 
    ```ts
-   import { Graph } from "@domainforge/sea";
+   import { Graph } from "@godspeedai/domainforge";
    import { readFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("examples/custom_units.sea", "utf8"));
@@ -104,7 +104,7 @@ assert resource.unit == "USD"
 
 - Add a small regression test under `tests/` that parses the DSL and asserts `graph.all_resources()[0].unit`.
 - When exporting to CALM, confirm that quantities carry the correct `unit` field; run `jq '.models[0].flows[0].quantity' file.calm.json`.
-- Use `sea project --format kg` and inspect the Turtle output to ensure unit annotations appear in the KG representation.
+- Use `domainforge project --format kg` and inspect the Turtle output to ensure unit annotations appear in the KG representation.
 
 ## Troubleshooting
 

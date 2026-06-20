@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "sea-core",
+    "domainforge-core",
 ]
 resolver = "2"  # Explicit resolver for edition 2021
 

@@ -3,15 +3,15 @@ Additional Python tests for SEA DSL bindings - ResourceInstance support
 """
 
 import pytest
-import sea_dsl
+import domainforge
 
 
 def test_instance_creation():
     """Test creating a ResourceInstance"""
-    entity = sea_dsl.Entity("Warehouse")
-    resource = sea_dsl.Resource("Camera", "units")
+    entity = domainforge.Entity("Warehouse")
+    resource = domainforge.Resource("Camera", "units")
 
-    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
+    instance = domainforge.ResourceInstance(resource.id, entity.id)
     assert instance.resource_id == resource.id
     assert instance.entity_id == entity.id
     assert len(instance.id) == 36
@@ -19,33 +19,33 @@ def test_instance_creation():
 
 def test_instance_with_namespace():
     """Test creating a ResourceInstance with namespace"""
-    entity = sea_dsl.Entity("Warehouse", "logistics")
-    resource = sea_dsl.Resource("Camera", "units", "inventory")
+    entity = domainforge.Entity("Warehouse", "logistics")
+    resource = domainforge.Resource("Camera", "units", "inventory")
 
-    instance = sea_dsl.ResourceInstance(resource.id, entity.id, "inventory")
+    instance = domainforge.ResourceInstance(resource.id, entity.id, "inventory")
     assert instance.namespace == "inventory"
 
 
 def test_instance_attributes():
     """Test ResourceInstance attributes"""
-    entity = sea_dsl.Entity("Warehouse")
-    resource = sea_dsl.Resource("Camera", "units")
+    entity = domainforge.Entity("Warehouse")
+    resource = domainforge.Resource("Camera", "units")
 
-    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
+    instance = domainforge.ResourceInstance(resource.id, entity.id)
     instance.set_attribute("serial_number", "CAM-12345")
     assert instance.get_attribute("serial_number") == "CAM-12345"
 
 
 def test_graph_add_instance():
     """Test adding a ResourceInstance to a Graph"""
-    graph = sea_dsl.Graph()
-    entity = sea_dsl.Entity("Warehouse")
-    resource = sea_dsl.Resource("Camera", "units")
+    graph = domainforge.Graph()
+    entity = domainforge.Entity("Warehouse")
+    resource = domainforge.Resource("Camera", "units")
 
     graph.add_entity(entity)
     graph.add_resource(resource)
 
-    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
+    instance = domainforge.ResourceInstance(resource.id, entity.id)
     graph.add_instance(instance)
 
     assert graph.instance_count() == 1
@@ -53,14 +53,14 @@ def test_graph_add_instance():
 
 def test_graph_instance_validation():
     """Test Graph validates ResourceInstance references"""
-    graph = sea_dsl.Graph()
-    entity = sea_dsl.Entity("Warehouse")
-    resource = sea_dsl.Resource("Camera", "units")
+    graph = domainforge.Graph()
+    entity = domainforge.Entity("Warehouse")
+    resource = domainforge.Resource("Camera", "units")
 
     graph.add_entity(entity)
     # Not adding resource
 
-    instance = sea_dsl.ResourceInstance(resource.id, entity.id)
+    instance = domainforge.ResourceInstance(resource.id, entity.id)
 
     with pytest.raises(ValueError, match="Resource not found"):
         graph.add_instance(instance)
@@ -68,27 +68,27 @@ def test_graph_instance_validation():
 
 def test_round_trip_serialization():
     """Test that primitives can be serialized and remain valid"""
-    graph = sea_dsl.Graph()
+    graph = domainforge.Graph()
 
     # Create a complete model
-    warehouse = sea_dsl.Entity("Warehouse", "logistics")
+    warehouse = domainforge.Entity("Warehouse", "logistics")
     warehouse.set_attribute("location", "NYC")
 
-    factory = sea_dsl.Entity("Factory", "manufacturing")
+    factory = domainforge.Entity("Factory", "manufacturing")
     factory.set_attribute("capacity", 10000)
 
-    cameras = sea_dsl.Resource("Camera", "units", "inventory")
+    cameras = domainforge.Resource("Camera", "units", "inventory")
     cameras.set_attribute("model", "X100")
 
     graph.add_entity(warehouse)
     graph.add_entity(factory)
     graph.add_resource(cameras)
 
-    flow = sea_dsl.Flow(cameras.id, warehouse.id, factory.id, 500.0)
+    flow = domainforge.Flow(cameras.id, warehouse.id, factory.id, 500.0)
     flow.set_attribute("priority", "high")
     graph.add_flow(flow)
 
-    instance = sea_dsl.ResourceInstance(cameras.id, warehouse.id, "inventory")
+    instance = domainforge.ResourceInstance(cameras.id, warehouse.id, "inventory")
     instance.set_attribute("serial", "SN-001")
     graph.add_instance(instance)
 
@@ -105,15 +105,15 @@ def test_round_trip_serialization():
 
 def test_error_handling_invalid_references():
     """Test that proper errors are raised for invalid references"""
-    graph = sea_dsl.Graph()
-    warehouse = sea_dsl.Entity("Warehouse")
+    graph = domainforge.Graph()
+    warehouse = domainforge.Entity("Warehouse")
     graph.add_entity(warehouse)
 
     # Try to create flow with non-existent IDs
     fake_resource_id = "00000000-0000-0000-0000-000000000000"
     fake_entity_id = "11111111-1111-1111-1111-111111111111"
 
-    flow = sea_dsl.Flow(fake_resource_id, warehouse.id, fake_entity_id, 100.0)
+    flow = domainforge.Flow(fake_resource_id, warehouse.id, fake_entity_id, 100.0)
 
     with pytest.raises(ValueError):
         graph.add_flow(flow)
@@ -121,10 +121,10 @@ def test_error_handling_invalid_references():
 
 def test_namespace_isolation():
     """Test that namespaces properly isolate entities"""
-    graph = sea_dsl.Graph()
+    graph = domainforge.Graph()
 
-    warehouse_logistics = sea_dsl.Entity("Warehouse", "logistics")
-    warehouse_storage = sea_dsl.Entity("Warehouse", "storage")
+    warehouse_logistics = domainforge.Entity("Warehouse", "logistics")
+    warehouse_storage = domainforge.Entity("Warehouse", "storage")
 
     graph.add_entity(warehouse_logistics)
     graph.add_entity(warehouse_storage)

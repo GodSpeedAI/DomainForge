@@ -1,9 +1,9 @@
-# @domainforge/sea-wasm
+# @godspeedai/domainforge-wasm
 
-[![npm](https://img.shields.io/npm/v/@domainforge/sea-wasm.svg)](https://www.npmjs.com/package/@domainforge/sea-wasm)
-[![License](https://img.shields.io/npm/l/@domainforge/sea-wasm.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@godspeedai/domainforge-wasm.svg)](https://www.npmjs.com/package/@godspeedai/domainforge-wasm)
+[![License](https://img.shields.io/npm/l/@godspeedai/domainforge-wasm.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
 [![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
-[![Bundle Size](https://img.shields.io/badge/bundle%20size-%3C500KB%20gzip-brightgreen)](https://bundlephobia.com/package/@domainforge/sea-wasm)
+[![Bundle Size](https://img.shields.io/badge/bundle%20size-%3C500KB%20gzip-brightgreen)](https://bundlephobia.com/package/@godspeedai/domainforge-wasm)
 
 WebAssembly bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-specific language. Runs in browsers and edge runtimes. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
 
@@ -21,11 +21,11 @@ WebAssembly bindings for the **SEA DSL** (Semantic Enterprise Architecture) doma
 ## Installation
 
 ```bash
-npm install @domainforge/sea-wasm
+npm install @godspeedai/domainforge-wasm
 ```
 
 ```bash
-yarn add @domainforge/sea-wasm
+yarn add @godspeedai/domainforge-wasm
 ```
 
 ### CDN (Browser)
@@ -37,7 +37,7 @@ yarn add @domainforge/sea-wasm
     Entity,
     Resource,
     Flow,
-  } from "https://unpkg.com/@domainforge/sea-wasm/sea_core.js";
+  } from "https://unpkg.com/@godspeedai/domainforge-wasm/domainforge_core.js";
 
   await init();
   // Ready to use
@@ -53,7 +53,7 @@ yarn add @domainforge/sea-wasm
 <html>
   <head>
     <script type="module">
-      import init, { Graph, Entity, Resource } from "@domainforge/sea-wasm";
+      import init, { Graph, Entity, Resource } from "@godspeedai/domainforge-wasm";
 
       async function main() {
         await init();
@@ -80,7 +80,7 @@ yarn add @domainforge/sea-wasm
 ### Node.js / ESM
 
 ```javascript
-import init, { Graph, Entity, Resource, Flow } from "@domainforge/sea-wasm";
+import init, { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge-wasm";
 
 await init();
 
@@ -103,7 +103,7 @@ console.log(`Graph has ${graph.entityCount()} entities`);
 ### CALM Integration
 
 ```javascript
-import init, { Graph } from "@domainforge/sea-wasm";
+import init, { Graph } from "@godspeedai/domainforge-wasm";
 
 await init();
 
@@ -216,14 +216,14 @@ Graph.importCalm(calmJson);
 ./scripts/build-wasm.sh
 
 # Manual build (output goes to target/wasm-pkg)
-cd sea-core
+cd domainforge-core
 wasm-pack build --target web --release --out-dir ../target/wasm-pkg --features wasm
 ```
 
 ### Test
 
 ```bash
-cd sea-core
+cd domainforge-core
 wasm-pack test --headless --firefox --features wasm
 ```
 
@@ -232,9 +232,9 @@ wasm-pack test --headless --firefox --features wasm
 ```
 target/wasm-pkg/
 ├── package.json          # npm package metadata
-├── sea_core.js           # Generated WASM bindings
-├── sea_core.d.ts         # TypeScript definitions
-└── sea_core_bg.wasm      # Compiled WASM binary
+├── domainforge_core.js           # Generated WASM bindings
+├── domainforge_core.d.ts         # TypeScript definitions
+└── domainforge_core_bg.wasm      # Compiled WASM binary
 ```
 
 ## Type Conversions
@@ -258,7 +258,7 @@ The default build uses `--target web`, which produces **browser-first** ES modul
 
 1. **Build with `--target nodejs`**:
    ```bash
-   cd sea-core
+   cd domainforge-core
    wasm-pack build --target nodejs --release --out-dir ../target/wasm-pkg-node --features wasm
    ```
 
@@ -266,7 +266,7 @@ The default build uses `--target web`, which produces **browser-first** ES modul
    ```javascript
    import { readFile } from 'node:fs/promises';
    const { instance } = await WebAssembly.instantiate(
-     await readFile('./node_modules/@domainforge/sea-wasm/sea_core_bg.wasm'),
+     await readFile('./node_modules/@godspeedai/domainforge-wasm/domainforge_core_bg.wasm'),
    );
    ```
 
@@ -274,10 +274,10 @@ The default build uses `--target web`, which produces **browser-first** ES modul
 
 | Package                                                                        | Registry  | Description                  |
 | ------------------------------------------------------------------------------ | --------- | ---------------------------- |
-| [`sea-core`](https://crates.io/crates/sea-core)                                | crates.io | Rust core library            |
-| [`sea-dsl`](https://pypi.org/project/sea-dsl/)                                 | PyPI      | Python bindings              |
-| [`@domainforge/sea`](https://www.npmjs.com/package/@domainforge/sea)           | npm       | Native Node.js bindings      |
-| [`@domainforge/sea-wasm`](https://www.npmjs.com/package/@domainforge/sea-wasm) | npm       | WASM bindings (this package) |
+| [`domainforge-core`](https://crates.io/crates/domainforge-core)                                | crates.io | Rust core library            |
+| [`domainforge`](https://pypi.org/project/domainforge/)                                 | PyPI      | Python bindings              |
+| [`@godspeedai/domainforge`](https://www.npmjs.com/package/@godspeedai/domainforge)           | npm       | Native Node.js bindings      |
+| [`@godspeedai/domainforge-wasm`](https://www.npmjs.com/package/@godspeedai/domainforge-wasm) | npm       | WASM bindings (this package) |
 
 ## Documentation
 
@@ -299,7 +299,7 @@ The default build uses `--target web`, which produces **browser-first** ES modul
 
 ### TypeScript errors
 
-- Ensure `sea_core.d.ts` is present in `target/wasm-pkg/`
+- Ensure `domainforge_core.d.ts` is present in `target/wasm-pkg/`
 - Check TypeScript version compatibility (4.5+)
 
 ## Policy Authority
@@ -307,7 +307,7 @@ The default build uses `--target web`, which produces **browser-first** ES modul
 DomainForge WASM bindings include Policy Authority for executable business authority:
 
 ```javascript
-import { evaluateAuthority, FinalDecision, PolicyModality, SourceClass } from '@domainforge/sea-wasm';
+import { evaluateAuthority, FinalDecision, PolicyModality, SourceClass } from '@godspeedai/domainforge-wasm';
 
 const result = evaluateAuthority(configJson, requestJson, factsJson);
 console.log(result.trace, result.decision);

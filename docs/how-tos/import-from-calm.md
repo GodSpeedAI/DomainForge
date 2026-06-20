@@ -4,11 +4,11 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 
 ## Prerequisites
 
-- SEA CLI built from source (`cargo install --path sea-core --features cli`) for validating the imported graph.
+- SEA CLI built from source (`cargo install --path domainforge-core --features cli`) for validating the imported graph.
 - Access to a CALM JSON file that conforms to the FINOS Architecture-as-Code schema (version `2.0` recommended).
 - Optional bindings:
-  - Python package (`sea_dsl`) built via `maturin develop` for programmatic import.
-  - TypeScript package (`@domainforge/sea`) built via `npm run build`.
+  - Python package (`domainforge`) built via `maturin develop` for programmatic import.
+  - TypeScript package (`@godspeedai/domainforge`) built via `npm run build`.
 
 ## Steps (be concise)
 
@@ -23,7 +23,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 2. **Import programmatically in Python**
 
    ```python
-   from sea_dsl import Graph
+   from domainforge import Graph
    import json
 
    calm_json = open("calm.json").read()
@@ -39,7 +39,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 3. **Import programmatically in TypeScript**
 
    ```ts
-   import { Graph } from "@domainforge/sea";
+   import { Graph } from "@godspeedai/domainforge";
    import { readFileSync } from "fs";
 
    const calm = readFileSync("calm.json", "utf8");
@@ -56,7 +56,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
    ```bash
    # Export the imported graph back to CALM then re-parse
    python - <<'PY'
-   from sea_dsl import Graph
+   from domainforge import Graph
    with open('calm.json') as f:
        data = f.read()
    graph = Graph.import_calm(data)
@@ -64,7 +64,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
        out.write(graph.export_calm())
    PY
 
-   sea import --format kg /tmp/roundtrip.calm.json
+   domainforge import --format kg /tmp/roundtrip.calm.json
    ```
 
    - The second command exercises the CLI import pipeline (Turtle/RDF) to ensure the graph can be converted downstream.
@@ -72,13 +72,13 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 5. **Convert CALM to SEA DSL text (Rust)**
 
    ```rust
-   use sea_core::calm::{import, export};
+   use domainforge_core::calm::{import, export};
 
    let calm_json = std::fs::read_to_string("calm.json")?;
    let graph = import(serde_json::from_str(&calm_json)?)?;
    // You can now traverse primitives or export to KG/SBVR
    let exported = export(&graph)?;
-   assert_eq!(exported["metadata"]["sea:version"], sea_core::VERSION);
+   assert_eq!(exported["metadata"]["sea:version"], domainforge_core::VERSION);
    ```
 
    - Although there is no direct CLI flag for CALM → SEA text, the Rust API lets you transform CALM into a `Graph` and then emit other projections (`project --format kg` for Turtle/RDF).
@@ -104,7 +104,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 
 ## Common Pitfalls / Troubleshooting
 
-- Importing CALM via the CLI is not yet available; use Python/TypeScript/Rust APIs instead, then rely on `sea project --format kg` for downstream exports.
+- Importing CALM via the CLI is not yet available; use Python/TypeScript/Rust APIs instead, then rely on `domainforge project --format kg` for downstream exports.
 - When working with large models, load the JSON with streaming (`ijson` in Python) if memory is constrained; construct the `Graph` once you validate the structure.
 - Keep the SEA version consistent across files; mixing CALM payloads exported from older SEA versions can surface validation differences.
 

@@ -17,7 +17,7 @@ graph LR
 
 ## Expression Parsing
 
-Policies are written in a subset of the SEA DSL designed for logic. Expressions are parsed into an expression tree defined in `sea-core/src/policy/expression.rs`.
+Policies are written in a subset of the SEA DSL designed for logic. Expressions are parsed into an expression tree defined in `domainforge-core/src/policy/expression.rs`.
 
 Common expression types:
 

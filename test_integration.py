@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-import sea_dsl
+import domainforge
 
 # Create a supply chain model
-graph = sea_dsl.Graph()
+graph = domainforge.Graph()
 
 # Create entities
-supplier = sea_dsl.Entity("Supplier", "supply_chain")
-warehouse = sea_dsl.Entity("Warehouse", "supply_chain")
-store = sea_dsl.Entity("Store", "retail")
+supplier = domainforge.Entity("Supplier", "supply_chain")
+warehouse = domainforge.Entity("Warehouse", "supply_chain")
+store = domainforge.Entity("Store", "retail")
 
 # Create resources
-widgets = sea_dsl.Resource("Widgets", "units")
-gadgets = sea_dsl.Resource("Gadgets", "units")
+widgets = domainforge.Resource("Widgets", "units")
+gadgets = domainforge.Resource("Gadgets", "units")
 
 # Add to graph
 graph.add_entity(supplier)
@@ -21,9 +21,9 @@ graph.add_resource(widgets)
 graph.add_resource(gadgets)
 
 # Create flows
-flow1 = sea_dsl.Flow(widgets.id, supplier.id, warehouse.id, 500.0)
-flow2 = sea_dsl.Flow(widgets.id, warehouse.id, store.id, 300.0)
-flow3 = sea_dsl.Flow(gadgets.id, supplier.id, warehouse.id, 200.0)
+flow1 = domainforge.Flow(widgets.id, supplier.id, warehouse.id, 500.0)
+flow2 = domainforge.Flow(widgets.id, warehouse.id, store.id, 300.0)
+flow3 = domainforge.Flow(gadgets.id, supplier.id, warehouse.id, 200.0)
 
 graph.add_flow(flow1)
 graph.add_flow(flow2)
@@ -58,7 +58,7 @@ Resource "Steel" tons
 Flow "Steel" from "Supplier" to "Factory" quantity 100
 '''
 
-parsed = sea_dsl.Graph.parse(dsl_source)
+parsed = domainforge.Graph.parse(dsl_source)
 print(f"Parsed Graph:")
 print(f"  Entities: {parsed.entity_count()}")
 print(f"  Resources: {parsed.resource_count()}")

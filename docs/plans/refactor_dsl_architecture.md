@@ -14,9 +14,9 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
 - [x] **Standardize Casing**:
   - Decision: Keep grammar case-insensitive (`^"keyword"`) to be user-friendly.
   - Action: Enforce "Capitalized" convention (e.g., `Entity`, `Resource`) in all documentation and examples.
-  - Action: Update `sea format` (if exists) or `PrettyPrinter` to output Capitalized keywords.
+  - Action: Update `domainforge format` (if exists) or `PrettyPrinter` to output Capitalized keywords.
 - [x] **Fix Examples**:
-  - Scan all `.sea` files in `examples/` and `sea-core/examples/`.
+  - Scan all `.sea` files in `examples/` and `domainforge-core/examples/`.
   - Remove any `...` placeholders that are not valid syntax.
   - Ensure all examples parse successfully with the current grammar.
 
@@ -29,11 +29,11 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
 - [x] **Update Grammar (`sea.pest`)**:
   - Modify `unary_expr` or `primary_expr` to support `as` syntax.
   - Rule: `cast_expr = { primary_expr ~ (^"as" ~ string_literal)? }`.
-- [x] **Update AST (`sea-core/src/parser/ast.rs`)**:
+- [x] **Update AST (`domainforge-core/src/parser/ast.rs`)**:
   - Add `Expression::Cast(Box<Expression>, String)` variant.
-- [x] **Update Parser (`sea-core/src/parser/mod.rs`)**:
+- [x] **Update Parser (`domainforge-core/src/parser/mod.rs`)**:
   - Map the new grammar rule to the AST variant.
-- [x] **Update Evaluator (`sea-core/src/policy/evaluation.rs`)**:
+- [x] **Update Evaluator (`domainforge-core/src/policy/evaluation.rs`)**:
   - Implement `eval_cast` logic (initially for unit conversion, e.g., `1000 "ms" as "s"`).
 
 ### Casting semantics and validation
@@ -72,7 +72,7 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
 
 ### Tasks
 
-- [x] **Create Profile Registry (`sea-core/src/parser/profiles.rs`)**:
+- [x] **Create Profile Registry (`domainforge-core/src/parser/profiles.rs`)**:
   - Define `Profile` struct (name, enabled keywords/features).
   - Create a registry of built-in profiles.
 - [x] **Update Parser Context**:
@@ -103,13 +103,13 @@ This plan addresses the critique regarding the SEA DSL implementation, focusing 
 ### Tasks
 
 - [x] **Create Standard Library Files**:
-  - `sea-core/std/core.sea` (Base types).
-  - `sea-core/std/http.sea` (HTTP/REST types).
-  - `sea-core/std/aws.sea` (AWS types).
+  - `domainforge-core/std/core.sea` (Base types).
+  - `domainforge-core/std/http.sea` (HTTP/REST types).
+  - `domainforge-core/std/aws.sea` (AWS types).
 - [x] **Embed Stdlib in Binary**:
   - Use `include_str!` to embed these files in the Rust binary.
 - [x] **Update Module Resolver**:
-  - Modify `sea-core/src/module/resolver.rs` to handle `std:` imports (e.g., `import { Service } from "std:core"`).
+  - Modify `domainforge-core/src/module/resolver.rs` to handle `std:` imports (e.g., `import { Service } from "std:core"`).
   - When resolving `std:*`, return the embedded content.
 
 ## 5. [x] Canonical Graph & Isomorphism

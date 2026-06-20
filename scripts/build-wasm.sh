@@ -16,40 +16,40 @@ if ! command -v wasm-opt &> /dev/null; then
 fi
 
 PKG_DIR="target/wasm-pkg"
-VERSION=$(grep '^version =' sea-core/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+VERSION=$(grep '^version =' domainforge-core/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
 if [ -z "$VERSION" ]; then
-    echo "ERROR: Failed to extract version from sea-core/Cargo.toml: VERSION is empty" >&2
+    echo "ERROR: Failed to extract version from domainforge-core/Cargo.toml: VERSION is empty" >&2
     exit 1
 fi
 
 echo "Building wasm-pack (version=${VERSION})..."
-cd sea-core
+cd domainforge-core
 wasm-pack build --target web --release --out-dir ../${PKG_DIR} --features wasm
 cd ..
 
 if command -v wasm-opt &> /dev/null; then
     echo "Optimizing WASM binary with wasm-opt..."
-    wasm-opt -Oz -o ${PKG_DIR}/sea_core_bg_opt.wasm ${PKG_DIR}/sea_core_bg.wasm
-    mv ${PKG_DIR}/sea_core_bg_opt.wasm ${PKG_DIR}/sea_core_bg.wasm
+    wasm-opt -Oz -o ${PKG_DIR}/domainforge_core_bg_opt.wasm ${PKG_DIR}/domainforge_core_bg.wasm
+    mv ${PKG_DIR}/domainforge_core_bg_opt.wasm ${PKG_DIR}/domainforge_core_bg.wasm
 fi
 
-echo "Patching package.json (name=@domainforge/sea-wasm, version=${VERSION})..."
+echo "Patching package.json (name=@godspeedai/domainforge-wasm, version=${VERSION})..."
 cd "${PKG_DIR}"
 if command -v python3 &> /dev/null; then
     python3 -c "
 import json, sys
 with open('package.json', 'r') as f:
     pkg = json.load(f)
-pkg['name'] = '@domainforge/sea-wasm'
+pkg['name'] = '@godspeedai/domainforge-wasm'
 pkg['version'] = '${VERSION}'
 pkg['description'] = 'WebAssembly bindings for SEA DSL - Semantic Enterprise Architecture'
 pkg['author'] = 'DomainForge Contributors'
 pkg['license'] = 'Apache-2.0'
 pkg['repository'] = {'type': 'git', 'url': 'https://github.com/GodSpeedAI/DomainForge.git'}
 pkg['homepage'] = 'https://github.com/GodSpeedAI/DomainForge'
-pkg['keywords'] = ['wasm', 'domainforge', 'sea-dsl', 'enterprise-architecture']
-pkg['files'] = ['sea_core.js', 'sea_core.d.ts', 'sea_core_bg.wasm', 'sea_core_bg.wasm.d.ts']
+pkg['keywords'] = ['wasm', 'domainforge', 'domainforge', 'enterprise-architecture']
+pkg['files'] = ['domainforge_core.js', 'domainforge_core.d.ts', 'domainforge_core_bg.wasm', 'domainforge_core_bg.wasm.d.ts']
 with open('package.json', 'w') as f:
     json.dump(pkg, f, indent=2)
     f.write('\n')
@@ -58,15 +58,15 @@ elif command -v node &> /dev/null; then
     node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-pkg.name = '@domainforge/sea-wasm';
+pkg.name = '@godspeedai/domainforge-wasm';
 pkg.version = '${VERSION}';
 pkg.description = 'WebAssembly bindings for SEA DSL - Semantic Enterprise Architecture';
 pkg.author = 'DomainForge Contributors';
 pkg.license = 'Apache-2.0';
 pkg.repository = {type: 'git', url: 'https://github.com/GodSpeedAI/DomainForge.git'};
 pkg.homepage = 'https://github.com/GodSpeedAI/DomainForge';
-pkg.keywords = ['wasm', 'domainforge', 'sea-dsl', 'enterprise-architecture'];
-pkg.files = ['sea_core.js', 'sea_core.d.ts', 'sea_core_bg.wasm', 'sea_core_bg.wasm.d.ts'];
+pkg.keywords = ['wasm', 'domainforge', 'domainforge', 'enterprise-architecture'];
+pkg.files = ['domainforge_core.js', 'domainforge_core.d.ts', 'domainforge_core_bg.wasm', 'domainforge_core_bg.wasm.d.ts'];
 fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 "
 else
@@ -75,10 +75,10 @@ fi
 cd ..
 
 echo "Creating gzipped version for size check..."
-gzip -k -f ${PKG_DIR}/sea_core_bg.wasm
+gzip -k -f ${PKG_DIR}/domainforge_core_bg.wasm
 
-WASM_SIZE=$(stat -c%s ${PKG_DIR}/sea_core_bg.wasm 2>/dev/null || stat -f%z ${PKG_DIR}/sea_core_bg.wasm 2>/dev/null)
-GZIP_SIZE=$(stat -c%s ${PKG_DIR}/sea_core_bg.wasm.gz 2>/dev/null || stat -f%z ${PKG_DIR}/sea_core_bg.wasm.gz 2>/dev/null)
+WASM_SIZE=$(stat -c%s ${PKG_DIR}/domainforge_core_bg.wasm 2>/dev/null || stat -f%z ${PKG_DIR}/domainforge_core_bg.wasm 2>/dev/null)
+GZIP_SIZE=$(stat -c%s ${PKG_DIR}/domainforge_core_bg.wasm.gz 2>/dev/null || stat -f%z ${PKG_DIR}/domainforge_core_bg.wasm.gz 2>/dev/null)
 WASM_SIZE_KB=$((WASM_SIZE / 1024))
 GZIP_SIZE_KB=$((GZIP_SIZE / 1024))
 

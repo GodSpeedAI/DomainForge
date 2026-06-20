@@ -40,33 +40,33 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build napi package
-        working-directory: sea-typescript
+        working-directory: domainforge-typescript
         run: npm run build
 
       - name: Patch generated TypeScript declarations
-        working-directory: sea-typescript
+        working-directory: domainforge-typescript
         run: python3 ../scripts/patch_napi_types.py
 
       - name: Smoke test npm pack
-        working-directory: sea-typescript
+        working-directory: domainforge-typescript
         run: |
           npm pack --dry-run 2>&1 | tee /tmp/npm-pack-output.txt
           grep -q "index.d.ts" /tmp/npm-pack-output.txt || { echo "ERROR: index.d.ts missing from pack"; exit 1; }
           grep -q "index.js" /tmp/npm-pack-output.txt || { echo "ERROR: index.js missing from pack"; exit 1; }
-          grep -q "sea-core.*.node" /tmp/npm-pack-output.txt || { echo "ERROR: native .node binary missing from pack"; exit 1; }
+          grep -q "domainforge-core.*.node" /tmp/npm-pack-output.txt || { echo "ERROR: native .node binary missing from pack"; exit 1; }
           echo "npm pack smoke test passed"
 
       - name: Check if already published
-        working-directory: sea-typescript
+        working-directory: domainforge-typescript
         run: |
-          if npm view "@domainforge/sea@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+          if npm view "@godspeedai/domainforge@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
             echo "Already published, skipping"
             echo "SKIP_PUBLISH=1" >> $GITHUB_ENV
           fi
 
       - name: Publish to npm
         if: env.SKIP_PUBLISH != '1'
-        working-directory: sea-typescript
+        working-directory: domainforge-typescript
         run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}
@@ -100,30 +100,30 @@ jobs:
 
       - name: Build WASM package
         run: |
-          cd sea-core
-          wasm-pack build --target web --release --scope domainforge -- --features wasm
+          cd domainforge-core
+          wasm-pack build --target web --release --scope godspeedai -- --features wasm
           node - <<'NODE'
           const fs = require('fs');
           const pkgPath = 'pkg/package.json';
           const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-          pkg.name = '@domainforge/sea-wasm';
-          pkg.files = ['sea_core.js', 'sea_core.d.ts', 'sea_core_bg.wasm', 'sea_core_bg.wasm.d.ts'];
+          pkg.name = '@godspeedai/domainforge-wasm';
+          pkg.files = ['domainforge_core.js', 'domainforge_core.d.ts', 'domainforge_core_bg.wasm', 'domainforge_core_bg.wasm.d.ts'];
           fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
           NODE
 
       - name: WASM smoke test
         run: |
-          cd sea-core/pkg
-          for f in sea_core.js sea_core.d.ts sea_core_bg.wasm sea_core_bg.wasm.d.ts package.json; do
+          cd domainforge-core/pkg
+          for f in domainforge_core.js domainforge_core.d.ts domainforge_core_bg.wasm domainforge_core_bg.wasm.d.ts package.json; do
             test -f "$f" || { echo "ERROR: missing $f in WASM pkg"; exit 1; }
           done
-          node -e "const p=require('./package.json'); if (p.name !== '@domainforge/sea-wasm') throw new Error('Unexpected package name: ' + p.name); ['version','main','types'].forEach(k => { if(!p[k]) throw new Error('Missing field: ' + k) })"
+          node -e "const p=require('./package.json'); if (p.name !== '@godspeedai/domainforge-wasm') throw new Error('Unexpected package name: ' + p.name); ['version','main','types'].forEach(k => { if(!p[k]) throw new Error('Missing field: ' + k) })"
           echo "WASM smoke test passed"
 
       - name: Check if WASM already published
         run: |
-          cd sea-core/pkg
-          if npm view "@domainforge/sea-wasm@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+          cd domainforge-core/pkg
+          if npm view "@godspeedai/domainforge-wasm@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
             echo "Already published, skipping"
             echo "SKIP_PUBLISH=1" >> $GITHUB_ENV
           fi
@@ -131,7 +131,7 @@ jobs:
       - name: Publish WASM to npm
         if: env.SKIP_PUBLISH != '1'
         run: |
-          cd sea-core/pkg
+          cd domainforge-core/pkg
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ steps.secrets.outputs.npm-token }}

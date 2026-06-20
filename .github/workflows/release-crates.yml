@@ -25,10 +25,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Publish sea-core to crates.io
+      - name: Publish domainforge-core to crates.io
         run: |
           set +e
-          OUTPUT=$(cargo publish --manifest-path sea-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }} 2>&1)
+          OUTPUT=$(cargo publish --manifest-path domainforge-core/Cargo.toml --token ${{ steps.secrets.outputs.cargo-registry-token }} 2>&1)
           EXIT_CODE=$?
           echo "$OUTPUT"
           

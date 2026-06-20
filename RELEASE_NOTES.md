@@ -6,7 +6,7 @@
 
 - **Semantic Pack System**: Canonical semantic pack support with schema definitions, builder APIs, validation, diffing, pack-set resolution, canonical JSON, review records, and signing helpers.
 - **Authority Evaluation**: Authority policy compilation and evaluation with environments, fact resolvers, resolver traces, policy transforms, and conformance coverage.
-- **CLI Pack Workflows**: `sea pack` and authority-oriented CLI support for building, validating, reviewing, signing, and checking semantic packs.
+- **CLI Pack Workflows**: `domainforge pack` and authority-oriented CLI support for building, validating, reviewing, signing, and checking semantic packs.
 - **Cross-Language Bindings**: Semantic pack and authority APIs exposed through Python, TypeScript napi, and WASM bindings.
 - **Test Fixtures And Coverage**: ACME procurement fixtures plus Rust, Python, TypeScript, and WASM coverage for semantic packs and authority behavior.
 - **Docs And Guardrails**: Security model, generated-artifact policy, semantic pack docs, diagnostics, release workflow linting, and enterprise verification gates.

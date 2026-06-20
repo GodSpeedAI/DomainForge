@@ -12,7 +12,7 @@ This guide explains how to export SEA models to Protocol Buffers (`.proto`) file
 Export an entity model to a `.proto` file:
 
 ```bash
-sea project --format protobuf model.sea output.proto
+domainforge project --format protobuf model.sea output.proto
 ```
 
 This generates a complete `.proto` file with:
@@ -47,7 +47,7 @@ Resource "PaymentRequest" USD
 Running:
 
 ```bash
-sea project --format protobuf payment.sea payment.proto
+domainforge project --format protobuf payment.sea payment.proto
 ```
 
 Produces:
@@ -95,7 +95,7 @@ message PaymentRequest {
 Generate gRPC service definitions from Flow patterns:
 
 ```bash
-sea project --format protobuf --include-services model.sea output.proto
+domainforge project --format protobuf --include-services model.sea output.proto
 ```
 
 This converts SEA Flows into gRPC RPC methods:
@@ -111,7 +111,7 @@ This converts SEA Flows into gRPC RPC methods:
 Split output by namespace for large models:
 
 ```bash
-sea project --format protobuf --multi-file --output-dir ./proto model.sea
+domainforge project --format protobuf --multi-file --output-dir ./proto model.sea
 ```
 
 This creates a directory structure:
@@ -131,7 +131,7 @@ proto/
 Override the default package:
 
 ```bash
-sea project --format protobuf --package "org.example.api" model.sea output.proto
+domainforge project --format protobuf --package "org.example.api" model.sea output.proto
 ```
 
 ### Language-Specific Options
@@ -139,7 +139,7 @@ sea project --format protobuf --package "org.example.api" model.sea output.proto
 Set language-specific proto options:
 
 ```bash
-sea project --format protobuf \
+domainforge project --format protobuf \
   --option java_package="com.example.api" \
   --option go_package="github.com/example/api" \
   --option java_multiple_files=true \
@@ -171,10 +171,10 @@ If `buf` CLI is installed, use it for linting and validation:
 
 ```bash
 # Lint generated protos
-sea project --format protobuf --buf-lint model.sea output.proto
+domainforge project --format protobuf --buf-lint model.sea output.proto
 
 # Check breaking changes
-sea project --format protobuf --buf-breaking --against ./previous model.sea output.proto
+domainforge project --format protobuf --buf-breaking --against ./previous model.sea output.proto
 ```
 
 If `buf` is not installed, these flags emit a warning and continue.
@@ -184,9 +184,9 @@ If `buf` is not installed, these flags emit a warning and continue.
 ### Rust
 
 ```rust
-use sea_core::parser::parse_source;
-use sea_core::parser::ast::ast_to_graph;
-use sea_core::projection::protobuf::ProtobufEngine;
+use domainforge_core::parser::parse_source;
+use domainforge_core::parser::ast::ast_to_graph;
+use domainforge_core::projection::protobuf::ProtobufEngine;
 
 let source = std::fs::read_to_string("model.sea")?;
 let ast = parse_source(&source)?;
@@ -199,8 +199,8 @@ println!("{}", proto_file.to_proto_string());
 ### Python
 
 ```python
-from sea_core import parse_source, ast_to_graph
-from sea_core.projection import protobuf_engine
+from domainforge_core import parse_source, ast_to_graph
+from domainforge_core.projection import protobuf_engine
 
 source = open("model.sea").read()
 ast = parse_source(source)
@@ -213,8 +213,8 @@ print(proto.to_proto_string())
 ### TypeScript
 
 ```typescript
-import { parseSource, astToGraph } from "sea-core";
-import { ProtobufEngine } from "sea-core/projection";
+import { parseSource, astToGraph } from "domainforge-core";
+import { ProtobufEngine } from "domainforge-core/projection";
 
 const source = fs.readFileSync("model.sea", "utf-8");
 const ast = parseSource(source);
@@ -240,7 +240,7 @@ The engine supports schema compatibility checking to prevent breaking changes:
 
 ```bash
 # Check compatibility against previous version
-sea project --format protobuf --compatibility additive \
+domainforge project --format protobuf --compatibility additive \
   --against ./previous/output.proto \
   model.sea output.proto
 ```

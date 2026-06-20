@@ -1,12 +1,12 @@
 import pytest
 import textwrap
 
-import sea_dsl
+import domainforge
 
 
 def test_registry_discover_and_resolve(tmp_path):
     # Skip this test if runtime package isn't built with python FFI enabled
-    if not hasattr(sea_dsl, "NamespaceRegistry"):
+    if not hasattr(domainforge, "NamespaceRegistry"):
         return
     base = tmp_path
     domains = base / "domains" / "logistics"
@@ -23,7 +23,7 @@ def test_registry_discover_and_resolve(tmp_path):
     """)
     registry_path.write_text(registry_content)
 
-    reg = sea_dsl.NamespaceRegistry.from_file(str(registry_path))
+    reg = domainforge.NamespaceRegistry.from_file(str(registry_path))
     assert reg is not None
     files = reg.resolve_files()
     assert len(files) == 1
@@ -36,7 +36,7 @@ def test_registry_discover_and_resolve(tmp_path):
 
 def test_registry_precedence_long_and_tie(tmp_path):
     # Skip if not installed with FFI bindings
-    if not hasattr(sea_dsl, "NamespaceRegistry"):
+    if not hasattr(domainforge, "NamespaceRegistry"):
         return
     base = tmp_path
     domains = base / "domains" / "logistics"
@@ -53,7 +53,7 @@ def test_registry_precedence_long_and_tie(tmp_path):
         '[[namespaces]]\nnamespace = "long"\npatterns = ["domains/logistics/**/*.sea"]\n'
     )
     registry_path.write_text(registry_content)
-    reg = sea_dsl.NamespaceRegistry.from_file(str(registry_path))
+    reg = domainforge.NamespaceRegistry.from_file(str(registry_path))
     assert reg.namespace_for(str(file_path)) == "long"
 
     # alphabetical tie-breaker
@@ -64,7 +64,7 @@ def test_registry_precedence_long_and_tie(tmp_path):
         '[[namespaces]]\nnamespace = "finance"\npatterns = ["domains/*/warehouse.sea"]\n'
     )
     registry_path.write_text(registry_content)
-    reg = sea_dsl.NamespaceRegistry.from_file(str(registry_path))
+    reg = domainforge.NamespaceRegistry.from_file(str(registry_path))
     assert reg.namespace_for(str(file_path)) == "finance"
 
     # When asking to fail on ambiguity, an exception should be raised

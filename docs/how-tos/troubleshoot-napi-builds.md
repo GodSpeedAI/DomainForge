@@ -4,7 +4,7 @@ Goal: fix Node.js native module (`.node`) build issues, especially PyO3 symbol l
 
 ## Symptoms
 
-- Loading `sea-core.*.node` fails with `undefined symbol: PyBaseObject_Type`.
+- Loading `domainforge-core.*.node` fails with `undefined symbol: PyBaseObject_Type`.
 - TypeScript tests crash when `python` feature symbols leak into the NAPI build.
 
 ## Root cause
@@ -16,20 +16,20 @@ The native binary was built with `python` features enabled or reused artifacts f
 ```bash
 # Remove stale artifacts
 cargo clean
-cd sea-core && cargo clean && cd ..
-rm -rf target sea-core/target
+cd domainforge-core && cargo clean && cd ..
+rm -rf target domainforge-core/target
 
 # Build TypeScript binding only
-cd sea-core
+cd domainforge-core
 cargo build --lib --features typescript,three_valued_logic
 
 # Copy the correct artifact to the root package if needed (choose your platform)
-cp target/debug/libsea_core.so ../sea-core.linux-x64-gnu.node      # Linux
-cp target/debug/libsea_core.dylib ../sea-core.darwin-x64.node      # macOS
-cp target\\debug\\sea_core.dll ..\\sea-core.win32-x64.node         # Windows
+cp target/debug/libdomainforge_core.so ../domainforge-core.linux-x64-gnu.node      # Linux
+cp target/debug/libdomainforge_core.dylib ../domainforge-core.darwin-x64.node      # macOS
+cp target\\debug\\domainforge_core.dll ..\\domainforge-core.win32-x64.node         # Windows
 
 # Verify no Py* symbols remain
-nm -D ../sea-core.linux-x64-gnu.node | grep Py || echo "clean"
+nm -D ../domainforge-core.linux-x64-gnu.node | grep Py || echo "clean"
 ```
 
 Then run `npm test` to confirm the binding loads.

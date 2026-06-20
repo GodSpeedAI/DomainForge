@@ -2,25 +2,25 @@
 set -e
 
 # optimized-wasm-build.sh
-# Performs a production build of the sea-core WASM bundle with SAFE optimizations.
+# Performs a production build of the domainforge-core WASM bundle with SAFE optimizations.
 
 echo "🚀 Starting Optimized WASM Build..."
 
 # 1. Clean previous builds
 echo "🧹 Cleaning previous artifacts..."
-cargo clean -p sea-core --target wasm32-unknown-unknown
+cargo clean -p domainforge-core --target wasm32-unknown-unknown
 
 # 2. Build with wasm-pack
-# Note: Profile configuration in sea-core/Cargo.toml now enables wasm-opt
+# Note: Profile configuration in domainforge-core/Cargo.toml now enables wasm-opt
 echo "🏗️  Building with wasm-pack (Release mode)..."
 # Using --target web as a standard default, can be changed to --target nodejs if needed
-wasm-pack build sea-core --target web --release --features wasm
+wasm-pack build domainforge-core --target web --release --features wasm
 
 # 3. Explicit Optimization (Verification Step)
 # Even though we enabled it in Cargo.toml, running it explicitly ensures it happens
 # and allows us to see the output stats.
-WASM_FILE="sea-core/pkg/sea_core_bg.wasm"
-OPTIMIZED_FILE="sea-core/pkg/sea_core_bg.optimized.wasm"
+WASM_FILE="domainforge-core/pkg/domainforge_core_bg.wasm"
+OPTIMIZED_FILE="domainforge-core/pkg/domainforge_core_bg.optimized.wasm"
 
 if command -v wasm-opt >/dev/null 2>&1; then
     echo "🔧 Running explicit wasm-opt -Oz..."

@@ -42,7 +42,7 @@ This will:
 
 - Calculate the new version based on bump type
 - Show unified diffs for all affected files:
-  - `sea-core/Cargo.toml`
+  - `domainforge-core/Cargo.toml`
   - `pyproject.toml`
   - `package.json`
   - `CHANGELOG.md`

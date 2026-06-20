@@ -11,10 +11,10 @@ This document outlines the release plan, publishing order, and best practices fo
 ## Versioning & Manifests
 
 - Ensure version parity across:
-  - `sea-core/Cargo.toml` (Rust)
-  - `pyproject.toml` (Python - sea-dsl)
-  - `package.json` (TypeScript - @domainforge/sea)
-  - `pkg/package.json` (WASM - @domainforge/sea-wasm)
+  - `domainforge-core/Cargo.toml` (Rust)
+  - `pyproject.toml` (Python - domainforge)
+  - `package.json` (TypeScript - @godspeedai/domainforge)
+  - `pkg/package.json` (WASM - @godspeedai/domainforge-wasm)
 - Choose a semantic version (e.g., 0.1.0). All manifests must match before tagging.
 - Where appropriate, add a `CHANGELOG.md` entry summarizing changes in v0.1.0.
 
@@ -27,7 +27,7 @@ This document outlines the release plan, publishing order, and best practices fo
 2. Ensure the `README.md` no longer contains roadmap or "coming soon" statements; replace with instructions that reflect the current release state.
 3. Clean up repository: remove or secure plaintext secrets; ensure `secrets/secrets.yaml` is encrypted.
 4. Create or update `docs/plans/release-plan.md` (this file) and commit.
-5. Ensure `pyproject.toml`, `sea-core/Cargo.toml`, and `package.json` set the new version.
+5. Ensure `pyproject.toml`, `domainforge-core/Cargo.toml`, and `package.json` set the new version.
 6. Add or update `CHANGELOG.md` and verify the package metadata (`license`, `authors`, `keywords`).
 7. Run a release smoke test locally by building all artifacts (see below).
 
@@ -36,16 +36,16 @@ This document outlines the release plan, publishing order, and best practices fo
 - Rust:
 
   ```bash
-  cargo build -p sea-core --release
-  cargo test -p sea-core
+  cargo build -p domainforge-core --release
+  cargo test -p domainforge-core
   ```
 
 - Python:
 
   ```bash
   .venv/bin/python -m maturin build --release -o dist
-  .venv/bin/pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --force-reinstall dist/sea_dsl-<version>.whl
-  python -c "import sea_dsl; print(sea_dsl.__version__)"
+  .venv/bin/pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --force-reinstall dist/domainforge-<version>.whl
+  python -c "import domainforge; print(domainforge.__version__)"
   ```
 
 - TypeScript/NAPI:
@@ -66,15 +66,15 @@ This document outlines the release plan, publishing order, and best practices fo
 
 ## Publish Order & Rationale
 
-1. **Publish Rust core crate to crates.io** (`cargo publish`) — optional but recommended if Rust users will consume `sea-core` directly.
+1. **Publish Rust core crate to crates.io** (`cargo publish`) — optional but recommended if Rust users will consume `domainforge-core` directly.
    - Auth: `CARGO_REGISTRY_TOKEN` set in CI or environment.
-2. **Publish WASM package** (`@domainforge/sea-wasm`) to npm (pkg/)
+2. **Publish WASM package** (`@godspeedai/domainforge-wasm`) to npm (pkg/)
    - Auth: `NPM_TOKEN` (or CI secret).
    - Reason: Browser & edge consumers rely on the WASM artifact.
-3. **Publish TypeScript bindings** (`@domainforge/sea`) to npm
+3. **Publish TypeScript bindings** (`@godspeedai/domainforge`) to npm
    - Auth: `NPM_TOKEN`.
    - Reason: Node consumers and the TypeScript API should be available for consumption.
-4. **Publish Python** (`sea-dsl`) to PyPI (maturin/publish)
+4. **Publish Python** (`domainforge`) to PyPI (maturin/publish)
    - Auth: `PYPI_API_TOKEN` or `PYPI_TEST_API_TOKEN` for TestPyPI.
    - Reason: Python package distribution typically bundles native wheels; publish last so any native artifacts are stable.
 5. **Tag and GitHub release**: Create a signed tag `v0.1.0`, push it to the repo, and create a GitHub Release with the changelog and attachments.
@@ -87,7 +87,7 @@ This document outlines the release plan, publishing order, and best practices fo
 - Rust:
 
   ```bash
-  cargo publish --manifest-path sea-core/Cargo.toml
+  cargo publish --manifest-path domainforge-core/Cargo.toml
   ```
 
 - WASM (pkg/):
@@ -129,9 +129,9 @@ This document outlines the release plan, publishing order, and best practices fo
 - Update `README.md` to show how to install packages from the package registries.
 - Update any docs that previously said "coming soon".
 - Verify published packages are available:
-  - Rust: <https://crates.io/crates/sea-core>
-  - PyPI: <https://pypi.org/project/sea-dsl/>
-  - npm: <https://www.npmjs.com/package/@domainforge/sea>
+  - Rust: <https://crates.io/crates/domainforge-core>
+  - PyPI: <https://pypi.org/project/domainforge-python/>
+  - npm: <https://www.npmjs.com/package/@godspeedai/domainforge>
   - WASM package page
 - Create release notes and highlight breaking changes (if any).
 

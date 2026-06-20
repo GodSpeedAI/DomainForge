@@ -1,8 +1,8 @@
 # SEA DSL
 
-[![PyPI](https://img.shields.io/pypi/v/sea-dsl.svg)](https://pypi.org/project/sea-dsl/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/sea-dsl.svg)](https://pypi.org/project/sea-dsl/)
-[![License](https://img.shields.io/pypi/l/sea-dsl.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/domainforge.svg)](https://pypi.org/project/domainforge/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/domainforge.svg)](https://pypi.org/project/domainforge/)
+[![License](https://img.shields.io/pypi/l/domainforge.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
 [![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
 
 Python bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-specific language. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
@@ -19,7 +19,7 @@ Python bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-sp
 ## Installation
 
 ```bash
-pip install sea-dsl
+pip install domainforge
 ```
 
 **Requires:** Python 3.11+
@@ -29,7 +29,7 @@ pip install sea-dsl
 ### Parse from DSL
 
 ```python
-import sea_dsl
+import domainforge
 
 source = '''
     @namespace "supply_chain"
@@ -42,7 +42,7 @@ source = '''
     Flow "Cameras" from "Warehouse" to "Factory" quantity 100
 '''
 
-graph = sea_dsl.Graph.parse(source)
+graph = domainforge.Graph.parse(source)
 
 print(f"Entities: {graph.entity_count()}")
 print(f"Resources: {graph.resource_count()}")
@@ -52,21 +52,21 @@ print(f"Flows: {graph.flow_count()}")
 ### Build Programmatically
 
 ```python
-import sea_dsl
+import domainforge
 
-graph = sea_dsl.Graph()
+graph = domainforge.Graph()
 
 # Create primitives
-warehouse = sea_dsl.Entity("Warehouse", "logistics")
-factory = sea_dsl.Entity("Factory", "manufacturing")
-cameras = sea_dsl.Resource("Cameras", "units")
+warehouse = domainforge.Entity("Warehouse", "logistics")
+factory = domainforge.Entity("Factory", "manufacturing")
+cameras = domainforge.Resource("Cameras", "units")
 
 graph.add_entity(warehouse)
 graph.add_entity(factory)
 graph.add_resource(cameras)
 
 # Create flow
-flow = sea_dsl.Flow(
+flow = domainforge.Flow(
     cameras.id(),
     warehouse.id(),
     factory.id(),
@@ -82,7 +82,7 @@ for entity in graph.all_entities():
 ### Work with Attributes
 
 ```python
-entity = sea_dsl.Entity("Warehouse")
+entity = domainforge.Entity("Warehouse")
 entity.set_attribute("capacity", 10000)
 entity.set_attribute("location", "New York")
 
@@ -97,7 +97,7 @@ print(entity.get_attribute("location"))   # "New York"
 calm_json = graph.export_calm()
 
 # Import from CALM
-imported_graph = sea_dsl.Graph.import_calm(calm_json)
+imported_graph = domainforge.Graph.import_calm(calm_json)
 ```
 
 ## API Reference
@@ -158,7 +158,7 @@ Graph.import_calm(json_str)
 
 ```python
 # Load workspace registry
-reg = sea_dsl.NamespaceRegistry.from_file('.sea-registry.toml')
+reg = domainforge.NamespaceRegistry.from_file('.sea-registry.toml')
 
 # Resolve files
 for binding in reg.resolve_files():
@@ -211,16 +211,16 @@ Build from source for other platforms.
 
 | Package                                                              | Registry  | Description                    |
 | -------------------------------------------------------------------- | --------- | ------------------------------ |
-| [`sea-core`](https://crates.io/crates/sea-core)                      | crates.io | Rust core library              |
-| [`sea-dsl`](https://pypi.org/project/sea-dsl/)                       | PyPI      | Python bindings (this package) |
-| [`@domainforge/sea`](https://www.npmjs.com/package/@domainforge/sea) | npm       | TypeScript/Node.js bindings    |
+| [`domainforge-core`](https://crates.io/crates/domainforge-core)                      | crates.io | Rust core library              |
+| [`domainforge`](https://pypi.org/project/domainforge/)                       | PyPI      | Python bindings (this package) |
+| [`@godspeedai/domainforge`](https://www.npmjs.com/package/@godspeedai/domainforge) | npm       | TypeScript/Node.js bindings    |
 
 ## Policy Authority
 
 DomainForge includes a Policy Authority system for executable business authority:
 
 ```python
-from sea_dsl import AuthorityEnvironment, evaluate_authority
+from domainforge import AuthorityEnvironment, evaluate_authority
 
 # Create and validate environment
 env = AuthorityEnvironment(config_json)

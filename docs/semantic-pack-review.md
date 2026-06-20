@@ -101,7 +101,7 @@ This is intentional. The hash covers the full definition surface to prevent sile
 ### Building an Approved Pack with Review
 
 ```bash
-sea pack build \
+domainforge pack build \
   --source "models/**/*.sea" \
   --org acme \
   --domain logistics \

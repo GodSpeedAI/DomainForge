@@ -321,10 +321,10 @@ fn parse_sbvr_statement(&self, statement: &str) -> Result<Expression, SbvrError>
 
 ```bash
 # Import SBVR XMI file
-sea import --from sbvr vocabulary.xmi > model.sea
+domainforge import --from sbvr vocabulary.xmi > model.sea
 
 # Import with namespace override
-sea import --from sbvr --namespace my-domain vocabulary.xmi
+domainforge import --from sbvr --namespace my-domain vocabulary.xmi
 ```
 
 ---

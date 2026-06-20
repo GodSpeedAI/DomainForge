@@ -1,4 +1,4 @@
-from sea_dsl import Graph
+from domainforge import Graph
 
 PAYMENT_DSL = """
 Role "Payer"

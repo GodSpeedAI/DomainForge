@@ -37,7 +37,7 @@ Create an annotated git tag for a release.
 
 ARGUMENTS:
     VERSION         Version number (e.g., 0.7.0 or v0.7.0)
-                    If not provided, reads from sea-core/Cargo.toml
+                    If not provided, reads from domainforge-core/Cargo.toml
 
 OPTIONS:
     --dry-run       Show what would be done without creating tag
@@ -59,7 +59,7 @@ EOF
 }
 
 get_current_version() {
-    grep -m1 '^version = ' "$PROJECT_ROOT/sea-core/Cargo.toml" | sed 's/version = "\(.*\)"/\1/'
+    grep -m1 '^version = ' "$PROJECT_ROOT/domainforge-core/Cargo.toml" | sed 's/version = "\(.*\)"/\1/'
 }
 
 has_gpg_signing() {

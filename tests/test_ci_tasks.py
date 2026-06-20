@@ -89,7 +89,7 @@ class TestMaliciousArchiveExtraction:
             tf.addfile(member, io.BytesIO(data))
 
         with pytest.raises(ValueError, match="Unsafe path"):
-            unpack_and_verify(str(tar_path), "sea")
+            unpack_and_verify(str(tar_path), "domainforge")
 
     def test_malicious_tar_with_symlink_fails(self, tmp_path):
         tar_path = tmp_path / "symlink.tar.gz"
@@ -100,7 +100,7 @@ class TestMaliciousArchiveExtraction:
             tf.addfile(member)
 
         with pytest.raises(ValueError, match="Symlink"):
-            unpack_and_verify(str(tar_path), "sea")
+            unpack_and_verify(str(tar_path), "domainforge")
 
     def test_malicious_tar_with_absolute_path_fails(self, tmp_path):
         tar_path = tmp_path / "absolute.tar.gz"
@@ -111,7 +111,7 @@ class TestMaliciousArchiveExtraction:
             tf.addfile(member, io.BytesIO(data))
 
         with pytest.raises(ValueError, match="Unsafe path"):
-            unpack_and_verify(str(tar_path), "sea")
+            unpack_and_verify(str(tar_path), "domainforge")
 
     def test_malicious_zip_with_traversal_fails(self, tmp_path):
         zip_path = tmp_path / "malicious.zip"
@@ -119,19 +119,19 @@ class TestMaliciousArchiveExtraction:
             zf.writestr("../outside.txt", "malicious content")
 
         with pytest.raises(ValueError, match="Unsafe path"):
-            unpack_and_verify(str(zip_path), "sea")
+            unpack_and_verify(str(zip_path), "domainforge")
 
     def test_safe_tar_extracts_successfully(self, tmp_path):
         tar_path = tmp_path / "safe.tar.gz"
         with tarfile.open(str(tar_path), "w:gz") as tf:
             data = b"#!/bin/sh\necho v1.0.0"
-            member = tarfile.TarInfo(name="sea")
+            member = tarfile.TarInfo(name="domainforge")
             member.size = len(data)
             member.mode = 0o755
             tf.addfile(member, io.BytesIO(data))
 
         with patch_verify_cli(tmp_path):
-            result = unpack_and_verify(str(tar_path), "sea")
+            result = unpack_and_verify(str(tar_path), "domainforge")
             assert result == 0
 
 

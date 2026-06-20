@@ -1,17 +1,17 @@
 import pytest
-import sea_dsl
+import domainforge
 
 
 def test_graph_creation():
-    graph = sea_dsl.Graph()
+    graph = domainforge.Graph()
     assert graph.entity_count() == 0
     assert graph.resource_count() == 0
     assert graph.flow_count() == 0
 
 
 def test_graph_add_entity():
-    graph = sea_dsl.Graph()
-    entity = sea_dsl.Entity("Warehouse")
+    graph = domainforge.Graph()
+    entity = domainforge.Entity("Warehouse")
     
     graph.add_entity(entity)
     assert graph.entity_count() == 1
@@ -19,8 +19,8 @@ def test_graph_add_entity():
 
 
 def test_graph_add_resource():
-    graph = sea_dsl.Graph()
-    resource = sea_dsl.Resource("Cameras", "units")
+    graph = domainforge.Graph()
+    resource = domainforge.Resource("Cameras", "units")
     
     graph.add_resource(resource)
     assert graph.resource_count() == 1
@@ -28,16 +28,16 @@ def test_graph_add_resource():
 
 
 def test_graph_add_flow():
-    graph = sea_dsl.Graph()
-    warehouse = sea_dsl.Entity("Warehouse")
-    factory = sea_dsl.Entity("Factory")
-    cameras = sea_dsl.Resource("Cameras", "units")
+    graph = domainforge.Graph()
+    warehouse = domainforge.Entity("Warehouse")
+    factory = domainforge.Entity("Factory")
+    cameras = domainforge.Resource("Cameras", "units")
     
     graph.add_entity(warehouse)
     graph.add_entity(factory)
     graph.add_resource(cameras)
     
-    flow = sea_dsl.Flow(cameras.id, warehouse.id, factory.id, 100.0)
+    flow = domainforge.Flow(cameras.id, warehouse.id, factory.id, 100.0)
     graph.add_flow(flow)
     
     assert graph.flow_count() == 1
@@ -45,23 +45,23 @@ def test_graph_add_flow():
 
 
 def test_graph_flow_validation():
-    graph = sea_dsl.Graph()
-    warehouse = sea_dsl.Entity("Warehouse")
-    factory = sea_dsl.Entity("Factory")
-    cameras = sea_dsl.Resource("Cameras", "units")
+    graph = domainforge.Graph()
+    warehouse = domainforge.Entity("Warehouse")
+    factory = domainforge.Entity("Factory")
+    cameras = domainforge.Resource("Cameras", "units")
     
     graph.add_entity(warehouse)
     graph.add_resource(cameras)
     
-    flow = sea_dsl.Flow(cameras.id, warehouse.id, factory.id, 100.0)
+    flow = domainforge.Flow(cameras.id, warehouse.id, factory.id, 100.0)
     
     with pytest.raises(ValueError, match="Target entity not found"):
         graph.add_flow(flow)
 
 
 def test_graph_get_entity():
-    graph = sea_dsl.Graph()
-    entity = sea_dsl.Entity("Warehouse")
+    graph = domainforge.Graph()
+    entity = domainforge.Entity("Warehouse")
     graph.add_entity(entity)
     
     retrieved = graph.get_entity(entity.id)
@@ -71,8 +71,8 @@ def test_graph_get_entity():
 
 
 def test_graph_find_entity_by_name():
-    graph = sea_dsl.Graph()
-    entity = sea_dsl.Entity("Warehouse")
+    graph = domainforge.Graph()
+    entity = domainforge.Entity("Warehouse")
     graph.add_entity(entity)
     
     found_id = graph.find_entity_by_name("Warehouse")
@@ -83,19 +83,19 @@ def test_graph_find_entity_by_name():
 
 
 def test_graph_flows_from():
-    graph = sea_dsl.Graph()
-    warehouse = sea_dsl.Entity("Warehouse")
-    factory1 = sea_dsl.Entity("Factory1")
-    factory2 = sea_dsl.Entity("Factory2")
-    cameras = sea_dsl.Resource("Cameras", "units")
+    graph = domainforge.Graph()
+    warehouse = domainforge.Entity("Warehouse")
+    factory1 = domainforge.Entity("Factory1")
+    factory2 = domainforge.Entity("Factory2")
+    cameras = domainforge.Resource("Cameras", "units")
     
     graph.add_entity(warehouse)
     graph.add_entity(factory1)
     graph.add_entity(factory2)
     graph.add_resource(cameras)
     
-    flow1 = sea_dsl.Flow(cameras.id, warehouse.id, factory1.id, 100.0)
-    flow2 = sea_dsl.Flow(cameras.id, warehouse.id, factory2.id, 50.0)
+    flow1 = domainforge.Flow(cameras.id, warehouse.id, factory1.id, 100.0)
+    flow2 = domainforge.Flow(cameras.id, warehouse.id, factory2.id, 50.0)
     
     graph.add_flow(flow1)
     graph.add_flow(flow2)
@@ -105,16 +105,16 @@ def test_graph_flows_from():
 
 
 def test_graph_all_methods():
-    graph = sea_dsl.Graph()
-    e1 = sea_dsl.Entity("E1")
-    e2 = sea_dsl.Entity("E2")
-    r1 = sea_dsl.Resource("R1", "units")
+    graph = domainforge.Graph()
+    e1 = domainforge.Entity("E1")
+    e2 = domainforge.Entity("E2")
+    r1 = domainforge.Resource("R1", "units")
     
     graph.add_entity(e1)
     graph.add_entity(e2)
     graph.add_resource(r1)
     
-    flow = sea_dsl.Flow(r1.id, e1.id, e2.id, 10.0)
+    flow = domainforge.Flow(r1.id, e1.id, e2.id, 10.0)
     graph.add_flow(flow)
     
     all_entities = graph.all_entities()

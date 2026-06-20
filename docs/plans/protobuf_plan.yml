@@ -37,7 +37,7 @@ current_state:
   
   projection_module:
     status: PARTIAL
-    location: "sea-core/src/projection/"
+    location: "domainforge-core/src/projection/"
     existing_files:
       - "mod.rs: re-exports"
       - "engine.rs: ProjectionExporter trait (entity/flow only)"
@@ -60,13 +60,13 @@ current_state:
 # =============================================================================
 context:
   repo_root: "."
-  core_crate: "sea-core"
-  grammar_file: "sea-core/src/grammar/sea.pest"
-  ast_module: "sea-core/src/parser/ast.rs"
-  graph_module: "sea-core/src/graph/mod.rs"
-  projection_dir: "sea-core/src/projection"
-  cli_project: "sea-core/src/cli/project.rs"
-  tests_dir: "sea-core/tests"
+  core_crate: "domainforge-core"
+  grammar_file: "domainforge-core/src/grammar/sea.pest"
+  ast_module: "domainforge-core/src/parser/ast.rs"
+  graph_module: "domainforge-core/src/graph/mod.rs"
+  projection_dir: "domainforge-core/src/projection"
+  cli_project: "domainforge-core/src/cli/project.rs"
+  tests_dir: "domainforge-core/tests"
   examples_dir: "examples"
 
 # =============================================================================
@@ -93,7 +93,7 @@ phases:
       - id: 1_1_update_target_format_enum
         action: "Add Protobuf variant to TargetFormat"
         files:
-          - "sea-core/src/parser/ast.rs"
+          - "domainforge-core/src/parser/ast.rs"
         changes:
           - "Add 'Protobuf' to TargetFormat enum (line ~108)"
           - "Update Display impl to add 'Protobuf' case"
@@ -112,7 +112,7 @@ phases:
       - id: 1_2_update_grammar_if_needed
         action: "Ensure grammar accepts 'protobuf' as target"
         files:
-          - "sea-core/src/grammar/sea.pest"
+          - "domainforge-core/src/grammar/sea.pest"
         changes:
           - "Verify target_format rule includes 'protobuf' (case-insensitive)"
         acceptance_criteria:
@@ -127,17 +127,17 @@ phases:
     depends_on: [1_extend_target_format]
     steps:
       - id: 2_1_create_protobuf_module
-        action: "Create sea-core/src/projection/protobuf.rs"
+        action: "Create domainforge-core/src/projection/protobuf.rs"
         files:
-          - "sea-core/src/projection/protobuf.rs"
-          - "sea-core/src/projection/mod.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/mod.rs"
         changes:
           - "Define ProtoFile struct"
           - "Define ProtoMessage, ProtoField, ProtoEnum"
           - "Define ProtoTypeRef enum for type references"
           - "Add mod protobuf to projection/mod.rs"
         code_sketch: |
-          // sea-core/src/projection/protobuf.rs
+          // domainforge-core/src/projection/protobuf.rs
           use serde::{Serialize, Deserialize};
           
           #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -221,7 +221,7 @@ phases:
       - id: 2_2_type_mapping
         action: "Implement SEA type to Proto type mapping"
         files:
-          - "sea-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
         changes:
           - "Add fn map_sea_type_to_proto(sea_type: &str) -> ProtoType"
           - "Map String -> string, Int -> int64, Float -> double, etc."
@@ -255,7 +255,7 @@ phases:
       - id: 3_1_engine_struct
         action: "Create ProtobufEngine implementing projection logic"
         files:
-          - "sea-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
         changes:
           - "Define ProtobufEngine struct"
           - "Implement fn project(graph: &Graph, namespace: &str) -> ProtoFile"
@@ -314,7 +314,7 @@ phases:
       - id: 3_2_proto_serializer
         action: "Implement serialization to .proto text format"
         files:
-          - "sea-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
         changes:
           - "Add impl ProtoFile { pub fn to_proto_string(&self) -> String }"
           - "Format messages, fields, enums according to proto3 syntax"
@@ -377,7 +377,7 @@ phases:
       - id: 3_3_governance_messages
         action: "Add standard governance message generation"
         files:
-          - "sea-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
         changes:
           - "Add fn generate_governance_messages() -> Vec<ProtoMessage>"
           - "Include PolicyViolation, MetricEvent, GovernanceEvent messages"
@@ -395,7 +395,7 @@ phases:
       - id: 4_1_extend_project_command
         action: "Add --format protobuf to sea project command"
         files:
-          - "sea-core/src/cli/project.rs"
+          - "domainforge-core/src/cli/project.rs"
         changes:
           - "Add 'protobuf' to format enum/match"
           - "Call ProtobufEngine::project when format is protobuf"
@@ -407,7 +407,7 @@ phases:
       - id: 4_2_output_options
         action: "Add output path and namespace options"
         files:
-          - "sea-core/src/cli/project.rs"
+          - "domainforge-core/src/cli/project.rs"
         changes:
           - "Add --namespace flag to filter which namespaces to project"
           - "Add --output-dir flag for proto file destination"
@@ -427,7 +427,7 @@ phases:
       - id: 5_1_schema_history
         action: "Add mechanism to store/load previous schemas"
         files:
-          - "sea-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
         changes:
           - "Add SchemaHistoryStore trait"
           - "Implement file-based storage of previous ProtoFile"
@@ -437,7 +437,7 @@ phases:
       - id: 5_2_compatibility_checker
         action: "Implement compatibility rules"
         files:
-          - "sea-core/src/projection/protobuf.rs"
+          - "domainforge-core/src/projection/protobuf.rs"
         changes:
           - "Add CompatibilityChecker struct"
           - "Implement check() method with additive/backward/breaking rules"
@@ -458,7 +458,7 @@ phases:
       - id: 6_1_unit_tests
         action: "Add unit tests for Protobuf projection"
         files:
-          - "sea-core/tests/protobuf_projection_tests.rs"
+          - "domainforge-core/tests/protobuf_projection_tests.rs"
         changes:
           - "Test type mapping"
           - "Test entity → message conversion"
@@ -470,7 +470,7 @@ phases:
       - id: 6_2_integration_test
         action: "Add end-to-end integration test"
         files:
-          - "sea-core/tests/protobuf_projection_integration.rs"
+          - "domainforge-core/tests/protobuf_projection_integration.rs"
         changes:
           - "Parse .sea file → Graph → ProtoFile → .proto text"
           - "Verify output contains expected messages and fields"

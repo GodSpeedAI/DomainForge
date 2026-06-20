@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scan test files (sea-core/tests/*.rs) for `use` statements and detect likely unused imports.
+Scan test files (domainforge-core/tests/*.rs) for `use` statements and detect likely unused imports.
 Only flags imports where the `use` imports a single identifier and that identifier is not used elsewhere in the file.
 This heuristic avoids removing multi-import groups that might be used via macros or shadowed names.
 """
@@ -12,7 +12,7 @@ repo_root = Path(__file__).resolve().parents[1]
 
 
 def get_test_files():
-    tests_dir = repo_root / "sea-core" / "tests"
+    tests_dir = repo_root / "domainforge-core" / "tests"
     return list(tests_dir.glob("*.rs"))
 
 
@@ -56,7 +56,7 @@ for f in get_test_files():
                 if not occ:
                     candidates.append((str(f), i, line.strip(), ident))
             continue
-        # Try to capture single import names like `crate::graph::Graph` or `sea_core::Graph` or `std::fmt::Result`
+        # Try to capture single import names like `crate::graph::Graph` or `domainforge_core::Graph` or `std::fmt::Result`
         # Remove trailing traits like "pub use"? Not present here
         if "::" not in use_expr:
             continue

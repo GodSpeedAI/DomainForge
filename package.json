@@ -2,7 +2,7 @@
   "name": "domainforge",
   "private": true,
   "workspaces": [
-    "sea-typescript"
+    "domainforge-typescript"
   ],
   "scripts": {
     "test": "bun vitest run",

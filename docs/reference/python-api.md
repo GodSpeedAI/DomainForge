@@ -13,7 +13,7 @@ maturin develop
 
 # Or build wheel
 maturin build --release
-pip install target/wheels/sea_dsl-*.whl
+pip install target/wheels/domainforge-*.whl
 ```
 
 ## Quick Start
@@ -21,21 +21,21 @@ pip install target/wheels/sea_dsl-*.whl
 ### Creating Primitives
 
 ```python
-import sea_dsl
+import domainforge
 
 # Create entities - use new() for default namespace, new_with_namespace() for explicit
-warehouse = sea_dsl.Entity.new("Warehouse")  # Default namespace
-factory = sea_dsl.Entity.new_with_namespace("Factory", "manufacturing")
+warehouse = domainforge.Entity.new("Warehouse")  # Default namespace
+factory = domainforge.Entity.new_with_namespace("Factory", "manufacturing")
 
 # Namespace is always a string (not None), defaults to "default"
 print(warehouse.namespace())  # "default"
 print(factory.namespace())    # "manufacturing"
 
 # Create resources
-cameras = sea_dsl.Resource.new("Cameras", "units")
+cameras = domainforge.Resource.new("Cameras", "units")
 
 # Create flows - pass ConceptId values (clone before passing)
-flow = sea_dsl.Flow.new(
+flow = domainforge.Flow.new(
     cameras.id().clone(),
     warehouse.id().clone(),
     factory.id().clone(),
@@ -46,25 +46,25 @@ flow = sea_dsl.Flow.new(
 ### Building a Graph
 
 ```python
-import sea_dsl
+import domainforge
 from decimal import Decimal
 
 # Create and populate a graph
-graph = sea_dsl.Graph()
+graph = domainforge.Graph()
 
 # Entities with constructor patterns
-warehouse = sea_dsl.Entity.new("Warehouse")
-factory = sea_dsl.Entity.new_with_namespace("Factory", "manufacturing")
+warehouse = domainforge.Entity.new("Warehouse")
+factory = domainforge.Entity.new_with_namespace("Factory", "manufacturing")
 
 # Resources with units
-cameras = sea_dsl.Resource.new("Cameras", "units")
+cameras = domainforge.Resource.new("Cameras", "units")
 
 graph.add_entity(warehouse)
 graph.add_entity(factory)
 graph.add_resource(cameras)
 
 # Flow with ConceptId clones and Decimal quantity
-flow = sea_dsl.Flow.new(
+flow = domainforge.Flow.new(
     cameras.id().clone(),
     warehouse.id().clone(),
     factory.id().clone(),
@@ -79,7 +79,7 @@ print(f"Graph has {graph.flow_count()} flows")
 ### Parsing DSL Source
 
 ```python
-import sea_dsl
+import domainforge
 
 # Supports multiline strings with """ syntax
 source = '''
@@ -90,7 +90,7 @@ source = '''
     Flow "Cameras" from "Warehouse" to "Multi-line\nFactory Name" quantity 100
 '''
 
-graph = sea_dsl.Graph.parse(source)
+graph = domainforge.Graph.parse(source)
 print(f"Parsed {graph.entity_count()} entities")
 print(f"Parsed {graph.flow_count()} flows")
 
@@ -104,10 +104,10 @@ for flow in flows:
 ### Working with Attributes
 
 ```python
-import sea_dsl
+import domainforge
 
 # Use new() for default namespace
-entity = sea_dsl.Entity.new("Warehouse")
+entity = domainforge.Entity.new("Warehouse")
 entity.set_attribute("capacity", 10000)
 entity.set_attribute("location", "New York")
 
@@ -121,15 +121,15 @@ print(entity.namespace())  # "default"
 ### Formatting Source Code
 
 ```python
-import sea_dsl
+import domainforge
 
 # Format SEA-DSL source with default settings
 source = '''Entity   "Foo"  in    bar'''
-formatted = sea_dsl.format_source(source)
+formatted = domainforge.format_source(source)
 print(formatted)  # Entity "Foo" in bar
 
 # Format with custom options
-formatted = sea_dsl.format_source(
+formatted = domainforge.format_source(
     source,
     indent_width=2,
     use_tabs=False,
@@ -138,11 +138,11 @@ formatted = sea_dsl.format_source(
 )
 
 # Check if source is already formatted
-is_formatted = sea_dsl.check_format(source)
+is_formatted = domainforge.check_format(source)
 print(is_formatted)  # False
 
 # Check with formatted content
-is_formatted = sea_dsl.check_format('Entity "Foo" in bar\n')
+is_formatted = domainforge.check_format('Entity "Foo" in bar\n')
 print(is_formatted)  # True
 ```
 
@@ -222,7 +222,7 @@ flow = Flow.new(
 ### Expression API (December 2025)
 
 ```python
-from sea_dsl import Expression, BinaryOp
+from domainforge import Expression, BinaryOp
 
 # Factory methods
 expr = Expression.binary(
@@ -242,9 +242,9 @@ print(normalized.stable_hash())  # Stable hash for caching
 ### NamespaceRegistry (Workspace)
 
 ```python
-import sea_dsl
+import domainforge
 
-reg = sea_dsl.NamespaceRegistry.from_file('./.sea-registry.toml')
+reg = domainforge.NamespaceRegistry.from_file('./.sea-registry.toml')
 files = reg.resolve_files()
 for binding in files:
     print(binding.path, '=>', binding.namespace)
@@ -271,12 +271,12 @@ except Exception as e:
 
 ## Semantic Pack API
 
-The `sea_dsl` module exposes semantic pack types and functions for building, validating, signing, and inspecting packs programmatically.
+The `domainforge` module exposes semantic pack types and functions for building, validating, signing, and inspecting packs programmatically.
 
 ### Enums
 
 ```python
-from sea_dsl import (
+from domainforge import (
     SemanticTruth,        # Valid, Invalid, Unknown
     DiagnosticSeverity,   # Error, Warning, Info, Hint
     ValidationMode,       # Off, Warn, Strict
@@ -294,7 +294,7 @@ from sea_dsl import (
 ### SemanticPack Class
 
 ```python
-pack = sea_dsl.SemanticPack.from_json(pack_json_string)
+pack = domainforge.SemanticPack.from_json(pack_json_string)
 print(pack.pack_id())              # "acme/logistics/1.1.0"
 print(pack.schema_version())       # "0.3"
 print(pack.approval_state())       # ApprovalState.Approved
@@ -327,7 +327,7 @@ Methods:
 ### SemanticValidationResult Class
 
 ```python
-result = sea_dsl.SemanticValidationResult.from_json(result_json)
+result = domainforge.SemanticValidationResult.from_json(result_json)
 print(result.status())                        # SemanticValidationStatus.Passed
 print(result.diagnostics_json())              # JSON array of diagnostics
 print(result.unsigned_fixture_bypass_used())  # False
@@ -341,7 +341,7 @@ print(result.first_approved_version_bypass_used())  # False
 Build a semantic pack from input JSON. Returns a tuple of `(pack_json, error_list)`.
 
 ```python
-pack_json, errors = sea_dsl.build_semantic_pack(input_json)
+pack_json, errors = domainforge.build_semantic_pack(input_json)
 if errors:
     for err in errors:
         print(err)
@@ -352,7 +352,7 @@ if errors:
 Validate a pack's internal consistency. Returns a list of diagnostic JSON strings.
 
 ```python
-diagnostics = sea_dsl.validate_semantic_pack(pack_json)
+diagnostics = domainforge.validate_semantic_pack(pack_json)
 for d in diagnostics:
     print(d)
 ```
@@ -362,7 +362,7 @@ for d in diagnostics:
 Validate a source file against a pack. Returns a JSON result string.
 
 ```python
-result_json = sea_dsl.validate_graph_with_pack(
+result_json = domainforge.validate_graph_with_pack(
     pack_json,
     "source_uri",
     options_json
@@ -374,7 +374,7 @@ result_json = sea_dsl.validate_graph_with_pack(
 Sign a pack with an Ed25519 private key. Returns the signed pack JSON.
 
 ```python
-signed_json = sea_dsl.sign_pack(pack_json, private_key_pem_string)
+signed_json = domainforge.sign_pack(pack_json, private_key_pem_string)
 ```
 
 #### verify_pack_signature
@@ -382,7 +382,7 @@ signed_json = sea_dsl.sign_pack(pack_json, private_key_pem_string)
 Verify a pack's signature. Returns `True` or `False`.
 
 ```python
-is_valid = sea_dsl.verify_pack_signature(pack_json, public_key_pem_string)
+is_valid = domainforge.verify_pack_signature(pack_json, public_key_pem_string)
 ```
 
 #### diff_packs
@@ -390,7 +390,7 @@ is_valid = sea_dsl.verify_pack_signature(pack_json, public_key_pem_string)
 Compare two packs. Returns a JSON diff result.
 
 ```python
-diff_json = sea_dsl.diff_packs(old_pack_json, new_pack_json)
+diff_json = domainforge.diff_packs(old_pack_json, new_pack_json)
 ```
 
 #### compute_pack_hash
@@ -398,7 +398,7 @@ diff_json = sea_dsl.diff_packs(old_pack_json, new_pack_json)
 Compute the content hash of a pack.
 
 ```python
-hash_str = sea_dsl.compute_pack_hash(pack_json)
+hash_str = domainforge.compute_pack_hash(pack_json)
 ```
 
 #### normalize_lookup_key
@@ -406,7 +406,7 @@ hash_str = sea_dsl.compute_pack_hash(pack_json)
 Normalize a term for lookup (NFC, case-fold, whitespace collapse).
 
 ```python
-normalized = sea_dsl.normalize_lookup_key("  Hello   World  ")  # "hello world"
+normalized = domainforge.normalize_lookup_key("  Hello   World  ")  # "hello world"
 ```
 
 #### resolve_concept
@@ -414,7 +414,7 @@ normalized = sea_dsl.normalize_lookup_key("  Hello   World  ")  # "hello world"
 Resolve a term against a pack. Returns a JSON result with `resolved_concept_id`, `semantic_truth`, `diagnostic_code`, `message`, and `suggestions`.
 
 ```python
-result_json = sea_dsl.resolve_concept(
+result_json = domainforge.resolve_concept(
     "Supplier",
     pack_json,
     options_json

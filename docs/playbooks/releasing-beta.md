@@ -18,11 +18,11 @@ This playbook describes the process for releasing a new beta version of DomainFo
 
 If bumping manually, update version in all files (they must stay in sync):
 
-- `sea-core/Cargo.toml` (source of truth)
+- `domainforge-core/Cargo.toml` (source of truth)
 - `pyproject.toml`
 - `package.json`
 
-> Note: WASM `pkg/package.json` is auto-generated from `sea-core/Cargo.toml` during build.
+> Note: WASM `pkg/package.json` is auto-generated from `domainforge-core/Cargo.toml` during build.
 
 1. **Changelog**:
 
@@ -45,7 +45,7 @@ git push origin v0.x.0
 1. **Publish Rust Core**:
 
 ```bash
-cargo publish -p sea-core
+cargo publish -p domainforge-core
 ```
 
 1. **Publish Python**:
@@ -71,7 +71,7 @@ If a critical bug is found immediately:
 - **NPM**: Deprecate the package version and suggest replacement:
 
 ```bash
-npm deprecate @domainforge/sea@0.x.0 "Critical security bug; use @domainforge/sea@0.x.1"
+npm deprecate @godspeedai/domainforge@0.x.0 "Critical security bug; use @godspeedai/domainforge@0.x.1"
 ```
 
 - **PyPI**: Yank/unyank through standard tooling (e.g., `twine` or `maturin publish --yank`) or publish a hotfix patch:

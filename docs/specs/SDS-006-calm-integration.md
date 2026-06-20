@@ -310,10 +310,10 @@ pub fn import(json: &str) -> Result<Graph, CalmError> {
 
 ```bash
 # Export to CALM
-sea project --format calm model.sea > architecture.json
+domainforge project --format calm model.sea > architecture.json
 
 # Import from CALM
-sea import --from calm architecture.json > model.sea
+domainforge import --from calm architecture.json > model.sea
 ```
 
 ---
@@ -363,5 +363,5 @@ pub fn validate_calm_schema(json: &str) -> Result<(), CalmError> {
 ## Related Documents
 
 - [ADR-001: SEA-DSL as Semantic Source of Truth](./ADR-001-sea-dsl-semantic-source-of-truth.md)
-- [SDS-002: SEA Core Architecture](./SDS-002-sea-core-architecture.md)
+- [SDS-002: SEA Core Architecture](./SDS-002-domainforge-core-architecture.md)
 - [PRD-002: SEA CLI Tooling](./PRD-002-sea-cli-tooling.md)

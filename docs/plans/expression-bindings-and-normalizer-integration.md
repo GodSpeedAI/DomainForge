@@ -66,9 +66,9 @@ Expose wrapper with:
 
 | File                                | Changes                                      |
 | ----------------------------------- | -------------------------------------------- |
-| `sea-core/src/python/policy.rs`     | Add Expression, Policy, NormalizedExpression |
-| `sea-core/src/typescript/policy.rs` | Add Expression, Policy, NormalizedExpression |
-| `sea-core/src/wasm/policy.rs`       | Add Expression, Policy, NormalizedExpression |
+| `domainforge-core/src/python/policy.rs`     | Add Expression, Policy, NormalizedExpression |
+| `domainforge-core/src/typescript/policy.rs` | Add Expression, Policy, NormalizedExpression |
+| `domainforge-core/src/wasm/policy.rs`       | Add Expression, Policy, NormalizedExpression |
 | `tests/test_*.py`                   | Python binding tests                         |
 | `typescript-tests/*.test.ts`        | TypeScript binding tests                     |
 
@@ -97,21 +97,21 @@ The canonical normalizer is implemented but not accessible from CLI.
 
 ## Decision
 
-Add `sea normalize <expr>` command for interactive normalization.
+Add `domainforge normalize <expr>` command for interactive normalization.
 
 ## Proposed Usage
 
 ```bash
 # Normalize an expression string
-sea normalize "b AND a"
+domainforge normalize "b AND a"
 # Output: (a AND b)
 
 # Show equivalence
-sea normalize --check-equiv "a AND b" "b AND a"
+domainforge normalize --check-equiv "a AND b" "b AND a"
 # Output: Equivalent (hash: 0x7f3a...)
 
 # Output normalized form with hash
-sea normalize --json "true AND x"
+domainforge normalize --json "true AND x"
 # Output: {"normalized": "x", "hash": "0x..."}
 ```
 
@@ -119,8 +119,8 @@ sea normalize --json "true AND x"
 
 | File                         | Changes                          |
 | ---------------------------- | -------------------------------- |
-| `sea-core/src/bin/sea.rs`    | Add `normalize` subcommand       |
-| `sea-core/src/parser/mod.rs` | May need expression-only parsing |
+| `domainforge-core/src/bin/sea.rs`    | Add `normalize` subcommand       |
+| `domainforge-core/src/parser/mod.rs` | May need expression-only parsing |
 
 ## Dependencies
 

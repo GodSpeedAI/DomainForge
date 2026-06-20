@@ -1,6 +1,6 @@
-    Checking sea-core v0.0.1 (/home/sprime01/projects/domainforge/sea-core)
+    Checking domainforge-core v0.0.1 (/home/sprime01/projects/domainforge/domainforge-core)
 error[E0277]: `ReferenceType` cannot be converted to a Python object
-   --> sea-core/src/python/error.rs:121:63
+   --> domainforge-core/src/python/error.rs:121:63
     |
 121 |             if let Err(e) = exc_obj.setattr("reference_type", reference_type) {
     |                                     -------                   ^^^^^^^^^^^^^^ unsatisfied trait bound
@@ -8,7 +8,7 @@ error[E0277]: `ReferenceType` cannot be converted to a Python object
     |                                     required by a bound introduced by this call
     |
 help: the trait `IntoPyObject<'_>` is not implemented for `ReferenceType`
-   --> sea-core/src/validation_error.rs:223:1
+   --> domainforge-core/src/validation_error.rs:223:1
     |
 223 | pub enum ReferenceType {
     | ^^^^^^^^^^^^^^^^^^^^^^
@@ -35,7 +35,7 @@ note: required by a bound in `setattr`
     |            ^^^^^^^^^^^^^^^^^ required by this bound in `PyAnyMethods::setattr`
 
 error[E0277]: the trait bound `ReferenceType: serde::Serialize` is not satisfied
-   --> sea-core/src/wasm/error.rs:79:13
+   --> domainforge-core/src/wasm/error.rs:79:13
     |
  79 | /             serde_json::json!({
  80 | |                 "code": code,
@@ -50,7 +50,7 @@ error[E0277]: the trait bound `ReferenceType: serde::Serialize` is not satisfied
     |                required by a bound introduced by this call
     |
 help: the trait `Serialize` is not implemented for `ReferenceType`
-   --> sea-core/src/validation_error.rs:223:1
+   --> domainforge-core/src/validation_error.rs:223:1
     |
 223 | pub enum ReferenceType {
     | ^^^^^^^^^^^^^^^^^^^^^^
@@ -78,6 +78,6 @@ note: required by a bound in `serde_json::to_value`
     = note: this error originates in the macro `$crate::json_internal` which comes from the expansion of the macro `serde_json::json` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 For more information about this error, try `rustc --explain E0277`.
-error: could not compile `sea-core` (lib) due to 2 previous errors
+error: could not compile `domainforge-core` (lib) due to 2 previous errors
 warning: build failed, waiting for other jobs to finish...
-error: could not compile `sea-core` (lib test) due to 2 previous errors
+error: could not compile `domainforge-core` (lib test) due to 2 previous errors

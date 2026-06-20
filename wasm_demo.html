@@ -82,7 +82,7 @@
     </div>
 
     <script type="module">
-      import init, { Graph, Severity } from './sea-core/pkg/sea_core.js';
+      import init, { Graph, Severity } from './domainforge-core/pkg/domainforge_core.js';
 
       let graph;
 
@@ -91,7 +91,7 @@
           graph = new Graph();
 
           // Add some test entities
-          const { Entity, Resource, Flow } = await import('./sea-core/pkg/sea_core.js');
+          const { Entity, Resource, Flow } = await import('./domainforge-core/pkg/domainforge_core.js');
 
           const webServer = new Entity("WebServer", "infrastructure");
           webServer.setAttribute("encrypted", true);

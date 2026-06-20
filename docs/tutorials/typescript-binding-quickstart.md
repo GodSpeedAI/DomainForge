@@ -10,9 +10,9 @@ This guide demonstrates how to use DomainForge in a Node.js/TypeScript environme
 ## Step 1: Installation
 
 ```bash
-npm install @domainforge/sea
+npm install @godspeedai/domainforge
 # Or if building locally:
-# npm install ../sea-core/typescript
+# npm install ../domainforge-core/typescript
 ```
 
 ## Step 2: Create a Script
@@ -20,7 +20,7 @@ npm install @domainforge/sea
 Create `index.ts`.
 
 ```typescript
-import { parse, Model, Flow } from '@domainforge/sea';
+import { parse, Model, Flow } from '@godspeedai/domainforge';
 
 const seaContent = `
 entity API { type = "service" }
@@ -68,7 +68,7 @@ Found flow: upload
 ```typescript
 // architecture.test.ts
 import { describe, it, expect, beforeAll } from 'vitest';
-import { parse } from '@domainforge/sea';
+import { parse } from '@godspeedai/domainforge';
 import * as fs from 'fs';
 
 describe('Architecture Rules', () => {

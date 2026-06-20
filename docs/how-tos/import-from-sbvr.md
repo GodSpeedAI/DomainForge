@@ -23,10 +23,10 @@ SBVR is an OMG standard for expressing business vocabularies and rules in natura
 
 ```bash
 # Import SBVR XMI to SEA DSL
-sea import --format sbvr vocabulary.xmi > model.sea
+domainforge import --format sbvr vocabulary.xmi > model.sea
 
 # Import with custom namespace
-sea import --format sbvr --namespace my-domain vocabulary.xmi
+domainforge import --format sbvr --namespace my-domain vocabulary.xmi
 ```
 
 ## Example
@@ -61,7 +61,7 @@ sea import --format sbvr --namespace my-domain vocabulary.xmi
 ### Output: SEA DSL
 
 ```bash
-sea import --format sbvr vocabulary.xmi
+domainforge import --format sbvr vocabulary.xmi
 ```
 
 Produces:
@@ -159,7 +159,7 @@ Business rules are converted based on their type:
 ### Rust
 
 ```rust
-use sea_core::sbvr::SbvrModel;
+use domainforge_core::sbvr::SbvrModel;
 
 let xmi = std::fs::read_to_string("vocabulary.xmi")?;
 let sbvr_model = SbvrModel::from_xmi(&xmi)?;
@@ -172,19 +172,19 @@ println!("Imported {} policies", graph.all_policies().count());
 ### Python
 
 ```python
-from sea_dsl import Graph
+from domainforge import Graph
 
 # Import SBVR via CLI subprocess
 import subprocess
 result = subprocess.run(
-    ["sea", "import", "--format", "sbvr", "vocabulary.xmi"],
+    ["domainforge", "import", "--format", "sbvr", "vocabulary.xmi"],
     capture_output=True,
     text=True
 )
-sea_dsl = result.stdout
+domainforge = result.stdout
 
 # Parse the resulting SEA DSL
-graph = Graph.parse(sea_dsl)
+graph = Graph.parse(domainforge)
 print(f"Imported {len(graph.entities())} entities")
 ```
 
@@ -202,17 +202,17 @@ Some SBVR statements cannot be automatically converted to SEA expressions. These
 ## Post-Import Workflow
 
 1. **Review imported policies**: Check for `@original_sbvr` markers indicating statements that need manual conversion
-2. **Validate the model**: Run `sea validate model.sea` to check for semantic errors
+2. **Validate the model**: Run `domainforge validate model.sea` to check for semantic errors
 3. **Refine expressions**: Convert natural language statements to formal SEA expressions
 4. **Add missing details**: SBVR may not capture all attributes needed for your domain
 
 ```bash
 # Validate imported model
-sea validate model.sea
+domainforge validate model.sea
 
 # Export to other formats
-sea project --format calm model.sea architecture.json
-sea project --format protobuf model.sea contracts.proto
+domainforge project --format calm model.sea architecture.json
+domainforge project --format protobuf model.sea contracts.proto
 ```
 
 ## Troubleshooting

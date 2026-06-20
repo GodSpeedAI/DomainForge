@@ -1,6 +1,6 @@
 """Tests for Expression and NormalizedExpression bindings."""
 
-from sea_dsl import (
+from domainforge import (
     Expression,
     NormalizedExpression,
     BinaryOp,

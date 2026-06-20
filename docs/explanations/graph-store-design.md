@@ -1,6 +1,6 @@
 # Graph Store Design
 
-The Graph Store (`sea-core/src/graph/mod.rs`) is the in-memory database that holds the semantic model. It is designed for performance, correctness, and deterministic behavior.
+The Graph Store (`domainforge-core/src/graph/mod.rs`) is the in-memory database that holds the semantic model. It is designed for performance, correctness, and deterministic behavior.
 
 ## Data Structure: IndexMap
 

@@ -32,7 +32,7 @@ This directory contains the architectural documentation for DomainForge and the 
 | Document                                           | Status      | Summary                                   |
 | -------------------------------------------------- | ----------- | ----------------------------------------- |
 | [SDS-001](./SDS-001-protobuf-projection-engine.md) | Draft       | Protobuf Projection Engine design         |
-| [SDS-002](./SDS-002-sea-core-architecture.md)      | Implemented | Core library architecture and modules     |
+| [SDS-002](./SDS-002-domainforge-core-architecture.md)      | Implemented | Core library architecture and modules     |
 | [SDS-003](./SDS-003-parser-semantic-graph.md)      | Implemented | Parser pipeline and graph construction    |
 | [SDS-004](./SDS-004-policy-engine-design.md)       | Implemented | Policy evaluation with three-valued logic |
 | [SDS-005](./SDS-005-knowledge-graph-module.md)     | Implemented | RDF/Turtle export/import and SHACL        |
@@ -49,14 +49,14 @@ This directory contains the architectural documentation for DomainForge and the 
 
 4. **Traceability**: Every generated artifact links back to its semantic source and projection declaration.
 
-5. **Single Source of Truth**: Rust core (`sea-core`) is the single implementation; all language bindings wrap it.
+5. **Single Source of Truth**: Rust core (`domainforge-core`) is the single implementation; all language bindings wrap it.
 
 6. **Standards Alignment**: Built on SBVR semantics, RDF interoperability, and FINOS CALM architecture standards.
 
 ## Quick Links
 
 - [Implementation Roadmap](../plans/protobuf_plan.yml)
-- [SEA-DSL Reference](../../sea-core/README.md)
+- [SEA-DSL Reference](../../domainforge-core/README.md)
 - [Python README](../../README_PYTHON.md)
 - [TypeScript README](../../README_TYPESCRIPT.md)
 - [WASM README](../../README_WASM.md)

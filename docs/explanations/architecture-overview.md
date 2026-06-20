@@ -40,9 +40,9 @@ graph TD
     Graph --> CLI
 ```
 
-## Core Components (`sea-core`)
+## Core Components (`domainforge-core`)
 
-The `sea-core` crate is the canonical implementation of the Semantic Enterprise Architecture DSL.
+The `domainforge-core` crate is the canonical implementation of the Semantic Enterprise Architecture DSL.
 
 ### 1. Grammar & Parsing
 
@@ -52,7 +52,7 @@ The `sea-core` crate is the canonical implementation of the Semantic Enterprise 
 
 
 
-- **Source**: `sea-core/grammar/sea.pest`
+- **Source**: `domainforge-core/grammar/sea.pest`
 
 - **Technology**: [Pest](https://pest.rs/) (PEG parser)
 
@@ -66,7 +66,7 @@ The `sea-core` crate is the canonical implementation of the Semantic Enterprise 
 
 
 
-- **Location**: `sea-core/src/primitives/`
+- **Location**: `domainforge-core/src/primitives/`
 
 
 - **Types**: `Entity`, `Resource`, `Flow`, `Instance`, `Policy`
@@ -77,14 +77,14 @@ The `sea-core` crate is the canonical implementation of the Semantic Enterprise 
 ### 3. Graph Store
 
 
-- **Location**: `sea-core/src/graph/mod.rs`
+- **Location**: `domainforge-core/src/graph/mod.rs`
 - **Technology**: `IndexMap` (for deterministic iteration)
 
 - **Role**: Acts as the in-memory database for the model. It resolves references (e.g., linking a Flow to its source Entity) and enables graph traversal algorithms.
 
 ### 4. Policy Engine
 
-- **Location**: `sea-core/src/policy/`
+- **Location**: `domainforge-core/src/policy/`
 - **Logic**: Three-valued logic (True, False, Unknown)
 - **Role**: Evaluates constraints against the model. It handles type inference and expression evaluation.
 

@@ -3,9 +3,9 @@
 # Usage: ./scripts/bump-version.sh [major|minor|patch|X.Y.Z] [OPTIONS]
 #
 # Updates version in:
-# - sea-core/Cargo.toml
-# - sea-dsl/pyproject.toml
-# - sea-typescript/package.json
+# - domainforge-core/Cargo.toml
+# - domainforge-python/pyproject.toml
+# - domainforge-typescript/package.json
 
 set -euo pipefail
 
@@ -53,9 +53,9 @@ OPTIONS:
     -h, --help      Show this help message
 
 FILES UPDATED:
-    - sea-core/Cargo.toml
-    - sea-dsl/pyproject.toml
-    - sea-typescript/package.json
+    - domainforge-core/Cargo.toml
+    - domainforge-python/pyproject.toml
+    - domainforge-typescript/package.json
 
 EXAMPLES:
     $(basename "$0") patch                    # 0.6.2 -> 0.6.3
@@ -68,7 +68,7 @@ EOF
 }
 
 get_current_version() {
-    grep -m1 '^version = ' "$PROJECT_ROOT/sea-core/Cargo.toml" | sed 's/version = "\(.*\)"/\1/'
+    grep -m1 '^version = ' "$PROJECT_ROOT/domainforge-core/Cargo.toml" | sed 's/version = "\(.*\)"/\1/'
 }
 
 calculate_new_version() {
@@ -112,10 +112,10 @@ update_cargo_toml() {
     local new="$2"
     
     if $DRY_RUN; then
-        log_info "Would update sea-core/Cargo.toml: $current -> $new"
+        log_info "Would update domainforge-core/Cargo.toml: $current -> $new"
     else
-        sed -i "s/^version = \"$current\"/version = \"$new\"/" "$PROJECT_ROOT/sea-core/Cargo.toml"
-        log_success "Updated sea-core/Cargo.toml"
+        sed -i "s/^version = \"$current\"/version = \"$new\"/" "$PROJECT_ROOT/domainforge-core/Cargo.toml"
+        log_success "Updated domainforge-core/Cargo.toml"
     fi
 }
 
@@ -126,8 +126,8 @@ update_pyproject_toml() {
     if $DRY_RUN; then
         log_info "Would update pyproject.toml: $current -> $new"
     else
-        sed -i "s/^version = \"$current\"/version = \"$new\"/" "$PROJECT_ROOT/sea-dsl/pyproject.toml"
-        log_success "Updated sea-dsl/pyproject.toml"
+        sed -i "s/^version = \"$current\"/version = \"$new\"/" "$PROJECT_ROOT/domainforge-python/pyproject.toml"
+        log_success "Updated domainforge-python/pyproject.toml"
     fi
 }
 
@@ -139,8 +139,8 @@ update_package_json() {
     else
         # Use jq to update version (avoids npm dependency issues)
         cd "$PROJECT_ROOT"
-        jq --arg v "$new" '.version = $v' sea-typescript/package.json > sea-typescript/package.json.tmp && mv sea-typescript/package.json.tmp sea-typescript/package.json
-        log_success "Updated sea-typescript/package.json"
+        jq --arg v "$new" '.version = $v' domainforge-typescript/package.json > domainforge-typescript/package.json.tmp && mv domainforge-typescript/package.json.tmp domainforge-typescript/package.json
+        log_success "Updated domainforge-typescript/package.json"
     fi
 }
 
@@ -227,7 +227,7 @@ update_package_json "$NEW_VERSION"
 if ! $DRY_RUN && ! $NO_COMMIT; then
     echo ""
     log_info "Creating git commit..."
-    git add sea-core/Cargo.toml sea-dsl/pyproject.toml sea-typescript/package.json
+    git add domainforge-core/Cargo.toml domainforge-python/pyproject.toml domainforge-typescript/package.json
     git commit -m "chore: bump version to v$NEW_VERSION" --quiet
     log_success "Created commit: chore: bump version to v$NEW_VERSION"
 fi

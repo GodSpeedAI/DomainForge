@@ -17,8 +17,8 @@ Goal: run `sea` validation in CI pipelines with machine-readable output and PR f
    - uses: actions-rust-lang/setup-rust-toolchain@v1
    - name: Build SEA CLI
      run: |
-       cd sea-core
-       cargo build --release --bin sea --features cli
+       cd domainforge-core
+       cargo build --release --bin domainforge --features cli
    ```
 
 2. **Validate models with JSON output**
@@ -26,7 +26,7 @@ Goal: run `sea` validation in CI pipelines with machine-readable output and PR f
    ```yaml
    - name: Validate models
      run: |
-       ./target/release/sea validate --format json models/ > validation-results.json
+       ./target/release/domainforge validate --format json models/ > validation-results.json
    ```
 
    - Exit code is non-zero on failure; wrap with `|| true` if you want to parse the report first.

@@ -28,10 +28,10 @@ if ! python -c "import pytest" 2>/dev/null; then
 fi
 
 # Build Python bindings in development mode.
-# pyproject.toml lives in sea-dsl/ and references sea-core/Cargo.toml via a
-# relative path, so maturin must be invoked from sea-dsl/.
-echo "Building with maturin develop (pyproject in sea-dsl/)..."
-cd sea-dsl && maturin develop
+# pyproject.toml lives in domainforge-python/ and references domainforge-core/Cargo.toml via a
+# relative path, so maturin must be invoked from domainforge-python/.
+echo "Building with maturin develop (pyproject in domainforge-python/)..."
+cd domainforge-python && maturin develop
 
 echo "✓ Python bindings built successfully"
 echo "✓ Virtual environment activated at $ROOT_DIR/.venv"

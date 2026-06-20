@@ -1,6 +1,6 @@
 # CLI Commands
 
-This reference captures the available CLI commands provided by the `sea` binary (feature `cli` in `sea-core`). Commands and flags mirror `sea --help` output and include examples with expected behavior.
+This reference captures the available CLI commands provided by the `sea` binary (feature `cli` in `domainforge-core`). Commands and flags mirror `domainforge --help` output and include examples with expected behavior.
 
 ## Conventions
 
@@ -11,11 +11,11 @@ This reference captures the available CLI commands provided by the `sea` binary 
 ## Global options
 
 ```
-sea --help
-sea --version
+domainforge --help
+domainforge --version
 ```
 
-- `--version` prints `sea-core <version>` (matches the built crate version).
+- `--version` prints `domainforge-core <version>` (matches the built crate version).
 - `--help` lists subcommands.
 
 ## parse
@@ -23,7 +23,7 @@ sea --version
 Parse a SEA file into an internal graph and print a summary.
 
 ```
-sea parse path/to/model.sea
+domainforge parse path/to/model.sea
 ```
 
 Options:
@@ -37,13 +37,13 @@ Options:
 Example:
 
 ```
-sea parse sea-core/examples/basic.sea --format human
+domainforge parse domainforge-core/examples/basic.sea --format human
 
 # Output AST JSON
-sea parse sea-core/examples/basic.sea --ast --format json
+domainforge parse domainforge-core/examples/basic.sea --ast --format json
 
 # Output Graph JSON
-sea parse sea-core/examples/basic.sea --format json
+domainforge parse domainforge-core/examples/basic.sea --format json
 ```
 
 Expected output includes entity/resource/flow counts and the active namespace. AST mode outputs tagged AST nodes (e.g., `{"type": "Entity", ...}`).
@@ -53,7 +53,7 @@ Expected output includes entity/resource/flow counts and the active namespace. A
 Validate syntax and semantics of a SEA file.
 
 ```
-sea validate path/to/model.sea
+domainforge validate path/to/model.sea
 ```
 
 Options:
@@ -72,7 +72,7 @@ Exit codes:
 Export a model to other formats.
 
 ```
-sea project --format <calm|rdf|sbvr|dsl|protobuf> input.sea output.json
+domainforge project --format <calm|rdf|sbvr|dsl|protobuf> input.sea output.json
 ```
 
 Formats:
@@ -86,7 +86,7 @@ Formats:
 ### Protobuf-specific options
 
 ```bash
-sea project --format protobuf [OPTIONS] input.sea output.proto
+domainforge project --format protobuf [OPTIONS] input.sea output.proto
 ```
 
 | Option                   | Description                                               |
@@ -105,39 +105,39 @@ Example:
 
 ```bash
 # Basic export
-sea project --format protobuf model.sea output.proto
+domainforge project --format protobuf model.sea output.proto
 
 # With gRPC services and custom package
-sea project --format protobuf --include-services --package "com.example.api" model.sea api.proto
+domainforge project --format protobuf --include-services --package "com.example.api" model.sea api.proto
 
 # Multi-file with buf validation
-sea project --format protobuf --multi-file --buf-lint --output-dir ./proto model.sea
+domainforge project --format protobuf --multi-file --buf-lint --output-dir ./proto model.sea
 ```
 
 Use cases:
 
-- `sea project --format calm model.sea calm.json` to feed downstream systems.
-- `sea project --format rdf model.sea graph.ttl` to load into triple stores.
-- `sea project --format protobuf model.sea schema.proto` for gRPC/binary serialization.
+- `domainforge project --format calm model.sea calm.json` to feed downstream systems.
+- `domainforge project --format rdf model.sea graph.ttl` to load into triple stores.
+- `domainforge project --format protobuf model.sea schema.proto` for gRPC/binary serialization.
 
 ## import
 
 Import CALM JSON into SEA DSL.
 
 ```
-sea import --format calm calm.json
+domainforge import --format calm calm.json
 ```
 
 - Outputs SEA DSL to stdout by default; redirect to a file to persist.
-- Use `--out` to write directly: `sea import --format calm calm.json --out restored.sea`.
+- Use `--out` to write directly: `domainforge import --format calm calm.json --out restored.sea`.
 
 ### Import from Knowledge Graph (RDF)
 
 Import RDF/Turtle or RDF/XML into SEA Graph.
 
 ```
-sea import --format kg graph.ttl
-sea import --format kg graph.rdf
+domainforge import --format kg graph.ttl
+domainforge import --format kg graph.rdf
 ```
 
 - Auto-detects Turtle vs RDF/XML based on content.
@@ -148,7 +148,7 @@ sea import --format kg graph.rdf
 Import SBVR XMI vocabulary into SEA.
 
 ```
-sea import --format sbvr vocabulary.xmi
+domainforge import --format sbvr vocabulary.xmi
 ```
 
 - Converts noun concepts to entities.
@@ -161,8 +161,8 @@ sea import --format sbvr vocabulary.xmi
 Validate RDF/Turtle or RDF/XML files against SHACL shapes.
 
 ```
-sea validate-kg graph.ttl
-sea validate-kg graph.rdf
+domainforge validate-kg graph.ttl
+domainforge validate-kg graph.rdf
 ```
 
 - Requires building with `--features cli,shacl`.
@@ -174,7 +174,7 @@ sea validate-kg graph.rdf
 Normalize and compare policy expressions.
 
 ```
-sea normalize [OPTIONS] <EXPRESSION>
+domainforge normalize [OPTIONS] <EXPRESSION>
 ```
 
 Options:
@@ -186,21 +186,21 @@ Examples:
 
 ```bash
 # Normalize an expression
-sea normalize "b AND a"
+domainforge normalize "b AND a"
 # Output: (a AND b)
 
 # Check equivalence
-sea normalize "a AND b" --check-equiv "b AND a"
+domainforge normalize "a AND b" --check-equiv "b AND a"
 # Output:
 # (a AND b)
 # Equivalent (hash: 0x...)
 
 # JSON output
-sea normalize "true AND x" --json
+domainforge normalize "true AND x" --json
 # Output: { "normalized": "x", "hash": "0x..." }
 
 # JSON output with equivalence
-sea normalize "true AND x" --check-equiv "x" --json
+domainforge normalize "true AND x" --check-equiv "x" --json
 # Output: { "normalized": "x", "hash": "0x...", "equivalent": true }
 ```
 
@@ -228,7 +228,7 @@ Options:
 - `--format <human|json>`: JSON exposes violation details.
 - `--allow-unknown`: enable three-valued logic for incomplete data.
 
-Policy JSON schema matches `sea-core::policy::Policy`. See [`primitives-api`](./primitives-api.md) for the policy type.
+Policy JSON schema matches `domainforge-core::policy::Policy`. See [`primitives-api`](./primitives-api.md) for the policy type.
 
 ## fmt
 
@@ -299,7 +299,7 @@ sea explain --format human model.sea
 
 ## Environment variables
 
-- `SEA_LOG`: set to `debug` to enable verbose logging (`SEA_LOG=debug sea validate model.sea`).
+- `SEA_LOG`: set to `debug` to enable verbose logging (`SEA_LOG=debug domainforge validate model.sea`).
 - `SEA_REGISTRY`: default path for `.sea-registry.toml` if not provided via `--registry`.
 
 ## Exit codes summary
@@ -311,9 +311,9 @@ sea explain --format human model.sea
 ## Example workflow
 
 ```bash
-sea validate payment.sea \
-  && sea project --format calm payment.sea calm.json \
-  && sea import --format calm calm.json --out roundtrip.sea
+domainforge validate payment.sea \
+  && domainforge project --format calm payment.sea calm.json \
+  && domainforge import --format calm calm.json --out roundtrip.sea
 ```
 
 - First command fails fast on syntax/semantic issues.
@@ -322,7 +322,7 @@ sea validate payment.sea \
 
 ## Troubleshooting
 
-- If `sea` is not found, ensure `$HOME/.cargo/bin` is on `PATH` or reinstall with `cargo install --path sea-core --features cli --force`.
+- If `sea` is not found, ensure `$HOME/.cargo/bin` is on `PATH` or reinstall with `cargo install --path domainforge-core --features cli --force`.
 - For Windows, run inside Developer PowerShell so the MSVC toolchain is available.
 - Use `--format json` when parsing complex files to pinpoint the failing declaration.
 
@@ -338,7 +338,7 @@ sea validate payment.sea \
 ### Batch-validate a directory
 
 ```bash
-find models -name "*.sea" -print0 | xargs -0 -n1 -I{} sea validate {}
+find models -name "*.sea" -print0 | xargs -0 -n1 -I{} domainforge validate {}
 ```
 
 - Fails fast on the first invalid file when combined with `set -e` in CI scripts.
@@ -352,13 +352,13 @@ paths = ["./models/shared", "./models/payments"]
 ```
 
 ```bash
-sea validate --registry .sea-registry.toml models/payments/payment.sea
+domainforge validate --registry .sea-registry.toml models/payments/payment.sea
 ```
 
 ### Emit JSON for tooling
 
 ```bash
-sea parse model.sea --format json | jq '.entities[] | {name, id}'
+domainforge parse model.sea --format json | jq '.entities[] | {name, id}'
 ```
 
 - Use when integrating with code generators or graph visualizers.
@@ -366,22 +366,22 @@ sea parse model.sea --format json | jq '.entities[] | {name, id}'
 ### Check CLI help for a subcommand
 
 ```
-sea project --help
+domainforge project --help
 ```
 
-- Mirrors the subcommand definitions in `sea-core/src/bin/sea.rs`.
+- Mirrors the subcommand definitions in `domainforge-core/src/bin/sea.rs`.
 
 ## Command locations in the repository
 
-- Entry point: `sea-core/src/bin/sea.rs`
-- Subcommand implementations: `sea-core/src/cli/commands/*.rs`
-- Argument parsing: `sea-core/src/cli/mod.rs` (clap definitions)
+- Entry point: `domainforge-core/src/bin/sea.rs`
+- Subcommand implementations: `domainforge-core/src/cli/commands/*.rs`
+- Argument parsing: `domainforge-core/src/cli/mod.rs` (clap definitions)
 
 Reading these files ensures documentation stays aligned with the shipped binary.
 
 ## CI integration
 
-- The repo uses `just all-tests` to run Rust, Python, and TypeScript suites; incorporate `sea validate` on sample DSL fixtures to guard docs.
+- The repo uses `just all-tests` to run Rust, Python, and TypeScript suites; incorporate `domainforge validate` on sample DSL fixtures to guard docs.
 - When building release artifacts, the GitHub workflows call the same CLI with `--format json` to capture machine-readable outputs.
 
 ## Legacy flags
@@ -396,14 +396,14 @@ Reading these files ensures documentation stays aligned with the shipped binary.
 
 ## Pack Commands
 
-The `sea pack` subcommand provides tools for building, validating, inspecting, diffing, signing, and verifying semantic packs.
+The `domainforge pack` subcommand provides tools for building, validating, inspecting, diffing, signing, and verifying semantic packs.
 
-### sea pack build
+### domainforge pack build
 
 Build a semantic pack from .sea source files.
 
 ```bash
-sea pack build \
+domainforge pack build \
   --source <glob> \
   --org <id> \
   --domain <id> \
@@ -439,22 +439,22 @@ Examples:
 
 ```bash
 # Build a candidate pack
-sea pack build --source "models/**/*.sea" --org acme --domain logistics \
+domainforge pack build --source "models/**/*.sea" --org acme --domain logistics \
   --version 1.0.0 --meaning-version 1.0.0 --out packs/candidate.json
 
 # Build an approved pack with review
-sea pack build --source "models/**/*.sea" --org acme --domain logistics \
+domainforge pack build --source "models/**/*.sea" --org acme --domain logistics \
   --version 1.1.0 --meaning-version 1.1.0 --approval approved \
   --review reviews/logistics.jsonl --previous-pack packs/candidate.json \
   --out packs/approved.json
 ```
 
-### sea pack validate
+### domainforge pack validate
 
 Validate .sea source files against a semantic pack.
 
 ```bash
-sea pack validate \
+domainforge pack validate \
   --pack <path> \
   --mode off|warn|strict \
   --deprecated-policy allow|warn|error_in_strict|error_always \
@@ -482,19 +482,19 @@ Examples:
 
 ```bash
 # Warn-mode validation
-sea pack validate --pack packs/approved.json models/*.sea
+domainforge pack validate --pack packs/approved.json models/*.sea
 
 # Strict CI validation
-sea pack validate --pack packs/signed.json --mode strict \
+domainforge pack validate --pack packs/signed.json --mode strict \
   --require-signature --expected-hash sha256:abc123... models/**/*.sea
 ```
 
-### sea pack inspect
+### domainforge pack inspect
 
 Display metadata and contents of a semantic pack.
 
 ```bash
-sea pack inspect [--format human|json|jsonl] <pack-path>
+domainforge pack inspect [--format human|json|jsonl] <pack-path>
 ```
 
 Options:
@@ -506,16 +506,16 @@ Options:
 Example:
 
 ```bash
-sea pack inspect packs/acme-logistics-1.1.0.json
-sea pack inspect --format json packs/acme-logistics-1.1.0.json
+domainforge pack inspect packs/acme-logistics-1.1.0.json
+domainforge pack inspect --format json packs/acme-logistics-1.1.0.json
 ```
 
-### sea pack diff
+### domainforge pack diff
 
 Compare two semantic packs and classify changes.
 
 ```bash
-sea pack diff --old <path> --new <path> [--format human|json|jsonl]
+domainforge pack diff --old <path> --new <path> [--format human|json|jsonl]
 ```
 
 Options:
@@ -533,15 +533,15 @@ Diff classifications: `ADD` (additive), `DEF` (definitional change), `DEP` (depr
 Example:
 
 ```bash
-sea pack diff --old packs/v1.0.0.json --new packs/v1.1.0.json
+domainforge pack diff --old packs/v1.0.0.json --new packs/v1.1.0.json
 ```
 
-### sea pack sign
+### domainforge pack sign
 
 Sign a semantic pack with an Ed25519 private key.
 
 ```bash
-sea pack sign <pack-path> --key <private.pem> [--out <path>]
+domainforge pack sign <pack-path> --key <private.pem> [--out <path>]
 ```
 
 Options:
@@ -556,16 +556,16 @@ Exit codes: `0` success, `4` signing failure.
 Example:
 
 ```bash
-sea pack sign packs/approved.json --key keys/private.pem \
+domainforge pack sign packs/approved.json --key keys/private.pem \
   --out packs/signed.json
 ```
 
-### sea pack verify
+### domainforge pack verify
 
 Verify the Ed25519 signature of a semantic pack.
 
 ```bash
-sea pack verify <pack-path> --key <public.pem>
+domainforge pack verify <pack-path> --key <public.pem>
 ```
 
 Options:
@@ -579,10 +579,10 @@ Exit codes: `0` valid signature, `4` invalid or missing signature.
 Example:
 
 ```bash
-sea pack verify packs/signed.json --key keys/public.pem
+domainforge pack verify packs/signed.json --key keys/public.pem
 ```
 
 ## Version compatibility
 
-- New flags are added under minor version bumps; scripts should check `sea --version` to ensure expected options exist.
+- New flags are added under minor version bumps; scripts should check `domainforge --version` to ensure expected options exist.
 - The CLI respects semantic versioning with breaking changes gated to major bumps; see [`../explanations/versioning-strategy.md`](../explanations/versioning-strategy.md).

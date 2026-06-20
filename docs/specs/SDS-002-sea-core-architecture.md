@@ -1,7 +1,7 @@
 # SDS-002: SEA Core Architecture
 
 **System:** DomainForge  
-**Component:** sea-core  
+**Component:** domainforge-core  
 **Version:** 0.2.1  
 **Date:** 2025-12-14  
 **Status:** Implemented
@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-`sea-core` is the Rust implementation of the SEA Domain-Specific Language. It provides:
+`domainforge-core` is the Rust implementation of the SEA Domain-Specific Language. It provides:
 
 - **Parsing**: Convert `.sea` source text to AST and semantic graph
 - **Validation**: Enforce semantic rules and constraints
@@ -24,7 +24,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         sea-core                                │
+│                         domainforge-core                                │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐   │
 │  │  Parser  │→ │   AST    │→ │  Graph   │→ │  Projection   │   │
@@ -48,7 +48,7 @@
 ## 3. Module Structure
 
 ```
-sea-core/src/
+domainforge-core/src/
 ├── lib.rs              # Public API and feature-gated re-exports
 ├── bin/sea.rs          # CLI entry point
 │

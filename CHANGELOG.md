@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Semantic Pack System**: Added canonical semantic pack support with schema definitions, builder APIs, validation, diffing, pack-set resolution, canonical JSON, review records, and signing helpers.
 - **Authority Evaluation**: Added authority policy compilation and evaluation with environments, fact resolvers, resolver traces, policy transforms, and conformance coverage.
-- **CLI Pack Workflows**: Added `sea pack` and authority-oriented CLI support for building, validating, reviewing, signing, and checking semantic packs.
-- **Cross-Language Semantic Pack Bindings**: Exposed semantic pack and authority APIs through Python, TypeScript napi, and WASM bindings to keep FFI packages in lockstep with `sea-core`.
+- **CLI Pack Workflows**: Added `domainforge pack` and authority-oriented CLI support for building, validating, reviewing, signing, and checking semantic packs.
+- **Cross-Language Semantic Pack Bindings**: Exposed semantic pack and authority APIs through Python, TypeScript napi, and WASM bindings to keep FFI packages in lockstep with `domainforge-core`.
 - **Semantic Pack Fixtures And Tests**: Added ACME procurement fixtures and comprehensive Rust, Python, TypeScript, and WASM tests for semantic pack behavior, authority evaluation, aliases, pack sets, signing, and three-valued logic.
 - **Security And Diagnostics Documentation**: Added security model, generated-artifact policy, semantic pack, signing, review, diagnostics, and expanded language API documentation.
 - **Release And CI Guardrails**: Added release workflow linting, enterprise verification gates, resource guardrails, native export validation, and deterministic napi type patching.
@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CLI Parse Command**: New `sea parse` command for SEA file parsing
+- **CLI Parse Command**: New `domainforge parse` command for SEA file parsing
 - **AST JSON Output**: JSON output support for AST generation
 - **Custom Flow Annotations**: Grammar + parser support for flow annotations
 - **AST JSON Schema Generation**: Added `schemars` dependency for schema output
@@ -75,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CLI Registry Command**: New `sea registry resolve` subcommand for namespace resolution
+- **CLI Registry Command**: New `domainforge registry resolve` subcommand for namespace resolution
   - Supports `--fail-on-ambiguity` flag for strict matching
   - Enables CI integration tests for registry ambiguity detection
 
@@ -177,10 +177,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Commutative operand sorting for deterministic output
   - Stable hashing via xxhash-rust for caching and comparison
 
-- **`sea normalize` CLI Command**: New command for expression normalization
+- **`domainforge normalize` CLI Command**: New command for expression normalization
 
-  - Normalize policy expressions: `sea normalize "a AND b"`
-  - Check equivalence: `sea normalize "a AND b" --check-equiv "b AND a"`
+  - Normalize policy expressions: `domainforge normalize "a AND b"`
+  - Check equivalence: `domainforge normalize "a AND b" --check-equiv "b AND a"`
   - JSON output mode: `--json` for programmatic use
 
 - **Expression Bindings**: Full Expression API across all language bindings
@@ -228,7 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `aarch64-unknown-linux-gnu` (ARM Linux servers)
   - Cross-compilation using `cross` and `zig` for CI builds
 
-- **WASM npm Package**: `@domainforge/sea-core-wasm` now published to npm
+- **WASM npm Package**: `@domainforge/domainforge-core-wasm` now published to npm
 
   - Enables browser-based SEA DSL parsing and formatting
   - Published alongside existing napi bindings
@@ -278,8 +278,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Formatter Bindings**: Programmatic access to the formatter
 
-  - **Python**: `sea_dsl.format_source()`, `sea_dsl.check_format()`
-  - **TypeScript**: `formatSource()`, `checkFormat()` from `@domainforge/sea`
+  - **Python**: `domainforge.format_source()`, `domainforge.check_format()`
+  - **TypeScript**: `formatSource()`, `checkFormat()` from `@godspeedai/domainforge`
   - **WASM**: `formatSource()`, `checkFormat()` for browser environments
 
 - **Documentation**:
@@ -301,7 +301,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Entity and Resource projection to Protobuf messages
   - Type mapping from SEA types to proto scalar types
   - Deterministic field numbering for schema stability
-  - CLI command: `sea project --format protobuf model.sea output.proto`
+  - CLI command: `domainforge project --format protobuf model.sea output.proto`
 
 - **gRPC Service Generation**: Generate gRPC services from Flow patterns (Phase 2)
 
@@ -357,7 +357,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Policy (Constraint) export/import with SEA/SBVR expression formats
   - Association mapping for relationship types
 - **Namespace Registry Improvements**:
-  - `sea registry` CLI with `list` and `resolve` subcommands
+  - `domainforge registry` CLI with `list` and `resolve` subcommands
   - Longest-literal-prefix precedence for overlapping glob patterns
   - Deterministic alphabetical tie-breaker for equal prefixes
   - `--fail-on-ambiguity` flag for strict resolution
