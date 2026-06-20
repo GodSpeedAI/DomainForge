@@ -30,21 +30,24 @@
       "package-name": "domainforge-core",
       "component": "domainforge-core",
       "changelog-path": "CHANGELOG.md",
-      "extra-files": ["Cargo.lock"]
+      "extra-files": ["../Cargo.lock"],
+      "release-as": "0.13.0"
     },
     "domainforge-python": {
       "release-type": "python",
       "package-name": "domainforge",
       "component": "domainforge",
       "changelog-path": "CHANGELOG-python.md",
-      "extra-files": ["pyproject.toml"]
+      "extra-files": ["pyproject.toml"],
+      "release-as": "0.13.0"
     },
     "domainforge-typescript": {
       "release-type": "node",
       "package-name": "@godspeedai/domainforge",
       "component": "domainforge-typescript",
       "changelog-path": "CHANGELOG-typescript.md",
-      "extra-files": ["package.json"]
+      "extra-files": ["package.json"],
+      "release-as": "0.13.0"
     }
   }
 }

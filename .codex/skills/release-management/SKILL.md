@@ -102,6 +102,31 @@ Check in order:
 7. Update `docs/governance.md`.
 8. Run the dry-run and focused workflow validation.
 
+### Rename a component / bootstrap a renamed package
+
+Renaming a component (e.g. `sea-core` -> `domainforge-core`) or relaunching
+under new registry names breaks release-please's continuity: the old
+`<old-component>-v*` tags no longer match the new component names, so
+release-please reports `No user facing commits found since - skipping`. The
+historical commits also reference the old paths, so path-based attribution
+stops matching, and a rename committed as a hidden type (`chore`) does not
+trigger a release on its own.
+
+To cut the first release under the new names:
+
+1. Update `release-please-config.json` package keys, `component`, and
+   `package-name` to the new names (done by the rename commit).
+2. Update `.release-please-manifest.json` keys to the new package keys with the
+   current version as the starting point.
+3. Add a per-package `"release-as": "<X.Y.Z>"` to `release-please-config.json`
+   for each renamed component to force the bootstrap release at the intended
+   version. release-please then opens a release PR even though no conventional
+   user-facing commit is attributed to the new components yet.
+4. Merge the release PR, confirm the new `<component>-v*` tags appear, and that
+   `deploy.yml` dispatches the publish workflows.
+5. After the first release ships, **remove `release-as`** from the config —
+   otherwise it pins every future release to that version.
+
 ## Common Mistakes
 
 | Mistake | Correction |
@@ -113,6 +138,8 @@ Check in order:
 | Treating old local release scripts as canonical | Use release-please unless the user requests legacy scripts. |
 | Putting package version files at repo root | release-please requires them under `<package-key>/`. Root-level packages must have a directory. |
 | Treating `deploy.yml` as a builder | `deploy.yml` is a router. The publish workflows own build + publish logic. |
+| `extra-files` referencing the workspace-root `Cargo.lock` as `"Cargo.lock"` | release-please resolves `extra-files` relative to the package dir, so for the `domainforge-core` crate use `"../Cargo.lock"` (the lockfile lives at the workspace root). |
+| Leaving `release-as` in the config after the bootstrap release | `release-as` pins the version. Add it to force the first release of a renamed component, then remove it once the tag lands. |
 
 ## References
 
