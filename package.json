@@ -1,7 +1,7 @@
 {
   "name": "domainforge",
   "version": "0.13.0",
-  "private": false,
+  "private": true,
   "workspaces": [
     "domainforge-typescript"
   ],
