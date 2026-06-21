@@ -68,9 +68,12 @@ jobs:
       - name: Publish to npm
         if: env.SKIP_PUBLISH != '1'
         working-directory: domainforge-typescript
-        run: npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || steps.secrets.outputs.npm-token }}
+        # Trusted publishing via OIDC: no NODE_AUTH_TOKEN. npm CLI auto-detects
+        # the OIDC environment and exchanges the GitHub id-token for a short-lived
+        # publish credential. Requires npm >= 11.5.1 (Node 24 bundles older npm).
+        run: |
+          npm install -g npm@^11.5.1
+          npm publish --access public --ignore-scripts
 
   publish-wasm:
     name: Publish WASM package to npm
