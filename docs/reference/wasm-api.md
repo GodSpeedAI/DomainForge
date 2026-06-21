@@ -134,7 +134,7 @@ const flow = Flow.new(resourceId.clone(), fromId.clone(), toId.clone(), 100);
 ### Parse from DSL
 
 ```javascript
-import { Graph } from "@godspeedai/domainforge-wasm";
+import { Graph } from "domainforge-wasm";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -157,7 +157,7 @@ console.log(astJson);
 ### Build Programmatically
 
 ```javascript
-import { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge-wasm";
+import { Graph, Entity, Resource, Flow } from "domainforge-wasm";
 
 const graph = new Graph();
 
@@ -187,7 +187,7 @@ console.log(factory.namespace()); // "manufacturing"
 ### Formatting Source Code
 
 ```javascript
-import { formatSource, checkFormat } from "@godspeedai/domainforge-wasm";
+import { formatSource, checkFormat } from "domainforge-wasm";
 
 const source = 'Entity   "Foo"  in    bar';
 
@@ -297,7 +297,7 @@ Rust Core (primitives, graph, parser)
 Export/import graphs to/from FINOS CALM format:
 
 ```javascript
-import { Graph } from "@godspeedai/domainforge-wasm";
+import { Graph } from "domainforge-wasm";
 
 // Build your model
 const graph = new Graph();
@@ -328,7 +328,7 @@ import {
   ConceptKind,                // Entity = 0, Resource = 1, Role = 2, Flow = 3, Policy = 4, Metric = 5, Dimension = 6, Unit = 7, External = 8
   AliasStatus,                // Approved = 0, Deprecated = 1, Ambiguous = 2, Blocked = 3
   SemanticValidationStatus,   // Passed = 0, Failed = 1, Unknown = 2, Blocked = 3
-} from "@godspeedai/domainforge-wasm";
+} from "domainforge-wasm";
 ```
 
 ### Functions

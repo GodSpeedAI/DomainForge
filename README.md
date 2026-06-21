@@ -91,7 +91,7 @@ print(f"Flows: {graph.flow_count()}")
 pip install domainforge
 
 # TypeScript / Node.js
-npm install @godspeedai/domainforge
+npm install domainforge
 
 # Rust
 cargo add domainforge-core
@@ -329,7 +329,7 @@ graph.add_flow(component_delivery)
 <summary><strong>💰 Finance: Payment Fraud Detection</strong> (click to expand)</summary>
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge";
+import { Graph, Entity, Resource, Flow } from "domainforge";
 
 const graph = new Graph();
 
@@ -421,7 +421,7 @@ u = domainforge.Unit("USD", "US Dollar", "Currency", 1.0, "USD")
 **TypeScript (napi-rs):**
 
 ```typescript
-import { Dimension, Unit } from "@godspeedai/domainforge";
+import { Dimension, Unit } from "domainforge";
 
 const d = Dimension.parse("currency");
 const u = new Unit("USD", "US Dollar", "Currency", 1.0, "USD");
@@ -528,7 +528,7 @@ trace_json, decision_json = env.evaluate(request_json, facts_json)
 ```
 
 ```typescript
-import { evaluateAuthority } from '@godspeedai/domainforge';
+import { evaluateAuthority } from 'domainforge';
 
 const result = evaluateAuthority(configJson, requestJson, factsJson);
 console.log(result.decisionJson);

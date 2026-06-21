@@ -13,8 +13,8 @@ This document outlines the release plan, publishing order, and best practices fo
 - Ensure version parity across:
   - `domainforge-core/Cargo.toml` (Rust)
   - `pyproject.toml` (Python - domainforge)
-  - `package.json` (TypeScript - @godspeedai/domainforge)
-  - `pkg/package.json` (WASM - @godspeedai/domainforge-wasm)
+  - `package.json` (TypeScript - domainforge)
+  - `pkg/package.json` (WASM - domainforge-wasm)
 - Choose a semantic version (e.g., 0.1.0). All manifests must match before tagging.
 - Where appropriate, add a `CHANGELOG.md` entry summarizing changes in v0.1.0.
 
@@ -68,10 +68,10 @@ This document outlines the release plan, publishing order, and best practices fo
 
 1. **Publish Rust core crate to crates.io** (`cargo publish`) — optional but recommended if Rust users will consume `domainforge-core` directly.
    - Auth: `CARGO_REGISTRY_TOKEN` set in CI or environment.
-2. **Publish WASM package** (`@godspeedai/domainforge-wasm`) to npm (pkg/)
+2. **Publish WASM package** (`domainforge-wasm`) to npm (pkg/)
    - Auth: `NPM_TOKEN` (or CI secret).
    - Reason: Browser & edge consumers rely on the WASM artifact.
-3. **Publish TypeScript bindings** (`@godspeedai/domainforge`) to npm
+3. **Publish TypeScript bindings** (`domainforge`) to npm
    - Auth: `NPM_TOKEN`.
    - Reason: Node consumers and the TypeScript API should be available for consumption.
 4. **Publish Python** (`domainforge`) to PyPI (maturin/publish)
@@ -131,7 +131,7 @@ This document outlines the release plan, publishing order, and best practices fo
 - Verify published packages are available:
   - Rust: <https://crates.io/crates/domainforge-core>
   - PyPI: <https://pypi.org/project/domainforge-python/>
-  - npm: <https://www.npmjs.com/package/@godspeedai/domainforge>
+  - npm: <https://www.npmjs.com/package/domainforge>
   - WASM package page
 - Create release notes and highlight breaking changes (if any).
 

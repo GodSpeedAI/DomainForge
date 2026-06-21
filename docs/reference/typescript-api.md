@@ -1,4 +1,4 @@
-# @godspeedai/domainforge
+# domainforge
 
 TypeScript/Node.js bindings for the SEA (Semantic Enterprise Architecture) DSL.
 
@@ -17,7 +17,7 @@ npm run build
 ## Quick Start
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge";
+import { Graph, Entity, Resource, Flow } from "domainforge";
 
 // Create a graph programmatically
 const graph = new Graph();
@@ -52,7 +52,7 @@ console.log(`Graph has ${graph.flowCount()} flows`);
 ## Parsing SEA DSL
 
 ```typescript
-import { Graph } from "@godspeedai/domainforge";
+import { Graph } from "domainforge";
 
 // Supports multiline strings with """ syntax
 const source = `
@@ -85,7 +85,7 @@ try {
 ## Formatting Source Code
 
 ```typescript
-import { formatSource, checkFormat } from "@godspeedai/domainforge";
+import { formatSource, checkFormat } from "domainforge";
 
 // Format SEA-DSL source with default settings
 const source = 'Entity   "Foo"  in    bar';
@@ -260,7 +260,7 @@ class Graph {
 ### Expression API (December 2025)
 
 ```typescript
-import { Expression, BinaryOp } from "@godspeedai/domainforge";
+import { Expression, BinaryOp } from "domainforge";
 
 // Factory methods
 const expr = Expression.binary(
@@ -329,7 +329,7 @@ class NormalizedExpression {
 ### NamespaceRegistry (Workspace)
 
 ```typescript
-import { NamespaceRegistry } from "@godspeedai/domainforge";
+import { NamespaceRegistry } from "domainforge";
 
 // Load a registry by path to the file
 const reg = NamespaceRegistry.from_file("./.sea-registry.toml");
@@ -407,7 +407,7 @@ Build from source for other platforms using `npm run build`.
 
 ## Semantic Pack API
 
-The `@godspeedai/domainforge` module exposes semantic pack enums and functions for building, validating, signing, and inspecting packs programmatically.
+The `domainforge` module exposes semantic pack enums and functions for building, validating, signing, and inspecting packs programmatically.
 
 ### Enums
 
@@ -422,7 +422,7 @@ import {
   ConceptKind,                // Entity = 0, Resource = 1, Role = 2, Flow = 3, Policy = 4, Metric = 5, Dimension = 6, Unit = 7, External = 8
   AliasStatus,                // Approved = 0, Deprecated = 1, Ambiguous = 2, Blocked = 3
   SemanticValidationStatus,   // Passed = 0, Failed = 1, Unknown = 2, Blocked = 3
-} from "@godspeedai/domainforge";
+} from "domainforge";
 ```
 
 ### Functions

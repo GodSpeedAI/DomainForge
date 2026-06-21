@@ -590,7 +590,7 @@ except Exception as e:
 ### In TypeScript
 
 ```typescript
-import { Graph } from "@godspeedai/domainforge";
+import { Graph } from "domainforge";
 
 try {
   const graph = Graph.parse(source);
@@ -606,7 +606,7 @@ try {
 ### In WASM/JavaScript
 
 ```javascript
-import { Graph } from "@godspeedai/domainforge-wasm";
+import { Graph } from "domainforge-wasm";
 
 try {
   const graph = Graph.parse(source);

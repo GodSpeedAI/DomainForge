@@ -9,7 +9,7 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
   - For developers building from this repo: `cargo install --path domainforge-core --features cli` (produces the `sea` binary).
   - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `domainforge --version`.
 
-- Optional: Python bindings (install locally via `maturin develop --features python` or via PyPI when published) and TypeScript package (`npm install @godspeedai/domainforge` then `npm run build`).
+- Optional: Python bindings (install locally via `maturin develop --features python` or via PyPI when published) and TypeScript package (`npm install domainforge` then `npm run build`).
 - A `.sea` source file. Use `domainforge-core/examples/basic.sea` or any model under `examples/` to follow along.
 
 ## Steps (be concise)
@@ -89,7 +89,7 @@ ast_json = Graph.parse_to_ast_json(text)
 
    ```ts
    import { readFileSync } from "fs";
-   import { Graph } from "@godspeedai/domainforge";
+   import { Graph } from "domainforge";
 
    const source = readFileSync("domainforge-core/examples/basic.sea", "utf8");
 

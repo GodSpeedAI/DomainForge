@@ -57,7 +57,7 @@ export interface FormatOptions {
  *
  * @example
  * ```typescript
- * import { formatSource } from '@godspeedai/domainforge';
+ * import { formatSource } from 'domainforge';
  *
  * const formatted = formatSource('Entity   "Foo"  in    bar');
  * console.log(formatted); // Entity "Foo" in bar
@@ -74,7 +74,7 @@ export declare function formatSource(source: string, options?: FormatOptions | u
  *
  * @example
  * ```typescript
- * import { checkFormat } from '@godspeedai/domainforge';
+ * import { checkFormat } from 'domainforge';
  *
  * console.log(checkFormat('Entity "Foo" in bar
 ')); // true

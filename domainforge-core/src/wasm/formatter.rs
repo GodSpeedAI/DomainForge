@@ -15,7 +15,7 @@ use wasm_bindgen::prelude::*;
 ///
 /// @example
 /// ```javascript
-/// import { formatSource } from '@godspeedai/domainforge-wasm';
+/// import { formatSource } from 'domainforge-wasm';
 ///
 /// const formatted = formatSource('Entity   "Foo"  in    bar');
 /// console.log(formatted); // Entity "Foo" in bar
@@ -53,7 +53,7 @@ pub fn format_source(
 ///
 /// @example
 /// ```javascript
-/// import { checkFormat } from '@godspeedai/domainforge-wasm';
+/// import { checkFormat } from 'domainforge-wasm';
 ///
 /// console.log(checkFormat('Entity "Foo" in bar\n')); // true
 /// console.log(checkFormat('Entity   "Foo"  in    bar')); // false

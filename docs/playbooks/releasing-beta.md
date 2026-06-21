@@ -71,7 +71,7 @@ If a critical bug is found immediately:
 - **NPM**: Deprecate the package version and suggest replacement:
 
 ```bash
-npm deprecate @godspeedai/domainforge@0.x.0 "Critical security bug; use @godspeedai/domainforge@0.x.1"
+npm deprecate domainforge@0.x.0 "Critical security bug; use domainforge@0.x.1"
 ```
 
 - **PyPI**: Yank/unyank through standard tooling (e.g., `twine` or `maturin publish --yank`) or publish a hotfix patch:

@@ -86,7 +86,7 @@ assert resource.unit == "USD"
 6. **Inspect units in TypeScript (re-using examples/custom_units.sea)**
 
    ```ts
-   import { Graph } from "@godspeedai/domainforge";
+   import { Graph } from "domainforge";
    import { readFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("examples/custom_units.sea", "utf8"));

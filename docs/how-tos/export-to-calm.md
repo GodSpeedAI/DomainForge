@@ -61,7 +61,7 @@ Goal: Export a SEA DSL model to FINOS CALM and verify the payload is valid.
 6. **Export programmatically in TypeScript**
 
    ```ts
-   import { Graph } from "@godspeedai/domainforge";
+   import { Graph } from "domainforge";
    import { readFileSync, writeFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("path/to/model.sea", "utf8"));

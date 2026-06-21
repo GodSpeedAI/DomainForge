@@ -88,7 +88,7 @@ publish process.
 |---|---|---|---|
 | `domainforge-core` (Rust) | `domainforge-core` | rust | `domainforge-core-vX.Y.Z` |
 | `domainforge` (Python) | `domainforge` | python | `domainforge-vX.Y.Z` |
-| `@godspeedai/domainforge` (TypeScript) | `domainforge-typescript` | node | `domainforge-typescript-vX.Y.Z` |
+| `domainforge` (TypeScript) | `domainforge-typescript` | node | `domainforge-typescript-vX.Y.Z` |
 
 ### Release-please trigger
 

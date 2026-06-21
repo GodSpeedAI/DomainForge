@@ -26,7 +26,7 @@ pub struct FormatOptions {
 ///
 /// @example
 /// ```typescript
-/// import { formatSource } from '@godspeedai/domainforge';
+/// import { formatSource } from 'domainforge';
 ///
 /// const formatted = formatSource('Entity   "Foo"  in    bar');
 /// console.log(formatted); // Entity "Foo" in bar
@@ -64,7 +64,7 @@ pub fn format_source(source: String, options: Option<FormatOptions>) -> Result<S
 ///
 /// @example
 /// ```typescript
-/// import { checkFormat } from '@godspeedai/domainforge';
+/// import { checkFormat } from 'domainforge';
 ///
 /// console.log(checkFormat('Entity "Foo" in bar\n')); // true
 /// console.log(checkFormat('Entity   "Foo"  in    bar')); // false

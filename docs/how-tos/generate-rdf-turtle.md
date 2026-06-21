@@ -59,7 +59,7 @@ Goal: Output SEA models as RDF/Turtle (or RDF/XML) for knowledge graph pipelines
 5. **Export programmatically in TypeScript**
 
    ```ts
-   import { Graph } from "@godspeedai/domainforge";
+   import { Graph } from "domainforge";
    import { writeFileSync } from "fs";
 
    const graph = Graph.parse(require("fs").readFileSync("domainforge-core/examples/basic.sea", "utf8"));
