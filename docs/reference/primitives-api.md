@@ -292,7 +292,7 @@ graph.add_relation(relation)
 ### Creating primitives in TypeScript
 
 ```ts
-import { Graph, Entity, Resource, Flow, Role, Relation } from "@godspeedai/domainforge";
+import { Graph, Entity, Resource, Flow, Role, Relation } from "domainforge";
 
 const graph = new Graph();
 const user = new Entity("User");

@@ -34,14 +34,14 @@ if command -v wasm-opt &> /dev/null; then
     mv ${PKG_DIR}/domainforge_core_bg_opt.wasm ${PKG_DIR}/domainforge_core_bg.wasm
 fi
 
-echo "Patching package.json (name=@godspeedai/domainforge-wasm, version=${VERSION})..."
+echo "Patching package.json (name=domainforge-wasm, version=${VERSION})..."
 cd "${PKG_DIR}"
 if command -v python3 &> /dev/null; then
     python3 -c "
 import json, sys
 with open('package.json', 'r') as f:
     pkg = json.load(f)
-pkg['name'] = '@godspeedai/domainforge-wasm'
+pkg['name'] = 'domainforge-wasm'
 pkg['version'] = '${VERSION}'
 pkg['description'] = 'WebAssembly bindings for SEA DSL - Semantic Enterprise Architecture'
 pkg['author'] = 'DomainForge Contributors'
@@ -58,7 +58,7 @@ elif command -v node &> /dev/null; then
     node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-pkg.name = '@godspeedai/domainforge-wasm';
+pkg.name = 'domainforge-wasm';
 pkg.version = '${VERSION}';
 pkg.description = 'WebAssembly bindings for SEA DSL - Semantic Enterprise Architecture';
 pkg.author = 'DomainForge Contributors';

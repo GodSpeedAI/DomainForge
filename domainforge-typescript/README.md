@@ -1,10 +1,10 @@
-# @godspeedai/domainforge
+# domainforge
 
-[![npm](https://img.shields.io/npm/v/@godspeedai/domainforge.svg)](https://www.npmjs.com/package/@godspeedai/domainforge)
-[![npm downloads](https://img.shields.io/npm/dm/@godspeedai/domainforge.svg)](https://www.npmjs.com/package/@godspeedai/domainforge)
-[![License](https://img.shields.io/npm/l/@godspeedai/domainforge.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/domainforge.svg)](https://www.npmjs.com/package/domainforge)
+[![npm downloads](https://img.shields.io/npm/dm/domainforge.svg)](https://www.npmjs.com/package/domainforge)
+[![License](https://img.shields.io/npm/l/domainforge.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
 [![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
-[![Node Version](https://img.shields.io/node/v/@godspeedai/domainforge.svg)](https://nodejs.org)
+[![Node Version](https://img.shields.io/node/v/domainforge.svg)](https://nodejs.org)
 
 TypeScript/Node.js bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-specific language. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
 
@@ -21,15 +21,15 @@ TypeScript/Node.js bindings for the **SEA DSL** (Semantic Enterprise Architectur
 ## Installation
 
 ```bash
-npm install @godspeedai/domainforge
+npm install domainforge
 ```
 
 ```bash
-yarn add @godspeedai/domainforge
+yarn add domainforge
 ```
 
 ```bash
-pnpm add @godspeedai/domainforge
+pnpm add domainforge
 ```
 
 **Requires:** Node.js 18+
@@ -39,7 +39,7 @@ pnpm add @godspeedai/domainforge
 ### Parse from DSL
 
 ```typescript
-import { Graph } from "@godspeedai/domainforge";
+import { Graph } from "domainforge";
 
 const source = `
   @namespace "supply_chain"
@@ -62,7 +62,7 @@ console.log(`Flows: ${graph.flowCount()}`);
 ### Build Programmatically
 
 ```typescript
-import { Graph, Entity, Resource, Flow } from "@godspeedai/domainforge";
+import { Graph, Entity, Resource, Flow } from "domainforge";
 
 const graph = new Graph();
 
@@ -215,7 +215,7 @@ class Graph {
 ### NamespaceRegistry
 
 ```typescript
-import { NamespaceRegistry } from "@godspeedai/domainforge";
+import { NamespaceRegistry } from "domainforge";
 
 // Load workspace registry
 const reg = NamespaceRegistry.fromFile(".sea-registry.toml");
@@ -266,14 +266,14 @@ npm test
 | -------------------------------------------------------------------- | --------- | ---------------------------------- |
 | [`domainforge-core`](https://crates.io/crates/domainforge-core)                      | crates.io | Rust core library                  |
 | [`domainforge`](https://pypi.org/project/domainforge/)                       | PyPI      | Python bindings                    |
-| [`@godspeedai/domainforge`](https://www.npmjs.com/package/@godspeedai/domainforge) | npm       | TypeScript bindings (this package) |
+| [`domainforge`](https://www.npmjs.com/package/domainforge) | npm       | TypeScript bindings (this package) |
 
 ## Policy Authority
 
 DomainForge includes a Policy Authority system for executable business authority:
 
 ```typescript
-import { evaluateAuthority, FinalDecision, PolicyModality, SourceClass, ClaimLevel } from '@godspeedai/domainforge';
+import { evaluateAuthority, FinalDecision, PolicyModality, SourceClass, ClaimLevel } from 'domainforge';
 
 const result = evaluateAuthority(configJson, requestJson, factsJson);
 const decision = JSON.parse(result.decisionJson);

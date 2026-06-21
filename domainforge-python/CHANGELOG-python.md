@@ -5,7 +5,7 @@
 
 ### ⚠ BREAKING CHANGES
 
-* **repo:** packages renamed sea-core -> domainforge-core (crates.io), sea-dsl -> domainforge (PyPI), @godspeedai/sea -> @godspeedai/domainforge (npm); the `sea` CLI binary is now `domainforge`. See the per-package MIGRATING.md files.
+* **repo:** packages renamed sea-core -> domainforge-core (crates.io), sea-dsl -> domainforge (PyPI), @godspeedai/sea -> domainforge (npm); the `sea` CLI binary is now `domainforge`. See the per-package MIGRATING.md files.
 
 ### Features
 

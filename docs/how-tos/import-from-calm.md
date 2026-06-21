@@ -8,7 +8,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 - Access to a CALM JSON file that conforms to the FINOS Architecture-as-Code schema (version `2.0` recommended).
 - Optional bindings:
   - Python package (`domainforge`) built via `maturin develop` for programmatic import.
-  - TypeScript package (`@godspeedai/domainforge`) built via `npm run build`.
+  - TypeScript package (`domainforge`) built via `npm run build`.
 
 ## Steps (be concise)
 
@@ -39,7 +39,7 @@ Goal: Import a FINOS CALM representation into DomainForge, verify integrity, and
 3. **Import programmatically in TypeScript**
 
    ```ts
-   import { Graph } from "@godspeedai/domainforge";
+   import { Graph } from "domainforge";
    import { readFileSync } from "fs";
 
    const calm = readFileSync("calm.json", "utf8");

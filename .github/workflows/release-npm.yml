@@ -102,7 +102,7 @@ jobs:
       - name: Build WASM package
         run: |
           cd domainforge-core
-          wasm-pack build --target web --release --scope godspeedai -- --features wasm
+          wasm-pack build --target web --release -- --features wasm
           node - <<'NODE'
           const fs = require('fs');
           const pkgPath = 'pkg/package.json';

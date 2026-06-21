@@ -337,7 +337,7 @@ pub fn format_source(source: String, indent_width: Option<u32>, use_tabs: Option
 **TypeScript usage:**
 
 ```typescript
-import { formatSource } from "@godspeedai/domainforge";
+import { formatSource } from "domainforge";
 
 const formatted = formatSource(`Entity   "Foo"  in    bar`);
 console.log(formatted); // Entity "Foo" in bar
@@ -363,7 +363,7 @@ pub fn format_source(source: &str, indent_width: Option<usize>, use_tabs: Option
 **Browser usage:**
 
 ```javascript
-import { formatSource } from "@godspeedai/domainforge-wasm";
+import { formatSource } from "domainforge-wasm";
 
 const formatted = formatSource(`Entity   "Foo"  in    bar`);
 document.getElementById("output").textContent = formatted;
@@ -441,7 +441,7 @@ def test_format_source():
 
 ```typescript
 // typescript-tests/formatter.test.ts
-import { formatSource } from "@godspeedai/domainforge";
+import { formatSource } from "domainforge";
 import { expect, test } from "vitest";
 
 test("formatSource normalizes whitespace", () => {
@@ -510,7 +510,7 @@ test("formatSource normalizes whitespace", () => {
 ### Bindings (Phase 5) ✅
 
 - [x] Python: `format_source()` function available in `domainforge` module
-- [x] TypeScript: `formatSource()` function exported from `@godspeedai/domainforge`
+- [x] TypeScript: `formatSource()` function exported from `domainforge`
 - [x] WASM: `formatSource()` function available in browser bundle
 - [x] All bindings produce identical output for same input (shared core)
 - [ ] Cross-language formatter tests pass (deferred - requires E2E test infrastructure)

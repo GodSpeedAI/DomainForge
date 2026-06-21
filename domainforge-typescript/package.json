@@ -1,5 +1,5 @@
 {
-  "name": "@godspeedai/domainforge",
+  "name": "domainforge",
   "version": "0.13.0",
   "description": "TypeScript bindings for the SEA (Semantic Enterprise Architecture) DSL",
   "main": "index.js",

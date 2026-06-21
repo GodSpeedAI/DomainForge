@@ -213,7 +213,7 @@ Build from source for other platforms.
 | -------------------------------------------------------------------- | --------- | ------------------------------ |
 | [`domainforge-core`](https://crates.io/crates/domainforge-core)                      | crates.io | Rust core library              |
 | [`domainforge`](https://pypi.org/project/domainforge/)                       | PyPI      | Python bindings (this package) |
-| [`@godspeedai/domainforge`](https://www.npmjs.com/package/@godspeedai/domainforge) | npm       | TypeScript/Node.js bindings    |
+| [`domainforge`](https://www.npmjs.com/package/domainforge) | npm       | TypeScript/Node.js bindings    |
 
 ## Policy Authority
 

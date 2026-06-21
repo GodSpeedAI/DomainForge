@@ -279,7 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Formatter Bindings**: Programmatic access to the formatter
 
   - **Python**: `domainforge.format_source()`, `domainforge.check_format()`
-  - **TypeScript**: `formatSource()`, `checkFormat()` from `@godspeedai/domainforge`
+  - **TypeScript**: `formatSource()`, `checkFormat()` from `domainforge`
   - **WASM**: `formatSource()`, `checkFormat()` for browser environments
 
 - **Documentation**:

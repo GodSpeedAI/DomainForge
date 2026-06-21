@@ -65,7 +65,7 @@ Goal: Author policies in SEA DSL and verify they evaluate correctly across CLI a
 5. **Evaluate a policy in TypeScript**
 
    ```ts
-   import { Graph } from "@godspeedai/domainforge";
+   import { Graph } from "domainforge";
    import { readFileSync } from "fs";
 
    const graph = Graph.parse(readFileSync("examples/policies.sea", "utf8"));

@@ -40,7 +40,7 @@
     },
     "domainforge-typescript": {
       "release-type": "node",
-      "package-name": "@godspeedai/domainforge",
+      "package-name": "domainforge",
       "component": "domainforge-typescript",
       "changelog-path": "CHANGELOG-typescript.md",
       "extra-files": ["package.json"]
