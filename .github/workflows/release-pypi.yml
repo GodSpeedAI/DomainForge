@@ -9,8 +9,43 @@ permissions:
   packages: write
 
 jobs:
+  build-sdist:
+    name: Publish sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Decrypt secrets
+        id: secrets
+        uses: ./.github/actions/decrypt-secrets
+        with:
+          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install maturin
+        run: pip install maturin==1.10.1
+
+      # Publish the sdist FIRST, before any wheel job, so the wheel matrix's
+      # maturin publish sees the sdist already exists and skips it cleanly
+      # (--skip-existing) instead of racing on the concurrent first upload.
+      - name: Publish sdist
+        working-directory: domainforge-python
+        run: python -m maturin publish --features python --target x86_64-unknown-linux-gnu --skip-existing
+        env:
+          MATURIN_PYPI_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}
+
   build-and-publish:
     name: Publish Wheels (${{ matrix.os }}, ${{ matrix.target }})
+    needs: build-sdist
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
