@@ -9,7 +9,7 @@ advanced ahead of a passing gate.
 
 | Target | CLI `--format` | Gate script | Status |
 |---|---|---|---|
-| CloudEvents | `cloudevents` | `scripts/verify/projection-targets/cloudevents.sh` | Planned |
+| CloudEvents | `cloudevents` | `scripts/verify/projection-targets/cloudevents.sh` | Implemented |
 | AsyncAPI | `asyncapi` | `scripts/verify/projection-targets/asyncapi.sh` | Planned |
 | Devbox | `devbox` | `scripts/verify/projection-targets/devbox.sh` | Planned |
 | Dagger | `dagger` | `scripts/verify/projection-targets/dagger.sh` | Planned |

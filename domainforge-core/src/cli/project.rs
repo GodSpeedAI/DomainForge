@@ -127,6 +127,9 @@ pub enum ProjectFormat {
     Dspy,
     /// Learning-loop operator: ZenML pipeline package (@step load/train/eval/register wired into a @pipeline DAG, model version keyed to the model hash; directory output)
     Zenml,
+    /// Event operator: CloudEvents 1.0 stream — one envelope per Flow (directory output)
+    #[value(name = "cloudevents")]
+    CloudEvents,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -202,6 +205,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Zenml => {
             run_zenml(&args, &graph)?;
+        }
+        ProjectFormat::CloudEvents => {
+            run_cloudevents(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -418,6 +424,43 @@ fn run_lean(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("lean projection failed: {e}"))?;
     println!(
         "Projected Lean 4 package to {} ({} files); check with `lake build`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_cloudevents(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format cloudevents (the projection is model-driven)"
+        ));
+    }
+
+    // Directory output, like the other model-driven projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the cloudevents projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::cloudevents::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("cloudevents projection failed: {e}"))?;
+    println!(
+        "Projected CloudEvents 1.0 stream to {} ({} files)",
         args.output.display(),
         files.len()
     );

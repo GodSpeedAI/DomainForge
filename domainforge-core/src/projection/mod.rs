@@ -3,6 +3,7 @@ pub mod archimate;
 pub mod baml;
 pub mod bpmn;
 pub mod buf;
+pub mod cloudevents;
 pub mod cmmn;
 pub mod contracts;
 pub mod dspy;
