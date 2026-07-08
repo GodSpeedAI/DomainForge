@@ -326,6 +326,267 @@ impl Graph {
         proto.to_proto_string()
     }
 
+    /// Compile the graph into AI Learning Projection artifacts.
+    ///
+    /// @param recipeJson - Optional JSON recipe (defaults enable all projections)
+    /// @param authorityConfigJson - Optional AuthorityEnvironmentConfig JSON; required for resolver-grounded families
+    /// @param modelRef - Provenance label for the source model
+    /// @param seed - Optional split/sampling seed (overrides the recipe seed)
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths (the `--format ai-learning` layout) to file contents
+    #[napi]
+    pub fn export_ai_learning(
+        &self,
+        recipe_json: Option<String>,
+        authority_config_json: Option<String>,
+        model_ref: Option<String>,
+        seed: Option<u32>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::ai_learning::project_ai_learning_in_memory(
+            &self.inner,
+            recipe_json.as_deref(),
+            authority_config_json.as_deref(),
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            seed.map(u64::from),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a Lean 4 formal verification package (the `--format lean` layout).
+    ///
+    /// @param modelRef - Provenance label for the source model
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_lean(
+        &self,
+        model_ref: Option<String>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::lean::project_lean_in_memory(
+            &self.inner,
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit an RDF/OWL dataset (the `--format rdf` layout).
+    ///
+    /// @param modelRef - Provenance label for the source model
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @param baseIri - Optional base IRI the `sea:` prefix expands to
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_rdf_projection(
+        &self,
+        model_ref: Option<String>,
+        created_at: Option<String>,
+        base_iri: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::rdf::project_rdf_in_memory(
+            &self.inner,
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            created_at,
+            base_iri,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a BPMN 2.0 process (the `--format bpmn` layout: model.bpmn).
+    ///
+    /// @param modelRef - Provenance label for the source model
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_bpmn(
+        &self,
+        model_ref: Option<String>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::bpmn::project_bpmn_in_memory(
+            &self.inner,
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a CMMN 1.1 case (the `--format cmmn` layout: model.cmmn).
+    ///
+    /// @param modelRef - Provenance label for the source model
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_cmmn(
+        &self,
+        model_ref: Option<String>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::cmmn::project_cmmn_in_memory(
+            &self.inner,
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit an ArchiMate 3.0 Model Exchange File (the `--format archimate`
+    /// layout: model.xml).
+    ///
+    /// @param modelRef - Provenance label for the source model
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_archimate(
+        &self,
+        model_ref: Option<String>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::archimate::project_archimate_in_memory(
+            &self.inner,
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit an OpenTelemetry SemConv projection (the `--format otel-semconv`
+    /// layout: registry/telemetry.yaml + constants/attributes.{rs,py,ts}).
+    ///
+    /// @param modelRef - Provenance label for the source model
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_otel_semconv(
+        &self,
+        model_ref: Option<String>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::otel::project_otel_semconv_in_memory(
+            &self.inner,
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a BAML capability (the `--format baml` layout: baml_src/*.baml +
+    /// README.md). Requires an authority environment: the function and its
+    /// tests are resolver-grounded.
+    ///
+    /// @param recipeJson - Optional JSON recipe (its `baml` section configures naming)
+    /// @param authorityConfigJson - AuthorityEnvironmentConfig JSON (required)
+    /// @param modelRef - Provenance label for the source model
+    /// @param seed - Optional seed override
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_baml(
+        &self,
+        recipe_json: Option<String>,
+        authority_config_json: Option<String>,
+        model_ref: Option<String>,
+        seed: Option<u32>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::baml::project_baml_in_memory(
+            &self.inner,
+            recipe_json.as_deref(),
+            authority_config_json.as_deref(),
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            seed.map(u64::from),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a DSPy optimization program (the `--format dspy` layout:
+    /// program.py, metric.py, optimize.py, dspy.config.json, README.md).
+    /// Requires an authority environment: the signature and its examples are
+    /// resolver-grounded. Train/dev examples are referenced from the
+    /// ai-learning LLM dataset, never copied.
+    ///
+    /// @param recipeJson - Optional JSON recipe (its `dspy` section configures naming/optimizer)
+    /// @param authorityConfigJson - AuthorityEnvironmentConfig JSON (required)
+    /// @param modelRef - Provenance label for the source model
+    /// @param seed - Optional seed override
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_dspy(
+        &self,
+        recipe_json: Option<String>,
+        authority_config_json: Option<String>,
+        model_ref: Option<String>,
+        seed: Option<u32>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::dspy::project_dspy_in_memory(
+            &self.inner,
+            recipe_json.as_deref(),
+            authority_config_json.as_deref(),
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            seed.map(u64::from),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a ZenML learning pipeline (the `--format zenml` layout:
+    /// pipeline.py, steps.py, run.py, requirements.txt, zenml.config.json,
+    /// README.md). Requires an authority environment: the pipeline and its
+    /// labeled examples are resolver-grounded. Train/dev examples are
+    /// referenced from the ai-learning LLM dataset, never copied.
+    ///
+    /// @param recipeJson - Optional JSON recipe (its `zenml` section configures pipeline/model/gate)
+    /// @param authorityConfigJson - AuthorityEnvironmentConfig JSON (required)
+    /// @param modelRef - Provenance label for the source model
+    /// @param seed - Optional seed override
+    /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+    /// @returns JSON object mapping relative artifact paths to file contents
+    #[napi]
+    pub fn export_zenml(
+        &self,
+        recipe_json: Option<String>,
+        authority_config_json: Option<String>,
+        model_ref: Option<String>,
+        seed: Option<u32>,
+        created_at: Option<String>,
+    ) -> Result<String> {
+        let artifacts = crate::projection::zenml::project_zenml_in_memory(
+            &self.inner,
+            recipe_json.as_deref(),
+            authority_config_json.as_deref(),
+            model_ref.as_deref().unwrap_or("<in-memory>"),
+            seed.map(u64::from),
+            created_at,
+        )
+        .map_err(Error::from_reason)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
     #[napi]
     pub fn add_policy(&mut self, policy_json: String) -> Result<()> {
         let policy: crate::policy::Policy = serde_json::from_str(&policy_json)

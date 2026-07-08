@@ -329,7 +329,524 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install cargo-audit
+        # Run cargo-audit directly instead of the deprecated rustsec/audit-check
+        # action, which fails with "Resource not accessible by integration" when
+        # it tries to publish a check run the default GITHUB_TOKEN cannot create.
+        # `cargo audit` reads audit.toml and exits non-zero only on unignored
+        # vulnerabilities.
+        run: cargo install cargo-audit --locked --quiet
+
       - name: Run cargo audit
-        uses: rustsec/audit-check@v1
+        run: cargo audit
+
+  verify-lean:
+    name: Verify Lean projection proof-checks
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Project the Lean fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format lean --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/lean/basic/domain/model.sea lean_out
+
+      - name: Install elan and resolve lake manifest
+        # lean-action's config step requires a committed lake-manifest.json,
+        # which the projection does not emit (it is a generated lockfile).
+        # Install elan and run `lake update` to materialize it from
+        # lakefile.toml + lean-toolchain before lean-action runs.
+        # `$GITHUB_PATH` only affects later steps, so export elan's bin dir
+        # locally here; lean-action re-exposes lake to the "Reject sorry" step.
+        run: |
+          set -e
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd lean_out && lake update
+
+      - name: Check proofs with lake build
+        uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean_out
+
+      - name: Reject sorry in the checked layer
+        run: |
+          cd lean_out
+          lake build DomainForge 2>&1 | tee build.log
+          if grep -q "uses 'sorry'" build.log; then
+            echo "::error::generated DomainForge library contains sorry"
+            exit 1
+          fi
+
+  verify-rdf:
+    name: Verify RDF projection validates
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Project the RDF fixture
+        run: |
+          cargo run --release --features cli,shacl --bin domainforge -- project \
+            --format rdf --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/rdf/basic/domain/model.sea rdf_out
+
+      - name: Validate the emitted Turtle with SHACL
+        run: |
+          cargo run --release --features cli,shacl --bin domainforge -- \
+            validate-kg rdf_out/model.ttl
+
+      - name: Parse the emitted JSON-LD
+        run: |
+          python3 -c "import json; json.load(open('rdf_out/model.jsonld')); print('model.jsonld parses')"
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli,shacl --bin domainforge -- project \
+            --format rdf --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/rdf/basic/domain/model.sea rdf_out2
+          diff -r rdf_out rdf_out2
+
+  verify-bpmn:
+    name: Verify BPMN projection validates
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Install xmllint (BPMN 2.0 XSD validator)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Project the BPMN fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format bpmn --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/bpmn/basic/domain/model.sea bpmn_out
+
+      - name: Validate the emitted BPMN against the vendored XSD
+        run: |
+          xmllint --schema schemas/bpmn/BPMN20.xsd bpmn_out/model.bpmn --noout
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format bpmn --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/bpmn/basic/domain/model.sea bpmn_out2
+          diff -r bpmn_out bpmn_out2
+
+  verify-cmmn:
+    name: Verify CMMN projection validates
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Install xmllint (CMMN 1.1 XSD validator)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Project the CMMN fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format cmmn --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/cmmn/basic/domain/model.sea cmmn_out
+
+      - name: Validate the emitted CMMN against the vendored XSD
+        run: |
+          xmllint --schema schemas/cmmn/CMMN11.xsd cmmn_out/model.cmmn --noout
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format cmmn --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/cmmn/basic/domain/model.sea cmmn_out2
+          diff -r cmmn_out cmmn_out2
+
+  verify-archimate:
+    name: Verify ArchiMate projection validates
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Install xmllint (ArchiMate Model Exchange XSD validator)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Project the ArchiMate fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format archimate --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/archimate/basic/domain/model.sea archimate_out
+
+      - name: Validate the emitted model against the vendored XSD
+        run: |
+          xmllint --schema schemas/archimate/archimate3_Diagram.xsd archimate_out/model.xml --noout
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format archimate --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/archimate/basic/domain/model.sea archimate_out2
+          diff -r archimate_out archimate_out2
+
+  verify-otel:
+    name: Verify OTel SemConv projection validates
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      # NOTE: OpenTelemetry's official `weaver registry check` is intentionally
+      # NOT used here. `weaver` is a heavy binary whose registry schema has
+      # churned across releases; for the small, closed registry subset this
+      # projection emits, we gate on a JSON-Schema validation of the YAML
+      # instead (schemas/otel/semconv_registry.schema.json). See
+      # docs/otel-projections.md and schemas/otel/VENDORED.md for the rationale.
+      - name: Install YAML + JSON-Schema validators
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml jsonschema
+
+      - name: Project the OTel fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format otel-semconv --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/otel/basic/domain/model.sea otel_out
+
+      - name: Validate the emitted registry against the JSON schema
+        run: |
+          python3 - <<'PY'
+          import json, sys, yaml, jsonschema
+          registry = yaml.safe_load(open("otel_out/registry/telemetry.yaml"))
+          schema = json.load(open("schemas/otel/semconv_registry.schema.json"))
+          jsonschema.validate(registry, schema)
+
+          # Single-producer gate: the registry attribute set must equal the
+          # generated Rust constant values.
+          ids = {
+              a["id"]
+              for g in registry["groups"]
+              if g["type"] == "attribute_group"
+              for a in g["attributes"]
+          }
+          consts = set()
+          for line in open("otel_out/constants/attributes.rs"):
+              if '= "' in line:
+                  consts.add(line.split('= "', 1)[1].rstrip().rstrip(";").strip('"'))
+          consts = {c for c in consts if "." in c}
+          if ids != consts:
+              print("registry vs constants mismatch:", ids ^ consts, file=sys.stderr)
+              sys.exit(1)
+          assert "domainforge.model.hash" in ids
+          print(f"OTel registry valid: {len(ids)} attributes agree across registry + constants")
+          PY
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format otel-semconv --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/otel/basic/domain/model.sea otel_out2
+          diff -r otel_out otel_out2
+
+  verify-baml:
+    name: Verify BAML projection is well-formed
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      # NOTE: BAML's official `baml-cli generate` is intentionally NOT used here.
+      # The generated project leaves the `client<llm>` block as a documented,
+      # commented-out placeholder so the output is vendor-neutral (no provider or
+      # credentials baked in). `baml-cli generate` would fail on that intentionally
+      # undefined client, and baking a vendor into the fixture purely to satisfy the
+      # generator would defeat the goal. We validate the emitted `.baml`
+      # structurally instead (schemas/baml/check_baml.py). See
+      # docs/baml-projections.md and schemas/baml/VENDORED.md for the rationale.
+      - name: Project the BAML fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format baml --recipe fixtures/baml/basic/recipes/baml.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/baml/basic/domain/model.sea baml_out
+
+      - name: Structurally validate the emitted BAML
+        run: |
+          python3 schemas/baml/check_baml.py baml_out/baml_src
+
+      - name: Assert a resolver-grounded authority case is present verbatim
+        run: |
+          grep -q 'actor_role "CertifiedAuditor"' baml_out/baml_src/tests.baml
+          grep -q 'operation "close_audit_finding"' baml_out/baml_src/tests.baml
+          grep -q 'resource_type "AuditFinding"' baml_out/baml_src/tests.baml
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format baml --recipe fixtures/baml/basic/recipes/baml.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/baml/basic/domain/model.sea baml_out2
+          diff -r baml_out baml_out2
+
+  verify-dspy:
+    name: Verify DSPy projection is well-formed
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      # NOTE: DSPy's optimizer is intentionally NOT run here. The projection
+      # emits program + config only; the baseline-vs-optimized comparison and
+      # the regression gate live in the emitted `optimize.py` (the user's
+      # compute, which needs a configured LM and a vendor). The plan's accepted
+      # floor is a Python `ast.parse` well-formedness check over every emitted
+      # `.py` file, which needs no third-party install. See
+      # docs/dspy-projections.md for the scope boundary.
+      - name: Project the DSPy fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format dspy --recipe fixtures/dspy/basic/recipes/dspy.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/dspy/basic/domain/model.sea dspy_out
+
+      - name: Assert every emitted Python file parses
+        run: |
+          python3 - <<'PY'
+          import ast, glob, sys
+          files = sorted(glob.glob("dspy_out/**/*.py", recursive=True))
+          assert files, "no emitted .py files found"
+          for path in files:
+              with open(path, "r", encoding="utf-8") as handle:
+                  ast.parse(handle.read())
+              print("ast.parse OK:", path)
+          PY
+
+      - name: Project the ai-learning dataset it references
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format ai-learning --recipe fixtures/dspy/basic/recipes/dspy.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/dspy/basic/domain/model.sea ai_learning_out
+
+      - name: Assert DSPy example refs resolve to ai-learning output
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          with open("dspy_out/dspy.config.json", "r", encoding="utf-8") as handle:
+              config = json.load(handle)
+          dataset = config["dataset"]
+          for key in ("train", "dev"):
+              ref = os.path.join("ai_learning_out", dataset[key])
+              if not os.path.exists(ref):
+                  sys.exit(f"DSPy {key} ref does not resolve to an ai-learning file: {ref}")
+              print(f"{key} ref resolves:", ref)
+          PY
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format dspy --recipe fixtures/dspy/basic/recipes/dspy.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/dspy/basic/domain/model.sea dspy_out2
+          diff -r dspy_out dspy_out2
+
+  verify-zenml:
+    name: Verify ZenML projection is well-formed
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      # NOTE: a real `pip install zenml` + live pipeline construction is
+      # intentionally NOT run here (yet). ZenML's dependency tree is very heavy
+      # (SQLAlchemy, pydantic, a web stack, ML extras) and slow/flaky to install
+      # on every CI run, and — per the scope boundary — the projection emits the
+      # pipeline DEFINITION only; training/evaluation/promotion is the user's
+      # compute on their ZenML stack. The plan's accepted blocking floor is a
+      # Python `ast.parse` well-formedness check over every emitted `.py` file
+      # (needs no third-party install), plus the cross-projection dataset-ref
+      # check. This is the same substitution the OTel (weaver) and DSPy
+      # projections make for heavyweight external tools; promoting a pinned
+      # `zenml` install to a separate non-blocking job is a documented follow-up.
+      # See docs/zenml-projections.md for the scope boundary and the pinned API
+      # line (ZENML_TARGET_VERSION).
+      - name: Project the ZenML fixture
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format zenml --recipe fixtures/zenml/basic/recipes/zenml.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/zenml/basic/domain/model.sea zenml_out
+
+      - name: Assert every emitted Python file parses
+        run: |
+          python3 - <<'PY'
+          import ast, glob
+          files = sorted(glob.glob("zenml_out/**/*.py", recursive=True))
+          assert files, "no emitted .py files found"
+          for path in files:
+              with open(path, "r", encoding="utf-8") as handle:
+                  ast.parse(handle.read())
+              print("ast.parse OK:", path)
+          PY
+
+      - name: Project the ai-learning dataset it references
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format ai-learning --recipe fixtures/zenml/basic/recipes/zenml.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/zenml/basic/domain/model.sea ai_learning_out
+
+      - name: Assert ZenML dataset refs resolve to ai-learning output
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          with open("zenml_out/zenml.config.json", "r", encoding="utf-8") as handle:
+              config = json.load(handle)
+          dataset = config["dataset"]
+          for key in ("train", "dev"):
+              ref = os.path.join("ai_learning_out", dataset[key])
+              if not os.path.exists(ref):
+                  sys.exit(f"ZenML {key} ref does not resolve to an ai-learning file: {ref}")
+              print(f"{key} ref resolves:", ref)
+          PY
+
+      - name: Assert byte-determinism across two runs
+        run: |
+          cargo run --release --features cli --bin domainforge -- project \
+            --format zenml --recipe fixtures/zenml/basic/recipes/zenml.json \
+            --created-at 2026-07-02T00:00:00+00:00 \
+            fixtures/zenml/basic/domain/model.sea zenml_out2
+          diff -r zenml_out zenml_out2

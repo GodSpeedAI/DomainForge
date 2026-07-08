@@ -316,6 +316,267 @@ impl Graph {
         proto.to_proto_string()
     }
 
+    /// Compile the graph into AI Learning Projection artifacts.
+    ///
+    /// Args:
+    ///     recipe_json: Optional JSON recipe (defaults enable all projections)
+    ///     authority_config_json: Optional AuthorityEnvironmentConfig JSON;
+    ///         required for resolver-grounded families (authorization Q&A,
+    ///         policy violation sampling, CEP AuthorityBench)
+    ///     model_ref: Provenance label for the source model
+    ///     seed: Optional split/sampling seed (overrides the recipe seed)
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths (the `--format
+    ///     ai-learning` layout) to file contents
+    #[pyo3(signature = (recipe_json = None, authority_config_json = None, model_ref = "<in-memory>", seed = None, created_at = None))]
+    fn export_ai_learning(
+        &self,
+        recipe_json: Option<&str>,
+        authority_config_json: Option<&str>,
+        model_ref: &str,
+        seed: Option<u64>,
+        created_at: Option<String>,
+    ) -> PyResult<String> {
+        let artifacts = crate::projection::ai_learning::project_ai_learning_in_memory(
+            &self.inner,
+            recipe_json,
+            authority_config_json,
+            model_ref,
+            seed,
+            created_at,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a Lean 4 formal verification package (the `--format lean` layout).
+    ///
+    /// Args:
+    ///     model_ref: Provenance label for the source model
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (model_ref = "<in-memory>", created_at = None))]
+    fn export_lean(&self, model_ref: &str, created_at: Option<String>) -> PyResult<String> {
+        let artifacts =
+            crate::projection::lean::project_lean_in_memory(&self.inner, model_ref, created_at)
+                .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit an RDF/OWL dataset (the `--format rdf` layout: model.ttl,
+    /// model.jsonld, ontology.owl.ttl).
+    ///
+    /// Args:
+    ///     model_ref: Provenance label for the source model
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///     base_iri: Optional base IRI the `sea:` prefix expands to
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (model_ref = "<in-memory>", created_at = None, base_iri = None))]
+    fn export_rdf_projection(
+        &self,
+        model_ref: &str,
+        created_at: Option<String>,
+        base_iri: Option<String>,
+    ) -> PyResult<String> {
+        let artifacts = crate::projection::rdf::project_rdf_in_memory(
+            &self.inner,
+            model_ref,
+            created_at,
+            base_iri,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a BPMN 2.0 process (the `--format bpmn` layout: model.bpmn).
+    ///
+    /// Args:
+    ///     model_ref: Provenance label for the source model
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (model_ref = "<in-memory>", created_at = None))]
+    fn export_bpmn(&self, model_ref: &str, created_at: Option<String>) -> PyResult<String> {
+        let artifacts =
+            crate::projection::bpmn::project_bpmn_in_memory(&self.inner, model_ref, created_at)
+                .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a CMMN 1.1 case (the `--format cmmn` layout: model.cmmn).
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (model_ref = "<in-memory>", created_at = None))]
+    fn export_cmmn(&self, model_ref: &str, created_at: Option<String>) -> PyResult<String> {
+        let artifacts =
+            crate::projection::cmmn::project_cmmn_in_memory(&self.inner, model_ref, created_at)
+                .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit an ArchiMate 3.0 Model Exchange File (the `--format archimate`
+    /// layout: model.xml).
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (model_ref = "<in-memory>", created_at = None))]
+    fn export_archimate(&self, model_ref: &str, created_at: Option<String>) -> PyResult<String> {
+        let artifacts = crate::projection::archimate::project_archimate_in_memory(
+            &self.inner,
+            model_ref,
+            created_at,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit an OpenTelemetry SemConv projection (the `--format otel-semconv`
+    /// layout: registry/telemetry.yaml + constants/attributes.{rs,py,ts}).
+    ///
+    /// Args:
+    ///     model_ref: Provenance label for the source model
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (model_ref = "<in-memory>", created_at = None))]
+    fn export_otel_semconv(&self, model_ref: &str, created_at: Option<String>) -> PyResult<String> {
+        let artifacts = crate::projection::otel::project_otel_semconv_in_memory(
+            &self.inner,
+            model_ref,
+            created_at,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a BAML capability (the `--format baml` layout: baml_src/*.baml +
+    /// README.md). Requires an authority environment: the function and its
+    /// tests are resolver-grounded.
+    ///
+    /// Args:
+    ///     recipe_json: Optional JSON recipe (its `baml` section configures the
+    ///         function name and unknown-case inclusion)
+    ///     authority_config_json: AuthorityEnvironmentConfig JSON (required)
+    ///     model_ref: Provenance label for the source model
+    ///     seed: Optional seed override
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (recipe_json = None, authority_config_json = None, model_ref = "<in-memory>", seed = None, created_at = None))]
+    fn export_baml(
+        &self,
+        recipe_json: Option<&str>,
+        authority_config_json: Option<&str>,
+        model_ref: &str,
+        seed: Option<u64>,
+        created_at: Option<String>,
+    ) -> PyResult<String> {
+        let artifacts = crate::projection::baml::project_baml_in_memory(
+            &self.inner,
+            recipe_json,
+            authority_config_json,
+            model_ref,
+            seed,
+            created_at,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a DSPy optimization program (the `--format dspy` layout:
+    /// program.py, metric.py, optimize.py, dspy.config.json, README.md).
+    /// Requires an authority environment: the signature and its examples are
+    /// resolver-grounded. The train/dev examples are referenced (by path) from
+    /// the ai-learning LLM dataset, never copied.
+    ///
+    /// Args:
+    ///     recipe_json: Optional JSON recipe (its `dspy` section configures the
+    ///         signature name, module strategy, optimizer, and regression gate)
+    ///     authority_config_json: AuthorityEnvironmentConfig JSON (required)
+    ///     model_ref: Provenance label for the source model
+    ///     seed: Optional seed override
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (recipe_json = None, authority_config_json = None, model_ref = "<in-memory>", seed = None, created_at = None))]
+    fn export_dspy(
+        &self,
+        recipe_json: Option<&str>,
+        authority_config_json: Option<&str>,
+        model_ref: &str,
+        seed: Option<u64>,
+        created_at: Option<String>,
+    ) -> PyResult<String> {
+        let artifacts = crate::projection::dspy::project_dspy_in_memory(
+            &self.inner,
+            recipe_json,
+            authority_config_json,
+            model_ref,
+            seed,
+            created_at,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
+    /// Emit a ZenML learning pipeline (the `--format zenml` layout:
+    /// pipeline.py, steps.py, run.py, requirements.txt, zenml.config.json,
+    /// README.md). Requires an authority environment: the pipeline and its
+    /// labeled examples are resolver-grounded. The train/dev examples are
+    /// referenced (by path) from the ai-learning LLM dataset, never copied.
+    ///
+    /// Args:
+    ///     recipe_json: Optional JSON recipe (its `zenml` section configures the
+    ///         pipeline name, model name, and promotion gate)
+    ///     authority_config_json: AuthorityEnvironmentConfig JSON (required)
+    ///     model_ref: Provenance label for the source model
+    ///     seed: Optional seed override
+    ///     created_at: Optional fixed RFC3339 timestamp for reproducible output
+    ///
+    /// Returns:
+    ///     JSON object mapping relative artifact paths to file contents
+    #[pyo3(signature = (recipe_json = None, authority_config_json = None, model_ref = "<in-memory>", seed = None, created_at = None))]
+    fn export_zenml(
+        &self,
+        recipe_json: Option<&str>,
+        authority_config_json: Option<&str>,
+        model_ref: &str,
+        seed: Option<u64>,
+        created_at: Option<String>,
+    ) -> PyResult<String> {
+        let artifacts = crate::projection::zenml::project_zenml_in_memory(
+            &self.inner,
+            recipe_json,
+            authority_config_json,
+            model_ref,
+            seed,
+            created_at,
+        )
+        .map_err(PyValueError::new_err)?;
+        serde_json::to_string(&artifacts)
+            .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
+    }
+
     fn add_policy(&mut self, policy_json: String) -> PyResult<()> {
         let policy: crate::policy::Policy = serde_json::from_str(&policy_json)
             .map_err(|e| PyValueError::new_err(format!("Invalid Policy JSON: {}", e)))?;

@@ -10,4 +10,12 @@ Welcome to the DomainForge documentation! This index provides an overview of the
 - Explanations: Architecture and conceptual documents
 - Playbooks: Runbooks and operational procedures
 
+## Projections
+
+DomainForge projects its canonical semantic model into mature external
+ecosystems. Start with the [Projection Families](projection-families.md)
+overview — the operator-family table linking every projection target (RDF/OWL,
+BPMN, CMMN, ArchiMate, OpenTelemetry, BAML, DSPy, ZenML, Lean) to its reference
+doc and CLI behavior.
+
 See the `templates/` folder to create new docs consistently.

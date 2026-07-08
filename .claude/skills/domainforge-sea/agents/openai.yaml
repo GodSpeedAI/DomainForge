@@ -1,0 +1,4 @@
+interface:
+  display_name: "DomainForge SEA"
+  short_description: "Author SEA and run DomainForge CLI"
+  default_prompt: "Use $domainforge-sea to write, validate, format, inspect, project, import, or package DomainForge .sea models."

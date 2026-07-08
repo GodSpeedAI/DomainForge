@@ -1,0 +1,25 @@
+{
+  "name": "manufacturing_quality_zenml_v0",
+  "authority_config": "../authority/environment.json",
+  "projections": {
+    "llm_dataset": {
+      "enabled": true,
+      "format": "chatml_jsonl",
+      "families": [
+        "authorization_qa",
+        "policy_explanation",
+        "counterexample_detection",
+        "entity_lookup"
+      ]
+    },
+    "zenml": {
+      "enabled": true,
+      "pipeline_name": "authority_learning_pipeline",
+      "model_name": "authority_decider",
+      "promotion_threshold": 0.0,
+      "include_unknown": false
+    }
+  },
+  "splits": { "train": 0.8, "validation": 0.1, "test": 0.1 },
+  "seed": 0
+}

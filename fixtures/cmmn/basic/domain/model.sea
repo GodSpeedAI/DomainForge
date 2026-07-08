@@ -1,0 +1,19 @@
+@namespace "demo"
+@version "1.0.0"
+
+// Entities become human tasks (the work items handled inside the case).
+Entity "PurchaseOrder" in demo
+Entity "Invoice" in demo
+
+// Roles become CMMN case roles (task performers).
+Role "Approver" in demo
+Role "Clerk" in demo
+
+// Resources become case file items.
+Resource "Budget" units in demo
+
+// Policies with conditions become milestones gated by sentries: each policy
+// expression lowers to a sentry ifPart condition (the policy->sentry mapping
+// this projection exists to prove).
+Policy positive_budget as: Budget.quantity > 0
+Policy within_limit as: Budget.quantity < 500
