@@ -523,18 +523,20 @@ fn in_memory_api_matches_cli_output() {
             .get(&rel)
             .unwrap_or_else(|| panic!("missing artifact {rel} in in-memory output"));
         // recipe_ref/model_ref provenance strings legitimately differ between
-        // the two entry points; compare after normalizing them away.
-        // Forward-slash first so the recipe-path match is robust to Windows
-        // path-separator mixing (the in-memory path uses "<inline>"; the CLI
-        // embeds the literal recipe path, which mixes `\` and `/` on Windows).
-        let recipe = fixture("recipes/ai_learning.json")
+        // the two entry points; compare after normalizing them away. The
+        // in-memory path uses "<inline>"; the CLI embeds the literal recipe
+        // path. Artifacts are JSON, so backslashes in the path are escaped
+        // (`\` -> `\\`) — match both the raw and JSON-escaped forms so the
+        // replacement lands on Windows (`\` separators) as well as unix.
+        let recipe_raw = fixture("recipes/ai_learning.json")
             .to_str()
             .unwrap()
-            .replace('\\', "/");
+            .to_string();
+        let recipe_in_json = recipe_raw.replace('\\', "\\\\");
         let normalize = |s: &str| {
-            s.replace('\\', "/")
-                .replace("<inline>", "@")
-                .replace(&recipe, "@")
+            s.replace("<inline>", "@")
+                .replace(&recipe_in_json, "@")
+                .replace(&recipe_raw, "@")
         };
         assert_eq!(normalize(&disk), normalize(mem), "artifact differs: {rel}");
     }

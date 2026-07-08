@@ -376,7 +376,7 @@ jobs:
         # locally here; lean-action re-exposes lake to the "Reject sorry" step.
         run: |
           set -e
-          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none --profile minimal
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
           export PATH="$HOME/.elan/bin:$PATH"
           cd lean_out && lake update
 
