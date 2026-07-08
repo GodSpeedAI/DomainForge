@@ -14,7 +14,7 @@ import domainforge
 
 ROOT = pathlib.Path(__file__).parent.parent
 FIXTURE = ROOT / "fixtures" / "archimate" / "basic"
-SCHEMA = ROOT / "schemas" / "archimate" / "archimate3_Model.xsd"
+SCHEMA = ROOT / "schemas" / "archimate" / "archimate3_Diagram.xsd"
 FIXED_TS = "2026-07-02T00:00:00+00:00"
 
 

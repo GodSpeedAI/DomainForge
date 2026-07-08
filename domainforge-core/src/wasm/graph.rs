@@ -397,6 +397,7 @@ impl Graph {
     /// @param seed - Optional split/sampling seed (overrides the recipe seed)
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths (the `--format ai-learning` layout) to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportAiLearning)]
     pub fn export_ai_learning(
         &self,
@@ -424,6 +425,7 @@ impl Graph {
     /// @param modelRef - Optional provenance label for the source model
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportLean)]
     pub fn export_lean(
         &self,
@@ -446,6 +448,7 @@ impl Graph {
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @param baseIri - Optional base IRI the `sea:` prefix expands to
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportRdfProjection)]
     pub fn export_rdf_projection(
         &self,
@@ -469,6 +472,7 @@ impl Graph {
     /// @param modelRef - Optional provenance label for the source model
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportBpmn)]
     pub fn export_bpmn(
         &self,
@@ -490,6 +494,7 @@ impl Graph {
     /// @param modelRef - Optional provenance label for the source model
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportCmmn)]
     pub fn export_cmmn(
         &self,
@@ -512,6 +517,7 @@ impl Graph {
     /// @param modelRef - Optional provenance label for the source model
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportArchimate)]
     pub fn export_archimate(
         &self,
@@ -530,6 +536,7 @@ impl Graph {
 
     /// Emit an OpenTelemetry SemConv projection (the `--format otel-semconv`
     /// layout: registry/telemetry.yaml + constants/attributes.{rs,py,ts}).
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportOtelSemconv)]
     pub fn export_otel_semconv(
         &self,
@@ -556,6 +563,7 @@ impl Graph {
     /// @param seed - Optional seed override
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportBaml)]
     pub fn export_baml(
         &self,
@@ -590,6 +598,7 @@ impl Graph {
     /// @param seed - Optional seed override
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportDspy)]
     pub fn export_dspy(
         &self,
@@ -624,6 +633,7 @@ impl Graph {
     /// @param seed - Optional seed override
     /// @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
     /// @returns JSON object mapping relative artifact paths to file contents
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportZenml)]
     pub fn export_zenml(
         &self,
@@ -665,6 +675,7 @@ impl Graph {
     /// @param includeGovernance - Whether to include governance messages
     /// @param includeServices - Whether to generate gRPC service definitions from Flow patterns
     /// @returns The generated .proto file content as a string
+    #[cfg(feature = "wasm-projections")]
     #[wasm_bindgen(js_name = exportProtobuf)]
     pub fn export_protobuf(
         &self,

@@ -5,6 +5,54 @@
       "resolved": "github:NixOS/nixpkgs/cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73?narHash=sha256-IX7G1dlKrOqPOImfbo7ADDfV5yU1%2Bj%2BMRChI3TL4tAA%3D#bun",
       "source": "nixpkg"
     },
+    "elan@latest": {
+      "last_modified": "2026-06-27T07:37:20Z",
+      "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d#elan",
+      "source": "devbox-search",
+      "version": "4.2.3",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/7w5i7w3vqp7v0xgl1iq3gmqad9ds4gka-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/7w5i7w3vqp7v0xgl1iq3gmqad9ds4gka-elan-4.2.3"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/c8wh38prak2gc9gganymp0as5vv96d31-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/c8wh38prak2gc9gganymp0as5vv96d31-elan-4.2.3"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/mrd0ag51rb6p9faqwr4f6bp3iyilc1kd-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/mrd0ag51rb6p9faqwr4f6bp3iyilc1kd-elan-4.2.3"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/jlg0j945anib5b8773q4ykg4ahjxi3qf-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/jlg0j945anib5b8773q4ykg4ahjxi3qf-elan-4.2.3"
+        }
+      }
+    },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
       "last_modified": "2026-06-06T12:12:42Z",
       "resolved": "github:NixOS/nixpkgs/cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73?lastModified=1780747962&narHash=sha256-IX7G1dlKrOqPOImfbo7ADDfV5yU1%2Bj%2BMRChI3TL4tAA%3D"
@@ -12,6 +60,86 @@
     "just": {
       "resolved": "github:NixOS/nixpkgs/cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73?narHash=sha256-IX7G1dlKrOqPOImfbo7ADDfV5yU1%2Bj%2BMRChI3TL4tAA%3D#just",
       "source": "nixpkg"
+    },
+    "libxml2@latest": {
+      "last_modified": "2026-07-05T01:29:37Z",
+      "resolved": "github:NixOS/nixpkgs/6edbf1a6a03e75886a6609c088801a0856449e88#libxml2",
+      "source": "devbox-search",
+      "version": "2.15.3",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "bin",
+              "path": "/nix/store/ni1sdc1f4r5n1fz9yq82zzqq2b3zhfn8-libxml2-2.15.3-bin",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/vpkr7whrl6gyf5y46xcl7lcrhi23ikym-libxml2-2.15.3-dev"
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/annylz5apn08v8hd9gbsww4dlznjvnrj-libxml2-2.15.3"
+            }
+          ],
+          "store_path": "/nix/store/ni1sdc1f4r5n1fz9yq82zzqq2b3zhfn8-libxml2-2.15.3-bin"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "bin",
+              "path": "/nix/store/a37fisk3yd5r5vi6gy7xsip9y7yqbq4n-libxml2-2.15.3-bin",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/ak0xyhnhka0xqspv0k4xwidz1yb2hwis-libxml2-2.15.3-dev"
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/084b0v13mvf6pvm5cr69xfka755ri8jl-libxml2-2.15.3"
+            }
+          ],
+          "store_path": "/nix/store/a37fisk3yd5r5vi6gy7xsip9y7yqbq4n-libxml2-2.15.3-bin"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "bin",
+              "path": "/nix/store/7krhlgi2k0idqhxiyrmsfr45glip1m5z-libxml2-2.15.3-bin",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/n64yyyljzqypwzwkvx40839l0siayn53-libxml2-2.15.3-dev"
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/qgpsssjabkp2yrj3jz9qxd25s3hb0zmp-libxml2-2.15.3"
+            }
+          ],
+          "store_path": "/nix/store/7krhlgi2k0idqhxiyrmsfr45glip1m5z-libxml2-2.15.3-bin"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "bin",
+              "path": "/nix/store/fmivqr7jkqz6qv0knm692d1998wc8in7-libxml2-2.15.3-bin",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/35wfzwiy77ab9dhzjblb4kmdnckss40i-libxml2-2.15.3-dev"
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/hm2ixz0mgyx22sxzihs8ix1rsj2g36y6-libxml2-2.15.3"
+            }
+          ],
+          "store_path": "/nix/store/fmivqr7jkqz6qv0knm692d1998wc8in7-libxml2-2.15.3-bin"
+        }
+      }
     },
     "nodejs": {
       "plugin_version": "0.0.2",

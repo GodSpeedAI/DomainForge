@@ -603,7 +603,7 @@ fn run_archimate(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> 
     })?;
     println!(
         "Projected ArchiMate model to {} ({} files); validate with \
-         `xmllint --schema schemas/archimate/archimate3_Model.xsd {}`",
+         `xmllint --schema schemas/archimate/archimate3_Diagram.xsd {}`",
         args.output.display(),
         files.len(),
         args.output.join("model.xml").display()

@@ -8,7 +8,7 @@ ArchiMate tools.
 
 ```bash
 domainforge project --format archimate domain/model.sea out/
-xmllint --schema schemas/archimate/archimate3_Model.xsd out/model.xml --noout   # XSD validation
+xmllint --schema schemas/archimate/archimate3_Diagram.xsd out/model.xml --noout   # XSD validation
 ```
 
 The same artifact is available from the language bindings as a path → content
@@ -92,9 +92,13 @@ Identical model + fixed `--created-at` produce byte-identical output:
 ## Validation and the teeth-check
 
 The primary gate is **XSD validation** against the vendored Model Exchange
-File schema (`schemas/archimate/archimate3_Model.xsd`): run locally with
+File schema (`schemas/archimate/archimate3_Diagram.xsd`): run locally with
 `xmllint --schema ... --noout`, in CI by the `verify-archimate` job, and in
 `tests/test_archimate.py` via `lxml` (skipped if `lxml` is absent).
+`archimate3_Diagram.xsd` is the entry point because it is the top of the
+`xs:redefine` chain (it includes `archimate3_View.xsd`, which redefines
+`archimate3_Model.xsd` to add `views`); the base `archimate3_Model.xsd` alone
+has no `views` in its `ModelType`.
 
 **The relation-matrix teeth-check is the point of this task**:
 `forbidden_relation_tuple_is_rejected` (in

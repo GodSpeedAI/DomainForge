@@ -189,7 +189,7 @@ policies become motivation requirements. Relations are validated by
 construction against a static ArchiMate relationship matrix, so an illegal
 relation pairing can never reach the output. `--created-at` fixes the
 generation timestamp for byte-identical output. Validate with
-`xmllint --schema schemas/archimate/archimate3_Model.xsd output_dir/model.xml --noout`
+`xmllint --schema schemas/archimate/archimate3_Diagram.xsd output_dir/model.xml --noout`
 or open directly in Archi. See [ArchiMate Projection](../archimate-projections.md).
 
 ### OTel SemConv-specific behavior

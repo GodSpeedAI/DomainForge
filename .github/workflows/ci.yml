@@ -329,10 +329,16 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install cargo-audit
+        # Run cargo-audit directly instead of the deprecated rustsec/audit-check
+        # action, which fails with "Resource not accessible by integration" when
+        # it tries to publish a check run the default GITHUB_TOKEN cannot create.
+        # `cargo audit` reads audit.toml and exits non-zero only on unignored
+        # vulnerabilities.
+        run: cargo install cargo-audit --locked --quiet
+
       - name: Run cargo audit
-        uses: rustsec/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo audit
 
   verify-lean:
     name: Verify Lean projection proof-checks
@@ -360,6 +366,19 @@ jobs:
           cargo run --release --features cli --bin domainforge -- project \
             --format lean --created-at 2026-07-02T00:00:00+00:00 \
             fixtures/lean/basic/domain/model.sea lean_out
+
+      - name: Install elan and resolve lake manifest
+        # lean-action's config step requires a committed lake-manifest.json,
+        # which the projection does not emit (it is a generated lockfile).
+        # Install elan and run `lake update` to materialize it from
+        # lakefile.toml + lean-toolchain before lean-action runs.
+        # `$GITHUB_PATH` only affects later steps, so export elan's bin dir
+        # locally here; lean-action re-exposes lake to the "Reject sorry" step.
+        run: |
+          set -e
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none --profile minimal
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd lean_out && lake update
 
       - name: Check proofs with lake build
         uses: leanprover/lean-action@v1
@@ -538,7 +557,7 @@ jobs:
 
       - name: Validate the emitted model against the vendored XSD
         run: |
-          xmllint --schema schemas/archimate/archimate3_Model.xsd archimate_out/model.xml --noout
+          xmllint --schema schemas/archimate/archimate3_Diagram.xsd archimate_out/model.xml --noout
 
       - name: Assert byte-determinism across two runs
         run: |

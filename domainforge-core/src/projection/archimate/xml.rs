@@ -7,11 +7,15 @@
 //! values and text are escaped through [`crate::KnowledgeGraph::escape_xml`] via
 //! that writer.
 //!
-//! Element ordering follows the ArchiMate 3.0 `archimate3_Model.xsd`
-//! `ModelType` content model exactly: `name` → `elements` → `relationships` →
-//! `views`. Each concrete element/relationship/view carries its ArchiMate type as
-//! an `xsi:type` attribute (the exchange format models the type hierarchy through
-//! xsi:type on abstract base elements).
+//! Element ordering follows the ArchiMate 3.0 `ModelType` content model
+//! (base in `archimate3_Model.xsd`, extended by `archimate3_View.xsd` which
+//! adds `views`, and `archimate3_Diagram.xsd` which redefines `ViewsType` to
+//! add `diagrams` → `view`): `name` → `elements` → `relationships` →
+//! `views`/`diagrams`/`view`. `archimate3_Diagram.xsd` is the validation entry
+//! point because it sits at the top of the `xs:redefine` chain (View redefines
+//! Model; Diagram redefines View) and therefore carries the full content model.
+//! Each concrete element/relationship/view carries its ArchiMate type as an
+//! `xsi:type` attribute.
 
 use super::ir::{ArchitectureIR, Element, Relation, View, ViewNode};
 
@@ -21,7 +25,7 @@ const ARCHIMATE_NS: &str = "http://www.opengroup.org/xsd/archimate/3.0/";
 const XSI_NS: &str = "http://www.w3.org/2001/XMLSchema-instance";
 /// Schema location hint pointing consumers at the vendored root schema.
 const SCHEMA_LOCATION: &str = "http://www.opengroup.org/xsd/archimate/3.0/ \
-http://www.opengroup.org/xsd/archimate/3.0/archimate3_Model.xsd";
+http://www.opengroup.org/xsd/archimate/3.0/archimate3_Diagram.xsd";
 
 /// Render `ir` to a complete ArchiMate 3.0 Model Exchange File document.
 pub fn render(ir: &ArchitectureIR) -> String {

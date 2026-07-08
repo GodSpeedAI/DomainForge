@@ -1,0 +1,34 @@
+# cargo-audit configuration.
+#
+# Every ignored advisory below is reviewed and carries an explicit reason plus
+# the condition under which the ignore must be lifted. An ignore is NOT a fix;
+# it is a documented, time-boxed acceptance of an advisory that cannot yet be
+# remediated.
+
+[advisories]
+ignore = [
+    # quick-xml < 0.41 — DoS via NsReader (quadratic duplicate-attribute check
+    # and unbounded namespace-declaration allocation) on untrusted XML.
+    #
+    # Reach in DomainForge: quick-xml is pulled ONLY through the OPTIONAL
+    # `shacl` feature (oxigraph -> sparesults -> quick-xml 0.28.2; oxigraph ->
+    # rio_xml -> quick-xml 0.36.2). No shipped build enables `shacl`: the
+    # default, `cli`, `wasm`, `python`, and `typescript` feature sets all omit
+    # it, so the vulnerable code is never compiled into a published artifact.
+    #
+    # Threat model: DomainForge is a local CLI/architecture tooling. The
+    # affected RDF/XML import path consumes user-supplied local files, not
+    # network-untrusted input, so the DoS surface is negligible (a user can
+    # only DoS themselves).
+    #
+    # Why not fixed: upstream-blocked. The latest oxigraph line that DomainForge
+    # can use still resolves quick-xml to 0.28.2 / 0.36.2; sparesults 0.3.x and
+    # rio_xml pin `quick-xml = "^0.28"` / `"^0.36"`, neither of which can reach
+    # 0.41. Bumping oxigraph to 0.4/0.5 does not help: those route through
+    # oxrdfxml 0.2.x, which pins `quick-xml = "^0.37"` — still below 0.41.
+    #
+    # Lift these ignores when oxigraph/oxrdfxml publishes a release built
+    # against quick-xml >= 0.41, then bump oxigraph and remove both entries.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]
