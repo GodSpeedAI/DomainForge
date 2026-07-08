@@ -18,6 +18,7 @@ This directory contains the architectural documentation for DomainForge and the 
 | [ADR-008](./ADR-008-knowledge-graph-integration.md)        | Accepted | RDF/Turtle export and SHACL validation          |
 | [ADR-009](./ADR-009-module-resolution-strategy.md)         | Accepted | Import syntax and namespace registry            |
 | [ADR-010](./ADR-010-unit-system.md)                        | Accepted | Dimensional analysis and unit conversions       |
+| [ADR-011](./ADR-011-operator-backed-projection-families.md) | Accepted | Operator-backed projection families + shared kernel |
 
 ### Product Requirements Documents (PRDs)
 

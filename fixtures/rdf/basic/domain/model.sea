@@ -1,0 +1,17 @@
+@namespace "demo"
+@version "1.0.0"
+
+Entity "Warehouse" in demo
+Entity "Factory" in demo
+
+Role "Operator" in demo
+Role "Supervisor" in demo
+
+Resource "CameraUnits" units in demo
+
+Flow "CameraUnits" from "Warehouse" to "Factory" quantity 100
+
+Relation "Oversight"
+  subject: "Supervisor"
+  predicate: "supervises"
+  object: "Operator"

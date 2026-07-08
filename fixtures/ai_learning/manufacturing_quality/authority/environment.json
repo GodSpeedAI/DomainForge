@@ -1,0 +1,140 @@
+{
+  "resolver_semantics_version": "0.4",
+  "specificity_profile": {
+    "id": "default",
+    "dimensions": [
+      "actor",
+      "role",
+      "action",
+      "resource",
+      "scope",
+      "condition"
+    ],
+    "scoring_rules": {},
+    "hash": "default_v1"
+  },
+  "unknown_handling": {
+    "permission": {
+      "default": "escalate"
+    },
+    "prohibition": {
+      "default": "deny"
+    },
+    "obligation": {
+      "default": "escalate"
+    },
+    "override_": {
+      "default": "not_applicable"
+    }
+  },
+  "fact_sources": [
+    {
+      "id": "ehs-system",
+      "source_class": "system_of_record",
+      "allowed_paths": [
+        "ehs."
+      ],
+      "evidence_required": true,
+      "signature_required": false,
+      "max_response_latency_ms": 5000
+    }
+  ],
+  "fact_transforms": [],
+  "authority_packs": [
+    {
+      "created_at": "2026-07-02T00:00:00Z",
+      "hash": "e6b87eefa83268f4",
+      "id": "manufacturing-quality-authority",
+      "owner": "quality-team@example.com",
+      "policies": [
+        {
+          "applies_to": {
+            "action": "close_audit_finding",
+            "actor.role": "CertifiedAuditor",
+            "resource.type": "AuditFinding"
+          },
+          "description": "A Certified Auditor may close an audit finding.",
+          "modality": "Permission",
+          "policy_id": "allow_certified_auditor_close_finding",
+          "priority": 50,
+          "requires_fact": [],
+          "semantics_version": "0.4",
+          "when": null
+        },
+        {
+          "applies_to": {
+            "action": "close_audit_finding",
+            "actor.role": "Trainee",
+            "resource.type": "AuditFinding"
+          },
+          "description": "A Trainee must not close audit findings.",
+          "modality": "Prohibition",
+          "policy_id": "deny_trainee_close_finding",
+          "priority": 100,
+          "requires_fact": [],
+          "semantics_version": "0.4",
+          "when": null
+        },
+        {
+          "applies_to": {
+            "action": "prepare_audit_evidence",
+            "actor.role": "Trainee",
+            "resource.type": "AuditEvidence"
+          },
+          "description": "A Trainee may prepare audit evidence.",
+          "modality": "Permission",
+          "policy_id": "allow_trainee_prepare_evidence",
+          "priority": 50,
+          "requires_fact": [],
+          "semantics_version": "0.4",
+          "when": null
+        },
+        {
+          "applies_to": {
+            "action": "approve_corrective_action_extension",
+            "actor.role": "OperationsManager",
+            "resource.type": "CorrectiveActionExtension"
+          },
+          "description": "An Operations Manager may approve a corrective action extension.",
+          "modality": "Permission",
+          "policy_id": "allow_ops_manager_approve_extension",
+          "priority": 50,
+          "requires_fact": [],
+          "semantics_version": "0.4",
+          "when": null
+        },
+        {
+          "applies_to": {
+            "action": "close_audit_finding",
+            "resource.type": "HighRiskSafetyFinding"
+          },
+          "description": "Closing a high-risk safety finding requires EHS approval on record; absent that fact the decision escalates.",
+          "modality": "Permission",
+          "policy_id": "escalate_high_risk_close_requires_ehs",
+          "priority": 60,
+          "requires_fact": [
+            {
+              "allowed_source_classes": [
+                "system_of_record"
+              ],
+              "allowed_source_ids": [
+                "ehs-system"
+              ],
+              "evidence_ref_required": true,
+              "fact_path": "ehs.approval_status",
+              "signature_required": false
+            }
+          ],
+          "semantics_version": "0.4",
+          "when": null
+        }
+      ],
+      "required_specificity_profile": "default",
+      "semantics_version": "0.4",
+      "version": "1.0.0"
+    }
+  ],
+  "strict_mode": true,
+  "compatibility_lowering_version": "bounded_compatibility_v1",
+  "resolver_version": "0.1.0"
+}

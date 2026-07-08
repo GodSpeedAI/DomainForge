@@ -40,6 +40,7 @@ Not documentation hoping to be obeyed. Executable meaning with receipts.
 | **Fast rule checking** | Current benchmarks include validation of 10,000 entities in under 100 milliseconds. |
 | **Business-readable, machine-executable structure** | Analysts can read the rules. Systems can parse, validate, and enforce them. |
 | **Architecture-as-Code projection** | Export to FINOS CALM for enterprise architecture and governance workflows. |
+| **Formally verified domain invariants** | Project to a Lean 4 package whose `lake build` machine-checks your policies on every commit — no proof engineering required. |
 | **Structured validation and deterministic projection surfaces** | Not just documentation — rules that can be parsed, checked, projected, and tested. |
 
 ---
@@ -489,6 +490,9 @@ domainforge validate model.sea
 # Export to FINOS CALM
 domainforge project --format calm model.sea architecture.json
 
+# Emit a Lean 4 formal verification package (proof-check with `lake build`)
+domainforge project --format lean model.sea lean_out/
+
 # Import from Knowledge Graph
 domainforge import --format kg model.ttl
 
@@ -623,6 +627,9 @@ npm install && npm run build
 | 📕 [**System Design**](docs/specs/SDS-002-domainforge-core-architecture.md) | Technical specifications |
 | 🏛️ [**Architecture Decisions**](docs/specs/ADR-001-sea-dsl-semantic-source-of-truth.md) | Key architectural choices |
 | 🗺️ [**CALM Mapping**](docs/reference/calm-mapping.md) | SEA ↔ CALM conversion |
+| 🧭 [**Projection Families**](docs/projection-families.md) | Operator-family overview: every `--format` target and its ecosystem |
+| ✅ [**Lean 4 Projection**](docs/lean-projections.md) | Machine-checked policy theorems via `--format lean` |
+| 🤖 [**AI Learning Projections**](docs/ai-learning-projections.md) | LLM/GraphML/CEP datasets via `--format ai-learning` |
 | 📖 [**Error Codes**](docs/reference/error-codes.md) | Validation error reference |
 | 🔧 [**CLI Reference**](docs/reference/cli-commands.md) | CLI commands and usage |
 

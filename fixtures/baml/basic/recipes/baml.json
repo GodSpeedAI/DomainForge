@@ -1,0 +1,13 @@
+{
+  "name": "manufacturing_quality_baml_v0",
+  "authority_config": "../authority/environment.json",
+  "projections": {
+    "baml": {
+      "enabled": true,
+      "function_name": "DecideAuthority",
+      "include_unknown": false
+    }
+  },
+  "splits": { "train": 0.8, "validation": 0.1, "test": 0.1 },
+  "seed": 0
+}

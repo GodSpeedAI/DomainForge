@@ -15,19 +15,28 @@ pub fn run(args: ValidateKgArgs) -> Result<()> {
 
     let src_trim = source.trim_start();
 
+    // Turtle extensions are an unambiguous signal: honor them first so a `.ttl`
+    // that declares the rdf: prefix (whose namespace URI also appears in RDF/XML)
+    // is not misdetected as RDF/XML by the content heuristics below.
+    let is_turtle_ext = args
+        .file
+        .extension()
+        .is_some_and(|ext| ext == "ttl" || ext == "turtle" || ext == "n3");
+
     // More robust RDF/XML detection:
     // 1. Check file extension first (most reliable)
     // 2. Look for XML declaration or RDF namespace markers
     // 3. Check for common XML patterns (allowing for processing instructions/comments)
-    let is_rdf_xml = args
-        .file
-        .extension()
-        .is_some_and(|ext| ext == "xml" || ext == "rdf")
-        || src_trim.starts_with("<?xml")
-        || src_trim.starts_with("<rdf:")
-        || src_trim.starts_with("<rdf ")
-        || src_trim.contains("xmlns:rdf")
-        || src_trim.contains("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    let is_rdf_xml = !is_turtle_ext
+        && (args
+            .file
+            .extension()
+            .is_some_and(|ext| ext == "xml" || ext == "rdf")
+            || src_trim.starts_with("<?xml")
+            || src_trim.starts_with("<rdf:")
+            || src_trim.starts_with("<rdf ")
+            || src_trim.contains("xmlns:rdf")
+            || src_trim.contains("http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
 
     // Log when format detection is ambiguous (no extension and starts with '<' but not clearly RDF/XML)
     if args.file.extension().is_none() && src_trim.starts_with('<') && !is_rdf_xml {

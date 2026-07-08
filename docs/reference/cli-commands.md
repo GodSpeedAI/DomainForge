@@ -71,17 +71,259 @@ Exit codes:
 
 Export a model to other formats.
 
+For the operator-family overview — which external ecosystem each format unlocks
+and where its reference doc lives — see
+[Projection Families](../projection-families.md). Running `domainforge project
+--help` prints the same families as an operator table from the format doc
+comments.
+
 ```
-domainforge project --format <calm|rdf|sbvr|dsl|protobuf> input.sea output.json
+domainforge project --format <calm|rdf|bpmn|cmmn|archimate|otel-semconv|baml|dspy|zenml|sbvr|dsl|protobuf|lean|ai-llm|ai-graph-ml|cep-eval|ai-learning> input.sea output
 ```
 
 Formats:
 
 - `calm`: FINOS CALM JSON
-- `rdf`: RDF/Turtle
+- `kg`: single-file RDF (Turtle or RDF/XML by output extension)
+- `rdf`: RDF/OWL dataset — Turtle + JSON-LD + OWL ontology (directory output;
+  see [RDF/OWL Projection](../rdf-projections.md))
+- `bpmn`: BPMN 2.0 process XML (non-executable subset, directory output; see
+  [BPMN Projection](../bpmn-projections.md))
+- `cmmn`: CMMN 1.1 case XML — case, roles, human tasks, milestones, and
+  policy-derived sentries (directory output; see
+  [CMMN Projection](../cmmn-projections.md))
+- `archimate`: ArchiMate 3.0 Model Exchange File — business roles, objects,
+  processes, and policy-derived requirements, with only spec-legal relations
+  (directory output; see [ArchiMate Projection](../archimate-projections.md))
+- `otel-semconv`: OpenTelemetry semantic-convention registry (YAML) plus
+  attribute-key constant files (Rust/Python/TypeScript), every attribute
+  namespaced under the model's namespace and correlated to deterministic domain
+  IDs (directory output; see [OTel SemConv Projection](../otel-projections.md))
+- `baml`: BAML capability — typed enums/classes for the model's domains, a
+  typed policy-decision function, and resolver-seeded tests; the LLM client is a
+  vendor-neutral placeholder (directory output; requires an authority
+  environment; see [BAML Projection](../baml-projections.md))
+- `dspy`: DSPy optimization program — an authority-decision signature, a
+  decision-label metric, and an optimizer script with a declared regression gate;
+  train/dev examples are referenced (by path) from the ai-learning LLM dataset,
+  never copied (directory output; requires an authority environment; see
+  [DSPy Projection](../dspy-projections.md))
+- `zenml`: ZenML learning pipeline — `@step` functions (load dataset → train →
+  evaluate → register) wired into a `@pipeline` DAG, artifacts named by
+  deterministic ids and the run's model version keyed to the model hash;
+  train/dev inputs are referenced (by path) from the ai-learning LLM dataset,
+  never copied (directory output; requires an authority environment; see
+  [ZenML Projection](../zenml-projections.md))
 - `sbvr`: SBVR fact types
 - `dsl`: reformat the DSL (pretty-print)
 - `protobuf`: Protocol Buffer `.proto` files
+- `lean`: Lean 4 formal verification package (directory output; see
+  [Lean 4 Projection](../lean-projections.md))
+- `ai-llm` / `ai-graph-ml` / `cep-eval` / `ai-learning`: AI learning datasets
+  (directory output; see [AI Learning Projections](../ai-learning-projections.md))
+
+### Lean-specific behavior
+
+```bash
+domainforge project --format lean [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory. `--created-at` fixes the generation timestamp for
+byte-identical output. The generated package is proof-checked with `lake build`
+(sorry-free `DomainForge` library; deferred policies land in `Obligations/`).
+
+### RDF-specific behavior
+
+```bash
+domainforge project --format rdf [--created-at <RFC3339>] [--base-iri <IRI>] input.sea output_dir/
+```
+
+Output must be a directory; it receives `model.ttl` (Turtle instances),
+`model.jsonld` (JSON-LD over the same triples), and `ontology.owl.ttl` (OWL
+class/property axioms and named individuals). `--created-at` fixes the
+generation timestamp and `--base-iri` overrides the `sea:` prefix expansion in
+the JSON-LD and OWL files (default: the canonical SEA vocabulary namespace).
+Output is byte-deterministic; validate the Turtle with
+`domainforge validate-kg output_dir/model.ttl` (requires the `shacl` feature).
+See [RDF/OWL Projection](../rdf-projections.md).
+
+### BPMN-specific behavior
+
+```bash
+domainforge project --format bpmn [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives a single `model.bpmn` — a non-executable
+BPMN 2.0 process. Entities that participate in flows become tasks, flow
+fan-out/fan-in becomes parallel gateways, flows become sequence flows, roles
+become swimlanes, and resources become data objects. `--created-at` fixes the
+generation timestamp for byte-identical output. Validate with
+`xmllint --schema schemas/bpmn/BPMN20.xsd output_dir/model.bpmn --noout` or open
+directly in bpmn.io (which auto-lays-out the diagram). See
+[BPMN Projection](../bpmn-projections.md).
+
+### CMMN-specific behavior
+
+```bash
+domainforge project --format cmmn [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives a single `model.cmmn` — a CMMN 1.1
+case. Resources become case-file items, roles become case roles, entities
+become human tasks, and authority policies become milestones gated by
+sentries derived from the policy's condition. `--created-at` fixes the
+generation timestamp for byte-identical output. Validate with
+`xmllint --schema schemas/cmmn/CMMN11.xsd output_dir/model.cmmn --noout`. See
+[CMMN Projection](../cmmn-projections.md).
+
+### ArchiMate-specific behavior
+
+```bash
+domainforge project --format archimate [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives a single `model.xml` — an ArchiMate
+3.0 Model Exchange File. Roles become business roles, entities and resources
+become business objects, flows become business processes, and authority
+policies become motivation requirements. Relations are validated by
+construction against a static ArchiMate relationship matrix, so an illegal
+relation pairing can never reach the output. `--created-at` fixes the
+generation timestamp for byte-identical output. Validate with
+`xmllint --schema schemas/archimate/archimate3_Model.xsd output_dir/model.xml --noout`
+or open directly in Archi. See [ArchiMate Projection](../archimate-projections.md).
+
+### OTel SemConv-specific behavior
+
+```bash
+domainforge project --format otel-semconv [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives `registry/telemetry.yaml` (an
+OpenTelemetry semantic-convention registry) and `constants/attributes.rs`,
+`constants/attributes.py`, `constants/attributes.ts` (attribute-key constants
+for each supported language). Entities, flows, and policy-decision points become
+attribute groups; each flow additionally yields an `internal` span-kind
+suggestion. Every domain attribute is namespaced under the model's own
+namespace, and the OTel Resource carries the correlation keys
+`domainforge.model.hash` and `domainforge.element.id` so runtime telemetry
+points back at model identity.
+
+The projection **refuses** to mint any attribute under an OTel-reserved
+namespace (`otel.*`, `service.*`, `telemetry.*`, …): only the model namespace
+and the `domainforge.*` vendor namespace are allowed, enforced at IR-construction
+time. The registry and all three constant files are rendered from one IR, so
+they always agree on the attribute set. `--created-at` fixes the generation
+timestamp for byte-identical output. Validate the registry against the schema:
+
+```bash
+python3 -c "import json,yaml,jsonschema; \
+jsonschema.validate(yaml.safe_load(open('output_dir/registry/telemetry.yaml')), \
+json.load(open('schemas/otel/semconv_registry.schema.json')))"
+```
+
+See [OTel SemConv Projection](../otel-projections.md).
+
+### BAML-specific behavior
+
+```bash
+domainforge project --format baml [--recipe <FILE>] [--authority-config <FILE>] \
+  [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives a BAML project: `baml_src/domain.baml`
+(enums for the closed role/resource/operation domains plus the
+`AuthorityRequest`/`AuthorityRuling` classes), `baml_src/functions.baml` (a typed
+`DecideAuthority` function whose prompt embeds the governing policies),
+`baml_src/tests.baml` (one `test` per resolver-grounded authority case), and
+`baml_src/clients.baml` (a commented-out, vendor-neutral client placeholder),
+plus a `README.md`.
+
+An **authority environment is required** (the function and its tests are
+resolver-grounded): supply it with `--authority-config <FILE>` or via the
+recipe's `authority_config` field. The recipe's `baml` section (optional)
+configures the function name and whether `unknown`-labeled cases become tests.
+`--created-at` fixes the generation timestamp for byte-identical output. The
+emitted client is a documented placeholder — pick a provider and supply
+credentials before running `baml-cli generate`. Validate structurally with:
+
+```bash
+python3 schemas/baml/check_baml.py output_dir/baml_src
+```
+
+See [BAML Projection](../baml-projections.md).
+
+### DSPy-specific behavior
+
+```bash
+domainforge project --format dspy [--recipe <FILE>] [--authority-config <FILE>] \
+  [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives a runnable DSPy program: `program.py`
+(the `AuthorityDecision` signature and its module), `metric.py` (decision-label
+agreement), `optimize.py` (baseline-vs-optimized comparison and the
+regression-threshold gate — **your** compute to run, needs a configured LM),
+`dspy.config.json` (signature, dataset references, optimizer config, and
+provenance), plus a `README.md`.
+
+**Scope boundary:** DomainForge emits the program and config only. The
+baseline-vs-optimized comparison and the regression enforcement happen in the
+*emitted* `optimize.py`, **not** in DomainForge.
+
+An **authority environment is required** (the signature and its examples are
+resolver-grounded): supply it with `--authority-config <FILE>` or via the
+recipe's `authority_config` field. The recipe's `dspy` section (optional)
+configures the signature name, module strategy (`predict` / `chain_of_thought`),
+optimizer, and regression threshold. The train/dev examples are **referenced by
+path** from the ai-learning LLM dataset (`llm_dataset/train.jsonl` /
+`llm_dataset/validation.jsonl` under `dataset.root`), never copied — generate
+them first with `--format ai-learning`. `--created-at` fixes the generation
+timestamp for byte-identical output. Validate structurally with:
+
+```bash
+python3 -c "import ast, glob; [ast.parse(open(f).read()) for f in glob.glob('output_dir/**/*.py', recursive=True)]"
+```
+
+See [DSPy Projection](../dspy-projections.md).
+
+### ZenML-specific behavior
+
+```bash
+domainforge project --format zenml [--recipe <FILE>] [--authority-config <FILE>] \
+  [--created-at <RFC3339>] input.sea output_dir/
+```
+
+Output must be a directory; it receives a runnable ZenML pipeline package:
+`pipeline.py` (the `@pipeline` DAG wiring `load_dataset -> train_model ->
+evaluate_model -> register_model`, versioned under a ZenML `Model` whose version
+is keyed to the model hash), `steps.py` (the four `@step` functions; the
+training step is a deterministic majority-class baseline you replace with real
+training), `run.py` (`python run.py --dry-run` constructs the pipeline without
+executing it), `requirements.txt` (pins ZenML to the targeted API line),
+`zenml.config.json` (pipeline id, dataset references, steps + DAG edges, metric,
+promotion gate, model-version key, and provenance), plus a `README.md`.
+
+**Scope boundary:** DomainForge emits the pipeline definition and a runnable
+baseline only. The real training, evaluation, and promotion happen when **you**
+run the emitted pipeline on **your** ZenML stack — **not** inside DomainForge.
+The promotion gate (`decision_agreement >= threshold`) is enforced inside the
+emitted `register_model` step at run time.
+
+An **authority environment is required** (the pipeline and its examples are
+resolver-grounded): supply it with `--authority-config <FILE>` or via the
+recipe's `authority_config` field. The recipe's `zenml` section (optional)
+configures the pipeline name, model name, and promotion threshold. The train/dev
+inputs are **referenced by path** from the ai-learning LLM dataset
+(`llm_dataset/train.jsonl` / `llm_dataset/validation.jsonl` under
+`dataset.root`), never copied — generate them first with `--format ai-learning`.
+`--created-at` fixes the generation timestamp for byte-identical output.
+Validate structurally with:
+
+```bash
+python3 -c "import ast, glob; [ast.parse(open(f).read()) for f in glob.glob('output_dir/**/*.py', recursive=True)]"
+```
+
+See [ZenML Projection](../zenml-projections.md).
 
 ### Protobuf-specific options
 
@@ -119,6 +361,7 @@ Use cases:
 - `domainforge project --format calm model.sea calm.json` to feed downstream systems.
 - `domainforge project --format rdf model.sea graph.ttl` to load into triple stores.
 - `domainforge project --format protobuf model.sea schema.proto` for gRPC/binary serialization.
+- `domainforge project --format lean model.sea lean_out/` to machine-check policy invariants in CI.
 
 ## import
 

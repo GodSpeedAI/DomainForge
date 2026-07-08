@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://domainforge.dev/schemas/cep_eval/benchmark_case.schema.json",
+  "title": "CEP Benchmark Case",
+  "description": "Executable form of CEP-0008 §12/§49.1/§52 (envelope) and CEP-0009 §13.1 (case fields), pinned in docs/specs/cep/. cep_version 0.1.0, cep_eval_schema_version 0.1.0. Kept in sync with REQUIRED_* constants in domainforge-core/src/projection/ai_learning/cep_eval.rs.",
+  "type": "object",
+  "required": [
+    "envelope",
+    "case_id",
+    "case_version",
+    "benchmark_ref",
+    "family_ref",
+    "primary_question_ref",
+    "case_question_ref",
+    "input_representations",
+    "state_refs",
+    "transformation_refs",
+    "evidence_requirements",
+    "expected_answer_shape",
+    "answer_key_ref",
+    "metric_refs",
+    "scoring_rules",
+    "invalidity_conditions",
+    "provenance_refs",
+    "review_status",
+    "generation_record"
+  ],
+  "properties": {
+    "envelope": {
+      "description": "CEP-0008 §12 minimal envelope metadata plus the §52 additions always populated by this generator.",
+      "type": "object",
+      "required": [
+        "envelope_id",
+        "cep_version",
+        "envelope_version",
+        "envelope_kind",
+        "created_at",
+        "created_by",
+        "scope",
+        "boundary_record",
+        "completeness_status",
+        "provenance_refs",
+        "omission_status",
+        "validation_status",
+        "lineage_refs"
+      ],
+      "properties": {
+        "envelope_kind": { "const": "benchmark_case" },
+        "cep_version": { "type": "string" }
+      }
+    },
+    "case_id": { "type": "string", "minLength": 1 },
+    "case_version": { "type": "string" },
+    "family_ref": {
+      "type": "string",
+      "enum": ["AuthorityBench", "ConformanceBench"]
+    },
+    "expected_answer_shape": { "type": "string" },
+    "review_status": {
+      "description": "Anti-collapse (CEP-0008 §55): generated is not reviewed.",
+      "const": "unreviewed"
+    },
+    "generation_record": {
+      "description": "CEP-0009 §31.1 generation record.",
+      "type": "object",
+      "required": [
+        "generation_id",
+        "generator_ref",
+        "generation_method",
+        "source_refs",
+        "seed",
+        "constraints_used",
+        "target_family",
+        "human_review_status",
+        "validation_status",
+        "known_limitations"
+      ],
+      "properties": {
+        "generation_method": {
+          "type": "string",
+          "enum": [
+            "template_generation",
+            "policy_derived_generation",
+            "mutation_generation"
+          ]
+        }
+      }
+    }
+  }
+}

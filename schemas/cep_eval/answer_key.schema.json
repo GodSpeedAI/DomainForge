@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://domainforge.dev/schemas/cep_eval/answer_key.schema.json",
+  "title": "CEP Answer Key",
+  "description": "Executable form of CEP-0009 §16.1, pinned in docs/specs/cep/. Fields with no meaningful v0 content are present and explicitly empty, never omitted (§16.3 makes shape mismatch scoring-invalidating).",
+  "type": "object",
+  "required": [
+    "answer_key_id",
+    "answer_key_type",
+    "case_ref",
+    "question_ref",
+    "expected_answer_shape",
+    "expected_values",
+    "acceptable_variants",
+    "required_evidence_refs",
+    "required_reasoning_elements",
+    "partial_credit_rules",
+    "invalid_answer_conditions",
+    "confidence_requirements",
+    "provenance_refs"
+  ],
+  "properties": {
+    "answer_key_id": { "type": "string", "minLength": 1 },
+    "answer_key_type": {
+      "description": "§16.2: expected values are computed by the authority resolver.",
+      "const": "programmatic"
+    },
+    "expected_values": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["allow", "deny", "escalate", "unknown", "reject"]
+        }
+      }
+    }
+  }
+}

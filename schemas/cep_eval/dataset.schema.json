@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://domainforge.dev/schemas/cep_eval/dataset.schema.json",
+  "title": "CEP Benchmark Dataset",
+  "description": "Executable form of CEP-0009 §15.1, pinned in docs/specs/cep/.",
+  "type": "object",
+  "required": [
+    "dataset_id",
+    "dataset_version",
+    "cep_version",
+    "cep_eval_schema_version",
+    "benchmark_family_refs",
+    "case_refs",
+    "source_refs",
+    "generation_method",
+    "review_status",
+    "license",
+    "provenance_refs",
+    "distribution_profile",
+    "difficulty_distribution",
+    "coverage_report",
+    "known_limitations"
+  ],
+  "properties": {
+    "cep_version": { "const": "0.1.0" },
+    "cep_eval_schema_version": { "const": "0.1.0" },
+    "review_status": { "const": "unreviewed" },
+    "known_limitations": {
+      "description": "Must list the non-v0 benchmark families and why they are deferred.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    }
+  }
+}

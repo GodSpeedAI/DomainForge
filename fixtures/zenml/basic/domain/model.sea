@@ -1,0 +1,35 @@
+@namespace "quality"
+@version "1.0.0"
+
+Entity "AuditTeam" in quality
+Entity "OperationsDepartment" in quality
+Entity "EHSDepartment" in quality
+
+Role "CertifiedAuditor" in quality
+Role "Trainee" in quality
+Role "OperationsManager" in quality
+Role "EHSOfficer" in quality
+
+Resource "AuditFinding" units in quality
+Resource "HighRiskSafetyFinding" units in quality
+Resource "AuditEvidence" units in quality
+Resource "CorrectiveActionExtension" units in quality
+
+Flow "AuditEvidence" from "AuditTeam" to "OperationsDepartment" quantity 1
+
+// Note: relation subjects/objects must be roles in the current grammar;
+// role-to-resource authorization links live in authority/environment.json.
+Relation "ClosureOversight"
+  subject: "CertifiedAuditor"
+  predicate: "supervises"
+  object: "Trainee"
+
+Relation "SafetyEscalation"
+  subject: "CertifiedAuditor"
+  predicate: "escalates to"
+  object: "EHSOfficer"
+
+Relation "ExtensionCoordination"
+  subject: "OperationsManager"
+  predicate: "coordinates with"
+  object: "EHSOfficer"
