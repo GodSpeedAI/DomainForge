@@ -138,6 +138,9 @@ pub enum ProjectFormat {
     /// Activation operator: Dagger module — one @dagger.function per Flow so `dagger call` can activate each step (directory output)
     #[value(name = "dagger")]
     Dagger,
+    /// Authority operator: Cedar schema + policies — each Flow becomes an Action with principal=from, resource=resource (directory output)
+    #[value(name = "cedar")]
+    Cedar,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -225,6 +228,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Dagger => {
             run_dagger(&args, &graph)?;
+        }
+        ProjectFormat::Cedar => {
+            run_cedar(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -588,6 +594,42 @@ fn run_dagger(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     println!(
         "Projected Dagger module (engine {}) to {} ({} files)",
         crate::projection::dagger::DAGGER_ENGINE_VERSION,
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_cedar(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format cedar (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the cedar projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::cedar::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("cedar projection failed: {e}"))?;
+    println!(
+        "Projected Cedar schema + policies to {} ({} files)",
         args.output.display(),
         files.len()
     );

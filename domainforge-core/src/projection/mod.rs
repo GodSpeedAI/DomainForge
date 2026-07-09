@@ -4,6 +4,7 @@ pub mod asyncapi;
 pub mod baml;
 pub mod bpmn;
 pub mod buf;
+pub mod cedar;
 pub mod cloudevents;
 pub mod cmmn;
 pub mod contracts;

@@ -13,7 +13,7 @@ advanced ahead of a passing gate.
 | AsyncAPI | `asyncapi` | `scripts/verify/projection-targets/asyncapi.sh` | Implemented |
 | Devbox | `devbox` | `scripts/verify/projection-targets/devbox.sh` | Implemented |
 | Dagger | `dagger` | `scripts/verify/projection-targets/dagger.sh` | Implemented |
-| Cedar | `cedar` | `scripts/verify/projection-targets/cedar.sh` | Planned |
+| Cedar | `cedar` | `scripts/verify/projection-targets/cedar.sh` | Implemented |
 | Gauge | `gauge` | `scripts/verify/projection-targets/gauge.sh` | Planned |
 | Alloy | `alloy` | `scripts/verify/projection-targets/alloy.sh` | Planned |
 | TLA+ | `tla` | `scripts/verify/projection-targets/tla.sh` | Planned |
