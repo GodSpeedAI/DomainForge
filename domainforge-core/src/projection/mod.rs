@@ -12,6 +12,7 @@ pub mod dagger;
 pub mod devbox;
 pub mod dspy;
 pub mod engine;
+pub mod gauge;
 pub mod ids;
 pub mod lean;
 pub mod otel;

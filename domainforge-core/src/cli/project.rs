@@ -141,6 +141,9 @@ pub enum ProjectFormat {
     /// Authority operator: Cedar schema + policies — each Flow becomes an Action with principal=from, resource=resource (directory output)
     #[value(name = "cedar")]
     Cedar,
+    /// Verification operator: Gauge spec — one scenario per Flow with Given/When/Then steps (directory output)
+    #[value(name = "gauge")]
+    Gauge,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -231,6 +234,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Cedar => {
             run_cedar(&args, &graph)?;
+        }
+        ProjectFormat::Gauge => {
+            run_gauge(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -630,6 +636,42 @@ fn run_cedar(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("cedar projection failed: {e}"))?;
     println!(
         "Projected Cedar schema + policies to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_gauge(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format gauge (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the gauge projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::gauge::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("gauge projection failed: {e}"))?;
+    println!(
+        "Projected Gauge spec to {} ({} files)",
         args.output.display(),
         files.len()
     );

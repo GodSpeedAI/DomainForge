@@ -14,7 +14,7 @@ advanced ahead of a passing gate.
 | Devbox | `devbox` | `scripts/verify/projection-targets/devbox.sh` | Implemented |
 | Dagger | `dagger` | `scripts/verify/projection-targets/dagger.sh` | Implemented |
 | Cedar | `cedar` | `scripts/verify/projection-targets/cedar.sh` | Implemented |
-| Gauge | `gauge` | `scripts/verify/projection-targets/gauge.sh` | Planned |
+| Gauge | `gauge` | `scripts/verify/projection-targets/gauge.sh` | Implemented |
 | Alloy | `alloy` | `scripts/verify/projection-targets/alloy.sh` | Planned |
 | TLA+ | `tla` | `scripts/verify/projection-targets/tla.sh` | Planned |
 | Roundtrip cell | — | `scripts/verify/projection-targets/roundtrip-cell.sh` | Planned |
