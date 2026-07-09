@@ -147,6 +147,9 @@ pub enum ProjectFormat {
     /// Verification operator: Alloy model — signatures for entities/resources, a Flow sig with one fact per declared flow (directory output)
     #[value(name = "alloy")]
     Alloy,
+    /// Verification operator: TLA+ spec — flows become state-machine transitions, model-checkable with TLC (directory output)
+    #[value(name = "tla")]
+    Tla,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -243,6 +246,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Alloy => {
             run_alloy(&args, &graph)?;
+        }
+        ProjectFormat::Tla => {
+            run_tla(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -714,6 +720,42 @@ fn run_alloy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("alloy projection failed: {e}"))?;
     println!(
         "Projected Alloy model to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_tla(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format tla (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the tla projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::tla::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("tla projection failed: {e}"))?;
+    println!(
+        "Projected TLA+ spec to {} ({} files)",
         args.output.display(),
         files.len()
     );

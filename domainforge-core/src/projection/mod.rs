@@ -21,6 +21,7 @@ pub mod protobuf;
 pub mod rdf;
 pub mod registry;
 pub mod sink;
+pub mod tla;
 pub mod zenml;
 
 pub use contracts::{find_mapping_rule, find_projection_override};
