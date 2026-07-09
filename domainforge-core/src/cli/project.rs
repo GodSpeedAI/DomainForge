@@ -135,6 +135,9 @@ pub enum ProjectFormat {
     AsyncApi,
     /// Activation operator: Devbox manifest — domain-aware dev shell with the namespace/entities/resources/flows pre-loaded as env vars (directory output)
     Devbox,
+    /// Activation operator: Dagger module — one @dagger.function per Flow so `dagger call` can activate each step (directory output)
+    #[value(name = "dagger")]
+    Dagger,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -219,6 +222,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Devbox => {
             run_devbox(&args, &graph)?;
+        }
+        ProjectFormat::Dagger => {
+            run_dagger(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -545,6 +551,43 @@ fn run_devbox(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("devbox projection failed: {e}"))?;
     println!(
         "Projected Devbox manifest to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_dagger(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format dagger (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the dagger projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::dagger::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("dagger projection failed: {e}"))?;
+    println!(
+        "Projected Dagger module (engine {}) to {} ({} files)",
+        crate::projection::dagger::DAGGER_ENGINE_VERSION,
         args.output.display(),
         files.len()
     );
