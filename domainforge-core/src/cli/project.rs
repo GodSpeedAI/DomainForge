@@ -130,6 +130,9 @@ pub enum ProjectFormat {
     /// Event operator: CloudEvents 1.0 stream — one envelope per Flow (directory output)
     #[value(name = "cloudevents")]
     CloudEvents,
+    /// Event-API operator: AsyncAPI 2.6 document — one channel per Flow (directory output)
+    #[value(name = "asyncapi")]
+    AsyncApi,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -208,6 +211,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::CloudEvents => {
             run_cloudevents(&args, &graph)?;
+        }
+        ProjectFormat::AsyncApi => {
+            run_asyncapi(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -461,6 +467,43 @@ fn run_cloudevents(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()
     .map_err(|e| anyhow::anyhow!("cloudevents projection failed: {e}"))?;
     println!(
         "Projected CloudEvents 1.0 stream to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_asyncapi(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format asyncapi (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the asyncapi projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::asyncapi::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("asyncapi projection failed: {e}"))?;
+    println!(
+        "Projected AsyncAPI {} document to {} ({} files)",
+        crate::projection::asyncapi::ASYNCAPI_VERSION,
         args.output.display(),
         files.len()
     );

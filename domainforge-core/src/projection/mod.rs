@@ -1,5 +1,6 @@
 pub mod ai_learning;
 pub mod archimate;
+pub mod asyncapi;
 pub mod baml;
 pub mod bpmn;
 pub mod buf;
