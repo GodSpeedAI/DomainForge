@@ -11,7 +11,7 @@ advanced ahead of a passing gate.
 |---|---|---|---|
 | CloudEvents | `cloudevents` | `scripts/verify/projection-targets/cloudevents.sh` | Implemented |
 | AsyncAPI | `asyncapi` | `scripts/verify/projection-targets/asyncapi.sh` | Implemented |
-| Devbox | `devbox` | `scripts/verify/projection-targets/devbox.sh` | Planned |
+| Devbox | `devbox` | `scripts/verify/projection-targets/devbox.sh` | Implemented |
 | Dagger | `dagger` | `scripts/verify/projection-targets/dagger.sh` | Planned |
 | Cedar | `cedar` | `scripts/verify/projection-targets/cedar.sh` | Planned |
 | Gauge | `gauge` | `scripts/verify/projection-targets/gauge.sh` | Planned |

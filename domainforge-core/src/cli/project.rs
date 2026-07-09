@@ -133,6 +133,8 @@ pub enum ProjectFormat {
     /// Event-API operator: AsyncAPI 2.6 document — one channel per Flow (directory output)
     #[value(name = "asyncapi")]
     AsyncApi,
+    /// Activation operator: Devbox manifest — domain-aware dev shell with the namespace/entities/resources/flows pre-loaded as env vars (directory output)
+    Devbox,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -214,6 +216,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::AsyncApi => {
             run_asyncapi(&args, &graph)?;
+        }
+        ProjectFormat::Devbox => {
+            run_devbox(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -504,6 +509,42 @@ fn run_asyncapi(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     println!(
         "Projected AsyncAPI {} document to {} ({} files)",
         crate::projection::asyncapi::ASYNCAPI_VERSION,
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_devbox(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format devbox (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the devbox projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::devbox::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("devbox projection failed: {e}"))?;
+    println!(
+        "Projected Devbox manifest to {} ({} files)",
         args.output.display(),
         files.len()
     );

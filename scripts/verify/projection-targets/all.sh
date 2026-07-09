@@ -19,7 +19,7 @@ cargo run -q -p domainforge-core --features cli -- validate "$FIXTURE"
 # Per-target gates (appended as each target lands):
   bash scripts/verify/projection-targets/cloudevents.sh
   bash scripts/verify/projection-targets/asyncapi.sh
-#   bash scripts/verify/projection-targets/devbox.sh
+  bash scripts/verify/projection-targets/devbox.sh
 #   bash scripts/verify/projection-targets/dagger.sh
 #   bash scripts/verify/projection-targets/cedar.sh
 #   bash scripts/verify/projection-targets/gauge.sh

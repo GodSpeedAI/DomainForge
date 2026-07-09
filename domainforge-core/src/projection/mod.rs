@@ -7,6 +7,7 @@ pub mod buf;
 pub mod cloudevents;
 pub mod cmmn;
 pub mod contracts;
+pub mod devbox;
 pub mod dspy;
 pub mod engine;
 pub mod ids;
