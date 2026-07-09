@@ -10,7 +10,7 @@ advanced ahead of a passing gate.
 | Target | CLI `--format` | Gate script | Status |
 |---|---|---|---|
 | CloudEvents | `cloudevents` | `scripts/verify/projection-targets/cloudevents.sh` | Implemented |
-| AsyncAPI | `asyncapi` | `scripts/verify/projection-targets/asyncapi.sh` | Implemented |
+| AsyncAPI | `asyncapi` | `scripts/verify/projection-targets/asyncapi.sh` | Implemented (3.0.0, YAML, spec-validated) |
 | Devbox | `devbox` | `scripts/verify/projection-targets/devbox.sh` | Implemented |
 | Dagger | `dagger` | `scripts/verify/projection-targets/dagger.sh` | Implemented |
 | Cedar | `cedar` | `scripts/verify/projection-targets/cedar.sh` | Implemented |
