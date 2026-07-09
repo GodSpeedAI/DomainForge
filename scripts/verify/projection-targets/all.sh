@@ -23,7 +23,7 @@ cargo run -q -p domainforge-core --features cli -- validate "$FIXTURE"
   bash scripts/verify/projection-targets/dagger.sh
   bash scripts/verify/projection-targets/cedar.sh
   bash scripts/verify/projection-targets/gauge.sh
-#   bash scripts/verify/projection-targets/alloy.sh
+  bash scripts/verify/projection-targets/alloy.sh
 #   bash scripts/verify/projection-targets/tla.sh
 #   bash scripts/verify/projection-targets/roundtrip-cell.sh
 

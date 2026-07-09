@@ -144,6 +144,9 @@ pub enum ProjectFormat {
     /// Verification operator: Gauge spec — one scenario per Flow with Given/When/Then steps (directory output)
     #[value(name = "gauge")]
     Gauge,
+    /// Verification operator: Alloy model — signatures for entities/resources, a Flow sig with one fact per declared flow (directory output)
+    #[value(name = "alloy")]
+    Alloy,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -237,6 +240,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Gauge => {
             run_gauge(&args, &graph)?;
+        }
+        ProjectFormat::Alloy => {
+            run_alloy(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -672,6 +678,42 @@ fn run_gauge(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("gauge projection failed: {e}"))?;
     println!(
         "Projected Gauge spec to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_alloy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format alloy (the projection is model-driven)"
+        ));
+    }
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the alloy projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::alloy::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("alloy projection failed: {e}"))?;
+    println!(
+        "Projected Alloy model to {} ({} files)",
         args.output.display(),
         files.len()
     );

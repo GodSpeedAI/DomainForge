@@ -1,4 +1,5 @@
 pub mod ai_learning;
+pub mod alloy;
 pub mod archimate;
 pub mod asyncapi;
 pub mod baml;
