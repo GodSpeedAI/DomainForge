@@ -17,7 +17,7 @@ advanced ahead of a passing gate.
 | Gauge | `gauge` | `scripts/verify/projection-targets/gauge.sh` | Implemented |
 | Alloy | `alloy` | `scripts/verify/projection-targets/alloy.sh` | Implemented |
 | TLA+ | `tla` | `scripts/verify/projection-targets/tla.sh` | Implemented |
-| Roundtrip cell | — | `scripts/verify/projection-targets/roundtrip-cell.sh` | Planned |
+| Roundtrip cell | — | `scripts/verify/projection-targets/roundtrip-cell.sh` | Implemented |
 
 ## Existing projections (pre-date this plan)
 
