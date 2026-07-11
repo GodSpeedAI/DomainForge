@@ -524,25 +524,22 @@ fn in_memory_api_matches_cli_output() {
             .unwrap_or_else(|| panic!("missing artifact {rel} in in-memory output"));
         // recipe_ref/model_ref provenance strings legitimately differ between
         // the two entry points; compare after normalizing them away.
-        // Forward-slash first so the recipe-path match is robust to Windows
-        // path-separator mixing (the in-memory path uses "<inline>"; the CLI
-        // embeds the literal recipe path, which mixes `\` and `/` on Windows).
+        // `disk` is raw JSON *file text*, so a real path separator appears
+        // JSON-escaped as two chars (`\\`); collapse that pair to a single
+        // `/` before falling back to a single-char replace, otherwise each
+        // escaped separator doubles into `//` and never matches `recipe`
+        // (built from the unescaped path) on Windows.
         let recipe = fixture("recipes/ai_learning.json")
             .to_str()
             .unwrap()
             .replace('\\', "/");
         let normalize = |s: &str| {
-            s.replace('\\', "/")
+            s.replace("\\\\", "/")
+                .replace('\\', "/")
                 .replace("<inline>", "@")
                 .replace(&recipe, "@")
         };
-        let (nd, nm) = (normalize(&disk), normalize(mem));
-        if nd != nm {
-            eprintln!("=== DEBUG artifact differs: {rel} ===");
-            eprintln!("--- disk ---\n{nd}");
-            eprintln!("--- mem ---\n{nm}");
-        }
-        assert_eq!(nd, nm, "artifact differs: {rel}");
+        assert_eq!(normalize(&disk), normalize(mem), "artifact differs: {rel}");
     }
 
     // No unknown-authority guessing sneaks through the binding path either.
