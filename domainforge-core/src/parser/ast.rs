@@ -232,6 +232,52 @@ pub enum AstNode {
         target: TargetFormat,
         overrides: Vec<ProjectionOverride>,
     },
+    Cell {
+        name: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    SystemDependency {
+        name: String,
+        version: Option<String>,
+        annotations: HashMap<String, JsonValue>,
+    },
+    Runtime {
+        name: String,
+        version: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    Tool {
+        name: String,
+        version: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    DependencySet {
+        name: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    Service {
+        name: String,
+        version: Option<String>,
+        annotations: HashMap<String, JsonValue>,
+    },
+    Mount {
+        name: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    Endpoint {
+        name: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    NetworkFlow {
+        name: String,
+        from_ref: String,
+        to_ref: String,
+        annotations: HashMap<String, JsonValue>,
+    },
+    Credential {
+        name: String,
+        annotations: HashMap<String, JsonValue>,
+    },
 }
 
 /// Parse source code into an AST
@@ -352,6 +398,16 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
         Rule::metric_decl => parse_metric(pair),
         Rule::mapping_decl => parse_mapping(pair),
         Rule::projection_decl => parse_projection(pair),
+        Rule::cell_decl => parse_cell(pair),
+        Rule::system_dependency_decl => parse_system_dependency(pair),
+        Rule::runtime_decl => parse_runtime(pair),
+        Rule::tool_decl => parse_tool(pair),
+        Rule::dependency_set_decl => parse_dependency_set(pair),
+        Rule::service_decl => parse_service(pair),
+        Rule::mount_decl => parse_mount(pair),
+        Rule::endpoint_decl => parse_endpoint(pair),
+        Rule::network_flow_decl => parse_network_flow(pair),
+        Rule::credential_decl => parse_credential(pair),
         _ => Err(ParseError::GrammarError(format!(
             "Unexpected rule: {:?}",
             pair.as_rule()
@@ -2166,6 +2222,192 @@ fn parse_projection_rule(pair: Pair<Rule>) -> ParseResult<ProjectionOverride> {
         primitive_name,
         fields,
     })
+}
+
+/// Parse a `generic_annotation*` sequence (`"@" key value`) shared by all
+/// cell-environment declarations into a flat annotation map. Duplicate keys
+/// (after lowercasing) on the same declaration are an authoring error and are
+/// rejected, including case-insensitive collisions (e.g. `@Host` after
+/// `@host`).
+fn parse_generic_annotations<'a>(
+    pairs: impl Iterator<Item = Pair<'a, Rule>>,
+) -> ParseResult<HashMap<String, JsonValue>> {
+    let mut annotations = HashMap::new();
+    for part in pairs {
+        if part.as_rule() == Rule::generic_annotation {
+            let mut inner = part.into_inner();
+            let key =
+                parse_identifier(inner.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected annotation key".to_string())
+                })?)?
+                .to_lowercase();
+            let value_pair = inner
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected annotation value".to_string()))?;
+            if annotations.contains_key(&key) {
+                return Err(ParseError::GrammarError(format!(
+                    "Duplicate annotation '@{key}' on the same declaration"
+                )));
+            }
+            annotations.insert(key, parse_annotation_value(value_pair)?);
+        }
+    }
+    Ok(annotations)
+}
+
+fn parse_cell(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected cell name".to_string()))?,
+    )?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Cell { name, annotations })
+}
+
+fn parse_system_dependency(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner().peekable();
+    let name =
+        parse_name(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected system dependency name".to_string())
+        })?)?;
+    let mut version = None;
+    if let Some(peeked) = inner.peek() {
+        if peeked.as_rule() == Rule::string_literal {
+            version = Some(parse_string_literal(inner.next().unwrap())?);
+        }
+    }
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::SystemDependency {
+        name,
+        version,
+        annotations,
+    })
+}
+
+fn parse_runtime(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected runtime name".to_string()))?,
+    )?;
+    let version_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected runtime version".to_string()))?;
+    let version = parse_string_literal(version_pair)?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Runtime {
+        name,
+        version,
+        annotations,
+    })
+}
+
+fn parse_tool(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected tool name".to_string()))?,
+    )?;
+    let version_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected tool version".to_string()))?;
+    let version = parse_string_literal(version_pair)?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Tool {
+        name,
+        version,
+        annotations,
+    })
+}
+
+fn parse_dependency_set(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name =
+        parse_name(inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected dependency set name".to_string())
+        })?)?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::DependencySet { name, annotations })
+}
+
+fn parse_service(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner().peekable();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected service name".to_string()))?,
+    )?;
+    let mut version = None;
+    if let Some(peeked) = inner.peek() {
+        if peeked.as_rule() == Rule::string_literal {
+            version = Some(parse_string_literal(inner.next().unwrap())?);
+        }
+    }
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Service {
+        name,
+        version,
+        annotations,
+    })
+}
+
+fn parse_mount(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected mount name".to_string()))?,
+    )?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Mount { name, annotations })
+}
+
+fn parse_endpoint(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected endpoint name".to_string()))?,
+    )?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Endpoint { name, annotations })
+}
+
+fn parse_network_flow(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected network flow name".to_string()))?,
+    )?;
+    let from_ref = parse_string_literal(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected network flow 'from' reference".to_string())
+    })?)?;
+    let to_ref = parse_string_literal(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected network flow 'to' reference".to_string())
+    })?)?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::NetworkFlow {
+        name,
+        from_ref,
+        to_ref,
+        annotations,
+    })
+}
+
+fn parse_credential(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_name(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected credential name".to_string()))?,
+    )?;
+    let annotations = parse_generic_annotations(inner)?;
+    Ok(AstNode::Credential { name, annotations })
 }
 
 fn parse_property_mapping(pair: Pair<Rule>) -> ParseResult<JsonValue> {

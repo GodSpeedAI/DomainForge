@@ -187,6 +187,10 @@ prove-drift:
 prove-evidence:
     bash scripts/prove/collect-evidence.sh
 
+# Cell-environment projection: byte-determinism + structural + native checks.
+cell-verify:
+    bash scripts/verify/cell.sh
+
 # ============================================================================
 # CI-specific recipes (used by GitHub Actions)
 # ============================================================================

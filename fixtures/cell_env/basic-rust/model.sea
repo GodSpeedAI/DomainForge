@@ -1,0 +1,10 @@
+@namespace "godspeed.cells.build"
+
+Cell "BuildAgent"
+    @profile "rust-agent-v1"
+
+DependencySet "rust-application"
+    @ecosystem "rust"
+    @manifest "Cargo.toml"
+    @lockfile "Cargo.lock"
+    @install "cargo fetch --locked"

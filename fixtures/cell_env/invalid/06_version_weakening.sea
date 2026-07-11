@@ -1,0 +1,4 @@
+Cell "VersionWeaken"
+    @profile "python-agent-v1"
+
+Tool "uv" version "0.9.8"

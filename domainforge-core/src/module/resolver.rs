@@ -232,7 +232,17 @@ fn declaration_name(node: &AstNode) -> Option<&str> {
         | AstNode::ConceptChange { name, .. }
         | AstNode::Metric { name, .. }
         | AstNode::MappingDecl { name, .. }
-        | AstNode::ProjectionDecl { name, .. } => Some(name),
+        | AstNode::ProjectionDecl { name, .. }
+        | AstNode::Cell { name, .. }
+        | AstNode::SystemDependency { name, .. }
+        | AstNode::Runtime { name, .. }
+        | AstNode::Tool { name, .. }
+        | AstNode::DependencySet { name, .. }
+        | AstNode::Service { name, .. }
+        | AstNode::Mount { name, .. }
+        | AstNode::Endpoint { name, .. }
+        | AstNode::NetworkFlow { name, .. }
+        | AstNode::Credential { name, .. } => Some(name),
         AstNode::Export(inner) => declaration_name(&inner.node),
     }
 }

@@ -31,7 +31,52 @@ annotation_name = {
 
 // Declarations
 declaration = { export_decl | declaration_inner }
-declaration_inner = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl }
+declaration_inner = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
+
+// Cell environment declarations (godspeed cell-environment projection).
+// All share a generic annotation form: "@" key value. Category-specific
+// required fields (version, from/to) are positional per the grammar rule.
+generic_annotation = { "@" ~ identifier ~ annotation_value }
+
+cell_decl = {
+    ^"cell" ~ name ~ generic_annotation*
+}
+
+system_dependency_decl = {
+    ^"systemdependency" ~ name ~ (^"version" ~ string_literal)? ~ generic_annotation*
+}
+
+runtime_decl = {
+    ^"runtime" ~ name ~ ^"version" ~ string_literal ~ generic_annotation*
+}
+
+tool_decl = {
+    ^"tool" ~ name ~ ^"version" ~ string_literal ~ generic_annotation*
+}
+
+dependency_set_decl = {
+    ^"dependencyset" ~ name ~ generic_annotation*
+}
+
+service_decl = {
+    ^"service" ~ name ~ (^"version" ~ string_literal)? ~ generic_annotation*
+}
+
+mount_decl = {
+    ^"mount" ~ name ~ generic_annotation*
+}
+
+endpoint_decl = {
+    ^"endpoint" ~ name ~ generic_annotation*
+}
+
+network_flow_decl = {
+    ^"networkflow" ~ name ~ ^"from" ~ string_literal ~ ^"to" ~ string_literal ~ generic_annotation*
+}
+
+credential_decl = {
+    ^"credential" ~ name ~ generic_annotation*
+}
 
 // Entity Declaration
 // Syntax: Entity "Name" in domain
@@ -74,7 +119,9 @@ declaration_keyword = @{
     (
         ^"entity" | ^"resource" | ^"flow" | ^"pattern" | ^"role" | ^"relation" |
         ^"instance" | ^"policy" | ^"conceptchange" | ^"metric" | ^"mapping" |
-        ^"projection" | ^"dimension" | ^"unit" | ^"import" | ^"export"
+        ^"projection" | ^"dimension" | ^"unit" | ^"import" | ^"export" |
+        ^"cell" | ^"systemdependency" | ^"runtime" | ^"tool" | ^"dependencyset" |
+        ^"service" | ^"mount" | ^"endpoint" | ^"networkflow" | ^"credential"
     ) ~ !(LETTER | NUMBER | "_")
 }
 

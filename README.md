@@ -180,6 +180,7 @@ file above also projects to:
 | Knowledge graph | `rdf`, `kg` | RDF/OWL, Turtle, JSON-LD |
 | AI/ML pipelines | `baml`, `dspy`, `zenml`, `ai-*` | Typed AI capabilities and training datasets |
 | Test suites | `gauge` | One scenario per flow, Given/When/Then |
+| A hermetic agent sandbox | `cell` | Devbox + Mise + dependency-set + sandbox/network + authority + evidence + `cell.lock`, from one `Cell` declaration |
 
 Projections are deterministic: same model, same flags, byte-identical output.
 That's not a slogan — it's an assertion the repo tests against itself (two
@@ -287,6 +288,7 @@ That stack is optional. DomainForge stands on its own.
 - [Projection families](docs/projection-families.md)
 - [Projection target status](docs/projection-target-implementation-status.md) — the honest per-target validator table
 - [Project domain code (SEA → DDD mapping)](docs/how-tos/project-domain-code.md)
+- [Project a cell environment (hermetic agent sandbox)](docs/how-tos/project-a-cell-environment.md)
 - [PROOFS.md](PROOFS.md) — every claim, classified, with its falsifying command
 
 ## Contributing

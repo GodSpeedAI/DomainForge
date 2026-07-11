@@ -1,0 +1,22 @@
+@namespace "godspeed.cells.polyglot"
+
+Cell "PolyglotAgent"
+    @profile "polyglot-agent-v1"
+
+DependencySet "python-application"
+    @ecosystem "python"
+    @manifest "pyproject.toml"
+    @lockfile "uv.lock"
+    @install "uv sync --frozen"
+
+DependencySet "ts-application"
+    @ecosystem "typescript"
+    @manifest "package.json"
+    @lockfile "pnpm-lock.yaml"
+    @install "pnpm install --frozen-lockfile"
+
+DependencySet "rust-application"
+    @ecosystem "rust"
+    @manifest "Cargo.toml"
+    @lockfile "Cargo.lock"
+    @install "cargo fetch --locked"

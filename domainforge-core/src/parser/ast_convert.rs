@@ -470,6 +470,73 @@ impl From<&ast::AstNode> for schema::AstNode {
                 target: target.into(),
                 overrides: overrides.iter().map(|o| o.into()).collect(),
             },
+            ast::AstNode::Cell { name, annotations } => schema::AstNode::Cell {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::SystemDependency {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::SystemDependency {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Runtime {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::Runtime {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Tool {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::Tool {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::DependencySet { name, annotations } => schema::AstNode::DependencySet {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Service {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::Service {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Mount { name, annotations } => schema::AstNode::Mount {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Endpoint { name, annotations } => schema::AstNode::Endpoint {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::NetworkFlow {
+                name,
+                from_ref,
+                to_ref,
+                annotations,
+            } => schema::AstNode::NetworkFlow {
+                name: name.clone(),
+                from_ref: from_ref.clone(),
+                to_ref: to_ref.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Credential { name, annotations } => schema::AstNode::Credential {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
         }
     }
 }

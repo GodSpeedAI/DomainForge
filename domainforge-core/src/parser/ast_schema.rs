@@ -447,6 +447,84 @@ pub enum AstNode {
         target: TargetFormat,
         overrides: Vec<ProjectionOverride>,
     },
+
+    /// Cell declaration - isolated agent execution unit (cell-environment projection)
+    Cell {
+        name: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// SystemDependency declaration - OS package or native library
+    SystemDependency {
+        name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        version: Option<String>,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// Runtime declaration - language runtime or compiler toolchain
+    Runtime {
+        name: String,
+        version: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// Tool declaration - package manager, task runner, or developer CLI
+    Tool {
+        name: String,
+        version: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// DependencySet declaration - application dependency closure
+    DependencySet {
+        name: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// Service declaration - background or attached service
+    Service {
+        name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        version: Option<String>,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// Mount declaration - filesystem exposure
+    Mount {
+        name: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// Endpoint declaration - declared network destination
+    Endpoint {
+        name: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// NetworkFlow declaration - allowed communication relation
+    NetworkFlow {
+        name: String,
+        from_ref: String,
+        to_ref: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
+
+    /// Credential declaration - scoped secret requirement
+    Credential {
+        name: String,
+        #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+        annotations: HashMap<String, serde_json::Value>,
+    },
 }
 
 // =========================================================================

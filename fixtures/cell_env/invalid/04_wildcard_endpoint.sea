@@ -1,0 +1,6 @@
+Cell "Wildcard"
+    @profile "python-agent-v1"
+
+Endpoint "anywhere"
+    @host "*"
+    @port "443"

@@ -1,0 +1,4 @@
+schema = "domainforge-cell-overrides/v1"
+
+[resources]
+cpu = 8

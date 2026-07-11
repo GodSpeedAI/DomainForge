@@ -1,0 +1,27 @@
+schema = "domainforge-cell-overrides/v1"
+profile = "python-agent-v1"
+
+[devbox.packages]
+openssl = "openssl_3"
+git = "gitFull"
+
+[mise.tools]
+python = "3.13.5"
+uv = "0.9.8"
+just = "1.43.0"
+
+[dependency_sets.python-application]
+install_command = "uv sync --frozen --no-dev"
+
+[resources]
+cpu = 2
+memory_mb = 4096
+disk_mb = 10240
+timeout_seconds = 900
+
+[network.endpoints.package-mirror]
+host = "pypi.godspeed.internal"
+port = 443
+
+[evidence]
+extra_probes = ["python -c 'import ssl'"]

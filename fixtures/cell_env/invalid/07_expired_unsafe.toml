@@ -1,0 +1,8 @@
+schema = "domainforge-cell-overrides/v1"
+
+[unsafe_overrides]
+enabled = true
+ticket = "GS-1427"
+authority = "platform-architecture"
+rationale = "Temporary compatibility investigation"
+expires_at = "2026-01-01T00:00:00Z"

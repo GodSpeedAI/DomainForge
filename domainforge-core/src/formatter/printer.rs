@@ -5,6 +5,8 @@ use crate::parser::ast::{
     parse_source, Ast, AstNode, FileMetadata, ImportDecl, ImportItem, ImportSpecifier,
 };
 use crate::policy::Expression;
+use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 use std::fmt;
 
 /// Error type for formatting operations.
@@ -716,6 +718,59 @@ impl Formatter {
                 self.write("}");
                 self.newline();
             }
+            AstNode::Cell { name, annotations } => {
+                self.format_generic_decl("Cell", name, None, None, annotations)
+            }
+            AstNode::SystemDependency {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl(
+                "SystemDependency",
+                name,
+                version.as_deref(),
+                None,
+                annotations,
+            ),
+            AstNode::Runtime {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl("Runtime", name, Some(version), None, annotations),
+            AstNode::Tool {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl("Tool", name, Some(version), None, annotations),
+            AstNode::DependencySet { name, annotations } => {
+                self.format_generic_decl("DependencySet", name, None, None, annotations)
+            }
+            AstNode::Service {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl("Service", name, version.as_deref(), None, annotations),
+            AstNode::Mount { name, annotations } => {
+                self.format_generic_decl("Mount", name, None, None, annotations)
+            }
+            AstNode::Endpoint { name, annotations } => {
+                self.format_generic_decl("Endpoint", name, None, None, annotations)
+            }
+            AstNode::NetworkFlow {
+                name,
+                from_ref,
+                to_ref,
+                annotations,
+            } => self.format_generic_decl(
+                "NetworkFlow",
+                name,
+                None,
+                Some((from_ref.as_str(), to_ref.as_str())),
+                annotations,
+            ),
+            AstNode::Credential { name, annotations } => {
+                self.format_generic_decl("Credential", name, None, None, annotations)
+            }
         }
     }
 
@@ -724,6 +779,45 @@ impl Formatter {
     /// The Expression type has a proper Display that outputs SEA-compatible syntax.
     fn format_expression(&mut self, expr: &Expression) {
         self.write(&format!("{}", expr));
+    }
+
+    /// Shared formatter for the cell-environment declarations, all of which
+    /// share the `Keyword "name" [version "v"] [from "x" to "y"] @ann val*`
+    /// shape (see `parser::printer` for the mirrored debug-printer helper).
+    fn format_generic_decl(
+        &mut self,
+        keyword: &str,
+        name: &str,
+        version: Option<&str>,
+        from_to: Option<(&str, &str)>,
+        annotations: &HashMap<String, JsonValue>,
+    ) {
+        self.write(keyword);
+        self.write(" ");
+        self.write_string_literal(name);
+        if let Some(v) = version {
+            self.write(" version ");
+            self.write_string_literal(v);
+        }
+        if let Some((from, to)) = from_to {
+            self.write(" from ");
+            self.write_string_literal(from);
+            self.write(" to ");
+            self.write_string_literal(to);
+        }
+        let mut keys: Vec<_> = annotations.keys().collect();
+        keys.sort();
+        for key in keys {
+            self.newline();
+            self.indent();
+            self.write_indent();
+            self.write("@");
+            self.write(key);
+            self.write(" ");
+            self.write(&annotations[key].to_string());
+            self.dedent();
+        }
+        self.newline();
     }
 
     // Helper methods
