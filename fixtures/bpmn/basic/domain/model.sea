@@ -1,0 +1,17 @@
+@namespace "demo"
+@version "1.0.0"
+
+Entity "Warehouse" in demo
+Entity "LineA" in demo
+Entity "LineB" in demo
+Entity "Assembly" in demo
+
+Role "Operator" in demo
+Role "Supervisor" in demo
+
+Resource "CameraUnits" units in demo
+
+Flow "CameraUnits" from "Warehouse" to "LineA" quantity 40
+Flow "CameraUnits" from "Warehouse" to "LineB" quantity 60
+Flow "CameraUnits" from "LineA" to "Assembly" quantity 40
+Flow "CameraUnits" from "LineB" to "Assembly" quantity 60

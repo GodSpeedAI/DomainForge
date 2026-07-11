@@ -2470,10 +2470,10 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
         let node = unwrap_export(node);
         if let AstNode::Flow {
             resource_name,
+            annotations,
             from_entity,
             to_entity,
             quantity,
-            ..
         } = node
         {
             let from_id = resolve_by_name(&entity_map, from_entity, &default_namespace)?
@@ -2486,13 +2486,20 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 .ok_or_else(|| ParseError::undefined_resource_no_loc(resource_name))?;
 
             let qty = quantity.unwrap_or(Decimal::ZERO);
-            let flow = Flow::new_with_namespace(
+            let mut flow = Flow::new_with_namespace(
                 resource_id.clone(),
                 from_id.clone(),
                 to_id.clone(),
                 qty,
                 default_namespace.clone(),
             );
+
+            // Preserve flow annotations (e.g. `@cqrs { "kind": "command" }`)
+            // onto the flow's attribute map so downstream projection targets
+            // can read them via `ResolvedFlow::annotations`.
+            for (key, value) in annotations {
+                flow.set_attribute(key.clone(), value.clone());
+            }
 
             graph
                 .add_flow(flow)

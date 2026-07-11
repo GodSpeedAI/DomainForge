@@ -1,0 +1,10 @@
+projection_contract:
+  target: gauge
+  status: partial
+  preserves: [scenario_per_flow, given_when_then_steps, entity_source_target]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [scenario_identity, scenario_count]
+  deterministic_output_required: true
+  target_validator:
+    command: "Structural check (H1, M2 angle-bracket sanitization) via scripts/verify/projection-targets/gauge.sh. Native `gauge validate` deferred (Gauge CLI absent locally)."
+    native: false

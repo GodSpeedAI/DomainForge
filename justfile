@@ -156,6 +156,38 @@ enterprise-verify:
     echo "=== Enterprise Verification PASSED ==="
 
 # ============================================================================
+# Self-proving harness — `just prove`
+# ============================================================================
+# Runs the full proof suite from the current worktree and writes a machine- and
+# human-readable evidence pack to evidence/latest/. Each sub-recipe is
+# independently runnable and fails nonzero on any error. See PROOFS.md.
+
+# Full proof suite: gate unit/integration tests, then every proof, then evidence.
+prove: rust-test prove-language prove-canonical prove-projections prove-drift prove-evidence
+    @echo "=== just prove: PASSED — see evidence/latest/proof.md ==="
+
+# Parse + validate + format-stability on fixtures (+ negative fixtures rejected).
+prove-language:
+    bash scripts/prove/language.sh
+
+# Determinism: two isolated RDF projections, byte compare.
+prove-canonical:
+    bash scripts/prove/canonical.sh
+
+# Every projection-target gate (all.sh) + projection-contract parity.
+prove-projections:
+    bash scripts/prove/projections.sh
+
+# Round-trip (CALM + KG) and declared-drift via pack diff.
+prove-drift:
+    bash scripts/prove/roundtrip.sh
+    bash scripts/prove/drift.sh
+
+# Merge fragments into evidence/latest/proof.json + proof.md (runs LAST).
+prove-evidence:
+    bash scripts/prove/collect-evidence.sh
+
+# ============================================================================
 # CI-specific recipes (used by GitHub Actions)
 # ============================================================================
 

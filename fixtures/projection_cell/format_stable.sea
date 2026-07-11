@@ -1,0 +1,20 @@
+// Format-stability fixture for prove-language.
+//
+// Contains only the SEA constructs whose formatter output re-parses cleanly
+// (entities, resources, flows, patterns). The canonical projection-cell
+// fixture additionally declares Relation / Policy / Metric bodies, whose
+// formatter round-trip is a KNOWN GAP (the formatter emits a policy `as:`
+// expression / relation block the parser rejects) tracked in PROOFS.md as
+// CLAIM-FORMAT-STABILITY (partial). Keep this fixture to the round-trip-clean
+// subset so the idempotence proof stays honest.
+
+@namespace "procurement"
+@version "1.0.0"
+
+Entity "Buyer" in procurement
+Entity "Supplier" in procurement
+Resource "PurchaseOrder" units in procurement
+Resource "Payment" USD in procurement
+Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
+Flow "Payment" from "Supplier" to "Buyer" quantity 100
+Pattern "OrderNumber" matches "^[A-Z]{3}-[0-9]+$"

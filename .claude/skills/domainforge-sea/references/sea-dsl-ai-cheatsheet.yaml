@@ -1,0 +1,484 @@
+# SEA-DSL (DomainForge Semantic Enterprise Architecture DSL) agent cheatsheet
+# Purpose: portable, implementation-aligned reference for agents writing .sea files
+# Accuracy baseline: checked against domainforge-core/grammar/sea.pest and current CLI source on 2026-07-07
+
+---
+meta:
+  dsl_name: "SEA-DSL"
+  project_name: "DomainForge"
+  file_extension: ".sea"
+  purpose: "Model enterprise systems as typed semantic graphs with entities, resources, flows, relations, instances, policies, metrics, mappings, projections, and semantic packs."
+  implementation:
+    canonical_core: "Rust crate domainforge-core"
+    parser: "Pest grammar in domainforge-core/grammar/sea.pest"
+    cli_binary: "domainforge"
+    bindings: ["Python/PyO3", "TypeScript/napi-rs", "WASM/wasm-bindgen"]
+  important_distinction: "This is DomainForge SEA DSL. Do not confuse it with the separate SEA-Forge repository."
+  source_of_truth_order:
+    - "domainforge-core/grammar/sea.pest for syntax"
+    - "domainforge-core/src/parser/ast.rs and parser modules for AST behavior"
+    - "domainforge-core/src/cli/*.rs for CLI flags and subcommands"
+    - "DomainForge tests and examples for accepted idioms"
+
+---
+grammar:
+  file_structure:
+    pattern: "SOI ~ file_header? ~ declaration* ~ EOI"
+    file_header:
+      order: "zero or more metadata annotations, followed by zero or more imports"
+      annotations:
+        namespace: '@namespace "domain.subdomain"'
+        version: '@version "1.0.0"'
+        owner: '@owner "team-name"'
+        profile: '@profile "profile-name"'
+      imports:
+        named: 'import { Foo, Bar as Baz } from "module"'
+        wildcard: 'import * as alias from "module"'
+      note: "Imports are part of file_header, so place imports before declarations."
+    declarations:
+      - "Dimension"
+      - "Unit"
+      - "Entity"
+      - "Resource"
+      - "Flow"
+      - "Pattern"
+      - "Role"
+      - "Relation"
+      - "Instance"
+      - "Policy"
+      - "ConceptChange"
+      - "Metric"
+      - "Mapping"
+      - "Projection"
+      - "export <declaration>"
+
+  lexical:
+    comments: "// comment to end of line"
+    unsupported_comments: "# is not a SEA comment"
+    keywords: "case-insensitive in the grammar"
+    identifier:
+      rule: "(LETTER | _) followed by LETTER, NUMBER, or _"
+      examples: ["payment_limit", "_private", "vendor_123"]
+      avoid: ["finance.payments", "payment-limit", "Customer Service"]
+    name:
+      rule: "regular string literal or triple-quoted multiline string"
+      examples: ['"Customer"', '"""Long\nName"""']
+    string_literal:
+      rule: "double-quoted string with escapes"
+      escapes: ["\\\\", "\\\"", "\\n", "\\r", "\\t", "\\u{...}"]
+    number:
+      rule: "optional leading minus, digits, optional decimal fraction"
+      examples: ["42", "-10", "19.99"]
+      unsupported: "scientific notation"
+    boolean: ["true", "false"]
+    time_literal:
+      rule: "quoted ISO-like timestamp with required timezone"
+      examples: ['"2026-07-06T12:30:00Z"', '"2026-07-06T12:30:00-04:00"']
+    interval_literal:
+      syntax: 'interval("09:00", "17:00")'
+    quantity_literal:
+      syntax: 'number "unit"'
+      examples: ['100 "USD"', '1_500 "kg"']
+      caution: "The grammar currently permits underscores only where the number parser accepts them. Verify with domainforge validate."
+
+---
+declarations:
+  Entity:
+    purpose: "Actors, systems, concepts, or domain objects."
+    syntax:
+      basic: 'Entity "Name"'
+      namespace_domain: 'Entity "Name" in domain_identifier'
+      versioned: 'Entity "Name" v1.2.3 in domain_identifier'
+      evolution: |
+        Entity "VendorV2" v2.0.0
+          @replaces "Vendor" v1.0.0
+          @changes ["added credit_limit", "added payment_terms"]
+          in procurement
+    notes:
+      - "The optional `in` domain is an identifier, not a dotted namespace."
+      - "Use @namespace for dotted namespaces."
+
+  Resource:
+    purpose: "Things transferred, measured, or tracked in flows."
+    syntax:
+      basic: 'Resource "Name"'
+      with_unit_or_units: 'Resource "Money" USD'
+      with_domain: 'Resource "Money" USD in finance'
+      no_unit_domain: 'Resource "Invoice" in finance'
+    notes:
+      - "The token after the name is an identifier unless it is `in`."
+      - "`units` is the conventional generic unit identifier."
+
+  Flow:
+    purpose: "Movement of a declared resource from one declared entity to another."
+    syntax:
+      basic: 'Flow "ResourceName" from "SourceEntity" to "DestEntity"'
+      with_quantity: 'Flow "Money" from "Customer" to "Processor" quantity 1000'
+      with_annotations: |
+        Flow "Command"
+          @cqrs { "kind": "command" }
+          @tx { "transactional": false }
+          from "Client" to "Server"
+    notes:
+      - "Flow references use string names."
+      - "Flow annotations support object literals, string arrays, strings, booleans, and numbers."
+      - "Semantic graph construction resolves references and can fail on unknown or ambiguous concepts."
+
+  Pattern:
+    purpose: "Named regular expression for validation and policy matching."
+    syntax: 'Pattern "EmailAddress" matches "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"'
+
+  Role:
+    purpose: "Participant category labels for relations."
+    syntax:
+      basic: 'Role "Approver"'
+      with_domain: 'Role "Approver" in governance'
+
+  Relation:
+    purpose: "Semantic predicate connecting roles, optionally tied to a resource through `via: flow`."
+    syntax: |
+      Relation "Payment"
+        subject: "Payer"
+        predicate: "pays"
+        object: "Payee"
+        via: flow "Money"
+    notes:
+      - "subject and object refer to declared Role names."
+      - "`via: flow` currently takes a string literal, commonly the resource name used by a flow."
+
+  Instance:
+    purpose: "Concrete instance of an entity type with field values."
+    syntax: |
+      Instance vendor_123 of "Vendor" {
+          name: "Acme Corp",
+          credit_limit: 50000,
+          active: true,
+          balance: 1000 "USD"
+      }
+    notes:
+      - "Instance name is an identifier, not a quoted string."
+      - "Fields are identifier: expression pairs."
+
+  Dimension:
+    purpose: "Measurement dimension for units."
+    syntax: 'Dimension "Currency"'
+
+  Unit:
+    purpose: "Unit conversion definition inside a dimension."
+    syntax: 'Unit "EUR" of "Currency" factor 1.07 base "USD"'
+    notes:
+      - "Unit names are quoted in Unit declarations."
+      - "Resource declarations use unquoted unit identifiers."
+
+  Policy:
+    purpose: "Named expression evaluated against the graph."
+    syntax:
+      basic: 'Policy payment_limit as: true'
+      with_kind_modality_priority: 'Policy payment_limit per Constraint Obligation priority 5 as: expression'
+      full: |
+        Policy payment_limit per Constraint Obligation priority 5
+          @rationale "Limit single payments"
+          @tags ["finance", "risk"]
+          v1.0.0
+          as:
+            forall f in flows: (f.resource = "Money" and f.quantity <= 10000)
+    allowed_kinds: ["Constraint", "Derivation", "Obligation"]
+    allowed_modalities: ["Obligation", "Prohibition", "Permission"]
+    annotations:
+      rationale: "string literal"
+      tags: "string array"
+
+  ConceptChange:
+    purpose: "Semantic version migration metadata."
+    syntax: |
+      ConceptChange "Vendor_v2_migration"
+        @from_version v1.0.0
+        @to_version v2.0.0
+        @migration_policy mandatory
+        @breaking_change true
+    notes:
+      - "The grammar accepts identifier migration policies and boolean breaking_change values."
+
+  Metric:
+    purpose: "Named observable expression with optional metadata."
+    syntax: |
+      Metric "payment_success_rate" as:
+        count(flows)
+        @refresh_interval 60 "seconds"
+        @window 1 "hour"
+        @target 99.9
+        @threshold 95
+        @severity "warning"
+        @unit "percent"
+    annotations:
+      refresh_interval: 'number "duration-unit"'
+      window: 'number "duration-unit"'
+      unit: "string literal"
+      threshold: "number"
+      target: "number"
+      severity: "string literal"
+
+  Mapping:
+    purpose: "Contract for mapping primitives to target structures."
+    syntax: |
+      Mapping "calm_entities" for calm {
+        Entity "PaymentService" -> Node { id: "payment_service", critical: true }
+        Flow "Money" -> Edge { kind: "payment" }
+      }
+    target_formats: ["calm", "kg", "sbvr", "protobuf", "proto"]
+    primitive_types: ["Entity", "Resource", "Flow", "Policy", "Instance"]
+
+  Projection:
+    purpose: "Override projected fields for a target."
+    syntax: |
+      Projection "calm_names" for calm {
+        Entity "PaymentService" {
+          name: "payment-service",
+          properties: { "owner" -> "team" }
+        }
+      }
+    target_formats: ["calm", "kg", "sbvr", "protobuf", "proto"]
+    primitive_types: ["Entity", "Resource", "Flow", "Policy", "Instance"]
+
+---
+expressions:
+  precedence_high_to_low:
+    - "primary: literals, identifiers, member access, instance refs, quantifiers, aggregations, group_by, parentheses"
+    - "cast: expr as \"Unit\""
+    - "unary minus"
+    - "multiplication and division"
+    - "addition and subtraction"
+    - "comparison"
+    - "not"
+    - "and"
+    - "or"
+  collections: ["flows", "entities", "resources", "instances", "relations"]
+  comparison_operators:
+    equality: ["=", "!="]
+    relational: [">", "<", ">=", "<="]
+    string: ["contains", "startswith", "endswith", "matches"]
+    temporal: ["before", "after", "during"]
+    role: ["has_role"]
+  quantifiers:
+    forall: 'forall f in flows: (f.quantity > 0)'
+    exists: 'exists e in entities: (e.name = "Customer")'
+    exists_unique: 'exists_unique r in resources: (r.name = "Money")'
+    caution: "The current grammar requires parentheses around the quantified condition."
+  aggregations:
+    functions: ["count", "sum", "min", "max", "avg"]
+    simple: ["count(flows)", "sum(flows.quantity)"]
+    simple_filter_caution: "The grammar does not support `count(flows where ...)`; use comprehension form."
+    comprehension: 'sum(f in flows where f.resource = "Money": f.quantity as "USD")'
+    windowed_comprehension: 'sum(f in flows over last 60 "seconds" where f.resource = "Money": f.quantity)'
+  group_by:
+    syntax: 'group_by(f in flows where f.quantity > 0: f.to_entity) { sum(f.quantity) >= 100 }'
+  casts:
+    syntax: 'expression as "target_unit"'
+    examples: ['1000 "ms" as "s"', 'f.quantity as "USD"']
+  member_access:
+    syntax: "identifier.identifier"
+    examples: ["f.quantity", "e.name"]
+  instance_reference:
+    syntax: "@identifier"
+
+---
+semantic_rules:
+  authoring_order:
+    - "Header annotations"
+    - "Imports"
+    - "Dimensions and units"
+    - "Roles, entities, resources, patterns"
+    - "Flows, relations, instances"
+    - "Policies, metrics, mappings, projections, concept changes"
+  validation:
+    - "Parsing success does not imply semantic validity."
+    - "Flows require known resource, source entity, and target entity."
+    - "Relations require known subject and object roles."
+    - "Instances require a known entity type in the applicable namespace."
+    - "Patterns must compile as regular expressions."
+    - "Unit conversions require compatible dimensions."
+    - "Unqualified references can fail as ambiguous across namespaces."
+    - "Aggregations in policy boolean contexts should be compared explicitly."
+  namespace:
+    - "Use @namespace for dotted namespaces."
+    - "Use identifier-shaped names after `in`."
+    - "When a .sea-registry.toml exists, CLI parse/validate/project discover it near the input path."
+  determinism:
+    rust_convention: "Use IndexMap, not HashMap, for policy-relevant collections."
+  flow_constructor_convention:
+    rust_convention: "Flow::new takes ConceptId values for resource/from/to, not primitive objects."
+
+---
+cli:
+  binary: "domainforge"
+  global_options:
+    - "--verbose"
+    - "--quiet"
+    - "--color auto|always|never"
+    - "--help"
+    - "--version"
+  build:
+    command: "cargo install --path domainforge-core --features cli --force"
+    feature: "cli"
+    shacl_feature: "cli,shacl is required for RDF/XML KG import and SHACL validation behavior"
+  commands:
+    parse:
+      usage: "domainforge parse <input.sea> [--format human|json] [--out <path>] [--ast|--ast-v3]"
+      behavior:
+        graph_json: "default JSON output is semantic Graph JSON"
+        ast_json: "--ast or --ast-v3 outputs AST JSON"
+    validate:
+      usage: "domainforge validate [--format json|human|lsp] [--no-color] [--show-source] <file-or-directory>"
+      note: "Directory validation requires a discoverable .sea-registry.toml."
+    format:
+      usage: "domainforge format <file.sea> [--out <path>] [--indent-width <n>] [--use-tabs] [--check] [--sort-imports <bool>]"
+      alias: "domainforge fmt"
+    import:
+      usage: "domainforge import --format sbvr|kg <file>"
+      note: "Current CLI prints import graph stats. It does not provide --out in the current source."
+    project:
+      usage: "domainforge project --format <format> [options] <input.sea> <output>"
+      formats:
+        single_file_or_path: ["calm", "kg", "protobuf", "proto"]
+        directory_outputs: ["ai-llm", "ai-graph-ml", "cep-eval", "ai-learning", "lean", "rdf", "bpmn", "cmmn", "archimate"]
+      common_options:
+        - "--namespace <namespace>"
+        - "--created-at <RFC3339>"
+        - "--base-iri <IRI> for rdf"
+      protobuf_options:
+        - "--package <name>"
+        - "--include-governance"
+        - "--include-services"
+        - "--compatibility additive|backward|breaking"
+        - "--schema-history <dir>"
+        - "--apply-fixes"
+        - "--buf-lint"
+        - "--buf-breaking"
+        - "--buf-generate"
+        - "--multi-file"
+      ai_options:
+        - "--recipe <json>"
+        - "--seed <u64>"
+        - "--families <comma-separated-list>"
+        - "--authority-config <json>"
+    validate_kg:
+      usage: "domainforge validate-kg <file.ttl|file.rdf>"
+      command_name: "validate-kg"
+    normalize:
+      usage: "domainforge normalize <expression> [--check-equiv <other-expression>] [--json]"
+    registry:
+      usage: "domainforge registry resolve [--fail-on-ambiguity] <file>"
+    authority:
+      usage: "domainforge authority <config.json> <request.json> [--facts <facts.json>] [--json]"
+    pack:
+      subcommands: ["build", "validate", "inspect", "diff", "sign", "verify"]
+
+---
+semantic_packs:
+  build:
+    usage: |
+      domainforge pack build --source "models/**/*.sea" --org acme --domain logistics \
+        --version 1.0.0 --meaning-version 1.0.0 --out packs/candidate.json
+    options:
+      - "--source <glob-or-file> repeatable, required"
+      - "--org <id>"
+      - "--domain <id>"
+      - "--version <semver>"
+      - "--meaning-version <semver>"
+      - "--approval candidate|approved"
+      - "--review <jsonl>"
+      - "--previous-pack <path>"
+      - "--allow-first-approved-version"
+      - "--out <path>"
+      - "--format human|json|jsonl"
+  validate:
+    usage: "domainforge pack validate --pack <pack.json> [--mode off|warn|strict] [--require-signature] <input.sea>..."
+    options:
+      - "--deprecated-policy allow|warn|error-in-strict|error-always"
+      - "--expected-hash <hash>"
+      - "--format human|json|jsonl"
+  inspect:
+    usage: "domainforge pack inspect [--format human|json|jsonl] <pack.json>"
+  diff:
+    usage: "domainforge pack diff [--format human|json|jsonl] --old <old.json> --new <new.json>"
+    classifications: ["ADD", "DEF", "DEP", "BRK", "GOV", "SIG"]
+  sign:
+    usage: "domainforge pack sign <pack.json> --key <private.pem> [--out <signed.json>]"
+  verify:
+    usage: "domainforge pack verify <pack.json> --key <public.pem>"
+  exit_codes:
+    passed: 0
+    semantic_failed: 1
+    parse_error: 2
+    pack_unavailable: 3
+    signature_failure: 4
+    config_error: 5
+    internal_error: 6
+
+---
+projection_examples:
+  calm: "domainforge project --format calm model.sea calm.json"
+  kg_turtle_or_rdfxml_by_extension: "domainforge project --format kg model.sea graph.ttl"
+  rdf_dataset: "domainforge project --format rdf --created-at 2026-01-01T00:00:00Z model.sea rdf_out/"
+  bpmn: "domainforge project --format bpmn --created-at 2026-01-01T00:00:00Z model.sea bpmn_out/"
+  cmmn: "domainforge project --format cmmn --created-at 2026-01-01T00:00:00Z model.sea cmmn_out/"
+  archimate: "domainforge project --format archimate --created-at 2026-01-01T00:00:00Z model.sea archimate_out/"
+  lean: "domainforge project --format lean --created-at 2026-01-01T00:00:00Z model.sea lean_out/"
+  protobuf: "domainforge project --format protobuf --include-services --package com.example model.sea api.proto"
+  ai_learning: "domainforge project --format ai-learning --recipe recipe.json model.sea ai_out/"
+
+---
+common_pitfalls:
+  stale_binary_name:
+    wrong: "sea validate model.sea"
+    correct: "domainforge validate model.sea"
+    note: "Use `sea` only if the local environment actually provides that alias."
+  stale_export_command:
+    wrong: "domainforge export --format calm model.sea"
+    correct: "domainforge project --format calm model.sea calm.json"
+  import_out_flag:
+    wrong: "domainforge import --format calm calm.json --out restored.sea"
+    current_source: "The current import command supports sbvr and kg and prints graph statistics."
+  dotted_in_domain:
+    wrong: 'Entity "Payment" in finance.payments'
+    correct: |
+      @namespace "finance.payments"
+      Entity "Payment"
+  unquoted_concept:
+    wrong: "Entity Customer"
+    correct: 'Entity "Customer"'
+  quantifier_without_parentheses:
+    wrong: 'forall f in flows: f.quantity > 0'
+    correct: 'forall f in flows: (f.quantity > 0)'
+  simple_aggregation_filter:
+    wrong: 'count(flows where resource = "Money")'
+    correct: 'count(f in flows where f.resource = "Money": f.quantity)'
+  hash_comments:
+    wrong: "# comment"
+    correct: "// comment"
+  scientific_notation:
+    wrong: "1e6"
+    correct: "1000000"
+
+---
+verification:
+  authoring:
+    - "domainforge format --check model.sea"
+    - "domainforge validate --format human model.sea"
+  troubleshooting:
+    - "domainforge validate --format json model.sea"
+    - "domainforge parse --ast --format json model.sea"
+  projection:
+    - "run the relevant domainforge project command"
+    - "run target-specific validators when available, for example validate-kg, xmllint schemas, lake build, buf lint/breaking"
+  implementation_changes:
+    grammar_first:
+      - "domainforge-core/grammar/sea.pest"
+      - "domainforge-core/src/parser/ast.rs and parser code"
+      - "domainforge-core/tests/parser_*.rs"
+    primitive_public_api:
+      - "Rust core"
+      - "Python bindings and tests"
+      - "TypeScript bindings and tests"
+      - "WASM bindings when public"
+    broad_proof: "just all-tests"

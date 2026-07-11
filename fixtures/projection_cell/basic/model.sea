@@ -1,0 +1,61 @@
+// Projection-cell fixture for the event/authority/verification/activation targets.
+//
+// This is a NEW fixture family introduced by the
+// "Event, Authority, Verification, and Activation Projections" plan. It is a
+// single-file, flat `.sea` model (matching the flat style of
+// fixtures/semantic_packs/acme_procurement/domain/*.sea rather than any
+// nested basic/domain/model.sea subtree — no such convention previously
+// existed). It exercises the primitives the eight new projection targets read:
+// entities, resources, and flows. It also declares roles, a pattern, a
+// relation, an instance, a policy, and a metric — these are not yet consumed
+// by the eight targets (AsyncAPI reads policy names as prose; the rest read
+// entities/resources/flows only) but are included as backlog for future
+// authority/verification projections (Cedar is the natural consumer of
+// roles/policies).
+
+@namespace "procurement"
+@version "1.0.0"
+
+// Principals / actors
+Entity "Buyer" in procurement
+Entity "Supplier" in procurement
+Entity "Approver" in procurement
+
+// Resources that move through the cell
+Resource "PurchaseOrder" units in procurement
+Resource "Payment" USD in procurement
+
+// Authority roles
+Role "Requester" in procurement
+Role "Authorizer" in procurement
+
+// Event-bearing flows (projected to CloudEvents envelopes + AsyncAPI messages)
+Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
+Flow "Payment" from "Buyer" to "Supplier" quantity 100
+
+// Structural pattern used by validation projections
+Pattern "OrderNumber" matches "^[A-Z]{3}-[0-9]+$"
+
+// Relational structure used by Alloy/authority projections
+Relation "OrderFulfillment"
+  subject: "Requester"
+  predicate: "orders"
+  object: "Authorizer"
+
+// Concrete instance for entity/example projections
+instance acme_supplier of "Supplier" {
+    name: "Acme Corp",
+    region: "NA"
+}
+
+// Governed behavior: every order requires approval before settlement
+policy require_approval per Constraint Obligation priority 1
+  @rationale "every order must be approved before payment"
+  as:
+    1 = 1
+
+// Behavioral settlement metric
+Metric "order_count" as:
+  count(f in flows where f.resource = "PurchaseOrder": f.quantity)
+  @threshold 100
+  @unit "orders"

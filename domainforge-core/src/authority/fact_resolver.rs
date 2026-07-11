@@ -51,6 +51,28 @@ impl Default for FactSourceRegistry {
     }
 }
 
+/// Facts that have been through [`FactResolver::resolve_trusted_facts`] —
+/// checked against the fact-source registry for source-class match, path
+/// allowlisting, evidence/signature requirements, and freshness (A2). The
+/// resolver only accepts this type, not raw `FactEnvelope`s, so a caller
+/// cannot bypass the trust pipeline by constructing envelopes directly and
+/// handing them to `AuthorityResolver::resolve`.
+#[derive(Debug, Clone, Default)]
+pub struct TrustedFacts(pub Vec<FactEnvelope>);
+
+impl TrustedFacts {
+    pub fn as_slice(&self) -> &[FactEnvelope] {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for TrustedFacts {
+    type Target = [FactEnvelope];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 pub struct FactResolver {
     registry: FactSourceRegistry,
 }
@@ -111,7 +133,7 @@ impl FactResolver {
         raw_facts: &[FactEnvelope],
         provided_trusted: &[FactEnvelope],
         now: chrono::DateTime<Utc>,
-    ) -> (Vec<FactEnvelope>, Vec<FactTrustDecision>) {
+    ) -> (TrustedFacts, Vec<FactTrustDecision>) {
         let mut resolved = raw_facts.to_vec();
         let mut trust_decisions = Vec::new();
 
@@ -179,16 +201,29 @@ impl FactResolver {
                 continue;
             }
 
-            if source.signature_required && fact.signature.is_none() {
-                trust_decisions.push(FactTrustDecision {
-                    fact_path: fact.path.clone(),
-                    required_sources: vec![source.source_class],
-                    observed_source: fact.source_class,
-                    trusted: false,
-                    reason: "missing_signature".to_string(),
-                    evidence_ref: fact.evidence_ref.clone(),
-                });
-                continue;
+            if source.signature_required {
+                if fact.signature.is_none() {
+                    trust_decisions.push(FactTrustDecision {
+                        fact_path: fact.path.clone(),
+                        required_sources: vec![source.source_class],
+                        observed_source: fact.source_class,
+                        trusted: false,
+                        reason: "missing_signature".to_string(),
+                        evidence_ref: fact.evidence_ref.clone(),
+                    });
+                    continue;
+                }
+                if let Some(reject_reason) = self.reject_unverified_signature(fact, source) {
+                    trust_decisions.push(FactTrustDecision {
+                        fact_path: fact.path.clone(),
+                        required_sources: vec![source.source_class],
+                        observed_source: fact.source_class,
+                        trusted: false,
+                        reason: reject_reason,
+                        evidence_ref: fact.evidence_ref.clone(),
+                    });
+                    continue;
+                }
             }
 
             if !fact.is_fresh(now) {
@@ -219,6 +254,32 @@ impl FactResolver {
             }
         }
 
-        (resolved, trust_decisions)
+        (TrustedFacts(resolved), trust_decisions)
+    }
+
+    /// Returns `Some(reason)` if a signed fact fails cryptographic
+    /// verification, `None` if it passes or cannot be cryptographically
+    /// checked (no `signing` feature / no public key on file — presence was
+    /// already enforced by the caller).
+    #[cfg(feature = "signing")]
+    fn reject_unverified_signature(
+        &self,
+        fact: &FactEnvelope,
+        source: &FactSource,
+    ) -> Option<String> {
+        let public_key_pem = source.public_key_pem.as_ref()?;
+        match super::signing::verify_fact_signature(fact, public_key_pem.as_bytes()) {
+            Ok(()) => None,
+            Err(e) => Some(format!("invalid_signature: {e}")),
+        }
+    }
+
+    #[cfg(not(feature = "signing"))]
+    fn reject_unverified_signature(
+        &self,
+        _fact: &FactEnvelope,
+        _source: &FactSource,
+    ) -> Option<String> {
+        None
     }
 }

@@ -1,0 +1,25 @@
+@namespace "demo"
+@version "1.0.0"
+
+// Entities become business objects (the things the architecture handles).
+Entity "PurchaseOrder" in demo
+Entity "Invoice" in demo
+Entity "Ledger" in demo
+
+// Roles become business roles (the active-structure actors).
+Role "Approver" in demo
+Role "Clerk" in demo
+
+// Resources become business objects too (passive information/value objects).
+Resource "Budget" units in demo
+
+// Flows become business processes. Each process accesses its endpoint objects;
+// chained flows (Invoice is the target of the first and the source of the
+// second) trigger one another.
+Flow "Budget" from "PurchaseOrder" to "Invoice" quantity 1
+Flow "Budget" from "Invoice" to "Ledger" quantity 1
+
+// Policies become motivation requirements. Each requirement is associated with
+// every business object its condition expression references (here: Budget).
+Policy positive_budget as: Budget.quantity > 0
+Policy within_limit as: Budget.quantity < 500

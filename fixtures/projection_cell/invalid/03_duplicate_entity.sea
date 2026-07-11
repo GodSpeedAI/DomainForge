@@ -1,0 +1,12 @@
+// Negative fixture: semantically broken SEA.
+// Declares the same Entity twice in the same namespace, which is not a valid
+// model. `domainforge validate` MUST reject it (duplicate concept identity).
+
+@namespace "procurement"
+@version "1.0.0"
+
+Entity "Buyer" in procurement
+Entity "Buyer" in procurement
+
+Resource "PurchaseOrder" units in procurement
+Flow "PurchaseOrder" from "Buyer" to "Buyer" quantity 1

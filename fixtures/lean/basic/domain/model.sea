@@ -1,0 +1,27 @@
+@namespace "demo"
+@version "1.0.0"
+
+Entity "Warehouse" in demo
+Entity "Factory" in demo
+
+Role "Operator" in demo
+Role "Supervisor" in demo
+
+Resource "CameraUnits" units in demo
+
+Flow "CameraUnits" from "Warehouse" to "Factory" quantity 100
+
+Relation "Oversight"
+  subject: "Supervisor"
+  predicate: "supervises"
+  object: "Operator"
+
+// Groundable and satisfied: machine-checked with `by decide`.
+Policy positive_flow as: Flow.quantity > 0
+Policy capacity_limit as: Flow.quantity < 500
+
+// Groundable but violated by the model: emitted as a `_violated` theorem.
+Policy overload as: Flow.quantity > 1000
+
+// Not auto-groundable (Entity.name member access): becomes an obligation stub.
+Policy named_entities as: Entity.name != ""

@@ -1,0 +1,10 @@
+projection_contract:
+  target: dagger
+  status: proven
+  preserves: [flow_identity, function_per_flow, entity_source_target]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics, runtime_container_semantics]
+  prohibited_losses: [flow_identity, function_count]
+  deterministic_output_required: true
+  target_validator:
+    command: "python3 -m py_compile main.py via scripts/verify/projection-targets/dagger.sh (catches escaping/syntax defects). Full dagger develop needs the daemon (deferred to containerized CI)."
+    native: true

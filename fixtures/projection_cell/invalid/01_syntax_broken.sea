@@ -1,0 +1,12 @@
+// Negative fixture: syntactically broken SEA.
+// `domainforge parse` MUST reject this file.
+//
+// The Entity declaration is missing its required quoted name and the block is
+// left unterminated, which no valid SEA grammar production accepts.
+
+@namespace "procurement"
+@version "1.0.0"
+
+Entity in procurement
+Resource "PurchaseOrder units in procurement
+Flow "PurchaseOrder" from "Buyer" to

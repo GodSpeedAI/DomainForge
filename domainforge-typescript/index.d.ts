@@ -258,6 +258,111 @@ export declare class Graph {
    * @returns The generated .proto file content as a string
    */
   exportProtobuf(package: string, namespace?: string | undefined | null, projectionName?: string | undefined | null, includeGovernance?: boolean | undefined | null, includeServices?: boolean | undefined | null): string
+  /**
+   * Compile the graph into AI Learning Projection artifacts.
+   *
+   * @param recipeJson - Optional JSON recipe (defaults enable all projections)
+   * @param authorityConfigJson - Optional AuthorityEnvironmentConfig JSON; required for resolver-grounded families
+   * @param modelRef - Provenance label for the source model
+   * @param seed - Optional split/sampling seed (overrides the recipe seed)
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths (the `--format ai-learning` layout) to file contents
+   */
+  exportAiLearning(recipeJson?: string | undefined | null, authorityConfigJson?: string | undefined | null, modelRef?: string | undefined | null, seed?: number | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit a Lean 4 formal verification package (the `--format lean` layout).
+   *
+   * @param modelRef - Provenance label for the source model
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportLean(modelRef?: string | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit an RDF/OWL dataset (the `--format rdf` layout).
+   *
+   * @param modelRef - Provenance label for the source model
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @param baseIri - Optional base IRI the `sea:` prefix expands to
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportRdfProjection(modelRef?: string | undefined | null, createdAt?: string | undefined | null, baseIri?: string | undefined | null): string
+  /**
+   * Emit a BPMN 2.0 process (the `--format bpmn` layout: model.bpmn).
+   *
+   * @param modelRef - Provenance label for the source model
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportBpmn(modelRef?: string | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit a CMMN 1.1 case (the `--format cmmn` layout: model.cmmn).
+   *
+   * @param modelRef - Provenance label for the source model
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportCmmn(modelRef?: string | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit an ArchiMate 3.0 Model Exchange File (the `--format archimate`
+   * layout: model.xml).
+   *
+   * @param modelRef - Provenance label for the source model
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportArchimate(modelRef?: string | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit an OpenTelemetry SemConv projection (the `--format otel-semconv`
+   * layout: registry/telemetry.yaml + constants/attributes.{rs,py,ts}).
+   *
+   * @param modelRef - Provenance label for the source model
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportOtelSemconv(modelRef?: string | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit a BAML capability (the `--format baml` layout: baml_src/*.baml +
+   * README.md). Requires an authority environment: the function and its
+   * tests are resolver-grounded.
+   *
+   * @param recipeJson - Optional JSON recipe (its `baml` section configures naming)
+   * @param authorityConfigJson - AuthorityEnvironmentConfig JSON (required)
+   * @param modelRef - Provenance label for the source model
+   * @param seed - Optional seed override
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportBaml(recipeJson?: string | undefined | null, authorityConfigJson?: string | undefined | null, modelRef?: string | undefined | null, seed?: number | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit a DSPy optimization program (the `--format dspy` layout:
+   * program.py, metric.py, optimize.py, dspy.config.json, README.md).
+   * Requires an authority environment: the signature and its examples are
+   * resolver-grounded. Train/dev examples are referenced from the
+   * ai-learning LLM dataset, never copied.
+   *
+   * @param recipeJson - Optional JSON recipe (its `dspy` section configures naming/optimizer)
+   * @param authorityConfigJson - AuthorityEnvironmentConfig JSON (required)
+   * @param modelRef - Provenance label for the source model
+   * @param seed - Optional seed override
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportDspy(recipeJson?: string | undefined | null, authorityConfigJson?: string | undefined | null, modelRef?: string | undefined | null, seed?: number | undefined | null, createdAt?: string | undefined | null): string
+  /**
+   * Emit a ZenML learning pipeline (the `--format zenml` layout:
+   * pipeline.py, steps.py, run.py, requirements.txt, zenml.config.json,
+   * README.md). Requires an authority environment: the pipeline and its
+   * labeled examples are resolver-grounded. Train/dev examples are
+   * referenced from the ai-learning LLM dataset, never copied.
+   *
+   * @param recipeJson - Optional JSON recipe (its `zenml` section configures pipeline/model/gate)
+   * @param authorityConfigJson - AuthorityEnvironmentConfig JSON (required)
+   * @param modelRef - Provenance label for the source model
+   * @param seed - Optional seed override
+   * @param createdAt - Optional fixed RFC3339 timestamp for reproducible output
+   * @returns JSON object mapping relative artifact paths to file contents
+   */
+  exportZenml(recipeJson?: string | undefined | null, authorityConfigJson?: string | undefined | null, modelRef?: string | undefined | null, seed?: number | undefined | null, createdAt?: string | undefined | null): string
   addPolicy(policyJson: string): void
   addAssociation(owner: string, owned: string, relType: string): void
   /**

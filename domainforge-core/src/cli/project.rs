@@ -56,16 +56,109 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub multi_file: bool,
 
+    /// JSON recipe file (required for ai-learning; optional for the other
+    /// learning-loop / AI-recipe formats: ai-llm, ai-graph-ml, cep-eval, baml,
+    /// dspy, zenml)
+    #[arg(long)]
+    pub recipe: Option<PathBuf>,
+
+    /// Split/sampling seed for the AI-recipe formats (ai-llm, ai-graph-ml,
+    /// cep-eval, ai-learning, baml, dspy, zenml; overrides the recipe seed)
+    #[arg(long)]
+    pub seed: Option<u64>,
+
+    /// Comma-separated family subset (ai-llm / cep-eval only)
+    #[arg(long)]
+    pub families: Option<String>,
+
+    /// AuthorityEnvironmentConfig JSON for resolver-grounded labels (AI-recipe
+    /// formats: ai-*; required for baml, dspy, zenml)
+    #[arg(long)]
+    pub authority_config: Option<PathBuf>,
+
+    /// Fixed RFC3339 created_at timestamp for byte-identical output (all
+    /// directory-output projections: ai-*, rdf, bpmn, cmmn, archimate,
+    /// otel-semconv, baml, dspy, zenml)
+    #[arg(long)]
+    pub created_at: Option<String>,
+
+    /// Base IRI the `sea:` prefix expands to (rdf format only; defaults to the
+    /// canonical SEA vocabulary namespace)
+    #[arg(long)]
+    pub base_iri: Option<String>,
+
     pub input: PathBuf,
     pub output: PathBuf,
 }
 
-#[derive(ValueEnum, Clone, Debug, Copy)]
+#[derive(ValueEnum, Clone, Debug, Copy, PartialEq, Eq)]
 pub enum ProjectFormat {
+    /// Architecture operator: CALM architecture JSON (single-file output)
     Calm,
+    /// Semantic-graph operator (legacy): knowledge-graph Turtle/RDF-XML (single-file output; prefer `rdf`)
     Kg,
+    /// Interface operator: Protobuf schema + optional gRPC services (single-file output)
     Protobuf,
-    Proto, // alias for protobuf
+    /// Interface operator: alias for `protobuf`
+    Proto,
+    /// Learning-loop operator: LLM JSONL dataset (directory output)
+    AiLlm,
+    /// Learning-loop operator: graph-ML dataset (directory output)
+    AiGraphMl,
+    /// Learning-loop operator: CEP evaluation dataset (directory output)
+    CepEval,
+    /// Learning-loop operator: all enabled AI datasets via recipe (directory output)
+    AiLearning,
+    /// Formal-verification operator: Lean 4 Lake package (`lake build`-checkable defs/proofs; directory output)
+    Lean,
+    /// Semantic graph operator: RDF/OWL dataset (Turtle + JSON-LD + OWL, directory output)
+    Rdf,
+    /// Ordered-process operator: BPMN 2.0 XML (non-executable subset, directory output)
+    Bpmn,
+    /// Adaptive-work/case operator: CMMN 1.1 XML (directory output)
+    Cmmn,
+    /// Enterprise-architecture operator: ArchiMate 3.0 Model Exchange File (directory output)
+    Archimate,
+    /// Runtime-observation operator: OpenTelemetry SemConv registry + attribute constants (directory output)
+    OtelSemconv,
+    /// AI-representation operator: BAML capability (typed classes/enums, policy-decision function, resolver-seeded tests; directory output)
+    Baml,
+    /// AI-optimization operator: DSPy program (authority-decision signature, decision-label metric, optimizer config with regression gate; directory output)
+    Dspy,
+    /// Learning-loop operator: ZenML pipeline package (@step load/train/eval/register wired into a @pipeline DAG, model version keyed to the model hash; directory output)
+    Zenml,
+    /// Event operator: CloudEvents 1.0 stream — one envelope per Flow (directory output)
+    #[value(name = "cloudevents")]
+    CloudEvents,
+    /// Event-API operator: AsyncAPI 2.6 document — one channel per Flow (directory output)
+    #[value(name = "asyncapi")]
+    AsyncApi,
+    /// Activation operator: Devbox manifest — domain-aware dev shell with the namespace/entities/resources/flows pre-loaded as env vars (directory output)
+    Devbox,
+    /// Activation operator: Dagger module — one @dagger.function per Flow so `dagger call` can activate each step (directory output)
+    #[value(name = "dagger")]
+    Dagger,
+    /// Authority operator: Cedar schema + policies — each Flow becomes an Action with principal=from, resource=resource (directory output)
+    #[value(name = "cedar")]
+    Cedar,
+    /// Verification operator: Gauge spec — one scenario per Flow with Given/When/Then steps (directory output)
+    #[value(name = "gauge")]
+    Gauge,
+    /// Verification operator: Alloy model — signatures for entities/resources, a Flow sig with one fact per declared flow (directory output)
+    #[value(name = "alloy")]
+    Alloy,
+    /// Verification operator: TLA+ spec — flows become state-machine transitions, model-checkable with TLC (directory output)
+    #[value(name = "tla")]
+    Tla,
+    /// Code operator: Python DDD/CQRS domain layer — complete package up to the ports (directory output)
+    #[value(name = "domain-python")]
+    DomainPython,
+    /// Code operator: TypeScript DDD/CQRS domain layer — complete package up to the ports (directory output)
+    #[value(name = "domain-typescript")]
+    DomainTypescript,
+    /// Code operator: Rust DDD/CQRS domain layer — complete crate up to the ports (directory output)
+    #[value(name = "domain-rust")]
+    DomainRust,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -109,6 +202,72 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", args.input.display(), e))?;
 
     match args.format {
+        ProjectFormat::AiLlm
+        | ProjectFormat::AiGraphMl
+        | ProjectFormat::CepEval
+        | ProjectFormat::AiLearning => {
+            run_ai_learning(&args, &graph)?;
+        }
+        ProjectFormat::Lean => {
+            run_lean(&args, &graph)?;
+        }
+        ProjectFormat::Rdf => {
+            run_rdf(&args, &graph)?;
+        }
+        ProjectFormat::Bpmn => {
+            run_bpmn(&args, &graph)?;
+        }
+        ProjectFormat::Cmmn => {
+            run_cmmn(&args, &graph)?;
+        }
+        ProjectFormat::Archimate => {
+            run_archimate(&args, &graph)?;
+        }
+        ProjectFormat::OtelSemconv => {
+            run_otel_semconv(&args, &graph)?;
+        }
+        ProjectFormat::Baml => {
+            run_baml(&args, &graph)?;
+        }
+        ProjectFormat::Dspy => {
+            run_dspy(&args, &graph)?;
+        }
+        ProjectFormat::Zenml => {
+            run_zenml(&args, &graph)?;
+        }
+        ProjectFormat::CloudEvents => {
+            run_cloudevents(&args, &graph)?;
+        }
+        ProjectFormat::AsyncApi => {
+            run_asyncapi(&args, &graph)?;
+        }
+        ProjectFormat::Devbox => {
+            run_devbox(&args, &graph)?;
+        }
+        ProjectFormat::Dagger => {
+            run_dagger(&args, &graph)?;
+        }
+        ProjectFormat::Cedar => {
+            run_cedar(&args, &graph)?;
+        }
+        ProjectFormat::Gauge => {
+            run_gauge(&args, &graph)?;
+        }
+        ProjectFormat::Alloy => {
+            run_alloy(&args, &graph)?;
+        }
+        ProjectFormat::Tla => {
+            run_tla(&args, &graph)?;
+        }
+        ProjectFormat::DomainPython => {
+            run_domain_python(&args, &graph)?;
+        }
+        ProjectFormat::DomainTypescript => {
+            run_domain_typescript(&args, &graph)?;
+        }
+        ProjectFormat::DomainRust => {
+            run_domain_rust(&args, &graph)?;
+        }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
                 .map_err(|e| anyhow::anyhow!("Failed to export to CALM: {}", e))?;
@@ -290,5 +449,1131 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+fn run_lean(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format lean (the projection is model-driven)"
+        ));
+    }
+
+    // Directory output, like the ai-* projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the lean projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::lean::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("lean projection failed: {e}"))?;
+    println!(
+        "Projected Lean 4 package to {} ({} files); check with `lake build`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+/// Validate that `--created-at` (if provided) is a valid RFC 3339 timestamp.
+/// M6: CloudEvents writes it into the `time` attribute, which CloudEvents 1.0
+/// requires to be RFC 3339. Other targets use it for deterministic output.
+fn validate_created_at(args: &ProjectArgs) -> Result<()> {
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+    Ok(())
+}
+
+fn run_cloudevents(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format cloudevents (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    // Directory output, like the other model-driven projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the cloudevents projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::cloudevents::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("cloudevents projection failed: {e}"))?;
+    println!(
+        "Projected CloudEvents 1.0 stream to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_asyncapi(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format asyncapi (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the asyncapi projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::asyncapi::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("asyncapi projection failed: {e}"))?;
+    println!(
+        "Projected AsyncAPI {} document to {} ({} files)",
+        crate::projection::asyncapi::ASYNCAPI_VERSION,
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_devbox(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format devbox (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the devbox projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::devbox::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("devbox projection failed: {e}"))?;
+    println!(
+        "Projected Devbox manifest to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_dagger(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format dagger (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the dagger projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::dagger::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("dagger projection failed: {e}"))?;
+    println!(
+        "Projected Dagger module (engine {}) to {} ({} files)",
+        crate::projection::dagger::DAGGER_ENGINE_VERSION,
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_cedar(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format cedar (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the cedar projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::cedar::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("cedar projection failed: {e}"))?;
+    println!(
+        "Projected Cedar schema + policies to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_gauge(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format gauge (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the gauge projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::gauge::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("gauge projection failed: {e}"))?;
+    println!(
+        "Projected Gauge spec to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_alloy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format alloy (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the alloy projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::alloy::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("alloy projection failed: {e}"))?;
+    println!(
+        "Projected Alloy model to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_tla(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format tla (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the tla projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::tla::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("tla projection failed: {e}"))?;
+    println!(
+        "Projected TLA+ spec to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_domain_python(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format domain-python (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the domain-python projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::domain::python::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("domain-python projection failed: {e}"))?;
+    println!(
+        "Projected Python DDD/CQRS domain layer to {} ({} files); validate with \
+         `python -m compileall src tests && mypy --strict src && python -m unittest discover tests`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_domain_typescript(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format domain-typescript (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the domain-typescript projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::domain::typescript::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("domain-typescript projection failed: {e}"))?;
+    println!(
+        "Projected TypeScript DDD/CQRS domain layer to {} ({} files); validate with `tsc --noEmit`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_domain_rust(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format domain-rust (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the domain-rust projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::domain::rust::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("domain-rust projection failed: {e}"))?;
+    println!(
+        "Projected Rust DDD/CQRS domain crate to {} ({} files); validate with `cargo check && cargo test`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_rdf(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    use crate::projection::rdf::{self, RdfOptions};
+
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format rdf (the projection is model-driven); \
+             see docs/rdf-projections.md"
+        ));
+    }
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Directory output, identical to the lean projection.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the rdf projection; \
+             see docs/rdf-projections.md"
+        ));
+    }
+
+    let opts = RdfOptions {
+        base_iri: args.base_iri.clone(),
+    };
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = rdf::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &opts,
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("rdf projection failed: {e}; see docs/rdf-projections.md"))?;
+    println!(
+        "Projected RDF dataset to {} ({} files); validate with `domainforge validate-kg {}`",
+        args.output.display(),
+        files.len(),
+        args.output.join("model.ttl").display()
+    );
+    Ok(())
+}
+
+fn run_bpmn(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format bpmn (the projection is model-driven); \
+             see docs/bpmn-projections.md"
+        ));
+    }
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Directory output, identical to the lean and rdf projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the bpmn projection; \
+             see docs/bpmn-projections.md"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::bpmn::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("bpmn projection failed: {e}; see docs/bpmn-projections.md"))?;
+    println!(
+        "Projected BPMN 2.0 process to {} ({} files); validate with \
+         `xmllint --schema schemas/bpmn/BPMN20.xsd {}`",
+        args.output.display(),
+        files.len(),
+        args.output.join("model.bpmn").display()
+    );
+    Ok(())
+}
+
+fn run_cmmn(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format cmmn (the projection is model-driven); \
+             see docs/cmmn-projections.md"
+        ));
+    }
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Directory output, identical to the lean, rdf, and bpmn projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the cmmn projection; \
+             see docs/cmmn-projections.md"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::cmmn::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("cmmn projection failed: {e}; see docs/cmmn-projections.md"))?;
+    println!(
+        "Projected CMMN 1.1 case to {} ({} files); validate with \
+         `xmllint --schema schemas/cmmn/CMMN11.xsd {}`",
+        args.output.display(),
+        files.len(),
+        args.output.join("model.cmmn").display()
+    );
+    Ok(())
+}
+
+fn run_archimate(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format archimate (the projection is model-driven); \
+             see docs/archimate-projections.md"
+        ));
+    }
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Directory output, identical to the lean, rdf, bpmn, and cmmn projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the archimate projection; \
+             see docs/archimate-projections.md"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::archimate::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| {
+        anyhow::anyhow!("archimate projection failed: {e}; see docs/archimate-projections.md")
+    })?;
+    println!(
+        "Projected ArchiMate model to {} ({} files); validate with \
+         `xmllint --schema schemas/archimate/archimate3_Diagram.xsd {}`",
+        args.output.display(),
+        files.len(),
+        args.output.join("model.xml").display()
+    );
+    Ok(())
+}
+
+fn run_otel_semconv(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format otel-semconv (the projection is model-driven); \
+             see docs/otel-projections.md"
+        ));
+    }
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Directory output, identical to the lean, rdf, bpmn, cmmn, and archimate projections.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the otel-semconv projection; \
+             see docs/otel-projections.md"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::otel::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| {
+        anyhow::anyhow!("otel-semconv projection failed: {e}; see docs/otel-projections.md")
+    })?;
+    println!(
+        "Projected OTel SemConv registry to {} ({} files); the registry is \
+         {}",
+        args.output.display(),
+        files.len(),
+        args.output.join("registry/telemetry.yaml").display()
+    );
+    Ok(())
+}
+
+fn run_baml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    use crate::projection::ai_learning::{self, recipe::Recipe};
+
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Recipe supplies the `baml` section and (optionally) the authority config
+    // path; it is defaulted when absent, exactly like the other ai-* formats.
+    let (recipe, recipe_ref, recipe_dir) = match &args.recipe {
+        Some(path) => {
+            let text = read_to_string(path)
+                .with_context(|| format!("Failed to read recipe {}", path.display()))?;
+            let recipe = Recipe::from_json(&text).map_err(|e| anyhow::anyhow!(e))?;
+            let dir = path.parent().map(Path::to_path_buf);
+            (recipe, path.display().to_string(), dir)
+        }
+        None => (Recipe::default(), "<default>".to_string(), None),
+    };
+
+    // Authority environment: CLI flag wins, else the recipe's authority_config
+    // resolved relative to the recipe file (identical to run_ai_learning).
+    let authority_path: Option<PathBuf> = match (&args.authority_config, &recipe.authority_config) {
+        (Some(cli), _) => Some(cli.clone()),
+        (None, Some(from_recipe)) => {
+            let rel = PathBuf::from(from_recipe);
+            Some(match &recipe_dir {
+                Some(dir) if rel.is_relative() => dir.join(rel),
+                _ => rel,
+            })
+        }
+        (None, None) => None,
+    };
+    let (authority, authority_ref) = match authority_path {
+        Some(path) => {
+            let text = read_to_string(&path)
+                .with_context(|| format!("Failed to read authority config {}", path.display()))?;
+            let config: crate::authority::AuthorityEnvironmentConfig = serde_json::from_str(&text)
+                .map_err(|e| anyhow::anyhow!("Failed to parse authority config: {e}"))?;
+            let mut env = crate::authority::AuthorityEnvironment::new(config)
+                .map_err(|e| anyhow::anyhow!("Failed to create authority environment: {e}"))?;
+            env.validate()
+                .map_err(|e| anyhow::anyhow!("Authority environment validation failed: {e}"))?;
+            (Some(env), Some(path.display().to_string()))
+        }
+        None => {
+            return Err(anyhow::anyhow!(
+                "--format baml needs an authority environment (the function and its tests are \
+                 resolver-grounded): pass --authority-config <FILE> or set 'authority_config' \
+                 in the recipe; see docs/baml-projections.md"
+            ))
+        }
+    };
+
+    // Directory output, identical to the other projection families.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the baml projection; \
+             see docs/baml-projections.md"
+        ));
+    }
+
+    let ctx = ai_learning::AiLearningContext::build(
+        graph,
+        args.input.display().to_string(),
+        recipe,
+        recipe_ref,
+        args.seed,
+        args.created_at.clone(),
+        authority,
+        authority_ref,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::baml::emit(&ctx, &mut sink).map_err(|e| {
+        anyhow::anyhow!("baml projection failed: {e}; see docs/baml-projections.md")
+    })?;
+    println!(
+        "Projected BAML capability to {} ({} files); fill in a client in \
+         baml_src/clients.baml, then run `baml-cli generate`",
+        args.output.display(),
+        files.len(),
+    );
+    Ok(())
+}
+
+fn run_dspy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    use crate::projection::ai_learning::{self, recipe::Recipe};
+
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Recipe supplies the `dspy` section and (optionally) the authority config
+    // path; it is defaulted when absent, exactly like the baml format.
+    let (recipe, recipe_ref, recipe_dir) = match &args.recipe {
+        Some(path) => {
+            let text = read_to_string(path)
+                .with_context(|| format!("Failed to read recipe {}", path.display()))?;
+            let recipe = Recipe::from_json(&text).map_err(|e| anyhow::anyhow!(e))?;
+            let dir = path.parent().map(Path::to_path_buf);
+            (recipe, path.display().to_string(), dir)
+        }
+        None => (Recipe::default(), "<default>".to_string(), None),
+    };
+
+    // Authority environment: CLI flag wins, else the recipe's authority_config
+    // resolved relative to the recipe file (identical to run_baml).
+    let authority_path: Option<PathBuf> = match (&args.authority_config, &recipe.authority_config) {
+        (Some(cli), _) => Some(cli.clone()),
+        (None, Some(from_recipe)) => {
+            let rel = PathBuf::from(from_recipe);
+            Some(match &recipe_dir {
+                Some(dir) if rel.is_relative() => dir.join(rel),
+                _ => rel,
+            })
+        }
+        (None, None) => None,
+    };
+    let (authority, authority_ref) = match authority_path {
+        Some(path) => {
+            let text = read_to_string(&path)
+                .with_context(|| format!("Failed to read authority config {}", path.display()))?;
+            let config: crate::authority::AuthorityEnvironmentConfig = serde_json::from_str(&text)
+                .map_err(|e| anyhow::anyhow!("Failed to parse authority config: {e}"))?;
+            let mut env = crate::authority::AuthorityEnvironment::new(config)
+                .map_err(|e| anyhow::anyhow!("Failed to create authority environment: {e}"))?;
+            env.validate()
+                .map_err(|e| anyhow::anyhow!("Authority environment validation failed: {e}"))?;
+            (Some(env), Some(path.display().to_string()))
+        }
+        None => {
+            return Err(anyhow::anyhow!(
+                "--format dspy needs an authority environment (the signature and its examples are \
+                 resolver-grounded): pass --authority-config <FILE> or set 'authority_config' \
+                 in the recipe; see docs/dspy-projections.md"
+            ))
+        }
+    };
+
+    // Directory output, identical to the other projection families.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the dspy projection; \
+             see docs/dspy-projections.md"
+        ));
+    }
+
+    let ctx = ai_learning::AiLearningContext::build(
+        graph,
+        args.input.display().to_string(),
+        recipe,
+        recipe_ref,
+        args.seed,
+        args.created_at.clone(),
+        authority,
+        authority_ref,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::dspy::emit(&ctx, &mut sink).map_err(|e| {
+        anyhow::anyhow!("dspy projection failed: {e}; see docs/dspy-projections.md")
+    })?;
+    println!(
+        "Projected DSPy program to {} ({} files); generate the ai-learning dataset it \
+         references, then run `python optimize.py`",
+        args.output.display(),
+        files.len(),
+    );
+    Ok(())
+}
+
+fn run_zenml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    use crate::projection::ai_learning::{self, recipe::Recipe};
+
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Recipe supplies the `zenml` section and (optionally) the authority config
+    // path; it is defaulted when absent, exactly like the dspy format.
+    let (recipe, recipe_ref, recipe_dir) = match &args.recipe {
+        Some(path) => {
+            let text = read_to_string(path)
+                .with_context(|| format!("Failed to read recipe {}", path.display()))?;
+            let recipe = Recipe::from_json(&text).map_err(|e| anyhow::anyhow!(e))?;
+            let dir = path.parent().map(Path::to_path_buf);
+            (recipe, path.display().to_string(), dir)
+        }
+        None => (Recipe::default(), "<default>".to_string(), None),
+    };
+
+    // Authority environment: CLI flag wins, else the recipe's authority_config
+    // resolved relative to the recipe file (identical to run_dspy).
+    let authority_path: Option<PathBuf> = match (&args.authority_config, &recipe.authority_config) {
+        (Some(cli), _) => Some(cli.clone()),
+        (None, Some(from_recipe)) => {
+            let rel = PathBuf::from(from_recipe);
+            Some(match &recipe_dir {
+                Some(dir) if rel.is_relative() => dir.join(rel),
+                _ => rel,
+            })
+        }
+        (None, None) => None,
+    };
+    let (authority, authority_ref) = match authority_path {
+        Some(path) => {
+            let text = read_to_string(&path)
+                .with_context(|| format!("Failed to read authority config {}", path.display()))?;
+            let config: crate::authority::AuthorityEnvironmentConfig = serde_json::from_str(&text)
+                .map_err(|e| anyhow::anyhow!("Failed to parse authority config: {e}"))?;
+            let mut env = crate::authority::AuthorityEnvironment::new(config)
+                .map_err(|e| anyhow::anyhow!("Failed to create authority environment: {e}"))?;
+            env.validate()
+                .map_err(|e| anyhow::anyhow!("Authority environment validation failed: {e}"))?;
+            (Some(env), Some(path.display().to_string()))
+        }
+        None => {
+            return Err(anyhow::anyhow!(
+                "--format zenml needs an authority environment (the pipeline and its examples are \
+                 resolver-grounded): pass --authority-config <FILE> or set 'authority_config' \
+                 in the recipe; see docs/zenml-projections.md"
+            ))
+        }
+    };
+
+    // Directory output, identical to the other projection families.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the zenml projection; \
+             see docs/zenml-projections.md"
+        ));
+    }
+
+    let ctx = ai_learning::AiLearningContext::build(
+        graph,
+        args.input.display().to_string(),
+        recipe,
+        recipe_ref,
+        args.seed,
+        args.created_at.clone(),
+        authority,
+        authority_ref,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::zenml::emit(&ctx, &mut sink).map_err(|e| {
+        anyhow::anyhow!("zenml projection failed: {e}; see docs/zenml-projections.md")
+    })?;
+    println!(
+        "Projected ZenML pipeline to {} ({} files); generate the ai-learning dataset it \
+         references, then run `python run.py --dry-run`",
+        args.output.display(),
+        files.len(),
+    );
+    Ok(())
+}
+
+fn run_ai_learning(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    use crate::projection::ai_learning::{self, recipe::Recipe};
+
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+
+    // Load recipe (required for ai-learning; defaulted for single formats).
+    let (mut recipe, recipe_ref, recipe_dir) = match &args.recipe {
+        Some(path) => {
+            let text = read_to_string(path)
+                .with_context(|| format!("Failed to read recipe {}", path.display()))?;
+            let recipe = Recipe::from_json(&text).map_err(|e| anyhow::anyhow!(e))?;
+            let dir = path.parent().map(Path::to_path_buf);
+            (recipe, path.display().to_string(), dir)
+        }
+        None => {
+            if matches!(args.format, ProjectFormat::AiLearning) {
+                return Err(anyhow::anyhow!(
+                    "--format ai-learning requires --recipe <FILE> (JSON recipe)"
+                ));
+            }
+            (Recipe::default(), "<default>".to_string(), None)
+        }
+    };
+
+    // --families narrows the family list for the format being emitted.
+    if let Some(ref families) = args.families {
+        let list: Vec<String> = families
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        match args.format {
+            ProjectFormat::AiLlm => recipe.projections.llm_dataset.families = list,
+            ProjectFormat::CepEval => recipe.projections.cep_eval_dataset.families = list,
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "--families is only meaningful for --format ai-llm or cep-eval"
+                ))
+            }
+        }
+        recipe.validate().map_err(|e| anyhow::anyhow!(e))?;
+    }
+
+    // Authority environment: CLI flag wins, else the recipe's authority_config
+    // resolved relative to the recipe file.
+    let authority_path: Option<PathBuf> = match (&args.authority_config, &recipe.authority_config) {
+        (Some(cli), _) => Some(cli.clone()),
+        (None, Some(from_recipe)) => {
+            let rel = PathBuf::from(from_recipe);
+            Some(match &recipe_dir {
+                Some(dir) if rel.is_relative() => dir.join(rel),
+                _ => rel,
+            })
+        }
+        (None, None) => None,
+    };
+    let (authority, authority_ref) = match authority_path {
+        Some(path) => {
+            let text = read_to_string(&path)
+                .with_context(|| format!("Failed to read authority config {}", path.display()))?;
+            let config: crate::authority::AuthorityEnvironmentConfig = serde_json::from_str(&text)
+                .map_err(|e| anyhow::anyhow!("Failed to parse authority config: {e}"))?;
+            let mut env = crate::authority::AuthorityEnvironment::new(config)
+                .map_err(|e| anyhow::anyhow!("Failed to create authority environment: {e}"))?;
+            env.validate()
+                .map_err(|e| anyhow::anyhow!("Authority environment validation failed: {e}"))?;
+            (Some(env), Some(path.display().to_string()))
+        }
+        None => (None, None),
+    };
+
+    // Directory output, like protobuf --multi-file.
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for ai-* projections"
+        ));
+    }
+
+    let ctx = ai_learning::AiLearningContext::build(
+        graph,
+        args.input.display().to_string(),
+        recipe,
+        recipe_ref,
+        args.seed,
+        args.created_at.clone(),
+        authority,
+        authority_ref,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
+
+    type EmitFn = fn(
+        &ai_learning::AiLearningContext,
+        &mut ai_learning::ArtifactSink,
+    ) -> Result<Vec<String>, String>;
+    let mut emitted: Vec<(&str, usize)> = Vec::new();
+    let mut run = |kind: &'static str, subdir: &str, emit: EmitFn| -> Result<()> {
+        let dir = if subdir.is_empty() {
+            args.output.clone()
+        } else {
+            args.output.join(subdir)
+        };
+        std::fs::create_dir_all(&dir)?;
+        let mut sink = ai_learning::ArtifactSink::Dir(&dir);
+        let artifacts =
+            emit(&ctx, &mut sink).map_err(|e| anyhow::anyhow!("{kind} projection failed: {e}"))?;
+        emitted.push((kind, artifacts.len()));
+        Ok(())
+    };
+
+    match args.format {
+        ProjectFormat::AiLlm => run("llm_dataset", "", ai_learning::llm::emit)?,
+        ProjectFormat::AiGraphMl => run("graph_ml_dataset", "", ai_learning::graph_ml::emit)?,
+        ProjectFormat::CepEval => run("cep_eval_dataset", "", ai_learning::cep_eval::emit)?,
+        ProjectFormat::AiLearning => {
+            if ctx.recipe.projections.llm_dataset.enabled {
+                run("llm_dataset", "llm_dataset", ai_learning::llm::emit)?;
+            }
+            if ctx.recipe.projections.graph_ml_dataset.enabled {
+                run(
+                    "graph_ml_dataset",
+                    "graph_dataset",
+                    ai_learning::graph_ml::emit,
+                )?;
+            }
+            if ctx.recipe.projections.cep_eval_dataset.enabled {
+                run("cep_eval_dataset", "cep_eval", ai_learning::cep_eval::emit)?;
+            }
+        }
+        _ => unreachable!("run_ai_learning called for non-ai format"),
+    }
+
+    println!("Projected AI learning artifacts: {}", args.output.display());
+    for (kind, count) in emitted {
+        println!("  {kind}: {count} artifacts");
+    }
     Ok(())
 }

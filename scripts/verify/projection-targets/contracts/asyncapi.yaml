@@ -1,0 +1,10 @@
+projection_contract:
+  target: asyncapi
+  status: proven
+  preserves: [flow_identity, channel_per_flow, message_payload, policy_names_as_prose]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics, relation_structure]
+  prohibited_losses: [flow_identity, channel_count]
+  deterministic_output_required: true
+  target_validator:
+    command: "Official vendored AsyncAPI 3.0.0 JSON Schema validation via scripts/verify/projection-targets/asyncapi.sh (tests/asyncapi_spec_validation_tests.rs)"
+    native: true

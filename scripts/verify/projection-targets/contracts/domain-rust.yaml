@@ -1,0 +1,10 @@
+projection_contract:
+  target: domain-rust
+  status: proven
+  preserves: [entities, resources, flows, roles, policies, metrics, patterns, relations, instances, cqrs_command_event_split]
+  intentionally_collapses: [runtime_adapters_below_ports]
+  prohibited_losses: [entity_identity, flow_identity, aggregate_structure]
+  deterministic_output_required: true
+  target_validator:
+    command: "cargo check + cargo test (zero-dep generated crate) via scripts/verify/projection-targets/domain-rust.sh"
+    native: true

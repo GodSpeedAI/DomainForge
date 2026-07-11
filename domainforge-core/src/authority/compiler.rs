@@ -53,6 +53,44 @@ impl PolicyCompiler {
         };
         let requires_fact = self.parse_fact_requirements(&raw.requires_fact)?;
 
+        // A3: a `when` path with no matching `requires_fact` entry is
+        // satisfied by whatever the caller puts in the request context
+        // (ConditionPredicates::evaluate has no source-class filter of its
+        // own). Forgetting `requires_fact` silently trusts the caller, so
+        // refuse to compile the policy instead of shipping the gap.
+        if let Some(ref when) = when {
+            for path in when.conditions.keys() {
+                if !requires_fact.iter().any(|r| &r.fact_path == path) {
+                    return Err(AuthorityError::new(
+                        super::error::AuthorityErrorCode::PolicyParseError,
+                        format!(
+                            "Policy '{}': `when` condition on '{}' has no matching `requires_fact` \
+                             entry, so it would be satisfied by unverified caller-supplied context. \
+                             Add a `requires_fact` entry for '{}' naming the trusted source classes.",
+                            raw.policy_id, path, path
+                        ),
+                    ));
+                }
+            }
+        }
+
+        // A4: `required_transform` is parsed but never enforced by
+        // `FactRequirement::is_satisfied_by`. Silently accepting it would
+        // give the policy author a false sense of security. Refuse to
+        // compile until enforcement exists.
+        for req in &requires_fact {
+            if req.required_transform.is_some() {
+                return Err(AuthorityError::new(
+                    super::error::AuthorityErrorCode::PolicyParseError,
+                    format!(
+                        "Policy '{}': `required_transform` on fact '{}' is not yet enforced by the \
+                         resolver. Remove it rather than rely on an unenforced field.",
+                        raw.policy_id, req.fact_path
+                    ),
+                ));
+            }
+        }
+
         Ok(AuthorityPolicy {
             policy_id: raw.policy_id,
             modality: raw.modality,
@@ -72,8 +110,36 @@ impl PolicyCompiler {
         &self,
         raw: &HashMap<String, serde_json::Value>,
     ) -> Result<StructuralPredicates, AuthorityError> {
+        // A10: `StructuralPredicates::matches` recognizes exactly five keys
+        // ("action", "actor.id", "actor.role", "resource.id",
+        // "resource.type") and treats everything else as an open metadata
+        // lookup. A typo like "resource.typ" therefore doesn't error — it
+        // silently becomes a metadata predicate that (almost certainly)
+        // never matches, making the policy permanently inert with no
+        // diagnostic. The "resource."/"actor." prefixes are reserved for
+        // the known structural fields, so reject unrecognized keys under
+        // them at compile time instead of shipping a silently-dead policy.
+        const KNOWN_STRUCTURAL_KEYS: [&str; 5] = [
+            "action",
+            "actor.id",
+            "actor.role",
+            "resource.id",
+            "resource.type",
+        ];
         for key in raw.keys() {
             validate_fact_path(key)?;
+            if (key.starts_with("resource.") || key.starts_with("actor."))
+                && !KNOWN_STRUCTURAL_KEYS.contains(&key.as_str())
+            {
+                return Err(AuthorityError::new(
+                    super::error::AuthorityErrorCode::PolicyParseError,
+                    format!(
+                        "Unrecognized structural predicate key '{}'. The 'resource.' and 'actor.' \
+                         prefixes are reserved for {:?}; did you mean one of those?",
+                        key, KNOWN_STRUCTURAL_KEYS
+                    ),
+                ));
+            }
         }
         Ok(StructuralPredicates {
             predicates: raw.clone(),
@@ -119,28 +185,40 @@ impl PolicyCompiler {
     }
 }
 
+/// A9: parses a duration string. Fixes three foot-guns in the previous
+/// version: a bare number silently meant hours (surprising — now rejected,
+/// a unit suffix is required); negative durations were accepted (`"-5h"`
+/// made every fact look "fresh" forever — now rejected); and suffix
+/// matching checked single-char suffixes first, so `"10ms"` matched the
+/// `s` branch and became `"10m"` before parsing, producing a confusing
+/// error instead of 10 milliseconds. Longer suffixes (`ms`) are now matched
+/// before shorter ones (`s`, `m`, `h`, `d`).
 fn parse_duration(s: &str) -> Result<chrono::Duration, AuthorityError> {
     let s = s.trim();
-    let seconds = if s.ends_with('s') {
-        s.trim_end_matches('s').parse::<i64>().ok()
-    } else if s.ends_with('m') {
-        s.trim_end_matches('m').parse::<i64>().ok().map(|v| v * 60)
-    } else if s.ends_with('h') {
-        s.trim_end_matches('h')
-            .parse::<i64>()
-            .ok()
-            .map(|v| v * 3600)
-    } else if s.ends_with('d') {
-        s.trim_end_matches('d')
-            .parse::<i64>()
-            .ok()
-            .map(|v| v * 86400)
+    let invalid = || AuthorityError::invalid_environment(format!("Invalid duration: '{}'", s));
+
+    // Longer suffixes must be checked before shorter ones ("ms" before "s").
+    let parsed = if let Some(n) = s.strip_suffix("ms") {
+        n.parse::<i64>().ok().map(chrono::Duration::milliseconds)
+    } else if let Some(n) = s.strip_suffix('s') {
+        n.parse::<i64>().ok().map(chrono::Duration::seconds)
+    } else if let Some(n) = s.strip_suffix('m') {
+        n.parse::<i64>().ok().map(chrono::Duration::minutes)
+    } else if let Some(n) = s.strip_suffix('h') {
+        n.parse::<i64>().ok().map(chrono::Duration::hours)
+    } else if let Some(n) = s.strip_suffix('d') {
+        n.parse::<i64>().ok().map(chrono::Duration::days)
     } else {
-        s.parse::<i64>().ok().map(|v| v * 3600) // default hours
+        return Err(AuthorityError::invalid_environment(format!(
+            "Invalid duration: '{}' — a unit suffix (ms, s, m, h, d) is required",
+            s
+        )));
     };
-    seconds
-        .map(chrono::Duration::seconds)
-        .ok_or_else(|| AuthorityError::invalid_environment(format!("Invalid duration: '{}'", s)))
+
+    match parsed {
+        Some(d) if d >= chrono::Duration::zero() => Ok(d),
+        _ => Err(invalid()),
+    }
 }
 
 pub struct CompatibilityLoweringAuditor {
@@ -162,30 +240,35 @@ impl CompatibilityLoweringAuditor {
         &self.version
     }
 
+    /// A5: the previous implementation lowercased `expr` and applied the
+    /// resulting *byte* offsets back onto the original string. For
+    /// non-ASCII input where lowercasing changes byte length (e.g. `İ` →
+    /// `i̇`), that could slice at a non-UTF8 boundary and panic. It also
+    /// matched " and "/" or " inside quoted string literals, so a value
+    /// like `role = "black or white"` was rejected as ambiguous. This
+    /// version scans char-by-char, tracks quote state, and never lowercases
+    /// the whole string — only individual ASCII keyword characters are
+    /// compared case-insensitively.
     pub fn audit_expression(&self, expr: &str) -> Result<Option<LoweredPolicy>, AuthorityError> {
-        let expr_lc = expr.to_lowercase();
-
-        // Reject all structural OR as ambiguous (spec §14.1.7, §17.7)
-        if expr_lc.contains(" or ") {
+        // Reject all top-level structural OR as ambiguous (spec §14.1.7, §17.7).
+        // "Top-level" = outside quoted string literals.
+        if contains_top_level(expr, " or ") {
             return Err(AuthorityError::ambiguous_lowering(expr));
         }
 
-        // Handle negated conditions: `not X = "Y"` lowers to when condition
-        // Reject negative structural predicates (spec §14.1.7)
-        if let Some(inner) = expr_lc.strip_prefix("not ") {
+        // Handle negated conditions: `not X = "Y"` lowers to when condition.
+        if let Some(inner) = strip_prefix_ci(expr, "not ") {
             let inner_trimmed = inner.trim();
             // Reject if the negated expression targets structural keys
-            if inner_trimmed.starts_with("resource.")
-                || inner_trimmed.starts_with("actor.")
-                || inner_trimmed.starts_with("action")
+            // (spec §14.1.7): negative structural predicates are ambiguous.
+            if starts_with_ci(inner_trimmed, "resource.")
+                || starts_with_ci(inner_trimmed, "actor.")
+                || starts_with_ci(inner_trimmed, "action")
             {
                 return Err(AuthorityError::ambiguous_lowering(expr));
             }
-            // Lower `not fact.path = "value"` to when condition with negated comparison
-            if let Some(eq_pos) = inner_trimmed.find(" = ") {
-                let key = expr[4..][..eq_pos].trim().to_string();
-                let val = expr[4..][eq_pos + 3..].trim().trim_matches('"').to_string();
-                return Ok(Some(LoweredPolicy {
+            return match parse_equality(inner_trimmed) {
+                Some((key, val)) => Ok(Some(LoweredPolicy {
                     original: expr.to_string(),
                     lowered_applies_to: HashMap::new(),
                     lowered_when: {
@@ -193,38 +276,24 @@ impl CompatibilityLoweringAuditor {
                         m.insert(key, serde_json::json!({"__neq": val}));
                         m
                     },
-                }));
-            }
-            return Err(AuthorityError::ambiguous_lowering(expr));
+                })),
+                None => Err(AuthorityError::ambiguous_lowering(expr)),
+            };
         }
 
-        if expr_lc.contains(" and ") {
-            // Split on case-insensitive " and " boundaries
-            let mut parts: Vec<&str> = Vec::new();
-            let mut last = 0;
-            let lc_bytes = expr_lc.as_bytes();
-            let pattern = b" and ";
-            let plen = pattern.len();
-            for i in 0..=lc_bytes.len().saturating_sub(plen) {
-                if &lc_bytes[i..i + plen] == pattern {
-                    parts.push(&expr[last..i]);
-                    last = i + plen;
-                }
-            }
-            parts.push(&expr[last..]);
+        if contains_top_level(expr, " and ") {
             let mut applies_to = HashMap::new();
             let mut when = HashMap::new();
-            for part in parts {
+            for part in split_top_level(expr, " and ") {
                 let trimmed = part.trim();
-                let trimmed_lc = trimmed.to_lowercase();
-                if trimmed_lc.starts_with("resource.")
-                    || trimmed_lc.starts_with("actor.")
-                    || trimmed_lc.starts_with("action")
+                let (k, v) = parse_equality(trimmed)
+                    .ok_or_else(|| AuthorityError::ambiguous_lowering(expr))?;
+                if starts_with_ci(trimmed, "resource.")
+                    || starts_with_ci(trimmed, "actor.")
+                    || starts_with_ci(trimmed, "action")
                 {
-                    if let Some((k, v)) = parse_equality(trimmed) {
-                        applies_to.insert(k, v);
-                    }
-                } else if let Some((k, v)) = parse_equality(trimmed) {
+                    applies_to.insert(k, v);
+                } else {
                     when.insert(k, v);
                 }
             }
@@ -245,13 +314,106 @@ impl CompatibilityLoweringAuditor {
             }));
         }
 
-        Ok(None)
+        // Unrecognized syntax (e.g. `!=`, `<`, `>=`, an unparenthesized
+        // mixed and/or): previously this returned `Ok(None)`, silently
+        // leaving the policy uncompiled. A policy compiler that silently
+        // drops a clause is a correctness hole, not a convenience — error
+        // instead so the gap is visible at compile time.
+        Err(AuthorityError::ambiguous_lowering(expr))
+    }
+}
+
+/// True if `keyword` (matched case-insensitively, ASCII only) occurs outside
+/// any double-quoted region of `s`.
+fn contains_top_level(s: &str, keyword: &str) -> bool {
+    find_top_level(s, keyword).is_some()
+}
+
+fn find_top_level(s: &str, keyword: &str) -> Option<usize> {
+    let chars: Vec<(usize, char)> = s.char_indices().collect();
+    let kw: Vec<char> = keyword.chars().collect();
+    let mut in_quotes = false;
+    let mut i = 0;
+    while i < chars.len() {
+        let (byte_idx, ch) = chars[i];
+        if ch == '"' {
+            in_quotes = !in_quotes;
+            i += 1;
+            continue;
+        }
+        if !in_quotes
+            && i + kw.len() <= chars.len()
+            && chars[i..i + kw.len()]
+                .iter()
+                .zip(kw.iter())
+                .all(|((_, c), k)| c.eq_ignore_ascii_case(k))
+        {
+            return Some(byte_idx);
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Split `s` on every top-level (outside-quotes) occurrence of `keyword`,
+/// matched case-insensitively. Never allocates a lowercased copy of `s`, so
+/// byte offsets always land on the original string's char boundaries.
+fn split_top_level<'a>(s: &'a str, keyword: &str) -> Vec<&'a str> {
+    let chars: Vec<(usize, char)> = s.char_indices().collect();
+    let kw: Vec<char> = keyword.chars().collect();
+    let mut parts = Vec::new();
+    let mut in_quotes = false;
+    let mut last = 0usize;
+    let mut i = 0;
+    while i < chars.len() {
+        let (byte_idx, ch) = chars[i];
+        if ch == '"' {
+            in_quotes = !in_quotes;
+            i += 1;
+            continue;
+        }
+        if !in_quotes
+            && i + kw.len() <= chars.len()
+            && chars[i..i + kw.len()]
+                .iter()
+                .zip(kw.iter())
+                .all(|((_, c), k)| c.eq_ignore_ascii_case(k))
+        {
+            parts.push(&s[last..byte_idx]);
+            let (last_byte, last_ch) = chars[i + kw.len() - 1];
+            last = last_byte + last_ch.len_utf8();
+            i += kw.len();
+            continue;
+        }
+        i += 1;
+    }
+    parts.push(&s[last..]);
+    parts
+}
+
+fn starts_with_ci(s: &str, prefix: &str) -> bool {
+    let mut sc = s.chars();
+    prefix
+        .chars()
+        .all(|p| sc.next().is_some_and(|c| c.eq_ignore_ascii_case(&p)))
+}
+
+fn strip_prefix_ci<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
+    if starts_with_ci(s, prefix) {
+        let byte_len: usize = prefix
+            .chars()
+            .zip(s.chars())
+            .map(|(_, c)| c.len_utf8())
+            .sum();
+        Some(&s[byte_len..])
+    } else {
+        None
     }
 }
 
 fn parse_equality(s: &str) -> Option<(String, serde_json::Value)> {
     let s = s.trim();
-    if let Some(eq_pos) = s.find(" = ") {
+    if let Some(eq_pos) = find_top_level(s, " = ") {
         let key = s[..eq_pos].trim().to_string();
         let val = s[eq_pos + 3..].trim().trim_matches('"').to_string();
         Some((key, serde_json::Value::String(val)))

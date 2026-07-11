@@ -1,0 +1,28 @@
+{
+  "name": "manufacturing_quality_dspy_v0",
+  "authority_config": "../authority/environment.json",
+  "projections": {
+    "llm_dataset": {
+      "enabled": true,
+      "format": "chatml_jsonl",
+      "families": [
+        "authorization_qa",
+        "policy_explanation",
+        "counterexample_detection",
+        "entity_lookup"
+      ]
+    },
+    "dspy": {
+      "enabled": true,
+      "signature_name": "AuthorityDecision",
+      "module_strategy": "predict",
+      "optimizer": "BootstrapFewShot",
+      "max_bootstrapped_demos": 4,
+      "max_labeled_demos": 16,
+      "regression_threshold": 0.0,
+      "include_unknown": false
+    }
+  },
+  "splits": { "train": 0.8, "validation": 0.1, "test": 0.1 },
+  "seed": 0
+}

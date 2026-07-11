@@ -13,6 +13,9 @@ repository = "https://github.com/GodSpeedAI/DomainForge"
 uuid = { version = "=1.19.0", features = ["v4", "v5", "v7", "serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# ponytail: serde_yaml 0.9 is archived/unmaintained; migrate to serde_yml or
+# serde-yaml-ng at leisure. Used by asyncapi + cmmn projections for YAML I/O.
+serde_yaml = "0.9"
 thiserror = "1.0"
 icu_decimal = { version = "1.5", optional = true }
 icu_locid = { version = "1.5", optional = true }
@@ -79,6 +82,13 @@ default = []
 python = ["pyo3", "pythonize", "signing"]
 typescript = ["napi", "napi-derive", "signing"]
 wasm = ["wasm-bindgen", "serde-wasm-bindgen", "uuid/js", "lol_alloc"]
+# Opt-in: expose projection export families (archimate, lean, ai-learning, …)
+# through the wasm bindings. Off by default because projections are CLI-only
+# (see docs/projection-target-implementation-status.md) and compiling every
+# projection family into the wasm bundle pushes it past the 2.5 MB size gate.
+# Enable with `--features wasm,wasm-projections` when a wasm consumer needs
+# in-memory projection access; the format code is otherwise dead-stripped.
+wasm-projections = []
 shacl = ["oxigraph"]
 formatting = ["icu_decimal", "icu_locid", "fixed_decimal"]
 cli = ["three_valued_logic", "clap", "colored", "signing"]

@@ -40,6 +40,7 @@ Purpose: Solve a single task quickly and efficiently with concise, practical ins
 
 ### Development & CI
 
+- [Work As An Agentic Developer](work-as-agentic-developer.md)
 - [Run Cross-Language Tests](run-cross-language-tests.md)
 - [CI/CD Validation](ci-cd-validation.md)
 - [Troubleshoot NAPI Builds](troubleshoot-napi-builds.md)

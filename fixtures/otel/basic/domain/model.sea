@@ -1,0 +1,25 @@
+@namespace "demo"
+@version "1.0.0"
+
+// Entities become telemetry attribute groups: each carries a deterministic
+// element id and a human name, so a runtime span about this entity can be
+// correlated back to the model.
+Entity "PurchaseOrder" in demo
+Entity "Invoice" in demo
+Entity "Ledger" in demo
+
+// Roles participate in flows; they do not add attribute groups on their own.
+Role "Approver" in demo
+Role "Clerk" in demo
+
+// Resources are the things moved by flows; their names appear in flow attrs.
+Resource "Budget" units in demo
+
+// Flows become attribute groups + an INTERNAL span-kind suggestion. Each flow
+// group carries resource / source / target / quantity attributes.
+Flow "Budget" from "PurchaseOrder" to "Invoice" quantity 1
+Flow "Budget" from "Invoice" to "Ledger" quantity 1
+
+// Policies become decision-point attribute groups (decision + modality attrs).
+Policy positive_budget as: Budget.quantity > 0
+Policy within_limit as: Budget.quantity < 500

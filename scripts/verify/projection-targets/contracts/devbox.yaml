@@ -1,0 +1,10 @@
+projection_contract:
+  target: devbox
+  status: partial
+  preserves: [namespace, entity_env_vars, resource_env_vars, flow_env_vars]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics, relation_structure]
+  prohibited_losses: [namespace_identity]
+  deterministic_output_required: true
+  target_validator:
+    command: "JSONC structural check (Devbox parses hujson/JSONC; the // header is valid) via scripts/verify/projection-targets/devbox.sh. Native `devbox` CLI validation deferred (CLI absent locally)."
+    native: false

@@ -63,7 +63,12 @@ impl Flow {
         namespace: impl Into<String>,
     ) -> Self {
         let namespace = namespace.into();
-        // Use UUID v4 for flows to ensure uniqueness (flows are events, not concepts)
+        // Use UUID v4 for flows: two structurally-identical flows (same
+        // resource/from/to/quantity) are legitimate distinct events and must
+        // coexist in the graph (`Graph::add_flow` rejects duplicate ids), so
+        // the id itself cannot be content-addressed. Fingerprint stability is
+        // instead handled by `compute_graph_hash`, which hashes flows by their
+        // structural content rather than this id.
         let id = ConceptId::from_uuid(uuid::Uuid::new_v4());
 
         Self {

@@ -8,6 +8,7 @@ use crate::authority::error::AuthorityError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum FinalDecision {
     Allow,
     Deny,
@@ -42,6 +43,7 @@ impl std::fmt::Display for FinalDecision {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
+#[non_exhaustive]
 pub enum PolicyModality {
     Permission,
     Prohibition,
@@ -255,6 +257,12 @@ impl FactRequirement {
             return false;
         }
 
+        // Presence-only: this function has no registry access, so it cannot
+        // verify a signature cryptographically. Cryptographic verification
+        // (when the `signing` feature is enabled and the fact's source has a
+        // registered public key) happens earlier, in
+        // `FactResolver::resolve_trusted_facts`, which rejects unverifiable
+        // signed facts before they ever reach here.
         if self.signature_required && envelope.signature.is_none() {
             return false;
         }
@@ -311,6 +319,12 @@ pub struct FactSource {
     pub owner: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recovery_hint: Option<String>,
+    /// Ed25519 public key (PEM) this source signs facts with. When set and
+    /// the crate is built with the `signing` feature, facts claiming
+    /// `signature_required` are cryptographically verified against it rather
+    /// than merely checked for a non-empty `signature` field (A1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub public_key_pem: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

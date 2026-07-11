@@ -90,7 +90,7 @@ pub use patterns::Pattern;
 pub use registry::{NamespaceBinding, NamespaceRegistry, RegistryError};
 pub use sbvr::{SbvrError, SbvrModel};
 pub use semantic_version::SemanticVersion;
-pub use units::{unit_from_string, Dimension, Unit, UnitError, UnitRegistry};
+pub use units::{try_unit_from_string, unit_from_string, Dimension, Unit, UnitError, UnitRegistry};
 pub use uuid_module::{format_uuid, generate_uuid_v7, parse_uuid};
 pub use validation_error::{ErrorCode, Position, SourceRange, ValidationError};
 pub use validation_result::ValidationResult;

@@ -5,6 +5,8 @@ pub mod fact_resolver;
 pub mod pack;
 pub mod policy;
 pub mod resolver;
+#[cfg(feature = "signing")]
+pub mod signing;
 pub mod trace;
 pub mod transform;
 pub mod types;
