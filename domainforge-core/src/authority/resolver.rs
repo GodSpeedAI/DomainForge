@@ -1,4 +1,5 @@
 use super::error::AuthorityError;
+use super::fact_resolver::TrustedFacts;
 use super::pack::AuthorityPack;
 use super::policy::*;
 use super::types::*;
@@ -42,11 +43,12 @@ impl AuthorityResolver {
         &self,
         request: &AuthorityRequest,
         packs: &[AuthorityPack],
-        facts: &[FactEnvelope],
+        facts: &TrustedFacts,
         fact_trust_decisions: &[FactTrustDecision],
         _derived_lineages: &[DerivedFactLineage],
     ) -> Result<ResolverOutput, AuthorityError> {
         request.validate()?;
+        let facts: &[FactEnvelope] = facts.as_slice();
 
         let all_policies: Vec<&AuthorityPolicy> =
             packs.iter().flat_map(|p| p.policies.iter()).collect();
@@ -66,6 +68,7 @@ impl AuthorityResolver {
                 incomparable_policies: vec![],
                 evaluations: vec![],
                 conflict_resolution_steps: vec![],
+                obligations: vec![],
             });
         }
 
@@ -95,7 +98,11 @@ impl AuthorityResolver {
                     unknown_default_result: default,
                     unknown_reason: classify_unknown_reason(&fact_checks, fact_trust_decisions),
                     affected_fact_paths: unsatisfied_facts,
-                    fact_source_ids: vec![],
+                    fact_source_ids: fact_checks
+                        .iter()
+                        .filter(|(_, satisfied, _)| !satisfied)
+                        .filter_map(|(_, _, env)| env.as_ref().map(|e| e.source_id.clone()))
+                        .collect(),
                     availability_classification: classify_availability(&fact_checks),
                     operator_action_hint: None,
                 };
@@ -140,10 +147,25 @@ impl AuthorityResolver {
                 incomparable_policies: vec![],
                 evaluations,
                 conflict_resolution_steps: vec![],
+                obligations: vec![],
             });
         }
 
-        let (final_decision, conflict_steps) = self.resolve_conflicts(&applicable)?;
+        // A8: an Obligation-modality policy previously resolved to plain
+        // `Allow` with no trace of `obligation_spec` (action, deadline) in
+        // the output — the caller had no way to learn a duty was incurred,
+        // which defeats the point of the modality. Surface every applicable,
+        // effectively-satisfied obligation here, independent of which
+        // policy wins the conflict-resolution ladder below.
+        let obligations: Vec<ObligationSpec> = applicable
+            .iter()
+            .filter(|e| e.policy.modality == PolicyModality::Obligation)
+            .filter(|e| compute_eval_decision(e) == FinalDecision::Allow)
+            .filter_map(|e| e.policy.obligation_spec.clone())
+            .collect();
+
+        let (final_decision, conflict_steps, incomparable_policies) =
+            self.resolve_conflicts(&applicable)?;
 
         let decision_id = generate_decision_id();
         let reason_code = format!(
@@ -173,16 +195,17 @@ impl AuthorityResolver {
                 .iter()
                 .map(|e| e.policy.policy_id.clone())
                 .collect(),
-            incomparable_policies: vec![],
+            incomparable_policies,
             evaluations,
             conflict_resolution_steps: conflict_steps,
+            obligations,
         })
     }
 
     fn resolve_conflicts(
         &self,
         applicable: &[&PolicyEvaluation],
-    ) -> Result<(FinalDecision, Vec<ConflictResolutionStep>), AuthorityError> {
+    ) -> Result<(FinalDecision, Vec<ConflictResolutionStep>, Vec<String>), AuthorityError> {
         if applicable.len() == 1 {
             let ev = applicable[0];
             let decision = if ev.unknown_handling_applied {
@@ -198,11 +221,22 @@ impl AuthorityResolver {
                     policy_id: ev.policy.policy_id.clone(),
                     result: format!("{:?}", decision),
                 }],
+                vec![],
             ));
         }
 
         // Step 6: Apply modality precedence (spec §10.8)
         // Default: Reject > Deny > Escalate > Allow > NotApplicable
+        //
+        // A6: this ranks by the policy's *declared* modality, not by its
+        // effective decision. A Prohibition whose facts are missing (so its
+        // unknown-handling default applies, e.g. Escalate) still outranks a
+        // Permission whose conditions are definitively True — one
+        // un-fetchable fact on a broad prohibition can escalate everything
+        // it structurally overlaps with. This is intentional fail-closed
+        // behavior (a prohibition's uncertainty must not be silently
+        // resolved in the requester's favor), not a bug — documented here
+        // so it isn't "fixed" into a security regression later.
         let mut best_modality_rank = 0u8;
         for ev in applicable {
             let rank = modality_precedence_rank(&ev.policy.modality);
@@ -232,7 +266,7 @@ impl AuthorityResolver {
                 policy_id: ev.policy.policy_id.clone(),
                 result: format!("{:?}", decision),
             });
-            return Ok((decision, steps));
+            return Ok((decision, steps, vec![]));
         }
 
         // Step 7: Apply priority
@@ -265,8 +299,16 @@ impl AuthorityResolver {
                 policy_id: ev.policy.policy_id.clone(),
                 result: format!("{:?}", decision),
             });
-            return Ok((decision, steps));
+            return Ok((decision, steps, vec![]));
         }
+
+        // A10: compute each policy's specificity vector once up front rather
+        // than recomputing it O(n) times inside the O(n^2) domination loop
+        // below.
+        let specificity: Vec<SpecificityVector> = top_priority
+            .iter()
+            .map(|e| e.policy.compute_specificity(&self.specificity_profile))
+            .collect();
 
         let mut dominated = vec![false; top_priority.len()];
         for i in 0..top_priority.len() {
@@ -277,13 +319,7 @@ impl AuthorityResolver {
                 if i == j || dominated[j] {
                     continue;
                 }
-                let vec_i = top_priority[i]
-                    .policy
-                    .compute_specificity(&self.specificity_profile);
-                let vec_j = top_priority[j]
-                    .policy
-                    .compute_specificity(&self.specificity_profile);
-                match vec_i.compare(&vec_j) {
+                match specificity[i].compare(&specificity[j]) {
                     SpecificityComparison::AMoreSpecific => {
                         dominated[j] = true;
                     }
@@ -310,7 +346,7 @@ impl AuthorityResolver {
                 policy_id: ev.policy.policy_id.clone(),
                 result: format!("{:?}", decision),
             });
-            return Ok((decision, steps));
+            return Ok((decision, steps, vec![]));
         }
 
         steps.push(ConflictResolutionStep {
@@ -333,7 +369,11 @@ impl AuthorityResolver {
                 ids.get(1).map(|s| s.as_str()).unwrap_or("?"),
             ))
         } else {
-            Ok((FinalDecision::Escalate, steps))
+            let incomparable_policies: Vec<String> = non_dominated
+                .iter()
+                .map(|e| e.policy.policy_id.clone())
+                .collect();
+            Ok((FinalDecision::Escalate, steps, incomparable_policies))
         }
     }
 
@@ -410,17 +450,21 @@ fn classify_unknown_reason(
     "unknown".to_string()
 }
 
+/// A7: this used to classify a missing envelope as `"caller_omission"` — the
+/// exact opposite of `classify_unknown_reason`'s classification for the same
+/// state. Both functions now agree: no envelope at all (the fact was never
+/// observed by any source) is an availability failure; a caller-supplied
+/// envelope that failed the requirement (wrong source class, etc.) means the
+/// caller substituted their own claim instead of an authoritative one.
 fn classify_availability(fact_checks: &[(FactRequirement, bool, Option<FactEnvelope>)]) -> String {
     for (_req, satisfied, envelope) in fact_checks {
         if !satisfied {
-            if envelope.is_none() {
-                return "caller_omission".to_string();
-            }
-            if let Some(env) = envelope {
-                if env.source_class == SourceClass::CallerSupplied {
-                    return "caller_omission".to_string();
+            return match envelope {
+                Some(env) if env.source_class == SourceClass::CallerSupplied => {
+                    "caller_omission".to_string()
                 }
-            }
+                _ => "availability_failure".to_string(),
+            };
         }
     }
     "availability_failure".to_string()
@@ -443,4 +487,8 @@ pub struct ResolverOutput {
     pub incomparable_policies: Vec<String>,
     pub evaluations: Vec<PolicyEvaluation>,
     pub conflict_resolution_steps: Vec<ConflictResolutionStep>,
+    /// Obligations (spec §obligation modality) incurred by any applicable,
+    /// effectively-satisfied Obligation-modality policy — surfaced
+    /// independent of the winning permission/prohibition decision (A8).
+    pub obligations: Vec<ObligationSpec>,
 }

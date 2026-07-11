@@ -850,3 +850,130 @@ jobs:
             --created-at 2026-07-02T00:00:00+00:00 \
             fixtures/zenml/basic/domain/model.sea zenml_out2
           diff -r zenml_out zenml_out2
+
+  verify-projection-targets:
+    # H4: runs all projection gates (scripts/verify/projection-targets/all.sh)
+    # — the event/authority/verification/activation targets plus the round-trip
+    # cell and the three code targets (domain-python/typescript/rust). Each gate
+    # projects the fixture and validates the output with the real ecosystem
+    # toolchain where available (TLA+ → SANY+TLC, Dagger → py_compile,
+    # CloudEvents → strict JSONL + RFC 3339, domain-python → mypy --strict,
+    # domain-typescript → tsc --noEmit, domain-rust → cargo check+test).
+    # ADR-011 §1 requires this job to exist so the targets have CI regression
+    # protection.
+    name: Verify projection targets (event/authority/verification/activation/code)
+    needs: lint
+    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Install Java (for TLA+ SANY/TLC toolchain)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Node (for domain-typescript tsc --noEmit)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python tooling (pyyaml for AsyncAPI; mypy for domain-python)
+        run: python3 -m pip install --user pyyaml mypy
+
+      - name: Pin tla2tools.jar (TLA+ toolchain v1.8.0)
+        run: |
+          mkdir -p schemas/tla
+          curl -sL -o schemas/tla/tla2tools.jar \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          # Verify it's a valid jar.
+          jar tf schemas/tla/tla2tools.jar | grep -q tla2sany/SANY.class
+
+      - name: Run all projection-target gates
+        env:
+          TLA2TOOLS_JAR: ${{ github.workspace }}/schemas/tla/tla2tools.jar
+        run: bash scripts/verify/projection-targets/all.sh
+
+  prove:
+    # Self-proving harness: `just prove` runs the full proof suite (language,
+    # canonical determinism, all projection gates, round-trip, drift) and
+    # writes evidence/latest/proof.json + proof.md. Fails if any required proof
+    # fails (the exit code guarantees overall_result == "passed"). Runs the
+    # TLA+ toolchain natively (Java + pinned tla2tools.jar) so CLAIM-PROJ-TLA is
+    # proven natively here, not just structurally. See PROOFS.md.
+    name: Prove (self-proving evidence pack)
+    needs: lint
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+
+      - name: Install Java (for TLA+ SANY/TLC toolchain)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Node (for domain-typescript tsc --noEmit)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python tooling (pyyaml for AsyncAPI; mypy for domain-python)
+        run: python3 -m pip install --user pyyaml mypy
+
+      - name: Install jq (evidence-pack merge)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Pin tla2tools.jar (TLA+ toolchain v1.8.0)
+        run: |
+          mkdir -p schemas/tla
+          curl -sL -o schemas/tla/tla2tools.jar \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          jar tf schemas/tla/tla2tools.jar | grep -q tla2sany/SANY.class
+
+      - name: Run just prove
+        env:
+          TLA2TOOLS_JAR: ${{ github.workspace }}/schemas/tla/tla2tools.jar
+        run: just prove
+
+      - name: Upload evidence pack
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domainforge-proof-evidence
+          path: evidence/latest/
+          if-no-files-found: warn

@@ -204,9 +204,21 @@ impl AuthorityPolicy {
         self.requires_fact
             .iter()
             .map(|req| {
-                let matched = facts.iter().find(|f| req.is_satisfied_by(f, now));
-                let satisfied = matched.is_some();
-                (req.clone(), satisfied, matched.cloned())
+                let satisfying = facts.iter().find(|f| req.is_satisfied_by(f, now));
+                let satisfied = satisfying.is_some();
+                // A7: when the requirement isn't satisfied, surface the
+                // nearest same-path candidate anyway (e.g. rejected for
+                // staleness, missing evidence, or wrong source class)
+                // instead of `None`. `classify_unknown_reason` and
+                // `classify_availability` need this envelope to tell
+                // "no fact was ever observed at this path" apart from
+                // "a fact exists but doesn't meet the requirement" —
+                // previously they always saw `None` here, so the
+                // `caller_omission` branch in both functions was dead code.
+                let candidate = satisfying
+                    .or_else(|| facts.iter().find(|f| f.path == req.fact_path))
+                    .cloned();
+                (req.clone(), satisfied, candidate)
             })
             .collect()
     }

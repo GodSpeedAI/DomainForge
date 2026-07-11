@@ -1,0 +1,11 @@
+projection_contract:
+  target: protobuf
+  status: blocked
+  preserves: [entity_messages, resource_messages, flow_rpcs, field_identity]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [message_identity, field_number_stability]
+  deterministic_output_required: true
+  gate_optional: true
+  target_validator:
+    command: "buf lint / buf breaking via `project --format protobuf --buf-lint`. BLOCKED locally: `buf` CLI is not installed. Unblocking action: install buf (https://buf.build) or run in CI where buf is available."
+    native: true

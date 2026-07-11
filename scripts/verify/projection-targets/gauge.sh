@@ -39,6 +39,8 @@ assert all("Issue" in s and "from" in s and "to" in s for s in h2), \
     f"scenario heading not in 'Issue <r> from <f> to <t>' form: {h2}"
 
 # Steps: lines starting with '* ', params quoted, no raw '<'/'>'.
+# M2: the projection sanitizes names embedded in step text (a name with `<`
+# would corrupt Gauge's dynamic-param syntax). Verify the invariant holds.
 steps = [l for l in lines if l.startswith("* ")]
 assert len(steps) >= 3 * len(h2), f"too few steps ({len(steps)}) for {len(h2)} scenario(s)"
 for st in steps:

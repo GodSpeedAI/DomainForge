@@ -1,0 +1,10 @@
+projection_contract:
+  target: tla
+  status: proven
+  preserves: [entity_identity, resource_identity, flow_actions, type_invariant]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [source_element_identity, flow_action_count]
+  deterministic_output_required: true
+  target_validator:
+    command: "SANY parse + TLC model-check via scripts/verify/projection-targets/tla.sh (pinned tla2tools.jar v1.8.0)"
+    native: true

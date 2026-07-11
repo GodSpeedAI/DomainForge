@@ -15,6 +15,8 @@
 //! [Gauge]: https://docs.gauge.org/writing-specifications/
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{sanitize_filename, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
 use std::collections::BTreeMap;
 
@@ -26,9 +28,9 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let ns = model_namespace(graph);
+    let ns = model_namespace(graph)?;
     let file = format!("{}.spec", sanitize_filename(&ns));
-    let body = build_spec(graph, &ns, model_ref, &created_at);
+    let body = build_spec(graph, &ns, model_ref, &created_at)?;
     sink.write(&file, &body)?;
     Ok(vec![file])
 }
@@ -49,35 +51,13 @@ pub fn project_gauge_in_memory(
 }
 
 /// Build the Gauge spec body.
-fn build_spec(graph: &Graph, ns: &str, model_ref: &str, created_at: &str) -> String {
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
-
-    let mut flows: Vec<(String, String, String, String)> = Vec::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
-        flows.push((
-            resource.clone(),
-            from.clone(),
-            to.clone(),
-            f.quantity().to_string(),
-        ));
-    }
-    flows.sort();
+fn build_spec(
+    graph: &Graph,
+    ns: &str,
+    model_ref: &str,
+    created_at: &str,
+) -> Result<String, String> {
+    let flows = collect_flows(graph)?; // M4: loud dangling-ref policy
 
     let mut s = String::new();
     s.push_str(&format!(
@@ -89,48 +69,60 @@ fn build_spec(graph: &Graph, ns: &str, model_ref: &str, created_at: &str) -> Str
     if flows.is_empty() {
         s.push_str("// No flows declared — nothing to verify.\n");
     }
-    for (resource, from, to, qty) in &flows {
+    // Collision-safe scenario headings: two flows that produce the same heading
+    // `## Issue R from A to B` get a hash suffix (Gauge requires unique scenario
+    // names per spec file) — M1.
+    let mut reg = NameRegistrar::new();
+    for f in &flows {
+        // M2: escape names embedded in step text so `"` in a name doesn't
+        // corrupt step-parameter quoting, and `<`/`>` never appear raw.
+        let heading = format!(
+            "Issue {} from {} to {}",
+            gauge_escape(&f.resource),
+            gauge_escape(&f.from),
+            gauge_escape(&f.to)
+        );
+        let unique_heading = reg.register("slug", &heading);
+        let h_resource = gauge_escape(&f.resource);
+        let h_from = gauge_escape(&f.from);
+        let h_to = gauge_escape(&f.to);
+        let h_qty = gauge_escape(&f.quantity);
+        // Strip any hash suffix from the display (the suffix is part of the
+        // registered slug, which lowercases — but the heading must preserve
+        // the readable form). We keep the readable form and append a numeric
+        // disambiguator only when needed.
+        let display = if unique_heading != slug(&heading) {
+            // Collision occurred: append the suffix to the readable heading.
+            let suffix = unique_heading.strip_prefix(&slug(&heading)).unwrap_or("");
+            format!("{heading}{suffix}")
+        } else {
+            heading
+        };
         s.push_str(&format!(
-            "## Issue {resource} from {from} to {to}\n\n\
-             * Given a \"{from}\" entity exists\n\
-             * When \"{from}\" issues \"{resource}\" (quantity \"{qty}\") to \"{to}\"\n\
-             * Then \"{to}\" should hold \"{qty}\" \"{resource}\"\n\n"
+            "## {display}\n\n\
+             * Given a \"{h_from}\" entity exists\n\
+             * When \"{h_from}\" issues \"{h_resource}\" (quantity \"{h_qty}\") to \"{h_to}\"\n\
+             * Then \"{h_to}\" should hold \"{h_qty}\" \"{h_resource}\"\n\n"
         ));
     }
-    s
+    Ok(s)
 }
 
-/// Derive a single namespace: first entity's namespace (sorted by name), else
-/// first resource's, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
+/// Escape a name for safe embedding in Gauge step text: replace `"` (corrupts
+/// parameter quoting) and `<`/`>` (reserved by Gauge for dynamic params) with
+/// `_`. M2.
+fn gauge_escape(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            '"' | '<' | '>' => '_',
+            _ => c,
+        })
+        .collect()
 }
 
-/// Sanitize a namespace into a filesystem-safe spec basename: keep
-/// alphanumerics and `-`, `_`, `.`; replace everything else with `_`.
-fn sanitize_filename(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
-            out.push(c);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push_str("default");
-    }
-    out
+/// Lowercase slug (re-exported kernel helper for the heading dedup).
+fn slug(s: &str) -> String {
+    crate::projection::ids::slug(s)
 }
 
 #[cfg(test)]
@@ -201,5 +193,31 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         assert!(body.starts_with("# default flows\n"));
         assert_eq!(body.matches("## ").count(), 0);
         assert!(body.contains("No flows declared"));
+    }
+
+    /// M2 regression: names with `<`/`>`/`"` must be sanitized in step text.
+    /// Gauge reserves `<`/`>` for dynamic params; `"` corrupts param quoting.
+    #[test]
+    fn hostile_names_sanitized_in_step_text() {
+        let hostile = r#"
+@namespace "h"
+Entity "x<y>" in h
+Entity "a\"b" in h
+Resource "R" units in h
+Flow "R" from "x<y>" to "a\"b" quantity 1
+"#;
+        let files = project(hostile);
+        let body = &files["h.spec"];
+        for line in body.lines().filter(|l| l.starts_with("* ")) {
+            assert!(
+                !line.contains('<') && !line.contains('>'),
+                "reserved angle bracket in step (M2): {line}"
+            );
+        }
+        // The `"` in entity name must be replaced with `_` (sanitized).
+        assert!(
+            !body.contains("a\"b"),
+            "raw quote must not appear in step text (M2)"
+        );
     }
 }

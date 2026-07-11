@@ -668,6 +668,7 @@ impl Graph {
     }
 
     pub fn add_metric(&mut self, metric: Metric) -> Result<(), String> {
+        metric.validate()?;
         let id = metric.id().clone();
         if self.metrics.contains_key(&id) {
             return Err(format!("Metric with ID {} already exists", id));

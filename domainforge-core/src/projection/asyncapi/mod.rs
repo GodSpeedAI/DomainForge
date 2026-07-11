@@ -27,6 +27,8 @@
 //! [AsyncAPI]: https://www.asyncapi.com/
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{slug, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -45,7 +47,7 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let spec = build_spec(graph, model_ref, &created_at);
+    let spec = build_spec(graph, model_ref, &created_at)?;
     let yaml = serde_yaml::to_string(&spec)
         .map_err(|e| format!("failed to serialize AsyncAPI document: {e}"))?;
     // YAML has no leading-comment affordance in serde_yaml; prepend a header.
@@ -73,33 +75,22 @@ pub fn project_asyncapi_in_memory(
 }
 
 /// Build the AsyncAPI 3.0 document value.
-fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Value {
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
-    let ns = model_namespace(graph);
+fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Result<Value, String> {
+    let ns = model_namespace(graph)?; // M5: errors on multi-namespace
+    let flows = collect_flows(graph)?; // M4: loud dangling-ref policy
+
+    // Collision-safe key registrar (M1): channel/operation/message/schema keys
+    // that collide after case-folding get a hash suffix instead of silently
+    // overwriting each other in Map::insert.
+    let mut reg = NameRegistrar::new();
 
     // Group flows by (resource, from) -> set of tos. Each group = one channel.
     let mut groups: BTreeMap<(String, String), BTreeMap<String, ()>> = BTreeMap::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
+    for f in &flows {
         groups
-            .entry((resource.clone(), from.clone()))
+            .entry((f.resource.clone(), f.from.clone()))
             .or_default()
-            .insert(to.clone(), ());
+            .insert(f.to.clone(), ());
     }
 
     // serde_json::Map is BTreeMap-backed → channels/operations/components keys
@@ -110,9 +101,10 @@ fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Value {
     let mut schemas: Map<String, Value> = Map::new();
 
     for ((resource, from), tos) in &groups {
-        let chan_key = format!("{}{}Issued", lc(resource), pc(from));
-        let msg_key = format!("{chan_key}Message");
-        let schema_key = format!("{}Payload", lc(resource));
+        // M1: register keys through the collision-safe registrar.
+        let chan_key = reg.register("slug", &format!("{}{}Issued", lc(resource), pc(from)));
+        let msg_key = reg.register("slug", &format!("{chan_key}Message"));
+        let schema_key = reg.register("slug", &format!("{}Payload", lc(resource)));
         let address = format!("{}/{}/{}/issued", slug(&ns), slug(resource), slug(from));
 
         channels.insert(
@@ -124,7 +116,7 @@ fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Value {
         );
 
         // Producer operation: `from` sends.
-        let send_op = format!("emit{chan_key}");
+        let send_op = reg.register("slug", &format!("emit{chan_key}"));
         operations.insert(
             send_op,
             json!({
@@ -136,7 +128,7 @@ fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Value {
         );
         // Consumer operation(s): each `to` receives.
         for to in tos.keys() {
-            let recv_op = format!("receive{chan_key}By{}", pc(to));
+            let recv_op = reg.register("slug", &format!("receive{chan_key}By{}", pc(to)));
             operations.insert(
                 recv_op,
                 json!({
@@ -184,10 +176,11 @@ fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Value {
     components.insert("messages".to_string(), Value::Object(messages));
     components.insert("schemas".to_string(), Value::Object(schemas));
 
-    json!({
+    // L7: info.title is the namespace, not the input file path.
+    Ok(json!({
         "asyncapi": ASYNCAPI_VERSION,
         "info": {
-            "title": model_ref,
+            "title": ns,
             "version": "1.0.0",
             "description": description
         },
@@ -195,7 +188,7 @@ fn build_spec(graph: &Graph, model_ref: &str, created_at: &str) -> Value {
         "channels": channels,
         "operations": operations,
         "components": components
-    })
+    }))
 }
 
 /// One-line summary of policy names for the description (policies don't map
@@ -208,38 +201,6 @@ fn summarize_policies(graph: &Graph) -> String {
         .collect();
     names.sort();
     names.join(", ")
-}
-
-/// Derive a single namespace: first entity's namespace (sorted by name), else
-/// first resource's, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
-}
-
-/// Lowercase slug for channel address segments / message names.
-fn slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push('_');
-    }
-    out
 }
 
 /// PascalCase for operation/message key suffixes (Buyer -> Buyer).
@@ -262,16 +223,7 @@ fn pc(s: &str) -> String {
 
 /// LowerCamelCase for message/schema keys (PurchaseOrder -> purchaseorder).
 fn lc(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        }
-    }
-    if out.is_empty() {
-        out.push('_');
-    }
-    out
+    slug(s)
 }
 
 #[cfg(test)]

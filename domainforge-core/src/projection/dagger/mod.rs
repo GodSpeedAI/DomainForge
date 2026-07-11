@@ -16,6 +16,8 @@
 //! [`dagger.json`]: https://docs.dagger.io/reference/dagger.schema.json
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{slug, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -37,7 +39,7 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let ns = model_namespace(graph);
+    let ns = model_namespace(graph)?;
     let class_name = pascal_case(&ns);
 
     let manifest = build_manifest(&ns);
@@ -70,6 +72,9 @@ pub fn project_dagger_in_memory(
 }
 
 /// Build the `dagger.json` manifest (schema: name + engineVersion required).
+///
+/// H5: strict JSON — no `//` comment header (Dagger's Go CLI uses strict
+/// `encoding/json`). Provenance lives in the `main.py` docstring.
 fn build_manifest(ns: &str) -> String {
     // serde_json::Map is BTreeMap-backed, so keys emit in sorted order.
     let mut m: Map<String, Value> = Map::new();
@@ -81,11 +86,7 @@ fn build_manifest(ns: &str) -> String {
     m.insert("sdk".to_string(), json!("python"));
     m.insert("source".to_string(), json!("."));
     m.insert("engineVersion".to_string(), json!(DAGGER_ENGINE_VERSION));
-    format!(
-        "// dagger.json projected by DomainForge. Dagger module manifest\n\
-         // (schema: https://docs.dagger.io/reference/dagger.schema.json).\n{}\n",
-        serde_json::to_string_pretty(&Value::Object(m)).expect("manifest serializes")
-    )
+    serde_json::to_string_pretty(&Value::Object(m)).expect("manifest serializes")
 }
 
 /// Build the single-file Python module source.
@@ -96,34 +97,12 @@ fn build_module_src(
     model_ref: &str,
     created_at: &str,
 ) -> Result<String, String> {
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
+    let flows = collect_flows(graph)?; // M4: loud dangling-ref policy
 
-    let mut flows: Vec<(String, String, String, String)> = Vec::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
-        flows.push((
-            resource.clone(),
-            from.clone(),
-            to.clone(),
-            f.quantity().to_string(),
-        ));
-    }
-    flows.sort();
+    // Collision-safe function-name registrar (M1): two flows that slug to the
+    // same `run_<r>_<f>_<t>` get a hash suffix so Python doesn't silently
+    // shadow one function with another.
+    let mut reg = NameRegistrar::new();
 
     let mut s = String::new();
     s.push_str(&format!(
@@ -138,13 +117,34 @@ fn build_module_src(
     if flows.is_empty() {
         s.push_str("    pass\n");
     }
-    for (resource, from, to, qty) in &flows {
-        let fname = format!("run_{}_{}_{}", slug(resource), slug(from), slug(to));
+    for f in &flows {
+        let fname = format!(
+            "run_{}_{}_{}",
+            slug(&f.resource),
+            slug(&f.from),
+            slug(&f.to)
+        );
+        // Register the function name to deduplicate collisions (M1).
+        let fname = reg.register("slug", &fname);
+        // M2: escape names embedded in Python string literals/docstrings so a
+        // `"` or `\` in a model name cannot produce a SyntaxError.
+        let esc_resource = py_str_escape(&f.resource);
+        let esc_from = py_str_escape(&f.from);
+        let esc_to = py_str_escape(&f.to);
+        let esc_qty = py_str_escape(&f.quantity);
         s.push_str(&format!(
-            "\n    @dagger.function\n    def {fname}(self) -> str:\n        \"\"\"Activate flow: {resource} from {from} to {to} (quantity {qty}).\"\"\"\n        return \"{resource}: {from} -> {to} (x{qty})\"\n"
+            "\n    @dagger.function\n    def {fname}(self) -> str:\n        \"\"\"Activate flow: {esc_resource} from {esc_from} to {esc_to} (quantity {esc_qty}).\"\"\"\n        return \"{esc_resource}: {esc_from} -> {esc_to} (x{esc_qty})\"\n"
         ));
     }
     Ok(s)
+}
+
+/// Escape a string for safe embedding inside a Python double-quoted string
+/// literal: escape `\`, `"`, and newlines (M2).
+fn py_str_escape(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
 }
 
 /// Build the minimal single-file `pyproject.toml` (per the Dagger Python SDK
@@ -164,39 +164,6 @@ fn build_pyproject(ns: &str) -> String {
          requires-python = \">=3.10\"\n\
          dependencies = [\"dagger-io\"]\n"
     )
-}
-
-/// Derive a single namespace for the module: the namespace of the
-/// alphabetically-first entity, else first resource, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
-}
-
-/// Lowercase ASCII slug: keep alphanumerics, replace everything else with `_`.
-/// Empty input yields `_`.
-fn slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push('_');
-    }
-    out
 }
 
 /// PascalCase a namespace into a Python class name: split on non-alphanumerics,
@@ -263,13 +230,8 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
     fn manifest_is_schema_valid_and_namespaced() {
         let files = project(SOURCE);
         let body = &files["dagger.json"];
-        let lines: Vec<&str> = body.lines().collect();
-        let start = lines
-            .iter()
-            .position(|l| l.trim_start().starts_with('{'))
-            .unwrap();
-        let doc: Value =
-            serde_json::from_str(&lines[start..].join("\n")).expect("manifest parses as JSON");
+        // H5: manifest is strict JSON now — parse directly, no comment stripping.
+        let doc: Value = serde_json::from_str(body).expect("manifest parses as strict JSON");
         assert_eq!(doc["name"], "procurement");
         assert_eq!(doc["sdk"], "python");
         assert_eq!(doc["source"], ".");
@@ -277,6 +239,18 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         assert_eq!(
             doc["$schema"],
             "https://docs.dagger.io/reference/dagger.schema.json"
+        );
+    }
+
+    #[test]
+    fn manifest_is_strict_json_no_comment_header() {
+        let files = project(SOURCE);
+        let body = &files["dagger.json"];
+        // H5: first non-whitespace char must be `{`.
+        assert!(
+            body.trim_start().starts_with('{'),
+            "dagger.json must be strict JSON (no // header): {:?}",
+            &body[..body.len().min(40)]
         );
     }
 
@@ -304,12 +278,7 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
     fn empty_model_emits_pass_module_and_default_namespace() {
         let files = project("@namespace \"empty\"\n");
         let body = &files["dagger.json"];
-        let lines: Vec<&str> = body.lines().collect();
-        let start = lines
-            .iter()
-            .position(|l| l.trim_start().starts_with('{'))
-            .unwrap();
-        let doc: Value = serde_json::from_str(&lines[start..].join("\n")).expect("manifest parses");
+        let doc: Value = serde_json::from_str(body).expect("manifest parses as strict JSON");
         assert_eq!(doc["name"], "default");
         let src = &files["main.py"];
         assert!(
@@ -318,5 +287,31 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         );
         assert_eq!(src.matches("@dagger.function").count(), 0);
         assert!(src.contains("    pass"));
+    }
+
+    /// M2 regression: a name with `"` must not break the Python string literal.
+    /// The generated main.py must not have an unescaped quote corrupting the
+    /// docstring or return string.
+    #[test]
+    fn hostile_names_produce_compilable_python() {
+        let hostile = r#"
+@namespace "h"
+Entity "a\"b" in h
+Entity "c" in h
+Resource "R x" units in h
+Flow "R x" from "a\"b" to "c" quantity 1
+"#;
+        let files = project(hostile);
+        let src = &files["main.py"];
+        // The raw quote must be escaped in the return string.
+        assert!(
+            src.contains("\\\""),
+            "raw quote must be escaped in Python string literal (M2)"
+        );
+        // py_compile equivalent: check the docstring + return are balanced.
+        assert!(
+            !src.contains("\"\"\"Activate flow: a\"b"),
+            "unescaped quote must not corrupt the docstring (M2)"
+        );
     }
 }

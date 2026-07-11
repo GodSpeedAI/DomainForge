@@ -13,13 +13,24 @@
 //!   so the `to` endpoint is recorded in the action's `to` annotation rather
 //!   than in `appliesTo`.
 //!
+//! # Authority scope (H6)
+//! The `policies.cedar` file is a **permissive baseline**: one `permit` per
+//! Action, scoped to the flow's source entity type and resource type
+//! (`principal is <From>, resource is <Resource>`). It does not project SEA
+//! `policy` expressions as Cedar `forbid`/`when` clauses — that is future
+//! work. A Cedar engine loaded with this baseline authorizes the model's
+//! declared flows, not its full obligation set; tighten with policy-derived
+//! clauses as needed. The module doc and `docs/projection-families.md` say so.
+//!
 //! Output is two files: `schema.cedarschema.json` (entity types + actions,
-//! sorted for byte-identical runs) and `policies.cedar` (one `permit` per
-//! action — the baseline authority grant that the flow exists in the model).
+//! sorted for byte-identical runs — strict JSON, no comment headers) and
+//! `policies.cedar` (one scoped `permit` per action).
 //!
 //! [Cedar]: https://docs.cedarpolicy.com/schema/json-schema.html
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{ident, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -36,10 +47,10 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let ns = model_namespace(graph);
+    let ns = model_namespace(graph)?;
 
-    let schema = build_schema(graph, &ns);
-    let policies = build_policies(graph, &ns, model_ref, &created_at);
+    let schema = build_schema(graph, &ns)?;
+    let policies = build_policies(graph, &ns, model_ref, &created_at)?;
 
     sink.write(SCHEMA_FILE, &schema)?;
     sink.write(POLICIES_FILE, &policies)?;
@@ -62,25 +73,22 @@ pub fn project_cedar_in_memory(
 }
 
 /// Build the Cedar JSON schema (entityTypes + actions under the namespace).
-fn build_schema(graph: &Graph, ns: &str) -> String {
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
+///
+/// H5: the schema is **strict JSON** (no `//` comment header) — Cedar's JSON
+/// schema parser rejects comments. Provenance lives in `policies.cedar`
+/// comments instead.
+fn build_schema(graph: &Graph, ns: &str) -> Result<String, String> {
+    let mut reg = NameRegistrar::new();
+    let ns_ident = reg.register("ident", ns);
 
-    // entityTypes: union of entities + resources (both are Cedar entity types).
+    // entityTypes: union of entities + resources (both are Cedar entity types),
+    // sanitized to valid Cedar identifiers (M2: hostile names).
     let mut type_names: Vec<String> = Vec::new();
     for e in graph.all_entities() {
-        type_names.push(e.name().to_string());
+        type_names.push(reg.register("ident", e.name()));
     }
     for r in graph.all_resources() {
-        type_names.push(r.name().to_string());
+        type_names.push(reg.register("ident", r.name()));
     }
     type_names.sort();
     type_names.dedup();
@@ -90,34 +98,33 @@ fn build_schema(graph: &Graph, ns: &str) -> String {
         entity_types.insert(t.clone(), json!({}));
     }
 
+    let flows = collect_flows(graph)?;
+
     // actions: one `Issue<Resource>` per resource, merging principals + targets
-    // across all flows issuing it.
+    // across all flows issuing it. Resource names are sanitized (M2).
     let mut by_resource: BTreeMap<String, (BTreeSet<String>, BTreeSet<String>)> = BTreeMap::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
+    for f in &flows {
+        let resource_id = reg.register("ident", &f.resource);
+        let from_id = reg.register("ident", &f.from);
+        let to_id = reg.register("ident", &f.to);
         let entry = by_resource
-            .entry(resource.clone())
+            .entry(resource_id)
             .or_insert_with(|| (BTreeSet::new(), BTreeSet::new()));
-        entry.0.insert(from.clone());
-        entry.1.insert(to.clone());
+        entry.0.insert(from_id);
+        entry.1.insert(to_id);
     }
     let mut actions: Map<String, Value> = Map::new();
     for (resource, (principals, targets)) in &by_resource {
-        let mut principal_types: Vec<Value> = principals.iter().map(|p| json!(p)).collect();
-        principal_types.sort_by_key(|v| v.as_str().unwrap_or("").to_string());
+        // principals is a BTreeSet → already sorted; L7: no redundant re-sort.
+        let principal_types: Vec<Value> = principals.iter().map(|p| json!(p)).collect();
         let mut annotations: Map<String, Value> = Map::new();
         annotations.insert(
             "to".to_string(),
             json!(targets.iter().cloned().collect::<Vec<_>>().join(",")),
         );
+        let action_name = format!("Issue{resource}");
         actions.insert(
-            format!("Issue{resource}"),
+            action_name,
             json!({
                 "appliesTo": {
                     "principalTypes": principal_types,
@@ -133,59 +140,62 @@ fn build_schema(graph: &Graph, ns: &str) -> String {
     ns_map.insert("actions".to_string(), Value::Object(actions));
 
     let mut root: Map<String, Value> = Map::new();
-    root.insert(ns.to_string(), Value::Object(ns_map));
+    root.insert(ns_ident, Value::Object(ns_map));
 
-    format!(
-        "// Cedar schema projected by DomainForge. JSON schema format\n\
-         // (see https://docs.cedarpolicy.com/schema/json-schema.html).\n{}\n",
-        serde_json::to_string_pretty(&Value::Object(root)).expect("schema serializes")
-    )
+    // H5: strict JSON — NO comment header. The schema serializes directly.
+    Ok(serde_json::to_string_pretty(&Value::Object(root)).expect("schema serializes"))
 }
 
-/// Build `policies.cedar`: one `permit` per action (baseline authority grant).
-fn build_policies(graph: &Graph, ns: &str, model_ref: &str, created_at: &str) -> String {
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
+/// Build `policies.cedar`: one scoped `permit` per action (H6: baseline
+/// authority grant scoped to the flow's source entity type + resource type).
+fn build_policies(
+    graph: &Graph,
+    ns: &str,
+    model_ref: &str,
+    created_at: &str,
+) -> Result<String, String> {
+    let mut reg = NameRegistrar::new();
+    let ns_ident = reg.register("ident", ns);
+
+    // Collect (resource, from) pairs from flows — each becomes a scoped permit.
+    // The flow resolver (M4) errors on dangling references.
+    let flows = collect_flows(graph)?;
+    let mut pairs: Vec<(String, String)> = flows
         .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
+        .map(|f| {
+            (
+                reg.register("ident", &f.resource),
+                reg.register("ident", &f.from),
+            )
+        })
         .collect();
-    let mut resources: Vec<String> = graph
-        .all_flows()
-        .iter()
-        .filter_map(|f| resource_name.get(&f.resource_id().to_string()).cloned())
-        .collect();
-    resources.sort();
-    resources.dedup();
+    pairs.sort();
+    pairs.dedup();
 
     let mut s = String::new();
+    // Provenance + scope note live here (Cedar policy files allow `//` comments).
     s.push_str(&format!(
         "// Cedar policies projected by DomainForge from {model_ref} at {created_at}.\n\
-         // One baseline `permit` per Action: the authority grant that the flow\n\
-         // exists in the `{ns}` architecture. Tighten with `when`/`unless`\n\
-         // clauses derived from SEA `policy` expressions as needed.\n\n"
+         // PERMISSIVE BASELINE: one scoped `permit` per Action — the authority grant\n\
+         // that the flow exists in the `{ns_ident}` architecture. Each permit is scoped\n\
+         // to the flow's source entity type (`principal is <From>`) and resource type\n\
+         // (`resource is <Resource>`). This does NOT project SEA `policy` expressions;\n\
+         // tighten with `when`/`unless` clauses derived from SEA `policy` obligations\n\
+         // (e.g. require_approval) as needed.\n\n"
     ));
-    for resource in &resources {
+    for (resource, from) in &pairs {
+        // H6 fix: scope each permit to the flow's principal + resource types,
+        // not an unconstrained `principal, resource`.
         s.push_str(&format!(
-            "permit (\n  principal,\n  action == {ns}::Action::\"Issue{resource}\",\n  resource\n);\n\n"
+            "permit (\n  principal is {ns_ident}::{from},\n  action == {ns_ident}::Action::\"Issue{resource}\",\n  resource is {ns_ident}::{resource}\n);\n\n"
         ));
     }
-    s
+    Ok(s)
 }
 
-/// Derive a single namespace: first entity's namespace (sorted by name), else
-/// first resource's, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
+/// Re-export the kernel ident sanitizer for tests + downstream.
+pub fn cedar_ident(name: &str) -> String {
+    ident(name)
 }
 
 #[cfg(test)]
@@ -213,12 +223,8 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
 
     fn schema_doc(files: &BTreeMap<String, String>) -> Value {
         let body = &files[SCHEMA_FILE];
-        let lines: Vec<&str> = body.lines().collect();
-        let start = lines
-            .iter()
-            .position(|l| l.trim_start().starts_with('{'))
-            .unwrap();
-        serde_json::from_str(&lines[start..].join("\n")).expect("schema parses as JSON")
+        // H5: schema is strict JSON now — parse directly, no comment stripping.
+        serde_json::from_str(body).expect("schema parses as JSON")
     }
 
     #[test]
@@ -228,6 +234,21 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
             files.keys().collect::<Vec<_>>(),
             vec!["policies.cedar", "schema.cedarschema.json"]
         );
+    }
+
+    #[test]
+    fn schema_is_strict_json_no_comment_header() {
+        let files = project(SOURCE);
+        let body = &files[SCHEMA_FILE];
+        // H5: the first character must be `{` (strict JSON), not a `//` comment.
+        let trimmed = body.trim_start();
+        assert!(
+            trimmed.starts_with('{'),
+            "schema must be strict JSON (no comment header); first chars: {:?}",
+            &body[..body.len().min(40)]
+        );
+        // The whole file must parse as JSON without comment-stripping.
+        let _: Value = serde_json::from_str(body).expect("strict JSON parse");
     }
 
     #[test]
@@ -249,12 +270,19 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
     }
 
     #[test]
-    fn policies_has_one_permit_per_action() {
+    fn policies_has_one_scoped_permit_per_action() {
         let files = project(SOURCE);
         let p = &files[POLICIES_FILE];
-        // Count actual statements `permit (`, not the word "permit" in the header.
         assert_eq!(p.matches("permit (").count(), 1);
-        assert!(p.contains("action == procurement::Action::\"IssuePurchaseOrder\""));
+        // H6: the permit must scope principal and resource by type.
+        assert!(
+            p.contains("principal is procurement::Buyer"),
+            "permit must scope principal to source entity type (H6): {p}"
+        );
+        assert!(
+            p.contains("resource is procurement::PurchaseOrder"),
+            "permit must scope resource to resource type (H6): {p}"
+        );
     }
 
     #[test]
@@ -271,5 +299,30 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         assert!(ns_obj["actions"].as_object().unwrap().is_empty());
         let p = &files[POLICIES_FILE];
         assert_eq!(p.matches("permit (").count(), 0);
+    }
+
+    /// M2 regression: hostile names must not corrupt the Cedar schema or
+    /// policy file. An entity named `a"b` must produce a sanitized type name
+    /// (no raw quote) and must not break the Action EID string.
+    #[test]
+    fn hostile_names_do_not_corrupt_output() {
+        let hostile = r#"
+@namespace "h"
+Entity "a\"b" in h
+Resource "R x" units in h
+Flow "R x" from "a\"b" to "a\"b" quantity 1
+"#;
+        let files = project(hostile);
+        // Schema must still parse as strict JSON.
+        let _doc = schema_doc(&files);
+        // Policy file must not contain a raw quote escaping issue.
+        let p = &files[POLICIES_FILE];
+        assert!(p.contains("permit ("), "must have a permit");
+        // No unescaped raw `"` from the entity name inside identifier positions.
+        // The sanitized entity id replaces non-alnum with _.
+        assert!(
+            p.contains("principal is h::a_b"),
+            "hostile entity name must be sanitized: {p}"
+        );
     }
 }

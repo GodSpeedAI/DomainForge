@@ -22,6 +22,8 @@
 //! [TLA+]: https://lamport.org/tla/tla.html
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{sanitize_filename, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
 use std::collections::BTreeMap;
 
@@ -33,12 +35,16 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let ns = model_namespace(graph);
+    let ns = model_namespace(graph)?;
     let base = sanitize_filename(&ns);
     let tla_file = format!("{base}.tla");
     let cfg_file = format!("{base}.cfg");
 
-    let (entities, resources, flows) = collect(graph);
+    let flows = collect_flows(graph)?;
+
+    let entities: Vec<String> = sorted_unique_names(graph.all_entities().iter().map(|e| e.name()));
+    let resources: Vec<String> =
+        sorted_unique_names(graph.all_resources().iter().map(|r| r.name()));
 
     let tla = build_tla(&base, &entities, &resources, &flows, model_ref, &created_at);
     let cfg = build_cfg(&entities, &resources);
@@ -63,76 +69,52 @@ pub fn project_tla_in_memory(
     Ok(map)
 }
 
-type Flow = (String, String, String); // (resource, from, to)
-
-fn collect(graph: &Graph) -> (Vec<String>, Vec<String>, Vec<Flow>) {
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
-
-    let mut entities: Vec<String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| e.name().to_string())
-        .collect();
-    entities.sort();
-    entities.dedup();
-    let mut resources: Vec<String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| r.name().to_string())
-        .collect();
-    resources.sort();
-    resources.dedup();
-
-    let mut flows: Vec<Flow> = Vec::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
-        flows.push((resource.clone(), from.clone(), to.clone()));
-    }
-    flows.sort();
-    (entities, resources, flows)
-}
-
-/// The set of resources that appear in at least one flow (movable resources).
-fn movable_resources(flows: &[Flow]) -> Vec<String> {
-    let mut v: Vec<String> = flows.iter().map(|(r, _, _)| r.clone()).collect();
+fn sorted_unique_names<'a>(names: impl Iterator<Item = &'a str>) -> Vec<String> {
+    let mut v: Vec<String> = names.map(String::from).collect();
     v.sort();
     v.dedup();
     v
 }
 
+/// Build the TLA+ spec body.
+///
+/// Each flow becomes its own action `Transfer<Resource>_<From>_<To>` (H2):
+/// one action per flow, never conjoined, so chained flows (R: A→B, R: B→C)
+/// produce two independently-enabled actions rather than a contradictory
+/// conjunction. `Next` is the disjunction of all of them.
+///
+/// `Init` uses a CASE with the correct `CASE r = X -> F1 [] r = Y -> F2 []
+/// OTHER -> Fallback` syntax (H1): every arm carries its discriminant, and
+/// the default-case keyword is `OTHER` (not `OTHERWISE`).
 fn build_tla(
     module: &str,
     entities: &[String],
     resources: &[String],
-    flows: &[Flow],
+    flows: &[crate::projection::flows::ResolvedFlow],
     model_ref: &str,
     created_at: &str,
 ) -> String {
-    let movable = movable_resources(flows);
-    let eid = |s: &str| -> String { ident(s) };
-    let set = |xs: &[String]| -> String {
-        if xs.is_empty() {
+    // Collision-safe identifier registrar: entities/resources with names that
+    // collapse to the same identifier get a hash suffix so the TLA+ spec never
+    // has duplicate CONSTANTS (M1).
+    let mut reg = NameRegistrar::new();
+    // Pre-register entities first, then resources, so ident assignment is
+    // deterministic and stable across runs.
+    let ent_ids: Vec<String> = entities.iter().map(|e| reg.register("ident", e)).collect();
+    let res_ids: Vec<String> = resources.iter().map(|r| reg.register("ident", r)).collect();
+
+    let movable: Vec<&str> = {
+        let mut seen: Vec<&str> = flows.iter().map(|f| f.resource.as_str()).collect();
+        seen.sort();
+        seen.dedup();
+        seen
+    };
+
+    let set_str = |ids: &[String]| -> String {
+        if ids.is_empty() {
             "{}".to_string()
         } else {
-            format!(
-                "{{{}}}",
-                xs.iter().map(|x| eid(x)).collect::<Vec<_>>().join(", ")
-            )
+            format!("{{{}}}", ids.join(", "))
         }
     };
 
@@ -145,80 +127,99 @@ fn build_tla(
     ));
 
     s.push_str("(* SEA entities + resources, bound in the .cfg. *)\nCONSTANTS ");
-    let const_names: Vec<String> = entities
-        .iter()
-        .chain(resources.iter())
-        .map(|x| eid(x))
-        .collect();
+    let const_names: Vec<String> = ent_ids.iter().chain(res_ids.iter()).cloned().collect();
     if const_names.is_empty() {
-        s.push_str("None\n");
+        s.push_str("ModelValue\n");
     } else {
         s.push_str(&const_names.join(", "));
         s.push('\n');
     }
     s.push('\n');
 
+    // Build a lookup from original name → registered id for entities/resources.
+    let ent_lookup: std::collections::BTreeMap<&str, &str> = entities
+        .iter()
+        .zip(ent_ids.iter())
+        .map(|(e, id)| (e.as_str(), id.as_str()))
+        .collect();
+    let res_lookup: std::collections::BTreeMap<&str, &str> = resources
+        .iter()
+        .zip(res_ids.iter())
+        .map(|(r, id)| (r.as_str(), id.as_str()))
+        .collect();
+    let mut id_of = |name: &str| -> String {
+        ent_lookup
+            .get(name)
+            .or_else(|| res_lookup.get(name))
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| reg.register("ident", name))
+    };
+
     s.push_str("(* Entity and resource sets. *)\n");
-    s.push_str(&format!("Entities == {}\n", set(entities)));
-    s.push_str(&format!("Resources == {}\n\n", set(resources)));
+    s.push_str(&format!("Entities == {}\n", set_str(&ent_ids)));
+    s.push_str(&format!("Resources == {}\n\n", set_str(&res_ids)));
 
     s.push_str("(* holder[r] = the entity currently holding resource r. *)\n");
     s.push_str("VARIABLES holder\n\n");
 
     // Init: each movable resource starts at its first flow's from-entity.
+    // CASE syntax: every arm carries the discriminant `r = X`; the default is
+    // `OTHER -> Fallback` (H1: was `= X` missing on arms 2+, and `OTHERWISE`).
     s.push_str("Init ==\n  /\\ holder = [");
     if movable.is_empty() {
-        s.push_str("r \\in {} |-> ChooseEntity");
+        let fallback = entities
+            .first()
+            .map(|e| id_of(e))
+            .unwrap_or_else(|| "ModelValue".into());
+        s.push_str("r \\in Resources |-> ");
+        s.push_str(&fallback);
     } else {
-        s.push_str("r \\in Resources |-> CASE r");
+        s.push_str("r \\in Resources |-> CASE");
         for (i, r) in movable.iter().enumerate() {
             let from = flows
                 .iter()
-                .find(|(fr, _, _)| fr == r)
-                .map(|(_, f, _)| f.clone())
-                .unwrap_or_else(|| entities.first().cloned().unwrap_or_else(|| "None".into()));
+                .find(|f| f.resource == *r)
+                .map(|f| f.from.as_str())
+                .unwrap_or_else(|| entities.first().map(|e| e.as_str()).unwrap_or("ModelValue"));
             let sep = if i == 0 { " " } else { " [] " };
-            s.push_str(&format!("{sep}= {} -> {}", eid(r), eid(&from)));
+            // H1 fix: every arm carries the discriminant `r = <Resource>`.
+            let r_id = id_of(r);
+            let from_id = id_of(from);
+            s.push_str(&format!("{sep}r = {r_id} -> {from_id}"));
         }
-        // ponytail: CASE without exhaustive arms; non-movable resources keep an
-        // arbitrary entity via OTHERWISE — fine since no action touches them.
-        let fallback = entities.first().cloned().unwrap_or_else(|| "None".into());
-        s.push_str(&format!(" [] OTHERWISE {}", eid(&fallback)));
+        let fallback = entities
+            .first()
+            .map(|e| id_of(e))
+            .unwrap_or_else(|| "ModelValue".into());
+        // H1 fix: default-case keyword is `OTHER`, not `OTHERWISE`.
+        s.push_str(&format!(" [] OTHER -> {fallback}"));
     }
     s.push_str("]\n\n");
 
-    // One transfer action per declared flow.
+    // H2 fix: one action per flow (Transfer<Resource>_<From>_<To>), never
+    // conjoined. Chained flows R: A→B and R: B→C produce two independently
+    // enabled actions rather than a contradictory conjunction.
     s.push_str("(* One transfer action per declared SEA flow. *)\n");
     if flows.is_empty() {
         s.push_str("(* no flows declared *)\n");
     }
-    let mut by_resource: BTreeMap<String, Vec<&Flow>> = BTreeMap::new();
+    let mut action_names: Vec<String> = Vec::new();
     for f in flows {
-        by_resource.entry(f.0.clone()).or_default().push(f);
-    }
-    for (resource, group) in &by_resource {
-        s.push_str(&format!("Transfer{} ==\n", eid(resource)));
-        for (_, from, to) in group {
-            s.push_str(&format!(
-                "  /\\ holder[{}] = {}\n  /\\ holder' = [holder EXCEPT ![{}] = {}]\n",
-                eid(resource),
-                eid(from),
-                eid(resource),
-                eid(to)
-            ));
-        }
-        s.push('\n');
+        let r = id_of(&f.resource);
+        let from = id_of(&f.from);
+        let to = id_of(&f.to);
+        let action = format!("Transfer{r}_{from}_{to}");
+        action_names.push(action.clone());
+        s.push_str(&format!(
+            "{action} ==\n  /\\ holder[{r}] = {from}\n  /\\ holder' = [holder EXCEPT ![{r}] = {to}]\n\n"
+        ));
     }
 
     s.push_str("Next == ");
-    if flows.is_empty() {
+    if action_names.is_empty() {
         s.push_str("FALSE\n\n");
     } else {
-        let transfers: Vec<String> = by_resource
-            .keys()
-            .map(|r| format!("Transfer{}", eid(r)))
-            .collect();
-        s.push_str(&transfers.join(" \\/ "));
+        s.push_str(&action_names.join(" \\/ "));
         s.push('\n');
     }
     s.push('\n');
@@ -231,14 +232,16 @@ fn build_tla(
 }
 
 fn build_cfg(entities: &[String], resources: &[String]) -> String {
+    let mut reg = NameRegistrar::new();
     let mut s = String::new();
-    s.push_str("# TLC config projected by DomainForge.\n");
+    // L3 fix: TLC .cfg comments use `\*` (line) and `(* *)` (block), not `#`.
+    s.push_str("\\* TLC config projected by DomainForge.\n");
     s.push_str("CONSTANTS\n");
     if entities.is_empty() && resources.is_empty() {
-        s.push_str("# none\n");
+        s.push_str("\\* none\n");
     } else {
         for x in entities.iter().chain(resources.iter()) {
-            let i = ident(x);
+            let i = reg.register("ident", x);
             s.push_str(&format!("{i} = {i}\n"));
         }
     }
@@ -246,58 +249,6 @@ fn build_cfg(entities: &[String], resources: &[String]) -> String {
     s.push_str("SPECIFICATION Spec\n");
     s.push_str("INVARIANT TypeInvariant\n");
     s
-}
-
-/// Derive a single namespace: first entity's namespace (sorted by name), else
-/// first resource's, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
-}
-
-/// Sanitize a name into a valid TLA+ identifier: alphanumerics + underscore;
-/// non-alnum -> `_`. Leading digit -> prefix `_`.
-fn ident(name: &str) -> String {
-    let mut out = String::with_capacity(name.len());
-    for (i, c) in name.chars().enumerate() {
-        if c.is_ascii_alphanumeric() || c == '_' {
-            if i == 0 && c.is_ascii_digit() {
-                out.push('_');
-            }
-            out.push(c);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push_str("Unknown");
-    }
-    out
-}
-
-/// Sanitize a namespace into a filesystem-safe basename.
-fn sanitize_filename(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
-            out.push(c);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push_str("default");
-    }
-    out
 }
 
 #[cfg(test)]
@@ -341,10 +292,11 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         assert!(body.contains("CONSTANTS Buyer, Supplier, PurchaseOrder"));
         assert!(body.contains("VARIABLES holder"));
         assert!(body.contains("Init =="));
-        assert!(body.contains("TransferPurchaseOrder =="));
+        // H2: one action per flow, named Transfer<Resource>_<From>_<To>.
+        assert!(body.contains("TransferPurchaseOrder_Buyer_Supplier =="));
         assert!(body.contains("holder[PurchaseOrder] = Buyer"));
         assert!(body.contains("[holder EXCEPT ![PurchaseOrder] = Supplier]"));
-        assert!(body.contains("Next == TransferPurchaseOrder"));
+        assert!(body.contains("Next == TransferPurchaseOrder_Buyer_Supplier"));
         assert!(body.contains("Spec == Init /\\ [][Next]_holder"));
         assert!(body.contains("TypeInvariant =="));
         assert!(body.contains("====="));
@@ -374,5 +326,82 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         assert!(body.contains("Next == FALSE"));
         assert!(body.contains("Init =="));
         assert!(body.contains("Spec =="));
+    }
+
+    /// H1 regression: the CASE in Init must carry the discriminant `r = X` on
+    /// every arm and use `OTHER` (not `OTHERWISE`) for the default. A pre-H1
+    /// spec had `[] = PurchaseOrder` (no `r`) and `OTHERWISE`.
+    #[test]
+    fn init_case_has_discriminant_on_every_arm_and_uses_other() {
+        let files = project(SOURCE);
+        let body = &files["procurement.tla"];
+        // The Init line must contain `CASE r = PurchaseOrder -> Buyer`.
+        assert!(
+            body.contains("CASE r = PurchaseOrder -> Buyer"),
+            "Init CASE missing discriminant on first arm"
+        );
+        // Must NOT contain the broken `[] = ` (missing discriminant) form.
+        assert!(
+            !body.contains("[] = "),
+            "Init CASE arm missing discriminant (H1 regression)"
+        );
+        // Default-case keyword must be `OTHER`, not `OTHERWISE`.
+        assert!(
+            body.contains("[] OTHER -> "),
+            "Init CASE must use OTHER as the default-case keyword"
+        );
+        assert!(
+            !body.contains("OTHERWISE"),
+            "Init CASE must not use OTHERWISE (H1 regression)"
+        );
+    }
+
+    /// H2 regression: chained flows (R: A→B and R: B→C) must produce two
+    /// separate actions, not a single conjoined `Transfer<R>` that is never
+    /// enabled. The pre-H2 code AND-ed both flows' guards + primed
+    /// assignments into one action → immediate deadlock.
+    #[test]
+    fn chained_flows_produce_separate_non_conjoined_actions() {
+        let chained = r#"
+@namespace "chain"
+Entity "A" in chain
+Entity "B" in chain
+Entity "C" in chain
+Resource "R" units in chain
+
+Flow "R" from "A" to "B" quantity 1
+Flow "R" from "B" to "C" quantity 1
+"#;
+        let files = project(chained);
+        let body = &files["chain.tla"];
+        // Two distinct actions, one per flow.
+        assert!(
+            body.contains("TransferR_A_B =="),
+            "missing action for flow R: A→B"
+        );
+        assert!(
+            body.contains("TransferR_B_C =="),
+            "missing action for flow R: B→C"
+        );
+        // Next must be a disjunction of both.
+        assert!(body.contains("Next == TransferR_A_B \\/ TransferR_B_C"));
+        // Must NOT have a single conjoined TransferR action with two primed
+        // assignments (the H2 bug).
+        assert!(
+            !body.lines().any(|l| l.starts_with("TransferR ==")),
+            "chained flows must not be conjoined into a single TransferR (H2 regression)"
+        );
+    }
+
+    /// L4 regression: an empty model's Init must not reference undefined
+    /// `ChooseEntity`; it must use a valid constant or no CASE at all.
+    #[test]
+    fn empty_model_init_does_not_reference_undefined_operator() {
+        let files = project("@namespace \"empty\"\n");
+        let body = &files["default.tla"];
+        assert!(
+            !body.contains("ChooseEntity"),
+            "empty-model Init must not reference undefined ChooseEntity (L4)"
+        );
     }
 }

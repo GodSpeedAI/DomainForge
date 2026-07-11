@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::compiler::{CompatibilityLoweringAuditor, PolicyCompiler};
 use super::error::{AuthorityError, AuthorityErrorCode};
-use super::fact_resolver::{FactResolver, FactSourceRegistry};
+use super::fact_resolver::{FactResolver, FactSourceRegistry, TrustedFacts};
 use super::pack::AuthorityPack;
 use super::resolver::AuthorityResolver;
 use super::trace::{AuthorityTrace, AuthorityTraceEmitter, EvidenceSink};
@@ -167,8 +167,13 @@ impl AuthorityEnvironment {
         let (derived_facts, derived_lineages) =
             derived_engine.compute_derived_facts(&all_facts, &transform_keys)?;
 
-        let mut all_resolved_facts = all_facts;
+        // Derived facts are computed exclusively from already-trusted inputs
+        // (see DerivedFactEngine::compute_derived_facts), so folding them
+        // into TrustedFacts here does not reopen the trust gate closed by
+        // resolve_trusted_facts (A2).
+        let mut all_resolved_facts = all_facts.0;
         all_resolved_facts.extend(derived_facts);
+        let all_resolved_facts = TrustedFacts(all_resolved_facts);
 
         let resolver_output = self.resolver.resolve(
             request,

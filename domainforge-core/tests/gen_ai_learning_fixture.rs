@@ -157,6 +157,7 @@ fn generate_fixture_environment() {
             schema_ref: None,
             owner: None,
             recovery_hint: None,
+            public_key_pem: None,
         }],
         fact_transforms: vec![],
         authority_packs: vec![serde_json::to_value(&pack).unwrap()],

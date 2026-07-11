@@ -2,10 +2,12 @@
 # Cedar projection gate.
 #
 # Projects the projection-cell fixture to a Cedar JSON schema + policy set and
-# validates: schema has the namespaced entityTypes + >=1 Action with
-# principalTypes/resourceTypes populated, and policies.cedar carries one
-# `permit` per action with the fully-qualified action EID. Invoked by
-# scripts/verify/projection-targets/all.sh.
+# validates:
+#   - schema has the namespaced entityTypes + >=1 Action with
+#     principalTypes/resourceTypes populated (H5: strict JSON, no comment header).
+#   - policies.cedar carries one `permit` per action (H6: scoped to the flow's
+#     source entity type + resource type, not unconstrained).
+# Invoked by scripts/verify/projection-targets/all.sh.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -27,11 +29,8 @@ import json, re, sys
 
 schema_p, policies_p = sys.argv[1], sys.argv[2]
 
-# --- schema: skip leading // comment, parse, validate structure.
-text = open(schema_p).read()
-obj_start = next((i for i, l in enumerate(text.splitlines()) if l.lstrip().startswith("{")), None)
-assert obj_start is not None, "no JSON object in schema"
-doc = json.loads("\n".join(text.splitlines()[obj_start:]))
+# --- schema: H5 — strict JSON (no comment header to skip).
+doc = json.loads(open(schema_p).read())
 assert "procurement" in doc, "namespace missing from schema"
 ns = doc["procurement"]
 assert "entityTypes" in ns and isinstance(ns["entityTypes"], dict), "missing entityTypes"
@@ -47,7 +46,7 @@ for aname, action in ns["actions"].items():
     assert at.get("resourceTypes"), f"action {aname} has no resourceTypes"
     assert "to" in action.get("annotations", {}), f"action {aname} missing 'to' annotation"
 
-# --- policies: one permit per action, FQ action EIDs.
+# --- policies: one permit per action, FQ action EIDs, H6 scoped permits.
 policies = open(policies_p).read()
 permit_count = len(re.findall(r"\bpermit\s*\(", policies))
 assert permit_count == len(ns["actions"]), \
@@ -55,7 +54,12 @@ assert permit_count == len(ns["actions"]), \
 for aname in ns["actions"]:
     eid = f'procurement::Action::"{aname}"'
     assert eid in policies, f"action EID {eid} not referenced in policies"
-print(f"  cedar OK ({len(ns['entityTypes'])} entity types, {len(ns['actions'])} action(s), {permit_count} permit(s))")
+# H6: each permit must scope principal and resource by type (not unconstrained).
+assert "principal is procurement::" in policies, \
+    "permits must scope principal to entity type (H6)"
+assert "resource is procurement::" in policies, \
+    "permits must scope resource to resource type (H6)"
+print(f"  cedar OK ({len(ns['entityTypes'])} entity types, {len(ns['actions'])} action(s), {permit_count} scoped permit(s))")
 PY
 
 echo "==> cedar gate OK"

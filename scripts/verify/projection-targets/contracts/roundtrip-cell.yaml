@@ -1,0 +1,10 @@
+projection_contract:
+  target: roundtrip-cell
+  status: proven
+  preserves: [entity_identity, resource_identity, flow_identity, primitive_names]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics, pattern_structure]
+  prohibited_losses: [entity_identity, resource_identity, flow_identity]
+  deterministic_output_required: true
+  target_validator:
+    command: "CALM export -> import -> structural-primitive comparison via `cargo test -p domainforge-core --features cli --test roundtrip_cell_tests` (scripts/verify/projection-targets/roundtrip-cell.sh)"
+    native: true

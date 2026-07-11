@@ -1,0 +1,10 @@
+projection_contract:
+  target: cloudevents
+  status: proven
+  preserves: [flow_identity, event_per_flow, rfc3339_time, entity_source_target]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [flow_identity, event_count]
+  deterministic_output_required: true
+  target_validator:
+    command: "Strict JSONL parse + RFC 3339 time validation via scripts/verify/projection-targets/cloudevents.sh"
+    native: true

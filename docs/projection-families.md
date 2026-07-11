@@ -41,5 +41,47 @@ All minted identifiers route through the shared `projection::ids` module
 (content hashes of a U+0001-joined tuple, xxh64 seed 42). A fixed `--created-at`
 yields byte-identical output, enforced by a `verify-<family>` CI job and a
 byte-determinism test per family. See ADR-011 for the full convention.
+
+## Event, authority, verification, and activation targets
+
+Eight additional targets share the same kernel shape. See
+[Projection Target Implementation Status](projection-target-implementation-status.md)
+for gate/toolchain details.
+
+| Operator family | Projects to | CLI format | Notes |
+| --- | --- | --- | --- |
+| Event | CloudEvents 1.0 stream | `--format cloudevents` | One envelope per Flow |
+| Event-API | AsyncAPI 3.0 YAML | `--format asyncapi` | Channels/operations/messages per Flow; spec-validated |
+| Activation | Devbox manifest | `--format devbox` | Domain-aware dev shell |
+| Activation | Dagger module | `--format dagger` | One `@dagger.function` per Flow |
+| Authority | Cedar schema + policies | `--format cedar` | **Permissive baseline** (see below) |
+| Verification | Gauge spec | `--format gauge` | One scenario per Flow |
+| Verification | Alloy model | `--format alloy` | Sigs + facts per Flow |
+| Verification | TLA+ spec | `--format tla` | State-machine; SANY+TLC verified |
+
+### Cedar authority scope
+
+The Cedar `policies.cedar` file is a **permissive baseline**: one `permit`
+per Action, scoped to the flow's source entity type and resource type. It
+does not project SEA `policy` expressions as Cedar `forbid`/`when` clauses.
+A Cedar engine loaded with this baseline authorizes the model's declared
+flows, not its full obligation set. Projecting SEA `policy` obligations into
+Cedar policy clauses is future work.
+
+## Code targets (DDD/CQRS domain layer)
+
+Three code targets share one language-neutral Domain IR
+(`projection/domain/ir.rs`) and three pure renderers (Python, TypeScript,
+Rust). All DDD semantics are decided once in the IR; each renderer only
+translates IR → language syntax. Output is a complete, ready-to-use package
+up to the **port / abstract-base boundary** (no infrastructure adapters).
+See [Project Domain Code](how-tos/project-domain-code.md) for the normative
+SEA→DDD mapping and the `@cqrs` annotation switch.
+
+| Operator family | Projects to | CLI format | Notes |
+| --- | --- | --- | --- |
+| Code | Python DDD/CQRS package | `--format domain-python` | stdlib only; `compileall` + `mypy --strict` + `unittest` verified |
+| Code | TypeScript DDD/CQRS package | `--format domain-typescript` | zero runtime deps; `tsc --noEmit` (strict) verified |
+| Code | Rust DDD/CQRS crate | `--format domain-rust` | zero deps; `cargo check` + `cargo test` verified |
 </content>
 </invoke>

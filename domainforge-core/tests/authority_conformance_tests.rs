@@ -310,6 +310,7 @@ fn make_env_config(packs: Vec<serde_json::Value>) -> AuthorityEnvironmentConfig 
             schema_ref: None,
             owner: None,
             recovery_hint: None,
+            public_key_pem: None,
         }],
         fact_transforms: vec![],
         authority_packs: packs,
@@ -793,6 +794,7 @@ fn test_fact_source_registry_validation() {
         schema_ref: None,
         owner: None,
         recovery_hint: None,
+        public_key_pem: None,
     };
     registry.register(bad_source).unwrap();
     assert!(registry.validate().is_err());
@@ -869,6 +871,7 @@ fn test_trusted_system_of_record_override_accepted() {
         schema_ref: None,
         owner: None,
         recovery_hint: None,
+        public_key_pem: None,
     });
     let mut env = AuthorityEnvironment::new(config).unwrap();
     env.validate().unwrap();
@@ -948,6 +951,7 @@ fn test_derived_fact_lineage_in_trace() {
         schema_ref: None,
         owner: None,
         recovery_hint: None,
+        public_key_pem: None,
     });
 
     let mut env = AuthorityEnvironment::new(config).unwrap();
@@ -1035,6 +1039,7 @@ fn test_source_class_mismatch_rejected() {
             schema_ref: None,
             owner: None,
             recovery_hint: None,
+            public_key_pem: None,
         })
         .unwrap();
 
@@ -1170,4 +1175,35 @@ fn test_modality_precedence_prohibition_wins_over_permission() {
 
     // Prohibition should win: credit_status=Hold triggers prohibition -> Deny
     assert_eq!(decision.final_decision, FinalDecision::Deny);
+}
+
+// Property test (report item 7): a Prohibition-modality policy must never
+// resolve to Allow, regardless of whether its required fact is present,
+// absent, or holds a value that doesn't trigger the prohibition. This is
+// the fail-closed monotonicity guarantee the resolver's modality-precedence
+// and unknown-handling-default logic exists to provide — the kind of bug
+// an example-based test suite can miss because it only samples specific
+// fact states, not the whole space.
+proptest::proptest! {
+    #[test]
+    fn prohibition_never_resolves_to_allow(fact_state in proptest::prop_oneof![
+        proptest::strategy::Just(None),
+        proptest::strategy::Just(Some("Hold")),
+        proptest::strategy::Just(Some("Clear")),
+        proptest::strategy::Just(Some("Unknown")),
+    ]) {
+        let pack = make_prohibition_pack();
+        let config = make_env_config(vec![serde_json::to_value(&pack).unwrap()]);
+        let mut env = AuthorityEnvironment::new(config).unwrap();
+        env.validate().unwrap();
+
+        let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
+        let facts: Vec<FactEnvelope> = fact_state
+            .map(|v| make_trusted_fact("customer.credit_status", serde_json::json!(v)))
+            .into_iter()
+            .collect();
+
+        let (_, decision) = env.evaluate(&request, &facts).unwrap();
+        proptest::prop_assert_ne!(decision.final_decision, FinalDecision::Allow);
+    }
 }

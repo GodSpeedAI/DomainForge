@@ -10,7 +10,8 @@
 //! random per-parse flow UUIDs never reach the output.
 
 use crate::graph::Graph;
-use crate::projection::ids::element_id;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{element_id, slug};
 use crate::projection::sink::ArtifactSink;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -24,7 +25,7 @@ pub const SPEC_VERSION: &str = "1.0";
 /// Emit the CloudEvents stream into `sink`; returns the emitted relative paths.
 pub fn emit(
     graph: &Graph,
-    model_ref: &str,
+    _model_ref: &str,
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
@@ -32,9 +33,9 @@ pub fn emit(
     let events = build_events(graph, &created_at)?;
 
     let mut body = String::new();
-    body.push_str(&format!(
-        "# CloudEvents 1.0 stream projected by DomainForge from {model_ref} at {created_at}.\n"
-    ));
+    // H5: events.jsonl is JSON Lines — every line MUST be valid JSON. No `#`
+    // comment header. Provenance is carried in a sibling README or via the
+    // CloudEvents extension attribute below; it must not be line 1.
     for ev in &events {
         body.push_str(
             &serde_json::to_string(ev)
@@ -63,74 +64,44 @@ pub fn project_cloudevents_in_memory(
 
 /// Build the CloudEvent envelopes, sorted by deterministic id.
 fn build_events(graph: &Graph, created_at: &str) -> Result<Vec<Value>, String> {
-    // Resolve entity/resource display names by id.
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
+    let ns = model_namespace(graph)?;
+    let flows = collect_flows(graph)?; // M4: loud dangling-ref policy
 
     let mut events: Vec<(String, Value)> = Vec::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            return Err(format!(
-                "flow {} references an unknown entity or resource",
-                f.id()
-            ));
-        };
-        let ns = f.namespace();
-        let qty = f.quantity().to_string();
+    for f in &flows {
+        let qty = &f.quantity;
         let id = element_id(
             "cloudevents",
-            &[from.as_str(), resource.as_str(), to.as_str(), qty.as_str()],
+            &[
+                f.from.as_str(),
+                f.resource.as_str(),
+                f.to.as_str(),
+                qty.as_str(),
+            ],
         );
-        let source = format!("/{}/{}", slug(ns), slug(from));
-        let etype = format!("{}.{}.issued", slug(ns), slug(resource));
+        let source = format!("/{}/{}", slug(&ns), slug(&f.from));
+        let etype = format!("{}.{}.issued", slug(&ns), slug(&f.resource));
         let ev = json!({
             "specversion": SPEC_VERSION,
             "id": id.clone(),
             "source": source,
             "type": etype,
-            "subject": to.as_str(),
+            "subject": f.to.as_str(),
             "time": created_at,
             "datacontenttype": "application/json",
+            // Provenance extension (H5: replaces the old comment header).
+            "domainforgemodelref": "DomainForge",
             "data": {
-                "resource": resource.as_str(),
+                "resource": f.resource.as_str(),
                 "quantity": qty,
-                "from": from.as_str(),
-                "to": to.as_str(),
+                "from": f.from.as_str(),
+                "to": f.to.as_str(),
             }
         });
         events.push((id, ev));
     }
     events.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(events.into_iter().map(|(_, v)| v).collect())
-}
-
-/// Lowercase ASCII slug for URI path segments / event-type fragments: keep
-/// alphanumerics, replace everything else with `_`. Empty input yields `_`.
-fn slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push('_');
-    }
-    out
 }
 
 #[cfg(test)]
@@ -165,9 +136,10 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
     #[test]
     fn each_line_is_a_valid_cloudevent() {
         let files = project(SOURCE);
+        // H5: every line must be valid JSON — no comment lines to skip.
         let lines: Vec<&str> = files["events.jsonl"]
             .lines()
-            .filter(|l| !l.starts_with('#'))
+            .filter(|l| !l.is_empty())
             .collect();
         assert_eq!(lines.len(), 1, "one flow -> one event");
         let ev: Value = serde_json::from_str(lines[0]).expect("event parses as JSON");
@@ -190,9 +162,39 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
     }
 
     #[test]
-    fn empty_model_emits_header_only() {
+    fn empty_model_emits_empty_file() {
         let files = project("@namespace \"empty\"\n");
         let body = &files["events.jsonl"];
-        assert_eq!(body.lines().filter(|l| !l.starts_with('#')).count(), 0);
+        // H5: no comment header; empty model = empty (or whitespace-only) file.
+        assert_eq!(body.lines().filter(|l| !l.is_empty()).count(), 0);
+    }
+
+    /// H5 + M2 regression: events.jsonl with a name containing spaces — the
+    /// event `type` and `source` use slug'd fragments, and the whole file
+    /// must be strict JSONL (no comment header).
+    #[test]
+    fn hostile_names_produce_valid_strict_jsonl() {
+        let hostile = r#"
+@namespace "h"
+Entity "Order Line" in h
+Entity "Supplier" in h
+Resource "R" units in h
+Flow "R" from "Order Line" to "Supplier" quantity 1
+"#;
+        let files = project(hostile);
+        let body = &files["events.jsonl"];
+        // Every line must parse as JSON (H5: strict JSONL).
+        for line in body.lines().filter(|l| !l.is_empty()) {
+            let ev: Value = serde_json::from_str(line).expect("strict JSONL line parses");
+            // M2: source/type slug the namespace + entity name (no raw spaces).
+            assert!(
+                !ev["source"].as_str().unwrap().contains(' '),
+                "source must not contain raw spaces (M2)"
+            );
+            assert!(
+                !ev["type"].as_str().unwrap().contains(' '),
+                "type must not contain raw spaces (M2)"
+            );
+        }
     }
 }

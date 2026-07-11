@@ -150,6 +150,15 @@ pub enum ProjectFormat {
     /// Verification operator: TLA+ spec — flows become state-machine transitions, model-checkable with TLC (directory output)
     #[value(name = "tla")]
     Tla,
+    /// Code operator: Python DDD/CQRS domain layer — complete package up to the ports (directory output)
+    #[value(name = "domain-python")]
+    DomainPython,
+    /// Code operator: TypeScript DDD/CQRS domain layer — complete package up to the ports (directory output)
+    #[value(name = "domain-typescript")]
+    DomainTypescript,
+    /// Code operator: Rust DDD/CQRS domain layer — complete crate up to the ports (directory output)
+    #[value(name = "domain-rust")]
+    DomainRust,
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy, Default)]
@@ -249,6 +258,15 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Tla => {
             run_tla(&args, &graph)?;
+        }
+        ProjectFormat::DomainPython => {
+            run_domain_python(&args, &graph)?;
+        }
+        ProjectFormat::DomainTypescript => {
+            run_domain_typescript(&args, &graph)?;
+        }
+        ProjectFormat::DomainRust => {
+            run_domain_rust(&args, &graph)?;
         }
         ProjectFormat::Calm => {
             let value = crate::calm::export(&graph)
@@ -471,12 +489,24 @@ fn run_lean(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     Ok(())
 }
 
+/// Validate that `--created-at` (if provided) is a valid RFC 3339 timestamp.
+/// M6: CloudEvents writes it into the `time` attribute, which CloudEvents 1.0
+/// requires to be RFC 3339. Other targets use it for deterministic output.
+fn validate_created_at(args: &ProjectArgs) -> Result<()> {
+    if let Some(ref ts) = args.created_at {
+        chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
+    }
+    Ok(())
+}
+
 fn run_cloudevents(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     if args.recipe.is_some() {
         return Err(anyhow::anyhow!(
             "--recipe is not used by --format cloudevents (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     // Directory output, like the other model-driven projections.
     if !args.output.exists() {
@@ -514,6 +544,7 @@ fn run_asyncapi(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format asyncapi (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -551,6 +582,7 @@ fn run_devbox(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format devbox (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -587,6 +619,7 @@ fn run_dagger(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format dagger (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -624,6 +657,7 @@ fn run_cedar(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format cedar (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -660,6 +694,7 @@ fn run_gauge(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format gauge (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -696,6 +731,7 @@ fn run_alloy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format alloy (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -732,6 +768,7 @@ fn run_tla(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
             "--recipe is not used by --format tla (the projection is model-driven)"
         ));
     }
+    validate_created_at(args)?;
 
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output).with_context(|| {
@@ -756,6 +793,118 @@ fn run_tla(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("tla projection failed: {e}"))?;
     println!(
         "Projected TLA+ spec to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_domain_python(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format domain-python (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the domain-python projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::domain::python::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("domain-python projection failed: {e}"))?;
+    println!(
+        "Projected Python DDD/CQRS domain layer to {} ({} files); validate with \
+         `python -m compileall src tests && mypy --strict src && python -m unittest discover tests`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_domain_typescript(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format domain-typescript (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the domain-typescript projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::domain::typescript::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("domain-typescript projection failed: {e}"))?;
+    println!(
+        "Projected TypeScript DDD/CQRS domain layer to {} ({} files); validate with `tsc --noEmit`",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_domain_rust(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format domain-rust (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the domain-rust projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::domain::rust::emit(
+        graph,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("domain-rust projection failed: {e}"))?;
+    println!(
+        "Projected Rust DDD/CQRS domain crate to {} ({} files); validate with `cargo check && cargo test`",
         args.output.display(),
         files.len()
     );

@@ -1,0 +1,12 @@
+// Negative fixture: semantically broken SEA.
+// Parses, but `domainforge validate` MUST reject it because the Flow endpoints
+// and resource reference entities/resources that were never declared.
+
+@namespace "procurement"
+@version "1.0.0"
+
+Entity "Buyer" in procurement
+
+// "Supplier" is never declared as an Entity, and "PurchaseOrder" is never
+// declared as a Resource — the flow dangles.
+Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1

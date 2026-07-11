@@ -1,0 +1,11 @@
+projection_contract:
+  target: kg
+  status: proven
+  preserves: [entity_identity, resource_identity, flow_identity, rdf_triples]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [entity_count, resource_count, flow_count]
+  deterministic_output_required: true
+  gate_optional: true
+  target_validator:
+    command: "project --format kg -> import --format kg count comparison (scripts/prove/roundtrip.sh). RDF/Turtle round-trip preserves entity/resource/flow counts."
+    native: true

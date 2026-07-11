@@ -1,0 +1,11 @@
+projection_contract:
+  target: calm
+  status: proven
+  preserves: [entity_identity, resource_identity, flow_identity, architecture_nodes_relationships]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [entity_identity, flow_identity]
+  deterministic_output_required: true
+  gate_optional: true
+  target_validator:
+    command: "CALM round-trip export/import structural comparison (cargo test --test roundtrip_cell_tests); FINOS CALM JSON is schema-shaped architecture-as-code."
+    native: true

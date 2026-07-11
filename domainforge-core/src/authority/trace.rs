@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use super::error::AuthorityError;
 use super::pack::AuthorityPack;
+use super::policy::ObligationSpec;
 use super::resolver::{ConflictResolutionStep, ResolverOutput};
 use super::types::*;
 
@@ -36,6 +37,8 @@ pub struct AuthorityTrace {
     pub claim_level: ClaimLevel,
     pub validation_suite_ref: Option<String>,
     pub created_at: String,
+    /// Obligations incurred alongside `final_decision` (A8).
+    pub obligations: Vec<ObligationSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,6 +172,7 @@ impl AuthorityTraceEmitter {
             claim_level: ClaimLevel::AuditBacked,
             validation_suite_ref: None,
             created_at: Utc::now().to_rfc3339(),
+            obligations: output.obligations.clone(),
         };
 
         match self.persist_trace(&trace) {

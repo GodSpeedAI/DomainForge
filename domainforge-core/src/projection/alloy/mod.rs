@@ -16,6 +16,8 @@
 //! [Alloy]: https://alloytools.org/
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
+use crate::projection::ids::{sanitize_filename, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
 use std::collections::BTreeMap;
 
@@ -27,9 +29,9 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let ns = model_namespace(graph);
+    let ns = model_namespace(graph)?;
     let file = format!("{}.als", sanitize_filename(&ns));
-    let body = build_model(graph, &ns, model_ref, &created_at);
+    let body = build_model(graph, &ns, model_ref, &created_at)?;
     sink.write(&file, &body)?;
     Ok(vec![file])
 }
@@ -50,17 +52,17 @@ pub fn project_alloy_in_memory(
 }
 
 /// Build the Alloy model body.
-fn build_model(graph: &Graph, ns: &str, model_ref: &str, created_at: &str) -> String {
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
-        .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
-        .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
+fn build_model(
+    graph: &Graph,
+    ns: &str,
+    model_ref: &str,
+    created_at: &str,
+) -> Result<String, String> {
+    let mut reg = NameRegistrar::new();
+    // M2: sanitize the namespace for the module header — Alloy requires a
+    // valid module name (identifier), so `module supply chain` must become
+    // `module supply_chain`.
+    let ns_ident = reg.register("ident", ns);
 
     let mut entities: Vec<String> = graph
         .all_entities()
@@ -77,47 +79,57 @@ fn build_model(graph: &Graph, ns: &str, model_ref: &str, created_at: &str) -> St
     resources.sort();
     resources.dedup();
 
-    let mut flows: Vec<(String, String, String)> = Vec::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
-        flows.push((resource.clone(), from.clone(), to.clone()));
-    }
-    flows.sort();
+    let flows = collect_flows(graph)?; // M4: loud dangling-ref policy
+
+    // Collision-safe sig names (M1): entities/resources that collide after
+    // sanitization get a hash suffix.
+    let ent_ids: Vec<String> = entities.iter().map(|e| reg.register("ident", e)).collect();
+    let res_ids: Vec<String> = resources.iter().map(|r| reg.register("ident", r)).collect();
+
+    let ent_lookup: std::collections::BTreeMap<&str, &str> = entities
+        .iter()
+        .zip(ent_ids.iter())
+        .map(|(e, id)| (e.as_str(), id.as_str()))
+        .collect();
+    let res_lookup: std::collections::BTreeMap<&str, &str> = resources
+        .iter()
+        .zip(res_ids.iter())
+        .map(|(r, id)| (r.as_str(), id.as_str()))
+        .collect();
+    let mut id_of = |name: &str| -> String {
+        ent_lookup
+            .get(name)
+            .or_else(|| res_lookup.get(name))
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| reg.register("ident", name))
+    };
 
     let mut s = String::new();
     s.push_str(&format!(
         "// Alloy model projected by DomainForge from {model_ref} at {created_at}.\n\
          // Analyze with the Alloy Analyzer (https://alloytools.org/).\n\
-         module {ns}\n\n"
+         module {ns_ident}\n\n"
     ));
 
     s.push_str("// Principals (SEA entities)\n");
     s.push_str("abstract sig Principal {}\n");
-    if entities.is_empty() {
+    if ent_ids.is_empty() {
         s.push_str("// no entities declared\n");
     } else {
-        let names: Vec<String> = entities.iter().map(|e| ident(e)).collect();
         s.push_str(&format!(
             "sig {} extends Principal {{}}\n\n",
-            names.join(", ")
+            ent_ids.join(", ")
         ));
     }
 
     s.push_str("// Resources that move through the cell (SEA resources)\n");
     s.push_str("abstract sig Resource {}\n");
-    if resources.is_empty() {
+    if res_ids.is_empty() {
         s.push_str("// no resources declared\n");
     } else {
-        let names: Vec<String> = resources.iter().map(|r| ident(r)).collect();
         s.push_str(&format!(
             "sig {} extends Resource {{}}\n\n",
-            names.join(", ")
+            res_ids.join(", ")
         ));
     }
 
@@ -130,72 +142,22 @@ fn build_model(graph: &Graph, ns: &str, model_ref: &str, created_at: &str) -> St
     if flows.is_empty() {
         s.push_str("// no flows declared\n");
     }
-    for (resource, from, to) in &flows {
+    for f in &flows {
+        let r = id_of(&f.resource);
+        let from = id_of(&f.from);
+        let to = id_of(&f.to);
+        let fact_name = format!("flow_{}_{}_{}", r, from, to);
         s.push_str(&format!(
-            "fact flow_{}_{}_{} {{\n  some f: Flow | f.resource in {} and f.from in {} and f.to in {}\n}}\n",
-            ident(resource),
-            ident(from),
-            ident(to),
-            ident(resource),
-            ident(from),
-            ident(to)
+            "fact {fact_name} {{\n  some f: Flow | f.resource in {r} and f.from in {from} and f.to in {to}\n}}\n"
         ));
     }
-    s.push_str("\nrun {} for 3\n");
-    s
-}
-
-/// Derive a single namespace: first entity's namespace (sorted by name), else
-/// first resource's, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
-}
-
-/// Sanitize a name into a valid Alloy identifier: leading letter/underscore,
-/// alphanumerics + underscore otherwise. Names not starting with a letter get
-/// an `E`/`R` safe prefix is avoided (kept simple); non-alnum → `_`.
-fn ident(name: &str) -> String {
-    let mut out = String::with_capacity(name.len());
-    for (i, c) in name.chars().enumerate() {
-        if c.is_ascii_alphanumeric() || c == '_' {
-            if i == 0 && c.is_ascii_digit() {
-                out.push('_');
-            }
-            out.push(c);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push_str("Unknown");
-    }
-    out
-}
-
-/// Sanitize a namespace into a filesystem-safe basename.
-fn sanitize_filename(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
-            out.push(c);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push_str("default");
-    }
-    out
+    // M3: scope the `run` command to accommodate models with >3 flows. Each
+    // flow fact may require a distinct Flow atom; capping at 3 makes models
+    // with ≥4 flows report "no instance found" (false inconsistency). Scale
+    // the scope to max(3, flow_count).
+    let scope = flows.len().max(3);
+    s.push_str(&format!("\nrun {{}} for {scope}\n"));
+    Ok(s)
 }
 
 #[cfg(test)]
@@ -245,6 +207,54 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
             "some f: Flow | f.resource in PurchaseOrder and f.from in Buyer and f.to in Supplier"
         ));
         assert!(body.contains("run {} for 3"));
+    }
+
+    /// M3 regression: a model with >3 flows must scale the run scope so the
+    /// facts remain satisfiable. Capping at 3 makes a 4-flow model report
+    /// "no instance found" (false inconsistency).
+    #[test]
+    fn run_scope_scales_with_flow_count() {
+        let many_flows = r#"
+@namespace "many"
+Entity "A" in many
+Entity "B" in many
+Entity "C" in many
+Entity "D" in many
+Entity "E" in many
+Resource "R1" units in many
+Resource "R2" units in many
+Resource "R3" units in many
+Resource "R4" units in many
+Flow "R1" from "A" to "B" quantity 1
+Flow "R2" from "B" to "C" quantity 1
+Flow "R3" from "C" to "D" quantity 1
+Flow "R4" from "D" to "E" quantity 1
+"#;
+        let files = project(many_flows);
+        let body = &files["many.als"];
+        // 4 flows → scope must be at least 4, not capped at 3.
+        assert!(
+            body.contains("run {} for 4"),
+            "run scope must scale to flow count (M3): {}",
+            body.lines().find(|l| l.starts_with("run")).unwrap_or("")
+        );
+    }
+
+    /// M2 regression: a namespace with spaces must be sanitized in the module
+    /// header (`module supply_chain`, not `module supply chain`).
+    #[test]
+    fn module_header_sanitizes_namespace() {
+        // Entity uses the default @namespace (no `in` clause needed).
+        let files = project("@namespace \"supply chain\"\nEntity \"E\"\n");
+        let body = &files["supply_chain.als"];
+        assert!(
+            body.contains("module supply_chain"),
+            "module header must sanitize the namespace (M2)"
+        );
+        assert!(
+            !body.contains("module supply chain"),
+            "module header must not contain raw namespace with spaces (M2)"
+        );
     }
 
     #[test]

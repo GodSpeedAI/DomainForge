@@ -48,7 +48,11 @@ assert fact_count == 2, f"expected 2 flow facts, got {fact_count}"
 for clause in ("f.resource in PurchaseOrder", "f.from in Buyer", "f.to in Supplier"):
     assert clause in text, f"flow fact missing clause: {clause}"
 assert re.search(r"^run\s*\{\s*\}\s*for\s+\d+", text, re.M), "missing run command"
-print(f"  alloy OK ({fact_count} flow fact(s))")
+# M3: scope must be >= the number of flows (2 in fixture → scope >= 2, but
+# the code uses max(3, flows) so it's 3 here).
+run_scope = int(re.search(r"^run\s*\{\s*\}\s*for\s+(\d+)", text, re.M).group(1))
+assert run_scope >= 2, f"run scope {run_scope} too small for {fact_count} flow facts (M3)"
+print(f"  alloy OK ({fact_count} flow fact(s), scope {run_scope})")
 PY
 
 echo "==> alloy gate OK"

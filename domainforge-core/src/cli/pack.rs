@@ -253,10 +253,29 @@ fn graph_to_concepts(graph: &Graph) -> Vec<ConceptDef> {
             ConceptKind::Role,
         ));
     }
-    for flow in graph.all_flows() {
+    // Flow ids are Uuid::new_v4() (see primitives/flow.rs), so they must not
+    // be used as the concept id here or meaning_fingerprint would be
+    // unstable across rebuilds. Derive a deterministic id from content
+    // instead, using content_hash_keys to keep identical flows distinguishable.
+    let flow_contents: Vec<String> = graph
+        .all_flows()
+        .iter()
+        .map(|flow| {
+            format!(
+                "{}::{}::{}::{}::{}",
+                flow.namespace(),
+                flow.resource_id(),
+                flow.from_id(),
+                flow.to_id(),
+                flow.quantity()
+            )
+        })
+        .collect();
+    for flow_id in content_hash_keys(&flow_contents) {
+        let concept_id = format!("flow:{flow_id}");
         concepts.push(make_concept_def(
-            flow.id().to_string(),
-            flow.id().to_string(),
+            concept_id.clone(),
+            concept_id,
             ConceptKind::Flow,
         ));
     }
@@ -321,11 +340,75 @@ fn load_review_records(path: &Path) -> Result<Vec<ReviewRecord>> {
 
 fn compute_graph_hash(graph: &Graph) -> String {
     use sha2::{Digest, Sha256};
-    let json = serde_json::to_string(graph).unwrap_or_default();
+    let mut value = serde_json::to_value(graph).unwrap_or(serde_json::Value::Null);
+    canonicalize_event_ids(&mut value, "flows");
+    canonicalize_event_ids(&mut value, "instances");
+    let json = serde_json::to_string(&value).unwrap_or_default();
     let mut hasher = Sha256::new();
     hasher.update(json.as_bytes());
     let result = hasher.finalize();
     format!("sha256:{:x}", result)
+}
+
+/// `Flow`/`ResourceInstance` ids are minted with `Uuid::new_v4()` (legitimate:
+/// they represent events/occurrences, not concepts, and content-identical
+/// entries must be able to coexist in the graph — see
+/// `primitives/flow.rs`, `primitives/resource_instance.rs`). That randomness
+/// must not leak into `source_graph_hash`/`meaning_fingerprint`, so before
+/// hashing we replace each entry's map key and inner `id` field with a hash
+/// of its remaining (deterministic) content. `serde_json::Map` here is a
+/// `BTreeMap` (the `preserve_order` feature is not enabled), so the rewritten
+/// keys also serialize in sorted order — making the hash independent of
+/// parse/insertion order, not just of the random id.
+fn canonicalize_event_ids(graph_value: &mut serde_json::Value, collection: &str) {
+    let Some(map) = graph_value
+        .get_mut(collection)
+        .and_then(|v| v.as_object_mut())
+    else {
+        return;
+    };
+    let mut entries: Vec<serde_json::Value> = map.values().cloned().collect();
+    for entry in &mut entries {
+        if let Some(obj) = entry.as_object_mut() {
+            obj.remove("id");
+        }
+    }
+    let contents: Vec<String> = entries
+        .iter()
+        .map(|e| serde_json::to_string(e).unwrap_or_default())
+        .collect();
+    let keys = content_hash_keys(&contents);
+    map.clear();
+    for (key, entry) in keys.into_iter().zip(entries) {
+        map.insert(key, entry);
+    }
+}
+
+/// Hashes each content string with SHA-256; if two contents are identical
+/// (legitimate for events like Flow/ResourceInstance, which may repeat), the
+/// later occurrences get a `#<n>` suffix so no entries collapse together.
+/// Stable given a stable input order (parsing the same source is
+/// deterministic, so this is stable across rebuilds).
+fn content_hash_keys(contents: &[String]) -> Vec<String> {
+    use sha2::{Digest, Sha256};
+    use std::collections::HashMap;
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    contents
+        .iter()
+        .map(|content| {
+            let mut hasher = Sha256::new();
+            hasher.update(content.as_bytes());
+            let base = format!("{:x}", hasher.finalize());
+            let count = seen.entry(base.clone()).or_insert(0);
+            let key = if *count == 0 {
+                base
+            } else {
+                format!("{base}#{count}")
+            };
+            *count += 1;
+            key
+        })
+        .collect()
 }
 
 fn run_build(args: BuildArgs) -> Result<()> {

@@ -1,0 +1,10 @@
+projection_contract:
+  target: cedar
+  status: partial
+  preserves: [action_per_flow, principal_from_entity, resource_from_resource, scoped_permit]
+  intentionally_collapses: [policy_obligation_semantics, metric_semantics]
+  prohibited_losses: [action_identity, principal_resource_scoping]
+  deterministic_output_required: true
+  target_validator:
+    command: "Strict JSON schema parse + H6 scoped-permit structural check via scripts/verify/projection-targets/cedar.sh. Native `cedar validate-schema` deferred (Cedar CLI absent locally)."
+    native: false

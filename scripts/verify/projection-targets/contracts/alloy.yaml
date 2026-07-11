@@ -1,0 +1,10 @@
+projection_contract:
+  target: alloy
+  status: partial
+  preserves: [entity_signatures, resource_signatures, flow_sig, fact_per_flow]
+  intentionally_collapses: [policy_execution_semantics, metric_semantics]
+  prohibited_losses: [signature_identity, flow_fact_count]
+  deterministic_output_required: true
+  target_validator:
+    command: "Structural check (M3 scope scales with flow count) via scripts/verify/projection-targets/alloy.sh. Native Alloy CLI parse deferred (Alloy CLI absent locally)."
+    native: false

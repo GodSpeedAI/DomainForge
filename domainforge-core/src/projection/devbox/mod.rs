@@ -17,6 +17,7 @@
 //! [`devbox.json`]: https://www.jetify.com/devbox/docs/configuration/
 
 use crate::graph::Graph;
+use crate::projection::flows::{collect_flows, model_namespace};
 use crate::projection::sink::ArtifactSink;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -32,7 +33,7 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-    let spec = build_spec(graph, model_ref, &created_at);
+    let spec = build_spec(graph, model_ref, &created_at)?;
     let mut body = format!(
         "// devbox.json projected by DomainForge from {model_ref} at {created_at}.\n\
          // Activation projection: a reproducible shell pre-loaded with the domain\n\
@@ -66,10 +67,10 @@ pub fn project_devbox_in_memory(
 }
 
 /// Build the devbox.json value.
-fn build_spec(graph: &Graph, model_ref: &str, _created_at: &str) -> Value {
+fn build_spec(graph: &Graph, model_ref: &str, _created_at: &str) -> Result<Value, String> {
     // ponytail: model `@version` is parsed into the AST but not carried onto
     // Graph; surfacing it is a cross-cutting graph change, out of scope here.
-    let ns = model_namespace(graph);
+    let ns = model_namespace(graph)?; // M5: errors on multi-namespace
 
     let mut entities: Vec<String> = graph
         .all_entities()
@@ -84,29 +85,12 @@ fn build_spec(graph: &Graph, model_ref: &str, _created_at: &str) -> Value {
         .collect();
     resources.sort();
 
-    // Resolve display names by id for flow endpoints.
-    let entity_name: BTreeMap<String, String> = graph
-        .all_entities()
+    // M4: use the shared flow resolver (loud dangling-ref policy).
+    let flows = collect_flows(graph)?;
+    let mut flow_strs: Vec<String> = flows
         .iter()
-        .map(|e| (e.id().to_string(), e.name().to_string()))
+        .map(|f| format!("{}:{}->{}", f.resource, f.from, f.to))
         .collect();
-    let resource_name: BTreeMap<String, String> = graph
-        .all_resources()
-        .iter()
-        .map(|r| (r.id().to_string(), r.name().to_string()))
-        .collect();
-    let mut flows: Vec<String> = Vec::new();
-    for f in graph.all_flows() {
-        let (Some(from), Some(to), Some(resource)) = (
-            entity_name.get(&f.from_id().to_string()),
-            entity_name.get(&f.to_id().to_string()),
-            resource_name.get(&f.resource_id().to_string()),
-        ) else {
-            continue;
-        };
-        flows.push(format!("{resource}:{from}->{to}"));
-    }
-    flows.sort();
 
     // serde_json::Map is BTreeMap-backed (no preserve_order), so env keys are
     // emitted in sorted order regardless of insertion order.
@@ -121,15 +105,19 @@ fn build_spec(graph: &Graph, model_ref: &str, _created_at: &str) -> Value {
         "DOMAINFORGE_RESOURCES".to_string(),
         json!(resources.join(",")),
     );
-    env.insert("DOMAINFORGE_FLOWS".to_string(), json!(flows.join(",")));
+    env.insert("DOMAINFORGE_FLOWS".to_string(), json!(flow_strs.join(",")));
 
+    // M2: the banner must not interpolate the namespace into a shell command
+    // (shell injection). Use the env var instead — it's already exported.
     let init_hook = json!([
-        format!("echo \"DomainForge: {ns} namespace\""),
+        "echo \"DomainForge: $DOMAINFORGE_NAMESPACE namespace\"".to_string(),
         "echo \"Entities: $DOMAINFORGE_ENTITIES\"".to_string(),
         "echo \"Resources: $DOMAINFORGE_RESOURCES\"".to_string(),
     ]);
 
-    json!({
+    let _ = &mut flow_strs; // silence unused-mut if flows is empty
+
+    Ok(json!({
         "packages": [],
         "env": env,
         "shell": {
@@ -138,23 +126,7 @@ fn build_spec(graph: &Graph, model_ref: &str, _created_at: &str) -> Value {
                 "domainforge-context": "echo \"Namespace: $DOMAINFORGE_NAMESPACE\"; echo \"Model: $DOMAINFORGE_MODEL\"; echo \"Entities: $DOMAINFORGE_ENTITIES\"; echo \"Resources: $DOMAINFORGE_RESOURCES\"; echo \"Flows: $DOMAINFORGE_FLOWS\""
             }
         }
-    })
-}
-
-/// Derive a single namespace for the manifest: the namespace of the
-/// alphabetically-first entity, else first resource, else `"default"`.
-fn model_namespace(graph: &Graph) -> String {
-    let mut ents = graph.all_entities();
-    ents.sort_by_key(|e| e.name().to_string());
-    if let Some(e) = ents.first() {
-        return e.namespace().to_string();
-    }
-    let mut res = graph.all_resources();
-    res.sort_by_key(|r| r.name().to_string());
-    if let Some(r) = res.first() {
-        return r.namespace().to_string();
-    }
-    "default".to_string()
+    }))
 }
 
 #[cfg(test)]
@@ -211,6 +183,16 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
             .as_array()
             .expect("init_hook is an array");
         assert!(hook.len() >= 3);
+        // M2: banner must use the env var, not interpolate the namespace.
+        let banner = hook[0].as_str().expect("banner is a string");
+        assert!(
+            banner.contains("$DOMAINFORGE_NAMESPACE"),
+            "banner must not interpolate namespace directly (M2 shell injection): {banner}"
+        );
+        assert!(
+            !banner.contains("{ns}") && !banner.contains("procurement"),
+            "banner must not contain the raw namespace value (M2): {banner}"
+        );
         let script = d["shell"]["scripts"]["domainforge-context"]
             .as_str()
             .expect("context script present");

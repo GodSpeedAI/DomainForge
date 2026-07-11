@@ -50,6 +50,13 @@ assert flows and "PurchaseOrder:Buyer->Supplier" in flows, f"flows missing/empty
 hook = doc["shell"].get("init_hook")
 assert hook is not None, "missing shell.init_hook"
 assert isinstance(hook, (str, list)), "init_hook must be string or array"
+# M2: the banner must use the env var, not interpolate the namespace directly
+# (shell injection: a namespace with $(...) would execute on shell entry).
+banner = hook[0] if isinstance(hook, list) else hook
+assert "$DOMAINFORGE_NAMESPACE" in banner, \
+    f"banner must use env var, not interpolate namespace (M2): {banner}"
+assert "procurement" not in banner, \
+    f"banner must not contain raw namespace value (M2): {banner}"
 assert isinstance(doc["shell"].get("scripts", {}), dict), "scripts must be a map"
 print(f"  devbox.json OK ({len(env)} env vars, {len(doc['packages'])} packages)")
 PY
