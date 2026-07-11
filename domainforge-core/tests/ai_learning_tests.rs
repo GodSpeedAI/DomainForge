@@ -536,7 +536,13 @@ fn in_memory_api_matches_cli_output() {
                 .replace("<inline>", "@")
                 .replace(&recipe, "@")
         };
-        assert_eq!(normalize(&disk), normalize(mem), "artifact differs: {rel}");
+        let (nd, nm) = (normalize(&disk), normalize(mem));
+        if nd != nm {
+            eprintln!("=== DEBUG artifact differs: {rel} ===");
+            eprintln!("--- disk ---\n{nd}");
+            eprintln!("--- mem ---\n{nm}");
+        }
+        assert_eq!(nd, nm, "artifact differs: {rel}");
     }
 
     // No unknown-authority guessing sneaks through the binding path either.
