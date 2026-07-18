@@ -613,7 +613,17 @@ fn parse_import_specifier(pair: Pair<Rule>) -> ParseResult<ImportSpecifier> {
             })?)?;
             Ok(ImportSpecifier::Wildcard(alias))
         }
-        Rule::import_specifier | Rule::import_named => {
+        // `import_specifier` wraps exactly one of `import_named` /
+        // `import_wildcard`; descend one level so we iterate the actual
+        // `import_item` pairs (or the wildcard alias) below.
+        Rule::import_specifier => {
+            let inner = pair
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Empty import specifier".to_string()))?;
+            parse_import_specifier(inner)
+        }
+        Rule::import_named => {
             let mut items = Vec::new();
             for item in pair.into_inner() {
                 if item.as_rule() == Rule::import_item {
@@ -802,6 +812,7 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Expected direction kind".to_string()))?
                 .as_str()
+                .trim()
                 .to_string();
             OperationClause::Direction { kind }
         }
@@ -809,7 +820,7 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
             // `^"anonymous"` is a literal and produces no sub-pair; only
             // the `symbol_ref` branch yields an inner pair.
             let actor = match inner.into_inner().next() {
-                Some(p) => p.as_str().to_string(),
+                Some(p) => parse_symbol_ref_text(p)?.trim().to_string(),
                 None => "anonymous".to_string(),
             };
             OperationClause::Actor { actor }
@@ -831,13 +842,16 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
                         let mut b = binding_pair.into_inner();
                         let policy = parse_symbol_ref_text(b.next().ok_or_else(|| {
                             ParseError::GrammarError("Expected policy in binding".to_string())
-                        })?)?;
+                        })?)?
+                        .trim()
+                        .to_string();
                         let enforcement_point = b
                             .next()
                             .ok_or_else(|| {
                                 ParseError::GrammarError("Expected enforcement point".to_string())
                             })?
                             .as_str()
+                            .trim()
                             .to_string();
                         // skip `fails with`
                         let failure_code = parse_identifier(b.next().ok_or_else(|| {
@@ -857,17 +871,23 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
         Rule::input_clause => OperationClause::Input {
             reference: parse_symbol_ref_text(inner.into_inner().next().ok_or_else(|| {
                 ParseError::GrammarError("Expected input reference".to_string())
-            })?)?,
+            })?)?
+            .trim()
+            .to_string(),
         },
         Rule::output_clause => OperationClause::Output {
             reference: parse_symbol_ref_text(inner.into_inner().next().ok_or_else(|| {
                 ParseError::GrammarError("Expected output reference".to_string())
-            })?)?,
+            })?)?
+            .trim()
+            .to_string(),
         },
         Rule::state_clause => OperationClause::State {
             reference: parse_symbol_ref_text(inner.into_inner().next().ok_or_else(|| {
                 ParseError::GrammarError("Expected state reference".to_string())
-            })?)?,
+            })?)?
+            .trim()
+            .to_string(),
         },
         Rule::effect_clause => {
             let mut e = inner.into_inner();
@@ -875,11 +895,14 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Expected effect kind".to_string()))?
                 .as_str()
+                .trim()
                 .to_string();
             let reference =
                 parse_symbol_ref_text(e.next().ok_or_else(|| {
                     ParseError::GrammarError("Expected effect target".to_string())
-                })?)?;
+                })?)?
+                .trim()
+                .to_string();
             OperationClause::Effect { kind, reference }
         }
         Rule::transaction_clause => OperationClause::Transaction {
@@ -888,6 +911,7 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
                 .next()
                 .ok_or_else(|| ParseError::GrammarError("Expected transaction kind".to_string()))?
                 .as_str()
+                .trim()
                 .to_string(),
         },
         Rule::failure_clause => {
@@ -901,7 +925,7 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
             let mut message = String::new();
             for part in f {
                 match part.as_rule() {
-                    Rule::failure_kind => kinds.push(part.as_str().to_string()),
+                    Rule::failure_kind => kinds.push(part.as_str().trim().to_string()),
                     Rule::string_literal => {
                         message = parse_string_literal(part)?;
                     }
@@ -932,6 +956,7 @@ fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClaus
                         .next()
                         .ok_or_else(|| ParseError::GrammarError("Expected na_reason".to_string()))?
                         .as_str()
+                        .trim()
                         .to_string();
                     let explanation = parse_string_literal(n.next().ok_or_else(|| {
                         ParseError::GrammarError("Expected na explanation".to_string())
@@ -1135,9 +1160,20 @@ fn parse_unsigned_int(pair: Pair<Rule>) -> ParseResult<u64> {
 
 /// Reconstruct the raw text of a `symbol_ref` (`Order` or `alias.Order`).
 /// Stored verbatim until resolution; the application module resolves it.
+/// We reconstruct from inner atomic `identifier` pairs because `symbol_ref`'s
+/// `as_str()` can include trailing implicit whitespace in some contexts.
 fn parse_symbol_ref_text(pair: Pair<Rule>) -> ParseResult<String> {
     match pair.as_rule() {
-        Rule::symbol_ref | Rule::identifier => Ok(pair.as_str().to_string()),
+        Rule::symbol_ref => {
+            let mut parts: Vec<String> = Vec::new();
+            for p in pair.into_inner() {
+                if p.as_rule() == Rule::identifier {
+                    parts.push(p.as_str().to_string());
+                }
+            }
+            Ok(parts.join("."))
+        }
+        Rule::identifier => Ok(pair.as_str().to_string()),
         other => Err(ParseError::GrammarError(format!(
             "Unexpected symbol_ref rule: {:?}",
             other

@@ -19,7 +19,15 @@ fn expected_ast_hash(path: &str) -> &'static str {
             "ffeba958f8f68f003b7b66ec3457aa2dc4aa01ff58591ce26fd141dd0a518c27"
         }
         "../fixtures/application_generation/compat/keyword-collision.sea" => {
-            "4947477664dd224bae50e67ff927a4450bc3bce301ea636a212d558922107ed2"
+            // Re-captured in Task 4: a pre-existing bug in
+            // `parse_import_specifier` silently dropped named-import items,
+            // so the Task 1 oracle locked in an AST that had lost
+            // `import { key as default }`. The Task 4 query-fixture
+            // round-trip required that bug fix; the AST now correctly
+            // carries the named import. Token/keyword compatibility is
+            // unchanged — only the previously-discarded import items are
+            // now retained.
+            "a8b14905e28026643cf295c8680a18a5816908ede5b117d8854c18a7cb37357f"
         }
         _ => panic!("unknown oracle path: {path}"),
     }
@@ -31,7 +39,9 @@ fn expected_format_hash(path: &str) -> &'static str {
             "7c5d6d7377345393f69109ad1967979b1e2b6a9c504a511f36129ef35836afc6"
         }
         "../fixtures/application_generation/compat/keyword-collision.sea" => {
-            "507c2767371aec4c751c769588d717fd57eda473c0ae07c814c5a94577b70f9a"
+            // Re-captured in Task 4 alongside the AST oracle above; the
+            // formatted output now correctly emits `import { key as default }`.
+            "4638add0cb48386e1d847c229e4aa14a73f00a4a046d7a236fce6b5e76fe166a"
         }
         _ => panic!("unknown oracle path: {path}"),
     }
