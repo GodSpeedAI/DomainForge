@@ -101,7 +101,6 @@ fix_*.py
 coverage/
 
 # Agent working files
-.agents/
 .omo/
 .omc/
 
