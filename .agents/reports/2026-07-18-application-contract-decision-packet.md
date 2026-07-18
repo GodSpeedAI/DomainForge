@@ -10,6 +10,15 @@ D1–D10 language/ownership decisions that must govern ADR-013 and the Milestone
 reviewed recommendations, including the amendments recorded below, on
 2026-07-18.
 
+> **Post-Gate-A amendment status: Accepted by the DomainForge repository
+> maintainer on 2026-07-18.** The Gate B adversarial review proposed narrow
+> corrections to D3, D5, and D6:
+> exact-byte legacy `ConceptId` identity; strict bounds; closed enum evolution;
+> entity defaults plus deterministic state/output lowering; reachable-only
+> `not_applicable`; precise concurrency ordering; and deferral of structured
+> failure details. The maintainer explicitly accepted ADR-013 and these
+> amendments; Human Gate B is closed.
+
 ## Baseline verification (Task 1 Steps 1–2)
 
 Recorded on branch `agent/projection-targets` (tracking
@@ -148,21 +157,22 @@ declaration classes it was not designed for. Bindings wrap Graph
 
 1. module resolution produces one `ResolvedModuleSet` containing logical module
    IDs, source hashes, the import graph, export visibility, named/wildcard alias
-   bindings, normalized qualified symbol IDs, declaration origins, and a single
+   bindings, qualified symbol IDs, declaration origins, and a single
    symbol table;
 2. named imports bind only the named exported symbols; wildcard imports remain
    alias-qualified; unexported imported declarations are not visible;
-3. import cycles, unresolved aliases, and two non-equivalent declarations with
-   the same normalized qualified ID are errors; equivalent duplicate imports
-   collapse to one symbol;
+3. import cycles, unresolved aliases, and two distinct declarations with the
+   same qualified ID are errors; repeated reachability of the same declaration
+   origin collapses to one symbol;
 4. Graph and the dedicated `ApplicationContract` are both constructed from that
    symbol table. Neither performs independent name or import resolution;
-5. references to existing SEA concepts use `ConceptId`; application-only
-   declarations use a new stable `ApplicationSymbolId` derived from normalized
+5. references to existing SEA concepts use the current exact-byte,
+   case-sensitive `ConceptId` inputs; application-only declarations use a new
+   stable `ApplicationSymbolId` derived from NFC-normalized, case-preserving
    namespace, declaration kind, and name;
 6. canonical closure order is logical module ID, then declaration kind, then
-   stable semantic ID. Authored order is retained only for fields explicitly
-   declared as sequences.
+   canonical declaration ID. Authored order is retained only for fields
+   explicitly declared as sequences.
 
 This avoids overloading Graph while preventing two independently resolved
 semantic worlds.
@@ -258,13 +268,18 @@ should reference rather than duplicate.
   must resolve to an existing SEA `unit`; canonical values normalize through
   that unit's declared dimension and base-unit factor;
 - a closed `enum` declaration has stable member identifiers and explicit wire
-  strings. Removing or changing a member/wire value is breaking; adding a member
-  is additive only for consumers that declare unknown-member handling;
+  strings. v0.1 exposes no unknown-member fallback, so adding, removing, or
+  changing a member/wire value is breaking. A future version may classify
+  addition as compatible only after it defines explicit unknown-member handling;
 - fields are required unless marked `optional`; optional means absent or a
   value, never an untyped JSON `null`;
+- required non-key entity fields of scalar, quantity, or enum type may declare
+  a type-checked literal default; record, optional, ref, list, and key fields may
+  not. An enum default is its explicit wire string;
 - `list<T>` is the only collection. v0.1 forbids nested lists, nested records,
   maps, unions, and arbitrary type strings;
-- `min`/`max` are inclusive and apply only to numeric or quantity fields;
+- `min`/`max` are inclusive and `exclusive_min`/`exclusive_max` are strict;
+  all four apply only to numeric or quantity fields;
   `min_length`/`max_length` count Unicode scalar values after NFC and apply only
   to strings; `min_items`/`max_items` apply only to lists; `pattern` references
   an existing validated SEA `Pattern` and uses the repository's Rust regex
@@ -314,14 +329,14 @@ invariants:
 
 | Concern | Accepted v0.1 values and rules |
 |---|---|
-| Effect | Exactly one of `creates <Entity>`, `mutates <Entity>`, or `reads <Entity>`. `emits` is deferred with messaging. The target must resolve to the operation's declared state entity. |
+| Effect | Exactly one of `creates <Entity>`, `mutates <Entity>`, or `reads <Entity>`. `emits` is deferred with messaging. The target must resolve to the operation's declared state entity. Creates construct same-named state fields from required input and explicit entity defaults; mutates preserve the key and replace same-named supplied fields; reads do not mutate. Required state or output fields without a same-named typed source make the operation not generation-ready. |
 | Transaction | Writes use `single_aggregate`; reads use `read_only`. No multi-aggregate or provider-selected boundary exists. |
-| Failure | A stable lower-snake-case code unique in the resolved closure, a plain-language meaning, and an optional flat typed details record. Every validation, policy, missing-state, idempotency, and concurrency path maps to one declared code. Transport status is a later adapter mapping, not SEA meaning. |
+| Failure | A stable lower-snake-case code unique in the resolved closure and a plain-language meaning. Every validation, policy, missing-state, idempotency, and concurrency path maps to one declared code. Structured detail payloads are deferred; transport status is a later adapter mapping, not SEA meaning. |
 | Idempotency | Harmful writes use `keyed_by <input-field>`. The field must be required and scalar. Same key plus the same canonical input fingerprint returns the stored result without another effect; same key plus a different fingerprint returns the declared idempotency-conflict failure. Reads use `inherent`. |
-| Concurrency | Creates use `unique_key <input-field>`; mutates use `optimistic_version <input-field>`; reads use `read_snapshot`. Each referenced field must have the required scalar/version type. |
+| Concurrency | Creates use `unique_key <input-field>` backed by a same-named compatible state field. Mutates use `optimistic_version <input-field>` backed by a same-named required state `int`; equality is required and successful mutation atomically increments it. Reads use one consistent `read_snapshot`. Idempotency lookup precedes create uniqueness. |
 | Evidence | Every inbound v0.1 operation declares `operation_trace`, producing a structured record with semantic operation ID, outcome code, and correlation ID. No payload or secret is evidence by default. |
 | Lifecycle | Every inbound v0.1 operation declares `synchronous_request_response`. Background, streaming, and externally managed lifecycles are unsupported. |
-| Not applicable | The first-class form is `not_applicable(<reason-code>, "explanation")`. Closed reason codes are `read_only`, `no_shared_state`, and `no_external_lifecycle`. The compiler accepts one only when the effect and direction prove the reason; a nonempty explanation alone is insufficient. |
+| Not applicable | The v0.1 first-class form is `idempotency not_applicable(read_only, "explanation")`, legal only on a `reads` operation and identical to `inherent` at runtime; its reason and explanation remain in the canonical contract for review. `no_shared_state` and `no_external_lifecycle` are deferred because v0.1 requires one state entity and synchronous inbound lifecycle; unreachable values MUST NOT enter the grammar. |
 
 Multiple effects, implicit ordering, omitted conditionally relevant fields, and
 free-form strategy names make the operation not generation-ready.
@@ -453,8 +468,8 @@ types; every later proof (§18) runs against this domain.
 
 **Repository evidence:** Future fixture paths are already fixed by the plan:
 `fixtures/application_generation/flagship/command-write.sea` and
-`fixtures/application_generation/flagship/query-read.sea` (not to be created
-until ADR-013 is accepted).
+`fixtures/application_generation/flagship/query-read.sea` (to be created during
+Milestone 0 now that ADR-013 is accepted).
 
 **Options considered:**
 1. Local order management: command `place_order`, governed by a deterministic
@@ -473,7 +488,8 @@ until ADR-013 is accepted).
 - enum: `OrderStatus` with wire member `placed`;
 - entity `Order`: aggregate key `order_id: uuid`; required
   `client_order_id: string` (length 1–64), `total: quantity<USD>` (`min > 0`),
-  `item_count: int` (`min 1`), `status: OrderStatus`;
+  `item_count: int` (`min 1`), `status: OrderStatus` with explicit default wire
+  value `"placed"`;
 - `PlaceOrderInput`: the same four input fields except `status`;
 - `PlaceOrderOutput`: `order_id: uuid`, `status: OrderStatus`;
 - `GetOrderStatusInput`: `order_id: uuid`;
@@ -608,11 +624,11 @@ ADR-013 may choose exact surface spelling and Rust field names only where those
 choices do not alter an accepted semantic rule above. A semantic change requires
 returning to Human Gate A.
 
-## Next actions
+## Gate outcome and next action
 
-1. Human Gate A is closed: D1–D10 were accepted by the DomainForge repository
-   maintainer on 2026-07-18 with no change to the Proposed v0.2 release boundary.
-2. Execute Task 2: draft ADR-013 and
-   `docs/reference/sea-application-contract.md` from these accepted decisions.
-3. Human Gate B ratifies the exact grammar/reference, then Task 3 writes the
-   Milestone 0 language code plan.
+1. Human Gate A is closed: D1–D10 and the D3/D5/D6 amendments were accepted by
+   the DomainForge repository maintainer on 2026-07-18 with no change to the
+   Proposed v0.2 release boundary.
+2. Human Gate B is closed: ADR-013 and its normative reference were ratified on
+   2026-07-18.
+3. Task 3 writes the Milestone 0 language code plan before compiler work starts.

@@ -1,12 +1,12 @@
 # ADR-013: SEA Application Contract
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-07-18
 **Deciders:** DomainForge Architecture Team
 
-> **Ratification record** _(fill in only after explicit human acceptance)_:
-> - Ratifier:
-> - Approval date:
+> **Ratification record**:
+> - Ratifier: DomainForge repository maintainer
+> - Approval date: 2026-07-18
 
 See `docs/reference/sea-language-evolution-policy.md`; every criterion there is
 addressed below. The normative surface contract (exact grammar, types,
@@ -101,16 +101,33 @@ satisfies:
 **Semantic ownership and import resolution (D3, accepted):** module
 resolution produces one `ResolvedModuleSet` (logical module IDs, source
 hashes, import graph, export visibility, named/wildcard alias bindings,
-normalized qualified symbol IDs, declaration origins, one symbol table).
+qualified symbol IDs governed by reference §7, declaration origins, and one
+symbol table).
 Named imports bind only named exported symbols; wildcard imports stay
 alias-qualified; unexported declarations are invisible. Cycles, unresolved
-aliases, and non-equivalent duplicate qualified IDs are errors; equivalent
-duplicates collapse. Graph and `ApplicationContract` are both constructed
+aliases, and distinct declarations with duplicate qualified IDs are errors;
+repeated reachability of the same declaration origin collapses. Graph and
+`ApplicationContract` are both constructed
 from that symbol table and perform no independent resolution. Existing
 concepts keep `ConceptId`; application-only declarations use
 `ApplicationSymbolId` (normalized namespace + declaration kind + name).
 Canonical closure order is logical module ID, then declaration kind, then
-stable semantic ID; authored order survives only in declared sequences.
+canonical declaration ID; authored order survives only in declared sequences.
+
+**Affected consumer mappings:**
+
+| Consumer | Normative mapping | Delivery gate |
+|---|---|---|
+| Graph | Existing entities, roles, policies, patterns, resources, and flows are constructed from the shared resolved symbol payload and retain `ConceptId`. Graph does not own records, enums, or operations; typed entity state is joined by `EntityContract.concept_id`. | Milestone 0 must prove Graph and `ApplicationContract` resolve the same existing-concept IDs. |
+| Application/Domain IR | `ApplicationContract` is the sole source for typed `OperationIr`/`PortIr`, fields, state/effect, policy bindings, failures, transaction, idempotency, concurrency, evidence, and lifecycle. Legacy heuristic Domain IR remains nonconforming and cannot make an operation generation-ready. | A later IR plan is blocked until Milestone 0 contract JSON and hashes are stable. |
+| Domain review and policy table | One row per operation using intent, actor/access, input/output, effect/state, policy binding/enforcement point, failures, and operational strategies directly from `ApplicationContract`. | Required before semantic approval in Milestone 1. |
+| Semantic diff | Diff by stable `ConceptId`/`ApplicationSymbolId`; classify field/type/constraint, operation, policy-binding, failure, and strategy changes separately. | Required before semantic approval in Milestone 1. |
+| RDF | Existing concepts keep their current RDF identity. Records, enums, and operations use `ApplicationSymbolId` IRIs and typed edges to referenced `ConceptId` values; no provider terms appear. | Required for graph-supported declarations; application-node projection lands only after its mapping tests exist. |
+| OpenTelemetry | `operation_trace` lowers the stable operation ID and canonical outcome code to profile-owned semantic attributes; payload fields are excluded by default. | Required only when runtime observation is implemented; no emitter may invent operation identity. |
+| Python/TypeScript/WASM | All consume the same Rust-produced strict `ApplicationContractDocument` canonical JSON; no binding reimplements resolution or validation. | Cross-binding byte parity is a Milestone 0 stop gate. |
+
+Until a row's delivery gate is met, that consumer reports an explicit gap; it
+must not infer missing semantics or silently omit a required projection.
 
 ## Grammar / AST impact
 
@@ -132,13 +149,18 @@ Files that must change together in Milestone 0 (none change under this ADR):
 - `domainforge-core/src/module/resolver.rs` — produce `ResolvedModuleSet`
   with the D3 symbol-table invariants.
 - `schemas/ast-v3.schema.json` — additive declaration variants.
-- New `schemas/application-contract-v1.schema.json` and a new
+- New `schemas/application-contract-v1.schema.json`,
+  `schemas/canonical-semantic-envelope-v1.schema.json`, and a new
   `domainforge-core/src/application/` module (`contract.rs`, `resolve.rs`,
-  `validate.rs`, `canonical.rs`; reference §8).
-- Bindings affected by AST/contract shape: `domainforge-core/src/python/`,
-  `domainforge-core/src/typescript/`, `domainforge-core/src/wasm/` gain
-  `parse_to_ast_json(source)` and
-  `resolve_application_contract_json(entry_logical_path, sources_json)`
+  `validate.rs`, `canonical.rs`, `envelope.rs`, `policy_context.rs`; reference
+  §8).
+- `domainforge-core/src/validation_error.rs`, `docs/reference/error-codes.md`, and
+  `docs/diagnostics.md` — register APP001–APP015 with the exact severity,
+  source evidence, and remediation contract from reference §5.
+- Bindings affected by AST/contract shape: Python and WASM preserve their
+  existing `Graph` AST-JSON methods; TypeScript adds the missing
+  `Graph.parseToAstJson`; all three `Graph` classes add the language-conventional
+  `resolveApplicationContractJson`/`resolve_application_contract_json` method
   (reference §9).
 - `domainforge-core/src/projection/domain/ir.rs` — later lowering consumes
   `ApplicationContract`; heuristic paths remain for legacy domain output only.
@@ -154,7 +176,12 @@ serialize unchanged; no top-level discriminator is added. The compatibility
 oracle is before/after equality of formatter and AST output over the existing
 corpus, plus a collision fixture placing every new token in every current
 identifier, name, namespace, unit, alias, and annotation-key position
-(reference §10). No existing valid `.sea` file changes meaning.
+(reference §10). Existing `ConceptId` namespace/name identity and matching
+remain exact-byte and case-sensitive, matching current construction; only new
+application IDs use NFC-normalized, case-preserving components. Existing
+namespace and `std:*` imports retain their behavior; entry-relative logical
+imports are an additive specifier form with root-confinement rules in reference
+§7. No existing valid `.sea` file changes meaning.
 
 ## Migration path
 
@@ -167,7 +194,7 @@ JSON change requires an explicit ast-v4 migration decision.
 
 ## Fixtures
 
-Created only after this ADR is Accepted, at exactly these paths:
+To be created during Milestone 0 at exactly these paths:
 
 - `fixtures/application_generation/flagship/command-write.sea` — D9
   `place_order` (reference §11.1).
@@ -177,32 +204,37 @@ Created only after this ADR is Accepted, at exactly these paths:
   token used as identifier/name/namespace/unit/alias/annotation-key.
 - `fixtures/application_generation/compat/entity-no-body.sea` — legacy entity
   unchanged-output oracle.
-- `fixtures/application_generation/invalid/` — one file per APP diagnostic,
-  named `app001-missing-semantics.sea` through
-  `app015-schema-version.sea` (reference §5).
+- `fixtures/application_generation/invalid/` — one `.sea` exemplar for each
+  APP001–APP014 diagnostic, named by code and slug, plus
+  `app015-artifact-schema.json` for persisted-artifact validation. Tests MUST
+  add focused inline cases for every distinct APP014 reason and APP015 document
+  failure; one exemplar is not the full diagnostic test matrix.
 
 ## Tests
 
 Required by the Milestone 0 implementation (proposed names):
 
 - `domainforge-core/tests/application_parser_tests.rs` — positive parse of
-  both flagship fixtures; negative parse/validation for every APP code.
+  both flagship fixtures; negative SEA parse/validation for APP001–APP014.
 - `domainforge-core/tests/application_contract_tests.rs` — resolution,
   symbol-table invariants, duplicate/cycle/visibility errors, closure
   ordering, `source_set_hash` and `semantic_closure_hash` determinism.
-- `domainforge-core/tests/format_golden.rs` (extended) — formatter round-trip
-  and canonical-output goldens for the new declarations, plus the
+- `domainforge-core/tests/printer_tests.rs` and
+  `domainforge-core/tests/round_trip_tests.rs` (extended) — formatter
+  round-trip and canonical-output goldens for the new declarations, plus the
   before/after corpus-equality compatibility oracle.
-- `domainforge-core/tests/ast_schema_tests.rs` (extended) — additive-variant
-  schema validation against `schemas/ast-v3.schema.json` and the new
-  `schemas/application-contract-v1.schema.json`, including
-  unknown-field rejection.
+- `domainforge-core/tests/parser_ast_v3.rs` (extended) — additive AST variants;
+  new `domainforge-core/tests/application_schema_tests.rs` — strict validation
+  against `schemas/application-contract-v1.schema.json` and
+  `schemas/canonical-semantic-envelope-v1.schema.json`, including unknown-field
+  rejection and artifact hash/input validation.
 - `domainforge-core/tests/semantic_pack_compat_tests.rs` — existing pack
   fixtures' hashes and signatures byte-identical before and after Milestone 0
   (D10).
-- Binding parity tests in `domainforge-core/tests/python_binding_tests.rs`,
-  `domainforge-core/tests/typescript_binding_tests.rs`, and the WASM test
-  suite: identical contract JSON for identical source maps on all targets.
+- Binding parity cases in `tests/test_parser.py`,
+  `typescript-tests/native-binding.test.ts`, and
+  `domainforge-core/tests/wasm_tests.rs`: identical contract JSON for identical
+  source maps on all targets and preservation of existing AST JSON APIs.
 
 ## Failure modes
 
@@ -215,10 +247,10 @@ references, invalid record shapes, duplicate fields, aggregate-key violations,
 entity-as-DTO misuse, policy-scope errors including reserved
 invariant/postcondition points, failure-code violations, strategy-field
 violations, unproven `not_applicable`, effect/state mismatch, constraint
-errors, enum errors, closure symbol collisions, and contract-JSON
-unknown-field rejection). Policy evaluation fails closed: missing facts,
-`UNKNOWN`, evaluator errors, and false obligations map to the policy's
-declared failure code.
+errors, enum errors, closure resolution errors, and persisted-artifact schema,
+metadata, hash, and unknown-field rejection). Policy evaluation fails closed:
+missing facts, `UNKNOWN`, evaluator errors, and false obligations map to the
+policy's declared failure code.
 
 ## Disconfirmation criterion
 
