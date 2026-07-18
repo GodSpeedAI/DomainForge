@@ -33,6 +33,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 static ALLOC: lol_alloc::LockedAllocator<lol_alloc::FreeListAllocator> =
     lol_alloc::LockedAllocator::new(lol_alloc::FreeListAllocator::new());
 
+pub mod application;
 pub mod authority;
 pub mod calm;
 pub mod concept_id;
