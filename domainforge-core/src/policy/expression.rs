@@ -78,6 +78,13 @@ pub enum Expression {
         projection: Box<Expression>,
         target_unit: Option<String>,
     },
+
+    /// Contextual role reference `role<SymbolRef>` from ADR-013 §2.
+    /// Outside application validation this is an opaque, unevaluated leaf;
+    /// application policy evaluation resolves it against the typed context.
+    RoleReference {
+        role: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -336,6 +343,7 @@ impl fmt::Display for Expression {
                 }
                 write!(f, ")")
             }
+            Expression::RoleReference { role } => write!(f, "role<{}>", role),
         }
     }
 }

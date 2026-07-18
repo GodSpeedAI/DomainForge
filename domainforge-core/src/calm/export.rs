@@ -534,5 +534,6 @@ fn serialize_expression_for_export(expr: &Expression) -> String {
                 serialize_expression_for_export(condition)
             )
         }
+        Expression::RoleReference { role } => format!("role<{}>", role),
     }
 }

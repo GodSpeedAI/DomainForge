@@ -239,6 +239,7 @@ impl Formatter {
                 version,
                 annotations,
                 domain,
+                body: _,
             } => {
                 self.write("Entity ");
                 self.write_string_literal(name);
@@ -770,6 +771,11 @@ impl Formatter {
             ),
             AstNode::Credential { name, annotations } => {
                 self.format_generic_decl("Credential", name, None, None, annotations)
+            }
+            // ponytail: full canonical printing lands in Task 4; this stub
+            // keeps format() total over the new variants.
+            AstNode::Record(_) | AstNode::Enum(_) | AstNode::Operation(_) => {
+                self.write("// application declaration formatting is pending Task 4\n")
             }
         }
     }

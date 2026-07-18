@@ -251,6 +251,9 @@ impl From<&CoreExpression> for schema::Expression {
                 projection: Box::new(projection.as_ref().into()),
                 target_unit: target_unit.clone(),
             },
+            CoreExpression::RoleReference { role } => {
+                schema::Expression::RoleReference { role: role.clone() }
+            }
         }
     }
 }
@@ -347,12 +350,23 @@ impl From<&ast::AstNode> for schema::AstNode {
                 version,
                 annotations,
                 domain,
+                body: _,
             } => schema::AstNode::Entity {
                 name: name.clone(),
                 version: version.clone(),
                 annotations: annotations.clone(),
                 domain: domain.clone(),
             },
+            ast::AstNode::Record(_) | ast::AstNode::Enum(_) | ast::AstNode::Operation(_) => {
+                // ponytail: AST-v3 wire shape for application declarations
+                // is Task 3's additive responsibility; this stopgap keeps
+                // existing single-source AST JSON byte-stable until then.
+                // Application source files do not flow through this converter
+                // during Milestone 0 work that depends only on the parser.
+                schema::AstNode::Dimension {
+                    name: "_application_ast_v3_pending".to_string(),
+                }
+            }
             ast::AstNode::Resource {
                 name,
                 annotations,

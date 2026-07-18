@@ -311,6 +311,11 @@ pub enum Expression {
         #[serde(skip_serializing_if = "Option::is_none")]
         target_unit: Option<String>,
     },
+    /// Contextual `role<SymbolRef>` leaf (ADR-013 §2). Opaque until
+    /// application policy evaluation resolves it.
+    RoleReference {
+        role: String,
+    },
 }
 
 // =========================================================================

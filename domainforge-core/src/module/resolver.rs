@@ -244,6 +244,9 @@ fn declaration_name(node: &AstNode) -> Option<&str> {
         | AstNode::NetworkFlow { name, .. }
         | AstNode::Credential { name, .. } => Some(name),
         AstNode::Export(inner) => declaration_name(&inner.node),
+        AstNode::Record(r) => Some(&r.name),
+        AstNode::Enum(e) => Some(&e.name),
+        AstNode::Operation(o) => Some(&o.name),
     }
 }
 

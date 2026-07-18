@@ -137,8 +137,6 @@ pub struct ProjectionOverride {
     pub fields: HashMap<String, JsonValue>,
 }
 
-/// Abstract Syntax Tree for SEA DSL
-/// Abstract Syntax Tree for SEA DSL
 #[derive(Debug, Clone, PartialEq)]
 pub struct Spanned<T> {
     pub node: T,
@@ -152,6 +150,159 @@ pub struct Ast {
     pub declarations: Vec<Spanned<AstNode>>,
 }
 
+// ---- SEA application contract AST extensions (ADR-013) ----
+// These types carry authored application declarations verbatim; semantic
+// resolution and validation happen in the application module. Field clauses
+// are stored in authored order so partial operations preserve evidence for
+// APP001 diagnostic construction.
+
+/// Typed body of an `entity` declaration: a sequence of fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EntityBody {
+    pub fields: Vec<FieldDecl>,
+}
+
+/// One field of a `record` or typed `entity` body.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldDecl {
+    pub is_key: bool,
+    pub name: String,
+    pub field_type: FieldType,
+    pub is_optional: bool,
+    pub constraints: Vec<FieldConstraintDecl>,
+    /// Authored `default <literal>` value, type-checked during application
+    /// validation. Stored as an `Expression` for round-trip parity, though
+    /// only the `literal` grammar branch is accepted.
+    pub default: Option<Expression>,
+}
+
+/// Type of a record/entity field. Closes the v0.1 type model: scalars,
+/// `quantity<Unit>`, `ref<Target>`, `list<...>`, and named symbol references.
+#[derive(Debug, Clone, PartialEq)]
+pub enum FieldType {
+    Scalar(FieldTypeRef),
+    Quantity(FieldTypeRef),
+    Ref(FieldTypeRef),
+    List(Box<FieldType>),
+    Named(FieldTypeRef),
+}
+
+/// A possibly alias-qualified symbol reference: `Order` or `alias.Order`.
+/// Used by `quantity<>`, `ref<>`, and named field types.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FieldTypeRef {
+    pub alias: Option<String>,
+    pub symbol: String,
+}
+
+/// Authored field constraint; validation maps these to the closed enum and
+/// type-checks the operand against the field type.
+#[derive(Debug, Clone, PartialEq)]
+pub enum FieldConstraintDecl {
+    MinLength(u64),
+    MaxLength(u64),
+    MinItems(u64),
+    MaxItems(u64),
+    ExclusiveMin(Decimal),
+    ExclusiveMax(Decimal),
+    Min(Decimal),
+    Max(Decimal),
+    /// `pattern <symbol_ref>` - the symbol reference text is stored verbatim
+    /// and resolved against the closure's pattern declarations.
+    Pattern(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordDecl {
+    pub name: String,
+    pub fields: Vec<FieldDecl>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumDecl {
+    pub name: String,
+    pub members: Vec<EnumMember>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnumMember {
+    pub name: String,
+    pub wire: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct OperationDecl {
+    pub name: String,
+    /// Authored clauses in source order. Validation (APP001) reports missing,
+    /// duplicate, or out-of-order clauses against this list; it never
+    /// re-orders it.
+    pub clauses: Vec<OperationClause>,
+}
+
+/// One authored operation clause. Strings carry the raw symbol_ref / kind
+/// text; the application module resolves and lowers them.
+#[derive(Debug, Clone, PartialEq)]
+pub enum OperationClause {
+    Intent(String),
+    Direction {
+        kind: String,
+    },
+    Actor {
+        actor: String,
+    },
+    AccessPublic,
+    AccessPolicyGoverned {
+        bindings: Vec<PolicyBinding>,
+    },
+    Input {
+        reference: String,
+    },
+    Output {
+        reference: String,
+    },
+    State {
+        reference: String,
+    },
+    Effect {
+        kind: String,
+        reference: String,
+    },
+    Transaction {
+        kind: String,
+    },
+    Failure {
+        code: String,
+        kinds: Vec<String>,
+        message: String,
+    },
+    IdempotencyKeyed {
+        field: String,
+    },
+    IdempotencyInherent,
+    IdempotencyNotApplicable {
+        reason: String,
+        explanation: String,
+    },
+    ConcurrencyUnique {
+        field: String,
+    },
+    ConcurrencyOptimistic {
+        field: String,
+    },
+    ConcurrencyReadSnapshot,
+    EvidenceOperationTrace,
+    LifecycleSynchronousRequestResponse,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyBinding {
+    /// Raw symbol_ref text (`order_total_within_limit` or `alias.foo`).
+    pub policy: String,
+    /// `precondition` | `invariant` | `postcondition` (validated in APP007).
+    pub enforcement_point: String,
+    pub failure_code: String,
+}
+
 /// AST Node types
 #[derive(Debug, Clone, PartialEq)]
 pub enum AstNode {
@@ -161,6 +312,9 @@ pub enum AstNode {
         version: Option<String>,
         annotations: HashMap<String, JsonValue>,
         domain: Option<String>,
+        /// Optional typed body `entity "X" { ... }`. Absent for legacy
+        /// bodyless entities.
+        body: Option<EntityBody>,
     },
     Resource {
         name: String,
@@ -168,6 +322,9 @@ pub enum AstNode {
         unit_name: Option<String>,
         domain: Option<String>,
     },
+    Record(RecordDecl),
+    Enum(EnumDecl),
+    Operation(OperationDecl),
     Flow {
         resource_name: String,
         annotations: HashMap<String, JsonValue>,
@@ -386,6 +543,9 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
         }
         Rule::dimension_decl => parse_dimension(pair),
         Rule::unit_decl => parse_unit_declaration(pair),
+        Rule::record_decl => parse_record(pair),
+        Rule::enum_decl => parse_enum(pair),
+        Rule::operation_decl => parse_operation(pair),
         Rule::entity_decl => parse_entity(pair),
         Rule::resource_decl => parse_resource(pair),
         Rule::flow_decl => parse_flow(pair),
@@ -528,6 +688,488 @@ fn parse_unit_declaration(pair: Pair<Rule>) -> ParseResult<AstNode> {
     })
 }
 
+// ---- SEA application contract parsers (ADR-013 §2) ----
+
+fn parse_entity_body(pair: Pair<Rule>) -> ParseResult<EntityBody> {
+    let mut fields = Vec::new();
+    for inner in pair.into_inner() {
+        if inner.as_rule() == Rule::entity_field {
+            let mut field_inner = inner.into_inner();
+            let mut is_key = false;
+            let mut next = field_inner.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected entity_field content".to_string())
+            })?;
+            if next.as_rule() == Rule::key_marker {
+                is_key = true;
+                next = field_inner.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected field_decl after key".to_string())
+                })?;
+            }
+            if next.as_rule() != Rule::field_decl {
+                return Err(ParseError::GrammarError(format!(
+                    "Expected field_decl in entity body, got {:?}",
+                    next.as_rule()
+                )));
+            }
+            fields.push(parse_field_decl(next, is_key)?);
+        }
+    }
+    Ok(EntityBody { fields })
+}
+
+fn parse_record(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_identifier(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected record name".to_string()))?,
+    )?;
+    let body_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected record body".to_string()))?;
+    let mut fields = Vec::new();
+    for field_pair in body_pair.into_inner() {
+        if field_pair.as_rule() == Rule::field_decl {
+            fields.push(parse_field_decl(field_pair, false)?);
+        }
+    }
+    Ok(AstNode::Record(RecordDecl { name, fields }))
+}
+
+fn parse_enum(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_identifier(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected enum name".to_string()))?,
+    )?;
+    let mut members = Vec::new();
+    for member_pair in inner {
+        if member_pair.as_rule() != Rule::enum_member {
+            continue;
+        }
+        let mut member_inner = member_pair.into_inner();
+        let member_name =
+            parse_identifier(member_inner.next().ok_or_else(|| {
+                ParseError::GrammarError("Expected enum member name".to_string())
+            })?)?;
+        let wire = parse_string_literal(member_inner.next().ok_or_else(|| {
+            ParseError::GrammarError("Expected enum member wire value".to_string())
+        })?)?;
+        members.push(EnumMember {
+            name: member_name,
+            wire,
+        });
+    }
+    Ok(AstNode::Enum(EnumDecl { name, members }))
+}
+
+fn parse_operation(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let name = parse_identifier(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected operation name".to_string()))?,
+    )?;
+    let body_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected operation body".to_string()))?;
+    let mut clauses = Vec::new();
+    for clause_pair in body_pair.into_inner() {
+        if let Some(clause) = parse_operation_clause(clause_pair)? {
+            clauses.push(clause);
+        }
+    }
+    Ok(AstNode::Operation(OperationDecl { name, clauses }))
+}
+
+fn parse_operation_clause(pair: Pair<Rule>) -> ParseResult<Option<OperationClause>> {
+    let inner = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Empty operation clause".to_string()))?;
+    let clause = match inner.as_rule() {
+        Rule::intent_clause => {
+            let text =
+                parse_string_literal(inner.into_inner().next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected intent text".to_string())
+                })?)?;
+            OperationClause::Intent(text)
+        }
+        Rule::direction_clause => {
+            let kind = inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected direction kind".to_string()))?
+                .as_str()
+                .to_string();
+            OperationClause::Direction { kind }
+        }
+        Rule::actor_clause => {
+            // `^"anonymous"` is a literal and produces no sub-pair; only
+            // the `symbol_ref` branch yields an inner pair.
+            let actor = match inner.into_inner().next() {
+                Some(p) => p.as_str().to_string(),
+                None => "anonymous".to_string(),
+            };
+            OperationClause::Actor { actor }
+        }
+        Rule::access_clause => {
+            // `^"public"` is a literal and produces no sub-pair; only the
+            // `policy_governed_clause` branch yields an inner pair.
+            let access_inner = match inner.into_inner().next() {
+                Some(p) => p,
+                None => return Ok(Some(OperationClause::AccessPublic)),
+            };
+            match access_inner.as_rule() {
+                Rule::policy_governed_clause => {
+                    let mut bindings = Vec::new();
+                    for binding_pair in access_inner.into_inner() {
+                        if binding_pair.as_rule() != Rule::policy_binding {
+                            continue;
+                        }
+                        let mut b = binding_pair.into_inner();
+                        let policy = parse_symbol_ref_text(b.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected policy in binding".to_string())
+                        })?)?;
+                        let enforcement_point = b
+                            .next()
+                            .ok_or_else(|| {
+                                ParseError::GrammarError("Expected enforcement point".to_string())
+                            })?
+                            .as_str()
+                            .to_string();
+                        // skip `fails with`
+                        let failure_code = parse_identifier(b.next().ok_or_else(|| {
+                            ParseError::GrammarError("Expected failure code".to_string())
+                        })?)?;
+                        bindings.push(PolicyBinding {
+                            policy,
+                            enforcement_point,
+                            failure_code,
+                        });
+                    }
+                    OperationClause::AccessPolicyGoverned { bindings }
+                }
+                _ => OperationClause::AccessPublic,
+            }
+        }
+        Rule::input_clause => OperationClause::Input {
+            reference: parse_symbol_ref_text(inner.into_inner().next().ok_or_else(|| {
+                ParseError::GrammarError("Expected input reference".to_string())
+            })?)?,
+        },
+        Rule::output_clause => OperationClause::Output {
+            reference: parse_symbol_ref_text(inner.into_inner().next().ok_or_else(|| {
+                ParseError::GrammarError("Expected output reference".to_string())
+            })?)?,
+        },
+        Rule::state_clause => OperationClause::State {
+            reference: parse_symbol_ref_text(inner.into_inner().next().ok_or_else(|| {
+                ParseError::GrammarError("Expected state reference".to_string())
+            })?)?,
+        },
+        Rule::effect_clause => {
+            let mut e = inner.into_inner();
+            let kind = e
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected effect kind".to_string()))?
+                .as_str()
+                .to_string();
+            let reference =
+                parse_symbol_ref_text(e.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected effect target".to_string())
+                })?)?;
+            OperationClause::Effect { kind, reference }
+        }
+        Rule::transaction_clause => OperationClause::Transaction {
+            kind: inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected transaction kind".to_string()))?
+                .as_str()
+                .to_string(),
+        },
+        Rule::failure_clause => {
+            let mut f = inner.into_inner();
+            let code =
+                parse_identifier(f.next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected failure code".to_string())
+                })?)?;
+            // skip `for`
+            let mut kinds = Vec::new();
+            let mut message = String::new();
+            for part in f {
+                match part.as_rule() {
+                    Rule::failure_kind => kinds.push(part.as_str().to_string()),
+                    Rule::string_literal => {
+                        message = parse_string_literal(part)?;
+                    }
+                    _ => {}
+                }
+            }
+            OperationClause::Failure {
+                code,
+                kinds,
+                message,
+            }
+        }
+        Rule::idempotency_clause => {
+            // `^"inherent"` is a literal and produces no sub-pair.
+            let body = match inner.into_inner().next() {
+                Some(p) => p,
+                None => return Ok(Some(OperationClause::IdempotencyInherent)),
+            };
+            match body.as_rule() {
+                Rule::idempotency_keyed => OperationClause::IdempotencyKeyed {
+                    field: parse_identifier(body.into_inner().next().ok_or_else(|| {
+                        ParseError::GrammarError("Expected keyed_by field".to_string())
+                    })?)?,
+                },
+                Rule::not_applicable_value => {
+                    let mut n = body.into_inner();
+                    let reason = n
+                        .next()
+                        .ok_or_else(|| ParseError::GrammarError("Expected na_reason".to_string()))?
+                        .as_str()
+                        .to_string();
+                    let explanation = parse_string_literal(n.next().ok_or_else(|| {
+                        ParseError::GrammarError("Expected na explanation".to_string())
+                    })?)?;
+                    OperationClause::IdempotencyNotApplicable {
+                        reason,
+                        explanation,
+                    }
+                }
+                _ => OperationClause::IdempotencyInherent,
+            }
+        }
+        Rule::concurrency_clause => {
+            // `^"read_snapshot"` is a literal and produces no sub-pair.
+            let body = match inner.into_inner().next() {
+                Some(p) => p,
+                None => return Ok(Some(OperationClause::ConcurrencyReadSnapshot)),
+            };
+            match body.as_rule() {
+                Rule::concurrency_unique => OperationClause::ConcurrencyUnique {
+                    field: parse_identifier(body.into_inner().next().ok_or_else(|| {
+                        ParseError::GrammarError("Expected unique_key field".to_string())
+                    })?)?,
+                },
+                Rule::concurrency_optimistic => OperationClause::ConcurrencyOptimistic {
+                    field: parse_identifier(body.into_inner().next().ok_or_else(|| {
+                        ParseError::GrammarError("Expected optimistic_version field".to_string())
+                    })?)?,
+                },
+                _ => OperationClause::ConcurrencyReadSnapshot,
+            }
+        }
+        Rule::evidence_clause => OperationClause::EvidenceOperationTrace,
+        Rule::lifecycle_clause => OperationClause::LifecycleSynchronousRequestResponse,
+        other => {
+            return Err(ParseError::GrammarError(format!(
+                "Unexpected operation clause rule: {:?}",
+                other
+            )))
+        }
+    };
+    Ok(Some(clause))
+}
+
+fn parse_field_decl(pair: Pair<Rule>, is_key: bool) -> ParseResult<FieldDecl> {
+    let mut inner = pair.into_inner();
+    let name = parse_identifier(
+        inner
+            .next()
+            .ok_or_else(|| ParseError::GrammarError("Expected field name".to_string()))?,
+    )?;
+    let field_type_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected field type".to_string()))?;
+    let field_type = parse_field_type(field_type_pair)?;
+
+    let mut is_optional = false;
+    let mut constraints: Vec<FieldConstraintDecl> = Vec::new();
+    let mut default: Option<Expression> = None;
+
+    for part in inner {
+        match part.as_rule() {
+            Rule::optional_marker => is_optional = true,
+            Rule::field_constraints => {
+                for c in part.into_inner() {
+                    if c.as_rule() == Rule::field_constraint {
+                        constraints.push(parse_field_constraint(c)?);
+                    }
+                }
+            }
+            Rule::field_default => {
+                let lit = c_to_lit(part.into_inner().next().ok_or_else(|| {
+                    ParseError::GrammarError("Expected default literal".to_string())
+                })?)?;
+                default = Some(lit);
+            }
+            _ => {}
+        }
+    }
+
+    Ok(FieldDecl {
+        is_key,
+        name,
+        field_type,
+        is_optional,
+        constraints,
+        default,
+    })
+}
+
+fn parse_field_type(pair: Pair<Rule>) -> ParseResult<FieldType> {
+    let inner = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Empty field type".to_string()))?;
+    Ok(match inner.as_rule() {
+        Rule::scalar_type => FieldType::Scalar(FieldTypeRef {
+            alias: None,
+            symbol: inner.as_str().to_string(),
+        }),
+        Rule::quantity_type => FieldType::Quantity(parse_symbol_ref_pair(
+            inner.into_inner().next().ok_or_else(|| {
+                ParseError::GrammarError("Expected unit in quantity<>".to_string())
+            })?,
+        )?),
+        Rule::ref_type => FieldType::Ref(parse_symbol_ref_pair(
+            inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected target in ref<>".to_string()))?,
+        )?),
+        Rule::list_type => {
+            let elem = inner.into_inner().next().ok_or_else(|| {
+                ParseError::GrammarError("Expected list element type".to_string())
+            })?;
+            FieldType::List(Box::new(parse_element_type(elem)?))
+        }
+        Rule::named_type => FieldType::Named(parse_symbol_ref_pair(
+            inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected named type".to_string()))?,
+        )?),
+        other => {
+            return Err(ParseError::GrammarError(format!(
+                "Unexpected field_type rule: {:?}",
+                other
+            )))
+        }
+    })
+}
+
+fn parse_element_type(pair: Pair<Rule>) -> ParseResult<FieldType> {
+    let inner = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Empty element type".to_string()))?;
+    Ok(match inner.as_rule() {
+        Rule::scalar_type => FieldType::Scalar(FieldTypeRef {
+            alias: None,
+            symbol: inner.as_str().to_string(),
+        }),
+        Rule::quantity_type => FieldType::Quantity(parse_symbol_ref_pair(
+            inner.into_inner().next().ok_or_else(|| {
+                ParseError::GrammarError("Expected unit in quantity<>".to_string())
+            })?,
+        )?),
+        Rule::ref_type => FieldType::Ref(parse_symbol_ref_pair(
+            inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected target in ref<>".to_string()))?,
+        )?),
+        Rule::named_type => FieldType::Named(parse_symbol_ref_pair(
+            inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| ParseError::GrammarError("Expected named type".to_string()))?,
+        )?),
+        other => {
+            return Err(ParseError::GrammarError(format!(
+                "Unexpected element_type rule: {:?}",
+                other
+            )))
+        }
+    })
+}
+
+fn parse_field_constraint(pair: Pair<Rule>) -> ParseResult<FieldConstraintDecl> {
+    let mut inner = pair.into_inner();
+    let head = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Empty field constraint".to_string()))?;
+    let value_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected constraint operand".to_string()))?;
+    Ok(match head.as_rule() {
+        Rule::fc_min_length => FieldConstraintDecl::MinLength(parse_unsigned_int(value_pair)?),
+        Rule::fc_max_length => FieldConstraintDecl::MaxLength(parse_unsigned_int(value_pair)?),
+        Rule::fc_min_items => FieldConstraintDecl::MinItems(parse_unsigned_int(value_pair)?),
+        Rule::fc_max_items => FieldConstraintDecl::MaxItems(parse_unsigned_int(value_pair)?),
+        Rule::fc_exclusive_min => FieldConstraintDecl::ExclusiveMin(parse_decimal(value_pair)?),
+        Rule::fc_exclusive_max => FieldConstraintDecl::ExclusiveMax(parse_decimal(value_pair)?),
+        Rule::fc_min => FieldConstraintDecl::Min(parse_decimal(value_pair)?),
+        Rule::fc_max => FieldConstraintDecl::Max(parse_decimal(value_pair)?),
+        Rule::fc_pattern => FieldConstraintDecl::Pattern(parse_symbol_ref_text(value_pair)?),
+        other => {
+            return Err(ParseError::GrammarError(format!(
+                "Unexpected field constraint head rule: {:?}",
+                other
+            )))
+        }
+    })
+}
+
+fn parse_unsigned_int(pair: Pair<Rule>) -> ParseResult<u64> {
+    pair.as_str().parse::<u64>().map_err(|_| {
+        ParseError::GrammarError(format!("Invalid unsigned integer: {}", pair.as_str()))
+    })
+}
+
+/// Reconstruct the raw text of a `symbol_ref` (`Order` or `alias.Order`).
+/// Stored verbatim until resolution; the application module resolves it.
+fn parse_symbol_ref_text(pair: Pair<Rule>) -> ParseResult<String> {
+    match pair.as_rule() {
+        Rule::symbol_ref | Rule::identifier => Ok(pair.as_str().to_string()),
+        other => Err(ParseError::GrammarError(format!(
+            "Unexpected symbol_ref rule: {:?}",
+            other
+        ))),
+    }
+}
+
+/// Parse a `symbol_ref` pair into an `alias.symbol` (or bare `symbol`).
+fn parse_symbol_ref_pair(pair: Pair<Rule>) -> ParseResult<FieldTypeRef> {
+    let mut inner = pair.into_inner();
+    let first = parse_identifier(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected identifier in symbol_ref".to_string())
+    })?)?;
+    if let Some(second) = inner.next() {
+        Ok(FieldTypeRef {
+            alias: Some(first),
+            symbol: parse_identifier(second)?,
+        })
+    } else {
+        Ok(FieldTypeRef {
+            alias: None,
+            symbol: first,
+        })
+    }
+}
+
+/// Map a `Rule::literal` pair to a literal-shaped `Expression`. Only the
+/// grammar's `literal` branch is accepted for field defaults.
+fn c_to_lit(pair: Pair<Rule>) -> ParseResult<Expression> {
+    parse_literal_expr(pair)
+}
+
 /// Parse entity declaration
 fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
@@ -541,11 +1183,15 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut version = None;
     let mut annotations = HashMap::new();
     let mut domain = None;
+    let mut body: Option<EntityBody> = None;
 
     for part in inner {
         match part.as_rule() {
             Rule::version => {
                 version = Some(part.as_str().to_string());
+            }
+            Rule::entity_body => {
+                body = Some(parse_entity_body(part)?);
             }
             Rule::entity_annotation => {
                 let mut annotation_inner = part.into_inner();
@@ -620,6 +1266,7 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
         version,
         annotations,
         domain,
+        body,
     })
 }
 
@@ -1438,6 +2085,7 @@ fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         Rule::aggregation_expr => parse_aggregation_expr(inner),
         Rule::quantified_expr => parse_quantified_expr(inner),
         Rule::member_access => parse_member_access(inner),
+        Rule::application_role_ref => parse_application_role_ref(inner),
         Rule::literal => parse_literal_expr(inner),
         Rule::identifier => {
             let name = parse_identifier(inner)?;
@@ -1448,6 +2096,22 @@ fn parse_primary_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             inner.as_rule()
         ))),
     }
+}
+
+fn parse_application_role_ref(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let mut inner = pair.into_inner();
+    let sym_pair = inner
+        .next()
+        .ok_or_else(|| ParseError::GrammarError("Expected symbol in role<...>".to_string()))?;
+    let mut sym_inner = sym_pair.into_inner();
+    let first = parse_identifier(sym_inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected identifier in role symbol_ref".to_string())
+    })?)?;
+    let role = match sym_inner.next() {
+        Some(second) => format!("{}.{}", first, parse_identifier(second)?),
+        None => first,
+    };
+    Ok(Expression::RoleReference { role })
 }
 
 /// Parse aggregation expression
@@ -1963,6 +2627,7 @@ fn expression_kind(expr: &Expression) -> &'static str {
         Expression::MemberAccess { .. } => "member_access",
         Expression::Aggregation { .. } => "aggregation",
         Expression::AggregationComprehension { .. } => "aggregation_comprehension",
+        Expression::RoleReference { .. } => "role_reference",
     }
 }
 
@@ -2636,6 +3301,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 domain,
                 version,
                 annotations,
+                body: _,
             } => {
                 let namespace = domain.as_ref().unwrap_or(&default_namespace).clone();
                 let key = (namespace.clone(), name.clone());

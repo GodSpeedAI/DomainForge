@@ -31,7 +31,7 @@ annotation_name = {
 
 // Declarations
 declaration = { export_decl | declaration_inner }
-declaration_inner = { dimension_decl | unit_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
+declaration_inner = { dimension_decl | unit_decl | record_decl | enum_decl | operation_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
 
 // Cell environment declarations (godspeed cell-environment projection).
 // All share a generic annotation form: "@" key value. Category-specific
@@ -81,9 +81,14 @@ credential_decl = {
 // Entity Declaration
 // Syntax: Entity "Name" in domain
 // Syntax: Entity "Name"
+// Syntax: Entity "Name" { key id: uuid, ... }
 entity_decl = {
-    ^"entity" ~ name ~ (^"v" ~ version)? ~ entity_annotation* ~ (in_keyword ~ identifier)?
+    ^"entity" ~ name ~ (^"v" ~ version)? ~ entity_annotation* ~ (in_keyword ~ identifier)? ~ entity_body?
 }
+
+entity_body = { "{" ~ entity_field* ~ "}" }
+entity_field = { key_marker? ~ field_decl }
+key_marker = { ^"key" }
 
 entity_annotation = {
     "@" ~ (
@@ -104,7 +109,7 @@ resource_decl = {
     ^"resource" ~ name ~ resource_annotation* ~ (
         (identifier ~ in_keyword ~ identifier) |  // "units in domain" - most specific first
         (in_keyword ~ identifier) |               // "in domain" - next most specific
-        ( !declaration_keyword ~ identifier )     // "units" only - least specific last. Must not be a keyword.
+        ( !(declaration_keyword | application_decl_prefix) ~ identifier )     // "units" only - least specific last. Must not be a keyword.
     )?
 }
 
@@ -123,6 +128,13 @@ declaration_keyword = @{
         ^"cell" | ^"systemdependency" | ^"runtime" | ^"tool" | ^"dependencyset" |
         ^"service" | ^"mount" | ^"endpoint" | ^"networkflow" | ^"credential"
     ) ~ !(LETTER | NUMBER | "_")
+}
+
+// ponytail: record/enum/operation are intentionally NOT declaration_keywords.
+// They stay contextual (D8 rule). application_decl_prefix is the lookahead
+// guard that stops `resource X <bare-identifier>` from swallowing them.
+application_decl_prefix = @{
+    (^"record" | ^"enum" | ^"operation") ~ WHITESPACE* ~ identifier ~ WHITESPACE* ~ "{"
 }
 
 // Flow Declaration
@@ -223,6 +235,91 @@ unit_decl = {
     ^"unit" ~ string_literal ~ ^"of" ~ string_literal ~ ^"factor" ~ number ~ ^"base" ~ string_literal
 }
 
+// ---- SEA application contract declarations (ADR-013) ----
+// record/enum/operation are NOT declaration_keywords; they stay contextual so
+// legacy identifier positions (`Resource "Record" operation`, `Entity "record"`)
+// keep parsing unchanged. The resource_decl lookahead guards against swallowing
+// the new keywords as bare trailing identifiers.
+
+record_decl = { ^"record" ~ identifier ~ record_body }
+record_body = { "{" ~ field_decl* ~ "}" }
+
+enum_decl = { ^"enum" ~ identifier ~ "{" ~ enum_member ~ ("," ~ enum_member)* ~ ","? ~ "}" }
+enum_member = { identifier ~ "=" ~ string_literal }
+
+field_decl = { identifier ~ ":" ~ field_type ~ optional_marker? ~ field_constraints? ~ field_default? }
+optional_marker = { ^"optional" }
+field_default = { ^"default" ~ literal }
+
+field_type = { list_type | quantity_type | ref_type | scalar_type | named_type }
+scalar_type = @{ (^"string" | ^"int" | ^"decimal" | ^"bool" | ^"timestamp" | ^"uuid") ~ !(LETTER | NUMBER | "_") }
+quantity_type = { ^"quantity" ~ "<" ~ symbol_ref ~ ">" }
+ref_type = { ^"ref" ~ "<" ~ symbol_ref ~ ">" }
+list_type = { ^"list" ~ "<" ~ element_type ~ ">" }
+element_type = { quantity_type | ref_type | scalar_type | named_type }
+named_type = { symbol_ref }
+symbol_ref = { identifier ~ ("." ~ identifier)? }
+
+field_constraints = { "(" ~ field_constraint ~ ("," ~ field_constraint)* ~ ")" }
+field_constraint = {
+    (fc_min_length ~ unsigned_integer) | (fc_max_length ~ unsigned_integer) |
+    (fc_min_items ~ unsigned_integer) | (fc_max_items ~ unsigned_integer) |
+    (fc_exclusive_min ~ number) | (fc_exclusive_max ~ number) |
+    (fc_min ~ number) | (fc_max ~ number) |
+    (fc_pattern ~ symbol_ref)
+}
+fc_min_length = { ^"min_length" }
+fc_max_length = { ^"max_length" }
+fc_min_items = { ^"min_items" }
+fc_max_items = { ^"max_items" }
+fc_exclusive_min = { ^"exclusive_min" }
+fc_exclusive_max = { ^"exclusive_max" }
+fc_min = { ^"min" }
+fc_max = { ^"max" }
+fc_pattern = { ^"pattern" }
+unsigned_integer = @{ ASCII_DIGIT+ }
+
+operation_decl = { ^"operation" ~ identifier ~ "{" ~ operation_body ~ "}" }
+operation_body = { operation_clause* }
+operation_clause = {
+    intent_clause | direction_clause | actor_clause | access_clause |
+    input_clause | output_clause | state_clause | effect_clause |
+    transaction_clause | failure_clause | idempotency_clause |
+    concurrency_clause | evidence_clause | lifecycle_clause
+}
+intent_clause = { ^"intent" ~ string_literal }
+direction_clause = { ^"direction" ~ direction_kind }
+direction_kind = { ^"inbound" | ^"outbound" | ^"internal" }
+actor_clause = { ^"actor" ~ (^"anonymous" | symbol_ref) }
+access_clause = { ^"access" ~ (policy_governed_clause | ^"public") }
+policy_governed_clause = { ^"policy_governed" ~ ^"by" ~ policy_binding ~ ("," ~ policy_binding)* }
+policy_binding = { symbol_ref ~ ^"at" ~ enforcement_point ~ ^"fails" ~ ^"with" ~ identifier }
+enforcement_point = { ^"precondition" | ^"invariant" | ^"postcondition" }
+input_clause = { ^"input" ~ symbol_ref }
+output_clause = { ^"output" ~ symbol_ref }
+state_clause = { ^"state" ~ symbol_ref }
+effect_clause = { ^"effect" ~ effect_kind ~ symbol_ref }
+effect_kind = { ^"creates" | ^"mutates" | ^"reads" }
+transaction_clause = { ^"transaction" ~ transaction_kind }
+transaction_kind = { ^"single_aggregate" | ^"read_only" }
+failure_clause = {
+    ^"failure" ~ identifier ~ ^"for" ~ failure_kind ~
+    ("," ~ failure_kind)* ~ string_literal
+}
+failure_kind = {
+    ^"input_validation" | ^"policy" | ^"missing_state" |
+    ^"idempotency_conflict" | ^"concurrency_conflict"
+}
+idempotency_clause = { ^"idempotency" ~ (idempotency_keyed | ^"inherent" | not_applicable_value) }
+idempotency_keyed = { ^"keyed_by" ~ identifier }
+concurrency_clause = { ^"concurrency" ~ (concurrency_unique | concurrency_optimistic | ^"read_snapshot") }
+concurrency_unique = { ^"unique_key" ~ identifier }
+concurrency_optimistic = { ^"optimistic_version" ~ identifier }
+evidence_clause = { ^"evidence" ~ ^"operation_trace" }
+lifecycle_clause = { ^"lifecycle" ~ ^"synchronous_request_response" }
+not_applicable_value = { ^"not_applicable" ~ "(" ~ na_reason ~ "," ~ string_literal ~ ")" }
+na_reason = { ^"read_only" }
+
 // Policy Declaration
 // Syntax: Policy name as: expression
 // Syntax: Policy name v1.0.0 as: expression
@@ -285,10 +382,16 @@ primary_expr = {
     member_access |
     aggregation_expr |
     quantified_expr |
+    application_role_ref |
     instance_reference |
     literal |
     identifier
 }
+
+// ponytail: role<...> is a contextual primary-expr leaf (ADR-013 §2). Bare
+// `role` stays an identifier. Application validation (Task 9) is the only
+// legal consumer; everywhere else it is an unevaluated leaf.
+application_role_ref = { ^"role" ~ "<" ~ symbol_ref ~ ">" }
 
 // Group By Expression
 // Syntax: group_by(f in flows: f.to.name) { sum(f.quantity) > 10 }

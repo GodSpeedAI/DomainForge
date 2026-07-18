@@ -257,6 +257,9 @@ fn render(expr: &Expression, ctx: &GroundCtx) -> Result<(String, Kind), String> 
         Expression::Aggregation { .. } | Expression::AggregationComprehension { .. } => {
             Err("uses aggregation (not auto-groundable)".to_string())
         }
+        Expression::RoleReference { .. } => {
+            Err("uses role reference (not auto-groundable outside application policy)".to_string())
+        }
     }
 }
 

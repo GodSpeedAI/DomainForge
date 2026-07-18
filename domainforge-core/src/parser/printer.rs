@@ -128,6 +128,7 @@ impl PrettyPrinter {
                 version,
                 annotations,
                 domain,
+                body: _,
             } => self.format_entity(name, version, annotations, domain),
             AstNode::Resource {
                 name,
@@ -278,6 +279,10 @@ impl PrettyPrinter {
             ),
             AstNode::Credential { name, annotations } => {
                 self.format_generic_decl("Credential", name, None, annotations, None, None)
+            }
+            // ponytail: full canonical printing lands in Task 4.
+            AstNode::Record(_) | AstNode::Enum(_) | AstNode::Operation(_) => {
+                "// application declaration formatting is pending Task 4".to_string()
             }
         }
     }

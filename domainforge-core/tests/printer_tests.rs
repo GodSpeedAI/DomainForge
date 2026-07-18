@@ -26,6 +26,7 @@ fn test_pretty_print_ast() {
                 version: None,
                 annotations: HashMap::new(),
                 domain: None,
+                body: None,
             }),
             spanned(AstNode::Resource {
                 name: "Widget".to_string(),

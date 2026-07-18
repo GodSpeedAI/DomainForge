@@ -29,6 +29,7 @@ impl Graph {
                 version: entity.version().map(|v| v.to_string()),
                 annotations: Default::default(),
                 domain: map_domain(entity.namespace()),
+                body: None,
             };
             declarations.push(crate::parser::ast::Spanned {
                 node,

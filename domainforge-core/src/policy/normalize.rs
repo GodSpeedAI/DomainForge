@@ -214,6 +214,7 @@ fn hash_expression<H: Hasher>(expr: &Expression, hasher: &mut H) {
             hash_expression(projection, hasher);
             target_unit.hash(hasher);
         }
+        Expression::RoleReference { role } => role.hash(hasher),
     }
 }
 
@@ -230,7 +231,8 @@ fn normalize_expr(expr: &Expression) -> Expression {
         | Expression::QuantityLiteral { .. }
         | Expression::TimeLiteral(_)
         | Expression::IntervalLiteral { .. }
-        | Expression::MemberAccess { .. } => expr.clone(),
+        | Expression::MemberAccess { .. }
+        | Expression::RoleReference { .. } => expr.clone(),
 
         // Binary: normalize children, apply optimizations, sort commutative ops
         Expression::Binary { op, left, right } => {
@@ -697,6 +699,7 @@ fn canonical_serialize(expr: &Expression) -> String {
             )
             .unwrap()
         }
+        Expression::RoleReference { role } => write!(out, "RoleRef({})", role).unwrap(),
     }
     out
 }
