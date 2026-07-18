@@ -1,0 +1,52 @@
+@namespace "flagship.orders"
+@version "0.1.0"
+
+dimension "Currency"
+unit "USD" of "Currency" factor 1 base "USD"
+
+role "Customer"
+
+policy order_total_within_limit per Constraint Obligation priority 5 as: total <= 10000
+
+export enum OrderStatus {
+    placed = "placed"
+}
+
+export entity "Order" {
+    key order_id: uuid
+    client_order_id: string (min_length 1, max_length 64)
+    total: quantity<USD> (exclusive_min 0)
+    item_count: int (min 1)
+    status: OrderStatus default "placed"
+}
+
+record PlaceOrderInput {
+    order_id: uuid
+    client_order_id: string (min_length 1, max_length 64)
+    total: quantity<USD> (exclusive_min 0)
+    item_count: int (min 1)
+}
+
+record PlaceOrderOutput {
+    order_id: uuid
+    status: OrderStatus
+}
+
+operation place_order {
+    intent "persist one valid order exactly once"
+    direction inbound
+    actor Customer
+    access policy_governed by order_total_within_limit at precondition fails with order_limit_exceeded
+    input PlaceOrderInput
+    output PlaceOrderOutput
+    state Order
+    effect creates Order
+    transaction single_aggregate
+    failure invalid_order for input_validation "input failed record validation"
+    failure order_limit_exceeded for policy "order total exceeds 10000 USD"
+    failure idempotency_conflict for idempotency_conflict, concurrency_conflict "client_order_id reused with different canonical input"
+    idempotency keyed_by client_order_id
+    concurrency unique_key client_order_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}

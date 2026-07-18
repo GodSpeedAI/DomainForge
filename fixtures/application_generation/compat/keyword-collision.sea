@@ -1,0 +1,29 @@
+@namespace "record.enum.operation"
+@version "0.1.0"
+@owner "intent"
+@profile "access"
+
+import { key as default } from "./entity-no-body.sea"
+import * as optional from "./entity-no-body.sea"
+
+Entity "string" in int
+Entity "decimal" v 1.0.0
+Entity "bool" @replaces "timestamp"
+Entity "uuid" @changes ["quantity"]
+Resource "Record" operation
+Resource "ref" list in state
+Resource "effect" in transaction
+Resource "failure"
+Role "idempotency"
+Pattern "concurrency" matches ".*"
+Relation "evidence"
+  subject: "string"
+  predicate: "creates"
+  object: "decimal"
+Instance lifecycle of "string"
+Policy inbound per Constraint Obligation priority 1 as: outbound = internal
+Dimension "keyed_by"
+Unit "unique_key" of "keyed_by" factor 1 base "unique_key"
+Metric "read_snapshot" as: 1
+Flow "operation" @cqrs "creates" from "string" to "decimal" quantity 1
+Flow "evidence" @tx { "mutates": true } from "decimal" to "string" quantity 1
