@@ -350,6 +350,10 @@ pub enum AstNode {
         annotations: HashMap<String, serde_json::Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
         domain: Option<String>,
+        /// Optional typed body `entity "X" { ... }`. Absent on legacy
+        /// bodyless entities so existing AST JSON stays byte-identical.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        body: Option<EntityBody>,
     },
 
     /// Resource declaration
@@ -530,6 +534,167 @@ pub enum AstNode {
         #[serde(default, skip_serializing_if = "HashMap::is_empty")]
         annotations: HashMap<String, serde_json::Value>,
     },
+
+    // ---- SEA application contract declarations (ADR-013) ----
+    /// Record declaration - structured DTO input/output
+    Record { declaration: RecordDecl },
+
+    /// Enum declaration - closed set of named wires
+    Enum { declaration: EnumDecl },
+
+    /// Operation declaration - inbound command/query contract
+    Operation { declaration: OperationDecl },
+}
+
+/// Typed body of an `entity` declaration (ADR-013).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct EntityBody {
+    pub fields: Vec<FieldDecl>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct FieldDecl {
+    pub is_key: bool,
+    pub name: String,
+    pub field_type: FieldType,
+    pub is_optional: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub constraints: Vec<FieldConstraintDecl>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<Expression>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[serde(tag = "kind", content = "data", rename_all = "snake_case")]
+pub enum FieldType {
+    Scalar { symbol: FieldTypeRef },
+    Quantity { symbol: FieldTypeRef },
+    Ref { symbol: FieldTypeRef },
+    List { element: Box<FieldType> },
+    Named { symbol: FieldTypeRef },
+}
+
+/// Alias-qualified symbol reference inside a field type. Stored verbatim
+/// until application resolution (Task 7).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct FieldTypeRef {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias: Option<String>,
+    pub symbol: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[serde(tag = "kind", content = "data", rename_all = "snake_case")]
+pub enum FieldConstraintDecl {
+    MinLength { value: u64 },
+    MaxLength { value: u64 },
+    MinItems { value: u64 },
+    MaxItems { value: u64 },
+    ExclusiveMin { value: String },
+    ExclusiveMax { value: String },
+    Min { value: String },
+    Max { value: String },
+    Pattern { symbol: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct RecordDecl {
+    pub name: String,
+    pub fields: Vec<FieldDecl>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct EnumDecl {
+    pub name: String,
+    pub members: Vec<EnumMember>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct EnumMember {
+    pub name: String,
+    pub wire: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct OperationDecl {
+    pub name: String,
+    pub clauses: Vec<OperationClause>,
+}
+
+/// Authored operation clause. Stored verbatim; the application module
+/// resolves and lowers each clause.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[serde(tag = "kind", content = "data", rename_all = "snake_case")]
+pub enum OperationClause {
+    Intent {
+        text: String,
+    },
+    Direction {
+        kind: String,
+    },
+    Actor {
+        actor: String,
+    },
+    AccessPublic,
+    AccessPolicyGoverned {
+        bindings: Vec<PolicyBinding>,
+    },
+    Input {
+        reference: String,
+    },
+    Output {
+        reference: String,
+    },
+    State {
+        reference: String,
+    },
+    Effect {
+        kind: String,
+        reference: String,
+    },
+    Transaction {
+        kind: String,
+    },
+    Failure {
+        code: String,
+        kinds: Vec<String>,
+        message: String,
+    },
+    IdempotencyKeyed {
+        field: String,
+    },
+    IdempotencyInherent,
+    IdempotencyNotApplicable {
+        reason: String,
+        explanation: String,
+    },
+    ConcurrencyUnique {
+        field: String,
+    },
+    ConcurrencyOptimistic {
+        field: String,
+    },
+    ConcurrencyReadSnapshot,
+    EvidenceOperationTrace,
+    LifecycleSynchronousRequestResponse,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct PolicyBinding {
+    pub policy: String,
+    pub enforcement_point: String,
+    pub failure_code: String,
 }
 
 // =========================================================================
