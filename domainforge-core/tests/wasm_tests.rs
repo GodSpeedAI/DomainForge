@@ -266,4 +266,35 @@ mod application_contract_wasm_tests {
         let message = err.as_string().unwrap_or_default();
         assert!(message.contains("APP"));
     }
+
+    /// Cross-binding byte parity (M0 gate finding 2): WASM must hash to the
+    /// same golden as Rust, Python, and TypeScript. See
+    /// `application_cross_binding_golden_tests.rs` for the canonical
+    /// constants.
+    #[wasm_bindgen_test]
+    fn cross_binding_golden_hashes() {
+        use sha2::{Digest, Sha256};
+        const CONTRACT_GOLDEN_SHA256: &str =
+            "sha256:57c81f0cddc0cec87eaef86cca6692134376076620c9c73844b016869cc31640";
+        let raw = Graph::resolve_application_contract_json(
+            "flagship/query-read.sea".into(),
+            flagship_sources_json(),
+        )
+        .unwrap();
+        let mut hasher = Sha256::new();
+        hasher.update(raw.as_bytes());
+        let digest = hasher.finalize();
+        let hex: String = {
+            let mut s = String::with_capacity(digest.len() * 2);
+            for b in digest {
+                s.push_str(&format!("{b:02x}"));
+            }
+            s
+        };
+        assert_eq!(
+            format!("sha256:{hex}"),
+            CONTRACT_GOLDEN_SHA256,
+            "WASM binding bytes drifted from the Rust golden"
+        );
+    }
 }
