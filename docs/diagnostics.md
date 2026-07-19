@@ -153,6 +153,24 @@ The `ValidationOptions` structure controls validation behavior:
 | `require_signed_pack`          | boolean  | `false`   | Whether to require a signed pack.                    |
 | `allow_unsigned_test_fixtures` | boolean  | `false`   | Bypass signature requirement for test fixture packs. |
 
+## Application Contract Diagnostics (APP001–APP015)
+
+Application contract resolution emits its own stable registry, separate from
+the E-code and semantic-pack tables above. See
+[error-codes.md](reference/error-codes.md#app001-app015-application-contract-diagnostics)
+for the full table. Key properties:
+
+- Wire form is `{code, slug, severity, message, context}`; `severity` is
+  always `"error"` and blocks contract emission.
+- `context` carries `reason`, `expected`, `actual`, `remediation`, and source
+  evidence (`logical_module_id`, `line`, `column`); inapplicable values are
+  omitted, never serialized as empty strings.
+- APP014 always includes one closed `reason` value; APP015 instead identifies
+  the artifact `document_kind`, `schema_version`, and failing JSON Pointer or
+  hash field.
+- Diagnostics are sorted by logical module ID, line, column, then code, so
+  output is deterministic for one input source set.
+
 ## See Also
 
 - [Semantic Packs](semantic-packs.md) for the overall pack system.

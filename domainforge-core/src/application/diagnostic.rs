@@ -48,6 +48,47 @@ pub enum ApplicationDiagnosticCode {
 }
 
 impl ApplicationDiagnosticCode {
+    /// Every registered APP code in numeric order.
+    pub fn all() -> [ApplicationDiagnosticCode; 15] {
+        use ApplicationDiagnosticCode::*;
+        [
+            App001, App002, App003, App004, App005, App006, App007, App008, App009, App010, App011,
+            App012, App013, App014, App015,
+        ]
+    }
+
+    /// The stable `("APPNNN", "code_slug")` registry.
+    pub fn all_code_slugs() -> [(&'static str, &'static str); 15] {
+        Self::all().map(|c| (c.code(), c.slug()))
+    }
+
+    /// Stable wire code, e.g. `"APP001"`.
+    pub fn code(&self) -> &'static str {
+        use ApplicationDiagnosticCode::*;
+        match self {
+            App001 => "APP001",
+            App002 => "APP002",
+            App003 => "APP003",
+            App004 => "APP004",
+            App005 => "APP005",
+            App006 => "APP006",
+            App007 => "APP007",
+            App008 => "APP008",
+            App009 => "APP009",
+            App010 => "APP010",
+            App011 => "APP011",
+            App012 => "APP012",
+            App013 => "APP013",
+            App014 => "APP014",
+            App015 => "APP015",
+        }
+    }
+
+    /// Every APP diagnostic blocks contract emission.
+    pub fn severity(&self) -> &'static str {
+        "error"
+    }
+
     pub fn slug(&self) -> &'static str {
         use ApplicationDiagnosticCode::*;
         match self {
