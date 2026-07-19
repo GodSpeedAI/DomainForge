@@ -80,3 +80,49 @@ def test_parsed_graph_query():
     flows = graph.flows_from(warehouse_id)
     assert len(flows) == 1
     assert flows[0].quantity == 50.0
+
+
+# ---- application contract binding (ADR-013 Milestone 0) ----
+
+def _flagship_sources_json() -> str:
+    import json
+    import pathlib
+
+    root = (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "application_generation"
+        / "flagship"
+    )
+    return json.dumps(
+        {
+            "flagship/command-write.sea": (root / "command-write.sea").read_text(),
+            "flagship/query-read.sea": (root / "query-read.sea").read_text(),
+        },
+        separators=(",", ":"),
+    )
+
+
+def test_resolve_application_contract_json_is_canonical():
+    import json
+
+    sources = _flagship_sources_json()
+    raw = domainforge.Graph.resolve_application_contract_json(
+        "flagship/query-read.sea", sources
+    )
+    again = domainforge.Graph.resolve_application_contract_json(
+        "flagship/query-read.sea", sources
+    )
+    assert raw == again, "canonical contract JSON must be byte-deterministic"
+    doc = json.loads(raw)
+    assert doc["schema_version"] == "domainforge-application-contract/v1"
+    assert doc["self_hash"].startswith("sha256:")
+    assert doc["semantic_closure_hash"].startswith("sha256:")
+
+
+def test_resolve_application_contract_json_rejects_bad_source_map():
+    import pytest
+
+    with pytest.raises(ValueError) as err:
+        domainforge.Graph.resolve_application_contract_json("a.sea", "[]")
+    assert "APP" in str(err.value)

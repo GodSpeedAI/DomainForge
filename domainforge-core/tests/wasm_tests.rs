@@ -227,3 +227,43 @@ Flow "Materials" from "Warehouse" to "Factory" quantity 500
         assert!(json_result.is_ok());
     }
 }
+
+#[cfg(feature = "wasm")]
+mod application_contract_wasm_tests {
+    use domainforge_core::wasm::Graph;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    fn flagship_sources_json() -> String {
+        serde_json::json!({
+            "flagship/command-write.sea": include_str!(
+                "../../fixtures/application_generation/flagship/command-write.sea"),
+            "flagship/query-read.sea": include_str!(
+                "../../fixtures/application_generation/flagship/query-read.sea"),
+        })
+        .to_string()
+    }
+
+    #[wasm_bindgen_test]
+    fn resolve_application_contract_json_is_canonical() {
+        let sources = flagship_sources_json();
+        let raw = Graph::resolve_application_contract_json(
+            "flagship/query-read.sea".into(),
+            sources.clone(),
+        )
+        .unwrap();
+        let again =
+            Graph::resolve_application_contract_json("flagship/query-read.sea".into(), sources)
+                .unwrap();
+        assert_eq!(raw, again);
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["schema_version"], "domainforge-application-contract/v1");
+    }
+
+    #[wasm_bindgen_test]
+    fn resolve_application_contract_json_rejects_bad_source_map() {
+        let err =
+            Graph::resolve_application_contract_json("a.sea".into(), "[]".into()).unwrap_err();
+        let message = err.as_string().unwrap_or_default();
+        assert!(message.contains("APP"));
+    }
+}

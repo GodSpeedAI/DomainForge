@@ -265,6 +265,28 @@ impl Graph {
             .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
     }
 
+    /// Resolve an in-memory source map into canonical Application Contract
+    /// document JSON (ADR-013 Milestone 0).
+    ///
+    /// Args:
+    ///     entry_logical_path: normalized logical path of the entry module
+    ///     sources_json: JSON object mapping logical paths to SEA source text
+    ///
+    /// Returns:
+    ///     Compact canonical ApplicationContractDocument JSON
+    #[staticmethod]
+    fn resolve_application_contract_json(
+        entry_logical_path: String,
+        sources_json: String,
+    ) -> PyResult<String> {
+        crate::application::resolve_application_contract_json(&entry_logical_path, &sources_json)
+            .map_err(|diags| {
+                PyValueError::new_err(
+                    serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()),
+                )
+            })
+    }
+
     fn export_calm(&self) -> PyResult<String> {
         crate::calm::export(&self.inner)
             .and_then(|value| {
