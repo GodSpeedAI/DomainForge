@@ -2,7 +2,8 @@
 //! reference §6/§8).
 
 use domainforge_core::application::{
-    resolve_application_contract, resolve_semantic_envelope,
+    resolve_application_contract, resolve_application_contract_with_packs,
+    resolve_semantic_envelope, resolve_semantic_envelope_with_packs,
     validate_application_contract_document_json, validate_semantic_envelope_document_json,
     CanonicalSemanticEnvelopeDocument,
 };
@@ -231,6 +232,150 @@ fn bad_hashes_are_app015_with_json_pointers() {
     assert_app015(&err, "/semantic_closure_hash");
 }
 
+/// Gate finding 6: every persisted metadata field is an APP015 vector with
+/// the field's JSON Pointer, including internally recomputed self-hashes.
+#[test]
+fn app015_tamper_vectors_cover_every_metadata_field() {
+    let contract_value = serde_json::to_value(
+        resolve_application_contract("flagship/command-write.sea", &flagship_sources()).unwrap(),
+    )
+    .unwrap();
+    let envelope_value = serde_json::to_value(envelope_for(&flagship_sources())).unwrap();
+
+    // (path, mutation, expected pointer). Each mutation must produce APP015
+    // at the named pointer. A self-consistent but contract-invalid artifact
+    // is the failure mode the gate explicitly calls out.
+    let contract_vectors: Vec<(&str, Mutation, &str)> = vec![
+        (
+            "producer name",
+            Box::new(|v| v["producer"]["name"] = json!("attacker")),
+            "/producer/name",
+        ),
+        (
+            "producer version empty",
+            Box::new(|v| v["producer"]["version"] = json!("")),
+            "/producer/version",
+        ),
+        (
+            "inputs.source_set_hash bad format",
+            Box::new(|v| v["inputs"]["source_set_hash"] = json!("not-a-hash")),
+            "/inputs/source_set_hash",
+        ),
+        (
+            "inputs.semantic_pack_set_hash bad format",
+            Box::new(|v| v["inputs"]["semantic_pack_set_hash"] = json!("sha256:deadbeef")),
+            "/inputs/semantic_pack_set_hash",
+        ),
+        (
+            "inputs.language_schema_version mismatch",
+            Box::new(|v| v["inputs"]["language_schema_version"] = json!("domainforge-ast/v1")),
+            "/inputs/language_schema_version",
+        ),
+        (
+            "inputs.interpretation_version mismatch",
+            Box::new(|v| {
+                v["inputs"]["interpretation_version"] = json!("domainforge-interpretation/v9")
+            }),
+            "/inputs/interpretation_version",
+        ),
+        (
+            "schema_version mismatch",
+            Box::new(|v| v["schema_version"] = json!("domainforge-application-contract/v9")),
+            "/schema_version",
+        ),
+        (
+            // Tamper a value the explicit checks do not cover; the
+            // internally recomputed self_hash is the only signal.
+            "tampered enum member with recomputed self_hash",
+            Box::new(|v| {
+                v["contract"]["enums"][0]["members"][0]["wire"] = json!("tampered");
+                v["self_hash"] = json!(format!("sha256:{}", "0".repeat(64)));
+            }),
+            "/self_hash",
+        ),
+    ];
+    for (label, mutate, expected_path) in contract_vectors {
+        let mut bad = contract_value.clone();
+        mutate(&mut bad);
+        let diags = match validate_application_contract_document_json(&bad.to_string()) {
+            Err(d) => d,
+            Ok(_) => panic!("expected APP015 for {label}"),
+        };
+        assert_app015(&diags, expected_path);
+    }
+
+    let envelope_vectors: Vec<(&str, Mutation, &str)> = vec![
+        (
+            "envelope producer name",
+            Box::new(|v| v["producer"]["name"] = json!("attacker")),
+            "/producer/name",
+        ),
+        (
+            "envelope inputs.semantic_pack_set_hash bad format",
+            Box::new(|v| v["inputs"]["semantic_pack_set_hash"] = json!("sha256:00")),
+            "/inputs/semantic_pack_set_hash",
+        ),
+        (
+            "envelope language_schema_version mismatch",
+            Box::new(|v| v["envelope"]["language_schema_version"] = json!("other")),
+            "/envelope/language_schema_version",
+        ),
+        (
+            "envelope canonicalization_version mismatch",
+            Box::new(|v| v["envelope"]["canonicalization_version"] = json!("other")),
+            "/envelope/canonicalization_version",
+        ),
+        (
+            "envelope compiler_interpretation_version mismatch",
+            Box::new(|v| v["envelope"]["compiler_interpretation_version"] = json!("other")),
+            "/envelope/compiler_interpretation_version",
+        ),
+        (
+            "envelope semantic_packs malformed",
+            Box::new(|v| {
+                v["envelope"]["semantic_packs"] =
+                    json!([{"pack_id": "p", "content_hash": "sha256:nope"}]);
+            }),
+            "/envelope/semantic_packs/0/content_hash",
+        ),
+        (
+            "envelope semantic_packs empty pack_id",
+            Box::new(|v| {
+                v["envelope"]["semantic_packs"] = json!([{
+                    "pack_id": "",
+                    "content_hash": format!("sha256:{}", "c".repeat(64))
+                }]);
+            }),
+            "/envelope/semantic_packs/0/pack_id",
+        ),
+        (
+            // Cross-consistency: the persisted pack-set hash disagrees with
+            // the packs actually listed in the envelope.
+            "pack_set_hash disagrees with envelope packs",
+            Box::new(|v| {
+                v["envelope"]["semantic_packs"] = json!([{
+                    "pack_id": "extra",
+                    "content_hash": format!("sha256:{}", "c".repeat(64))
+                }]);
+                v["inputs"]["semantic_pack_set_hash"] = json!(format!("sha256:{}", "d".repeat(64)));
+                // Re-stamp self_hash to keep the document self-consistent
+                // at the byte level — the cross-check must still fire.
+                v["self_hash"] = json!(format!("sha256:{}", "0".repeat(64)));
+            }),
+            "/inputs/semantic_pack_set_hash",
+        ),
+    ];
+    for (label, mutate, expected_path) in envelope_vectors {
+        let mut bad = envelope_value.clone();
+        mutate(&mut bad);
+        let diags = match validate_semantic_envelope_document_json(&bad.to_string()) {
+            Err(d) => d,
+            Ok(_) => panic!("expected APP015 for {label}"),
+        };
+        assert_app015(&diags, expected_path);
+    }
+}
+
 #[test]
 fn documents_satisfy_their_published_json_schemas() {
     let contract_schema: serde_json::Value = serde_json::from_str(include_str!(
@@ -389,4 +534,84 @@ fn strict_schemas_reject_malformed_nested_documents() {
             "envelope schema accepted: {label}"
         );
     }
+}
+
+/// Gate finding 5 (D10): the fixed public boundary carries non-empty
+/// semantic-pack sets through `inputs.semantic_pack_set_hash` and the
+/// envelope's `semantic_packs`, and rejects malformed inputs as APP015.
+#[test]
+fn non_empty_semantic_packs_cross_the_public_boundary() {
+    let hash_a = format!("sha256:{}", "a".repeat(64));
+    let hash_b = format!("sha256:{}", "b".repeat(64));
+    let packs = vec![
+        ("pack-alpha".to_string(), hash_a.clone()),
+        ("pack-beta".to_string(), hash_b.clone()),
+    ];
+
+    let contract = resolve_application_contract_with_packs(
+        "flagship/command-write.sea",
+        &flagship_sources(),
+        &packs,
+    )
+    .expect("non-empty pack set resolves");
+    let envelope = resolve_semantic_envelope_with_packs(
+        "flagship/command-write.sea",
+        &flagship_sources(),
+        &packs,
+    )
+    .expect("non-empty pack set resolves");
+
+    // The recomputed pack-set hash is deterministic and equal across both
+    // document kinds.
+    let expected_set_hash = domainforge_core::application::semantic_pack_set_hash(&packs).unwrap();
+    assert_eq!(contract.inputs.semantic_pack_set_hash, expected_set_hash);
+    assert_eq!(envelope.inputs.semantic_pack_set_hash, expected_set_hash);
+
+    // The envelope's listed packs preserve pack_id and content_hash.
+    let listed: Vec<(String, String)> = envelope
+        .envelope
+        .semantic_packs
+        .iter()
+        .map(|p| (p.pack_id.clone(), p.content_hash.clone()))
+        .collect();
+    assert_eq!(listed, packs);
+
+    // Both documents round-trip through the persisted-envelope validators.
+    let contract_json = serde_json::to_string(&contract).unwrap();
+    validate_application_contract_document_json(&contract_json).unwrap();
+    let envelope_json = serde_json::to_string(&envelope).unwrap();
+    validate_semantic_envelope_document_json(&envelope_json).unwrap();
+}
+
+#[test]
+fn malformed_semantic_packs_are_app015() {
+    let bad_packs = vec![
+        ("pack".to_string(), "not-a-hash".to_string()),
+        ("".to_string(), format!("sha256:{}", "a".repeat(64))),
+    ];
+    let err = resolve_application_contract_with_packs(
+        "flagship/command-write.sea",
+        &flagship_sources(),
+        &bad_packs,
+    )
+    .unwrap_err();
+    assert!(err
+        .iter()
+        .all(|d| d.code == domainforge_core::application::ApplicationDiagnosticCode::App015));
+    assert!(err.len() >= 2);
+
+    // Duplicate pack ids are also APP015.
+    let dup_packs = vec![
+        ("dup".to_string(), format!("sha256:{}", "a".repeat(64))),
+        ("dup".to_string(), format!("sha256:{}", "b".repeat(64))),
+    ];
+    let err = resolve_semantic_envelope_with_packs(
+        "flagship/command-write.sea",
+        &flagship_sources(),
+        &dup_packs,
+    )
+    .unwrap_err();
+    assert!(err
+        .iter()
+        .all(|d| d.code == domainforge_core::application::ApplicationDiagnosticCode::App015));
 }

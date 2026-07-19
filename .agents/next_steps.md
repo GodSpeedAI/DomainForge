@@ -1,23 +1,24 @@
 # Next Steps
 
-## 1. Write the Milestone 0 language code plan
+## 1. Create and execute a Milestone 0 remediation plan
 
-Execute Task 3 from
-`.agents/plans/2026-07-18-conversational-application-generator.md` and create
-`.agents/plans/2026-07-18-conversational-application-generator-m0-language.md`.
-Expected outcome: a codebase-grounded, test-first plan that a lesser coding
-agent can execute without choosing grammar, identity, validation, hashing, or
-binding semantics.
+Turn every Critical and High finding in
+`.agents/reports/2026-07-19-m0-human-review-gate.md` into test-first tasks,
+preserving ADR-013 semantics. Expected outcome: strict field/default
+validation, shared resolved identities, normalized canonical envelopes, strict
+schemas, complete persisted-artifact validation, and bounded public inputs.
 
-## 2. Adversarially review the Milestone 0 plan
+## 2. Produce independent compatibility and parity evidence
 
-Cross-check every task and test against accepted ADR-013, the normative
-reference, actual repository paths/APIs, and the master plan's Milestone 0 stop
-gate. Expected outcome: no unresolved design choice or stale path remains in
-the coding plan.
+Restore or explicitly adjudicate the pre-change oracles and `std/core.sea`
+visibility, exercise non-empty signed semantic packs, fix the D9 contract and
+envelope goldens, and compare rebuilt Rust/Python/TypeScript/WASM outputs from
+the same inputs. Expected outcome: stable accepted oracle values and
+byte-identical cross-target artifacts that cannot pass against stale bindings.
 
-## 3. Begin implementation only from the reviewed plan
+## 3. Re-run the Milestone 0 human gate
 
-Use the repository's worktree, incremental implementation, and test-driven
-development gates. Expected outcome: implementation starts with the first
-failing Milestone 0 test and preserves cross-binding compatibility.
+Pass every focused suite, `just all-tests`, Clippy, formatting, genuine WASM
+validation, and `git diff --check`; present a finding-to-test/commit matrix and
+all required hashes. Expected outcome: an evidence-backed accept/reject
+decision and, only if explicitly accepted, authorization to begin Milestone 1.

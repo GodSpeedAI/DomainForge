@@ -633,6 +633,7 @@ fn id_sort_key(id: &CanonicalDeclarationId) -> String {
 pub(crate) fn build_envelope(
     set: &ResolvedModuleSet,
     contract: &ApplicationContract,
+    semantic_packs: &[(String, String)],
 ) -> CanonicalSemanticEnvelope {
     let ctx = Ctx::new(set);
     let mut declarations: Vec<(usize, CanonicalSemanticDeclaration)> = Vec::new();
@@ -750,7 +751,13 @@ pub(crate) fn build_envelope(
         modules,
         import_graph,
         namespace_bindings,
-        semantic_packs: Vec::new(), // Milestone 0: empty pack set
+        semantic_packs: semantic_packs
+            .iter()
+            .map(|(pack_id, content_hash)| CanonicalSemanticPackRef {
+                pack_id: pack_id.clone(),
+                content_hash: content_hash.clone(),
+            })
+            .collect(),
         semantic_declarations,
         resolved_references,
         application_contract: contract.clone(),
@@ -885,15 +892,29 @@ fn collect_references(
 
 /// Resolve an in-memory source map into a validated canonical semantic
 /// envelope document, or the complete deterministic diagnostic list.
+/// Milestone 0 binds the empty semantic-pack set at the fixed public
+/// boundary (§9).
 pub fn resolve_semantic_envelope(
     entry_logical_path: &str,
     sources_json: &str,
 ) -> Result<CanonicalSemanticEnvelopeDocument, Vec<ApplicationDiagnostic>> {
+    resolve_semantic_envelope_with_packs(entry_logical_path, sources_json, &[])
+}
+
+/// [`resolve_semantic_envelope`] with explicit `(pack_id, content_hash)`
+/// semantic-pack inputs (D10): the pack set crosses the boundary into
+/// `inputs.semantic_pack_set_hash` and the envelope's `semantic_packs`.
+pub fn resolve_semantic_envelope_with_packs(
+    entry_logical_path: &str,
+    sources_json: &str,
+    semantic_packs: &[(String, String)],
+) -> Result<CanonicalSemanticEnvelopeDocument, Vec<ApplicationDiagnostic>> {
     use crate::module::resolver::{resolve_source_map, SourceMap};
+    let pack_set_hash = crate::application::resolve::validated_pack_set_hash(semantic_packs)?;
     let sources = SourceMap::parse_json(sources_json)?;
     let resolved = resolve_source_map(entry_logical_path, &sources)?;
     let contract = crate::application::resolve::build_contract(&resolved)?;
-    let envelope = build_envelope(&resolved, &contract);
+    let envelope = build_envelope(&resolved, &contract, semantic_packs);
     let closure_hash = semantic_closure_hash(&envelope);
     let mut doc = CanonicalSemanticEnvelopeDocument {
         schema_version: ENVELOPE_SCHEMA_VERSION.to_string(),
@@ -909,8 +930,7 @@ pub fn resolve_semantic_envelope(
                     .map(|(id, src)| (id.as_str(), src.as_str())),
             )
             .expect("duplicates already rejected"),
-            semantic_pack_set_hash: crate::application::canonical::semantic_pack_set_hash(&[])
-                .expect("empty set has no duplicates"),
+            semantic_pack_set_hash: pack_set_hash,
             language_schema_version: LANGUAGE_SCHEMA_VERSION.to_string(),
             interpretation_version: INTERPRETATION_VERSION.to_string(),
         },
@@ -940,7 +960,7 @@ pub fn envelope_document_self_hash(doc: &CanonicalSemanticEnvelopeDocument) -> S
     compute_sha256(canonical_json(&value).as_bytes())
 }
 
-fn is_hash(value: &str) -> bool {
+pub(crate) fn is_hash(value: &str) -> bool {
     value.strip_prefix("sha256:").is_some_and(|hex| {
         hex.len() == 64
             && hex
@@ -954,6 +974,79 @@ fn app015(document_kind: &str, field_path: &str, message: String) -> Application
     d.context.document_kind = Some(document_kind.to_string());
     d.context.field_path = Some(field_path.to_string());
     d
+}
+
+/// Producer identities this implementation emits; a persisted document from
+/// any other producer is APP015 at `/producer/name`.
+const KNOWN_PRODUCERS: &[&str] = &["domainforge-core"];
+
+fn validate_producer(
+    diags: &mut Vec<ApplicationDiagnostic>,
+    kind: &str,
+    producer: &ProducerIdentity,
+) {
+    if !KNOWN_PRODUCERS.contains(&producer.name.as_str()) {
+        diags.push(app015(
+            kind,
+            "/producer/name",
+            format!("unknown producer '{}'", producer.name),
+        ));
+    }
+    if producer.version.trim().is_empty() {
+        diags.push(app015(
+            kind,
+            "/producer/version",
+            "producer version is empty".to_string(),
+        ));
+    }
+}
+
+fn validate_inputs(
+    diags: &mut Vec<ApplicationDiagnostic>,
+    kind: &str,
+    inputs: &ApplicationContractInputs,
+) {
+    for (path, value) in [
+        ("/inputs/source_set_hash", &inputs.source_set_hash),
+        (
+            "/inputs/semantic_pack_set_hash",
+            &inputs.semantic_pack_set_hash,
+        ),
+    ] {
+        if !is_hash(value) {
+            diags.push(app015(
+                kind,
+                path,
+                format!("'{value}' is not a lowercase sha256:<hex> hash"),
+            ));
+        }
+    }
+    if inputs.language_schema_version != LANGUAGE_SCHEMA_VERSION {
+        let mut d = app015(
+            kind,
+            "/inputs/language_schema_version",
+            format!(
+                "expected language_schema_version '{}', got '{}'",
+                LANGUAGE_SCHEMA_VERSION, inputs.language_schema_version
+            ),
+        );
+        d.context.expected = Some(LANGUAGE_SCHEMA_VERSION.to_string());
+        d.context.actual = Some(inputs.language_schema_version.clone());
+        diags.push(d);
+    }
+    if inputs.interpretation_version != INTERPRETATION_VERSION {
+        let mut d = app015(
+            kind,
+            "/inputs/interpretation_version",
+            format!(
+                "expected interpretation_version '{}', got '{}'",
+                INTERPRETATION_VERSION, inputs.interpretation_version
+            ),
+        );
+        d.context.expected = Some(INTERPRETATION_VERSION.to_string());
+        d.context.actual = Some(inputs.interpretation_version.clone());
+        diags.push(d);
+    }
 }
 
 /// Validate schema, inputs, and self-hash of a persisted application contract
@@ -974,14 +1067,11 @@ pub fn validate_application_contract_document_json(
         d.context.schema_version = Some(doc.schema_version.clone());
         diags.push(d);
     }
+    validate_producer(&mut diags, kind, &doc.producer);
+    validate_inputs(&mut diags, kind, &doc.inputs);
     for (path, value) in [
         ("/self_hash", &doc.self_hash),
         ("/semantic_closure_hash", &doc.semantic_closure_hash),
-        ("/inputs/source_set_hash", &doc.inputs.source_set_hash),
-        (
-            "/inputs/semantic_pack_set_hash",
-            &doc.inputs.semantic_pack_set_hash,
-        ),
     ] {
         if !is_hash(value) {
             diags.push(app015(
@@ -1024,6 +1114,8 @@ pub fn validate_semantic_envelope_document_json(
         d.context.schema_version = Some(doc.schema_version.clone());
         diags.push(d);
     }
+    validate_producer(&mut diags, kind, &doc.producer);
+    validate_inputs(&mut diags, kind, &doc.inputs);
     for (path, value) in [
         ("/self_hash", &doc.self_hash),
         ("/semantic_closure_hash", &doc.semantic_closure_hash),
@@ -1034,6 +1126,82 @@ pub fn validate_semantic_envelope_document_json(
                 path,
                 format!("'{value}' is not a lowercase sha256:<hex> hash"),
             ));
+        }
+    }
+    // Envelope metadata invariants.
+    let env = &doc.envelope;
+    if env.language_schema_version != doc.inputs.language_schema_version {
+        diags.push(app015(
+            kind,
+            "/envelope/language_schema_version",
+            format!(
+                "envelope language_schema_version '{}' does not match inputs '{}'",
+                env.language_schema_version, doc.inputs.language_schema_version
+            ),
+        ));
+    }
+    if env.compiler_interpretation_version != doc.inputs.interpretation_version {
+        diags.push(app015(
+            kind,
+            "/envelope/compiler_interpretation_version",
+            format!(
+                "envelope compiler_interpretation_version '{}' does not match inputs '{}'",
+                env.compiler_interpretation_version, doc.inputs.interpretation_version
+            ),
+        ));
+    }
+    if env.canonicalization_version != CANONICALIZATION_VERSION {
+        diags.push(app015(
+            kind,
+            "/envelope/canonicalization_version",
+            format!(
+                "expected canonicalization_version '{}', got '{}'",
+                CANONICALIZATION_VERSION, env.canonicalization_version
+            ),
+        ));
+    }
+    for (index, pack) in env.semantic_packs.iter().enumerate() {
+        if pack.pack_id.is_empty() {
+            diags.push(app015(
+                kind,
+                &format!("/envelope/semantic_packs/{index}/pack_id"),
+                "semantic pack has an empty pack_id".to_string(),
+            ));
+        }
+        if !is_hash(&pack.content_hash) {
+            diags.push(app015(
+                kind,
+                &format!("/envelope/semantic_packs/{index}/content_hash"),
+                format!(
+                    "semantic pack '{}' content_hash '{}' is not a lowercase sha256:<hex> hash",
+                    pack.pack_id, pack.content_hash
+                ),
+            ));
+        }
+    }
+    // Cross-consistency: the persisted pack-set hash must match the packs
+    // actually listed in the envelope, recomputed under the §6 frame.
+    if diags.is_empty() {
+        let pack_pairs: Vec<(String, String)> = env
+            .semantic_packs
+            .iter()
+            .map(|p| (p.pack_id.clone(), p.content_hash.clone()))
+            .collect();
+        match crate::application::canonical::semantic_pack_set_hash(&pack_pairs) {
+            Ok(recomputed) if recomputed == doc.inputs.semantic_pack_set_hash => {}
+            Ok(recomputed) => diags.push(app015(
+                kind,
+                "/inputs/semantic_pack_set_hash",
+                format!(
+                    "semantic_pack_set_hash '{}' does not match the envelope's packs ('{}')",
+                    doc.inputs.semantic_pack_set_hash, recomputed
+                ),
+            )),
+            Err(reason) => diags.push(app015(
+                kind,
+                "/inputs/semantic_pack_set_hash",
+                format!("semantic_pack_set_hash cannot be recomputed: {reason}"),
+            )),
         }
     }
     if diags.is_empty() {

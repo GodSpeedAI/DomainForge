@@ -135,6 +135,7 @@ reclassify diagnostics.
 ### Task 1: Capture compatibility oracles and add proving sources
 
 **Files:**
+
 - Create: `fixtures/application_generation/flagship/command-write.sea`
 - Create: `fixtures/application_generation/flagship/query-read.sea`
 - Create: `fixtures/application_generation/compat/entity-no-body.sea`
@@ -142,6 +143,7 @@ reclassify diagnostics.
 - Create: `domainforge-core/tests/application_compatibility_tests.rs`
 
 **Interfaces:**
+
 - Consumes: reference §§10–11 verbatim.
 - Produces: exact D9 source-map inputs and committed legacy AST/formatter
   oracle hashes captured before grammar changes.
@@ -200,12 +202,14 @@ git commit -m "test(parser): capture application compatibility oracles"
 ### Task 2: Parse the accepted grammar into a partial internal AST
 
 **Files:**
+
 - Modify: `domainforge-core/grammar/sea.pest`
 - Modify: `domainforge-core/src/parser/ast.rs`
 - Modify: `domainforge-core/src/policy/expression.rs`
 - Create: `domainforge-core/tests/application_parser_tests.rs`
 
 **Interfaces:**
+
 - Consumes: reference §2 grammar exactly.
 - Produces: `EntityBody`, `FieldDecl`, `FieldTypeRef`, `FieldConstraintDecl`,
   `RecordDecl`, `EnumDecl`, `OperationDecl { clauses: Vec<OperationClause> }`,
@@ -272,12 +276,14 @@ git commit -m "feat(parser): parse SEA application declarations"
 ### Task 3: Extend serialized AST v3 without changing legacy JSON
 
 **Files:**
+
 - Modify: `domainforge-core/src/parser/ast_schema.rs`
 - Modify: `domainforge-core/src/parser/ast_convert.rs`
 - Modify: `schemas/ast-v3.schema.json`
 - Modify: `domainforge-core/tests/parser_ast_v3.rs`
 
 **Interfaces:**
+
 - Consumes: Task 2 internal AST.
 - Produces: additive schema twins for every Task 2 type and
   `Expression::RoleReference { role: String }`; entity gains omitted
@@ -336,12 +342,14 @@ git commit -m "feat(parser): extend AST v3 for application contracts"
 ### Task 4: Canonically print and round-trip new declarations
 
 **Files:**
+
 - Modify: `domainforge-core/src/parser/printer.rs`
 - Modify: `domainforge-core/src/formatter/printer.rs`
 - Modify: `domainforge-core/tests/printer_tests.rs`
 - Modify: `domainforge-core/tests/round_trip_tests.rs`
 
 **Interfaces:**
+
 - Consumes: partial AST from Task 2.
 - Produces: reference §10 formatting from both printers and parse-print-parse
   AST equality.
@@ -404,12 +412,14 @@ git commit -m "feat(formatter): print application declarations canonically"
 ### Task 5: Build the single source-map module resolver
 
 **Files:**
+
 - Modify: `domainforge-core/src/module/resolver.rs`
 - Modify: `domainforge-core/src/module/mod.rs`
 - Modify: `domainforge-core/tests/module_resolution_tests.rs`
 - Create: `domainforge-core/tests/application_contract_tests.rs`
 
 **Interfaces:**
+
 - Consumes: AST exports/imports and `SourceMap` fixed above.
 - Produces: crate-private `ResolvedModuleSet`, `ResolvedModule`, `ImportEdge`,
   `AliasBinding`, `ResolvedSymbol`, `OriginRef`, and exact APP014 reasons.
@@ -475,6 +485,7 @@ git commit -m "feat(module): resolve one deterministic semantic closure"
 ### Task 6: Define strict public contract types and diagnostics
 
 **Files:**
+
 - Create: `domainforge-core/src/application/mod.rs`
 - Create: `domainforge-core/src/application/contract.rs`
 - Create: `domainforge-core/src/application/diagnostic.rs`
@@ -482,6 +493,7 @@ git commit -m "feat(module): resolve one deterministic semantic closure"
 - Create: `domainforge-core/tests/application_public_types_tests.rs`
 
 **Interfaces:**
+
 - Consumes: exact type list in reference §8 and diagnostic context in §5.
 - Produces: every public contract type, `ApplicationDiagnostic`,
   `ApplicationDiagnosticCode`, `ApplicationDiagnosticContext`, and stable JSON.
@@ -536,12 +548,14 @@ git commit -m "feat(application): define strict contract wire types"
 ### Task 7: Resolve types and construct normalized declarations
 
 **Files:**
+
 - Create: `domainforge-core/src/application/resolve.rs`
 - Create: `domainforge-core/src/application/validate.rs`
 - Modify: `domainforge-core/src/application/mod.rs`
 - Modify: `domainforge-core/tests/application_contract_tests.rs`
 
 **Interfaces:**
+
 - Consumes: `ResolvedModuleSet` and public contract types.
 - Produces: normalized enums, records, typed entities, operation references,
   `ApplicationSymbolId`, and APP002–APP006/APP013.
@@ -596,6 +610,7 @@ git commit -m "feat(application): resolve typed contract declarations"
 ### Task 8: Validate complete operation semantics and lowering
 
 **Files:**
+
 - Modify: `domainforge-core/src/application/validate.rs`
 - Modify: `domainforge-core/src/application/resolve.rs`
 - Modify: `domainforge-core/tests/application_contract_tests.rs`
@@ -603,6 +618,7 @@ git commit -m "feat(application): resolve typed contract declarations"
 - Create: `fixtures/application_generation/invalid/app011-effect-state-mismatch.sea`
 
 **Interfaces:**
+
 - Consumes: resolved declaration candidates.
 - Produces: valid `OperationContract` or APP001/APP008–APP012; exact state,
   output, failure, idempotency, concurrency, and bound rules from reference §4.
@@ -664,6 +680,7 @@ git commit -m "feat(application): validate operation semantics"
 ### Task 9: Validate and evaluate the closed policy subset
 
 **Files:**
+
 - Create: `domainforge-core/src/application/policy_context.rs`
 - Modify: `domainforge-core/src/application/validate.rs`
 - Modify: `domainforge-core/src/application/mod.rs`
@@ -671,6 +688,7 @@ git commit -m "feat(application): validate operation semantics"
 - Create: `domainforge-core/tests/application_policy_tests.rs`
 
 **Interfaces:**
+
 - Consumes: existing `policy::Expression`, resolved role IDs, input/state field
   types, `ApplicationPolicyContext`.
 - Produces: subset validation plus
@@ -730,6 +748,7 @@ git commit -m "feat(application): enforce typed operation policies"
 ### Task 10: Register APP diagnostics and complete negative fixtures
 
 **Files:**
+
 - Modify: `domainforge-core/src/validation_error.rs`
 - Modify: `docs/reference/error-codes.md`
 - Modify: `docs/diagnostics.md`
@@ -737,6 +756,7 @@ git commit -m "feat(application): enforce typed operation policies"
 - Create: `domainforge-core/tests/application_diagnostic_tests.rs`
 
 **Interfaces:**
+
 - Consumes: `ApplicationDiagnostic` from Task 6 and validators from Tasks 7–9.
 - Produces: stable APP001–APP015 documentation, sorting, severity, source/artifact
   evidence, and remediation assertions.
@@ -802,6 +822,7 @@ git commit -m "feat(diagnostics): register application contract errors"
 ### Task 11: Canonicalize source sets and Application Contract documents
 
 **Files:**
+
 - Create: `domainforge-core/src/application/canonical.rs`
 - Modify: `domainforge-core/src/application/resolve.rs`
 - Modify: `domainforge-core/src/application/mod.rs`
@@ -809,6 +830,7 @@ git commit -m "feat(diagnostics): register application contract errors"
 - Create: `domainforge-core/tests/semantic_pack_compat_tests.rs`
 
 **Interfaces:**
+
 - Consumes: validated contract and resolved source set.
 - Produces: canonical decimals/strings/quantities, canonical input fingerprint,
   `source_set_hash`, `semantic_pack_set_hash`, contract `self_hash`, and compact
@@ -867,6 +889,7 @@ git commit -m "feat(application): canonicalize contract documents"
 ### Task 12: Build and validate the canonical semantic envelope
 
 **Files:**
+
 - Create: `domainforge-core/src/application/envelope.rs`
 - Modify: `domainforge-core/src/application/mod.rs`
 - Create: `domainforge-core/tests/application_schema_tests.rs`
@@ -874,6 +897,7 @@ git commit -m "feat(application): canonicalize contract documents"
 - Create: `schemas/canonical-semantic-envelope-v1.schema.json`
 
 **Interfaces:**
+
 - Consumes: full resolved closure, normalized contract, semantic-pack refs.
 - Produces: exact reference §8 envelope types, exhaustive canonical payload
   conversion, `semantic_closure_hash`, document self-hashes, strict schemas,
@@ -929,6 +953,7 @@ git commit -m "feat(application): emit canonical semantic envelopes"
 ### Task 13: Construct Graph and contract from the same resolved set
 
 **Files:**
+
 - Modify: `domainforge-core/src/parser/ast.rs`
 - Modify: `domainforge-core/src/parser/mod.rs`
 - Modify: `domainforge-core/src/graph/mod.rs`
@@ -936,6 +961,7 @@ git commit -m "feat(application): emit canonical semantic envelopes"
 - Modify: `domainforge-core/tests/application_contract_tests.rs`
 
 **Interfaces:**
+
 - Consumes: `ResolvedModuleSet`.
 - Produces: one internal `build_graph(&ResolvedModuleSet, &ParseOptions)` path
   and proof that Graph existing-concept IDs equal contract references.
@@ -995,6 +1021,7 @@ git commit -m "refactor(module): share resolution across graph and contract"
 ### Task 14: Expose thin Python, TypeScript, and WASM JSON bindings
 
 **Files:**
+
 - Modify: `domainforge-core/src/python/graph.rs`
 - Modify: `domainforge-core/src/typescript/graph.rs`
 - Modify: `domainforge-core/src/wasm/graph.rs`
@@ -1003,6 +1030,7 @@ git commit -m "refactor(module): share resolution across graph and contract"
 - Modify: `domainforge-core/tests/wasm_tests.rs`
 
 **Interfaces:**
+
 - Consumes: `application::resolve_application_contract_json` only.
 - Produces: the exact public methods in “Fixed interfaces and ownership” and
   byte-identical compact canonical JSON.
@@ -1080,6 +1108,7 @@ git commit -m "feat(bindings): expose application contract JSON"
 ### Task 15: Prove the Milestone 0 stop gate
 
 **Files:**
+
 - Modify: `domainforge-core/tests/application_contract_tests.rs`
 - Modify: `domainforge-core/tests/application_schema_tests.rs`
 - Modify: `domainforge-core/tests/application_compatibility_tests.rs`
@@ -1087,6 +1116,7 @@ git commit -m "feat(bindings): expose application contract JSON"
 - Modify: `docs/reference/sea-application-contract.md`
 
 **Interfaces:**
+
 - Consumes: all prior packets.
 - Produces: one explicit coverage matrix and final evidence that the accepted
   contract is implemented without generator work.

@@ -17,11 +17,12 @@ pub use diagnostic::{
     ApplicationDiagnostic, ApplicationDiagnosticCode, ApplicationDiagnosticContext,
 };
 pub use envelope::{
-    resolve_semantic_envelope, semantic_closure_hash, validate_application_contract_document_json,
-    validate_semantic_envelope_document_json, CanonicalSemanticEnvelope,
-    CanonicalSemanticEnvelopeDocument,
+    resolve_semantic_envelope, resolve_semantic_envelope_with_packs, semantic_closure_hash,
+    validate_application_contract_document_json, validate_semantic_envelope_document_json,
+    CanonicalSemanticEnvelope, CanonicalSemanticEnvelopeDocument,
 };
 pub use policy_context::{evaluate_precondition, EvaluationResult};
 pub use resolve::{
-    resolve_application_contract, resolve_application_contract_json, resolve_application_graph,
+    resolve_application_contract, resolve_application_contract_json,
+    resolve_application_contract_with_packs, resolve_application_graph,
 };

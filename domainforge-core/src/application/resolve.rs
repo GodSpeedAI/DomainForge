@@ -23,15 +23,29 @@ pub const LANGUAGE_SCHEMA_VERSION: &str = "domainforge-ast/v3";
 pub const INTERPRETATION_VERSION: &str = "domainforge-interpretation/v1";
 
 /// Resolve an in-memory source map into a validated application contract
-/// document, or the complete deterministic diagnostic list.
+/// document, or the complete deterministic diagnostic list. Milestone 0
+/// binds the empty semantic-pack set at the fixed public boundary (§9).
 pub fn resolve_application_contract(
     entry_logical_path: &str,
     sources_json: &str,
 ) -> Result<ApplicationContractDocument, Vec<ApplicationDiagnostic>> {
+    resolve_application_contract_with_packs(entry_logical_path, sources_json, &[])
+}
+
+/// [`resolve_application_contract`] with explicit `(pack_id, content_hash)`
+/// semantic-pack inputs (D10): the pack set crosses the boundary into
+/// `inputs.semantic_pack_set_hash` and the envelope's `semantic_packs`.
+pub fn resolve_application_contract_with_packs(
+    entry_logical_path: &str,
+    sources_json: &str,
+    semantic_packs: &[(String, String)],
+) -> Result<ApplicationContractDocument, Vec<ApplicationDiagnostic>> {
+    let pack_set_hash = validated_pack_set_hash(semantic_packs)?;
     let sources = SourceMap::parse_json(sources_json)?;
     let resolved = resolve_source_map(entry_logical_path, &sources)?;
     let contract = build_contract(&resolved)?;
-    let envelope = crate::application::envelope::build_envelope(&resolved, &contract);
+    let envelope =
+        crate::application::envelope::build_envelope(&resolved, &contract, semantic_packs);
     let closure_hash = crate::application::envelope::semantic_closure_hash(&envelope);
     let mut doc = ApplicationContractDocument {
         schema_version: APPLICATION_CONTRACT_SCHEMA_VERSION.to_string(),
@@ -41,7 +55,7 @@ pub fn resolve_application_contract(
         },
         inputs: ApplicationContractInputs {
             source_set_hash: source_set_hash(&sources),
-            semantic_pack_set_hash: semantic_pack_set_hash(),
+            semantic_pack_set_hash: pack_set_hash,
             language_schema_version: LANGUAGE_SCHEMA_VERSION.to_string(),
             interpretation_version: INTERPRETATION_VERSION.to_string(),
         },
@@ -53,9 +67,47 @@ pub fn resolve_application_contract(
     Ok(doc)
 }
 
+/// Reject malformed or duplicate semantic-pack inputs before use (APP015),
+/// then compute the §6 pack-set hash.
+pub(crate) fn validated_pack_set_hash(
+    semantic_packs: &[(String, String)],
+) -> Result<String, Vec<ApplicationDiagnostic>> {
+    let mut diags = Vec::new();
+    for (pack_id, content_hash) in semantic_packs {
+        if pack_id.is_empty() {
+            diags.push(ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                "semantic pack input has an empty pack id".to_string(),
+            ));
+        }
+        if !crate::application::envelope::is_hash(content_hash) {
+            diags.push(ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                format!(
+                    "semantic pack '{pack_id}' content hash '{content_hash}' is not a lowercase sha256:<hex> hash"
+                ),
+            ));
+        }
+    }
+    if diags.is_empty() {
+        crate::application::canonical::semantic_pack_set_hash(semantic_packs).map_err(|reason| {
+            vec![ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                format!("semantic pack inputs are invalid: {reason}"),
+            )]
+        })
+    } else {
+        Err(diags)
+    }
+}
+
 /// Build a Graph from the same resolved module set the application contract
 /// consumes (D3): one resolution, shared existing-concept identity, no
 /// independent module traversal.
+///
+/// Not part of the §9 fixed public boundary; exposed for identity proofs
+/// and diagnostics only.
+#[doc(hidden)]
 pub fn resolve_application_graph(
     entry_logical_path: &str,
     sources_json: &str,
@@ -133,11 +185,6 @@ fn source_set_hash(sources: &SourceMap) -> String {
             .map(|(id, src)| (id.as_str(), src.as_str())),
     )
     .expect("SourceMap::parse_json already rejected duplicate logical ids")
-}
-
-/// Reference §6 semantic-pack-set hash; Milestone 0 uses the empty set.
-fn semantic_pack_set_hash() -> String {
-    crate::application::canonical::semantic_pack_set_hash(&[]).expect("empty set has no duplicates")
 }
 
 // ---- contract construction ----
