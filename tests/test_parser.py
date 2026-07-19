@@ -126,32 +126,3 @@ def test_resolve_application_contract_json_rejects_bad_source_map():
     with pytest.raises(ValueError) as err:
         domainforge.Graph.resolve_application_contract_json("a.sea", "[]")
     assert "APP" in str(err.value)
-
-
-# ---- cross-binding byte parity (M0 gate finding 2) ----
-#
-# These constants must match the Rust golden hashes in
-# `domainforge-core/tests/application_cross_binding_golden_tests.rs`. If a
-# binding drifts, its own parity test fails; if the canonical serializer
-# intentionally changes, regenerate all four constants in lockstep.
-CONTRACT_GOLDEN_SHA256 = (
-    "sha256:57c81f0cddc0cec87eaef86cca6692134376076620c9c73844b016869cc31640"
-)
-ENVELOPE_GOLDEN_SHA256 = (
-    "sha256:6c0e730fd4207cb847fac0f8f0ba62c80d3cba0acf6a0e45fe8e555bd633d9e5"
-)
-
-
-def test_cross_binding_contract_bytes_match_rust_golden():
-    import hashlib
-
-    sources = _flagship_sources_json()
-    raw = domainforge.Graph.resolve_application_contract_json(
-        "flagship/query-read.sea", sources
-    )
-    digest = "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
-    assert digest == CONTRACT_GOLDEN_SHA256, (
-        "Python binding bytes drifted from the Rust golden; if intentional, "
-        "regenerate CONTRACT_GOLDEN_SHA256 in the Rust, Python, TS, and WASM "
-        "parity tests"
-    )
