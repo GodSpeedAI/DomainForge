@@ -1,0 +1,31 @@
+@namespace "invalid.app001"
+@version "0.1.0"
+
+entity "Widget" {
+    key widget_id: uuid
+    label: string
+}
+
+record MakeWidgetInput {
+    widget_id: uuid
+    label: string
+}
+
+record MakeWidgetOutput {
+    widget_id: uuid
+}
+
+operation make_widget {
+    intent "missing direction, wrong transaction pairing, no evidence"
+    actor anonymous
+    access public
+    input MakeWidgetInput
+    output MakeWidgetOutput
+    state Widget
+    effect creates Widget
+    transaction read_only
+    failure conflict for idempotency_conflict, concurrency_conflict "duplicate widget"
+    idempotency keyed_by widget_id
+    concurrency unique_key widget_id
+    lifecycle synchronous_request_response
+}

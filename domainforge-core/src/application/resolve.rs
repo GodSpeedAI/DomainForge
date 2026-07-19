@@ -7,7 +7,8 @@ use crate::application::diagnostic::{
     sort_diagnostics, ApplicationDiagnostic, ApplicationDiagnosticCode,
 };
 use crate::application::validate::{
-    check_duplicate_fields, check_entity_key, check_enum, check_record_defaults, DeclSite,
+    check_duplicate_fields, check_entity_key, check_enum, check_record_defaults, failure_kind,
+    validate_clause_shape, validate_failures, DeclSite,
 };
 use crate::concept_id::ConceptId;
 use crate::module::resolver::{resolve_source_map, ResolvedModuleSet, ResolvedSymbol, SourceMap};
@@ -329,39 +330,36 @@ fn build_contract(
                     });
                 }
             }
-            past::AstNode::Operation(decl) => {
-                // Task 7 scope: resolve input/output references (APP002/APP006).
-                // Full clause semantics and OperationContract lowering follow
-                // in the operation packet.
-                for clause in &decl.clauses {
-                    let (label, raw) = match clause {
-                        past::OperationClause::Input { reference } => ("input", reference),
-                        past::OperationClause::Output { reference } => ("output", reference),
-                        _ => continue,
-                    };
-                    let (alias, name) = split_symbol_ref(raw);
-                    match ctx.resolve_ref(symbol.module_index, alias, name) {
-                        None => diags.push(site.diag(
-                            ApplicationDiagnosticCode::App002,
-                            format!(
-                                "{label} '{raw}' of operation '{}' does not resolve in the symbol table",
-                                decl.name
-                            ),
-                        )),
-                        Some((_, "record")) => {}
-                        Some((_, slug)) => diags.push(site.diag(
-                            ApplicationDiagnosticCode::App006,
-                            format!(
-                                "{label} '{raw}' of operation '{}' resolves to {slug}; a record is required",
-                                decl.name
-                            ),
-                        )),
-                    }
-                }
-            }
+            // Operations lower in a second pass, after every record/entity
+            // contract they reference has been constructed.
+            past::AstNode::Operation(_) => {}
             _ => {}
         }
     }
+
+    let mut closure_codes: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut operations = Vec::new();
+    for symbol in set.symbols.values() {
+        let site = DeclSite {
+            logical_module_id: &symbol.origin.logical_module_id,
+            line: symbol.origin.line,
+            column: symbol.origin.column,
+        };
+        if let past::AstNode::Operation(decl) = ctx.decl_node(symbol) {
+            if let Some(op) = lower_operation(
+                &ctx,
+                &contract,
+                symbol,
+                decl,
+                site,
+                &mut closure_codes,
+                &mut diags,
+            ) {
+                operations.push(op);
+            }
+        }
+    }
+    contract.operations = operations;
 
     if diags.is_empty() {
         Ok(contract)
@@ -369,6 +367,589 @@ fn build_contract(
         sort_diagnostics(&mut diags);
         Err(diags)
     }
+}
+
+// ---- operation lowering (reference §4) ----
+
+fn field<'a>(fields: &'a [FieldContract], name: &str) -> Option<&'a FieldContract> {
+    fields.iter().find(|f| f.name == name)
+}
+
+/// Same field type and canonical constraint set (order-free).
+fn type_and_constraints_match(a: &FieldContract, b: &FieldContract) -> bool {
+    a.field_type == b.field_type
+        && a.constraints.len() == b.constraints.len()
+        && a.constraints.iter().all(|c| b.constraints.contains(c))
+}
+
+/// Same field type, optionality, and canonical constraint set.
+fn fields_compatible(a: &FieldContract, b: &FieldContract) -> bool {
+    type_and_constraints_match(a, b) && a.optional == b.optional
+}
+
+fn is_scalar(f: &FieldContract) -> bool {
+    matches!(f.field_type, FieldType::Scalar { .. })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn lower_operation(
+    ctx: &Ctx,
+    contract: &ApplicationContract,
+    symbol: &ResolvedSymbol,
+    decl: &past::OperationDecl,
+    site: DeclSite,
+    closure_codes: &mut std::collections::HashSet<String>,
+    diags: &mut Vec<ApplicationDiagnostic>,
+) -> Option<OperationContract> {
+    use past::OperationClause as C;
+
+    let defects = validate_clause_shape(&decl.clauses);
+    if !defects.is_empty() {
+        diags.push(site.diag(
+            ApplicationDiagnosticCode::App001,
+            format!(
+                "operation '{}' is not generation-ready: {}",
+                decl.name,
+                defects.join("; ")
+            ),
+        ));
+        return None;
+    }
+    let before = diags.len();
+
+    // Clause shape guarantees each of these appears exactly once.
+    let mut intent = String::new();
+    let mut actor_raw = "";
+    let mut access_clause: Option<&C> = None;
+    let mut input_raw = "";
+    let mut output_raw = "";
+    let mut state_raw = "";
+    let mut effect_kind_raw = "";
+    let mut effect_target_raw = "";
+    let mut transaction_raw = "";
+    let mut ast_failures: Vec<(String, Vec<FailureKind>, String)> = Vec::new();
+    let mut idem_clause: Option<&C> = None;
+    let mut conc_clause: Option<&C> = None;
+    for clause in &decl.clauses {
+        match clause {
+            C::Intent(text) => intent = text.clone(),
+            C::Actor { actor } => actor_raw = actor,
+            C::AccessPublic | C::AccessPolicyGoverned { .. } => access_clause = Some(clause),
+            C::Input { reference } => input_raw = reference,
+            C::Output { reference } => output_raw = reference,
+            C::State { reference } => state_raw = reference,
+            C::Effect { kind, reference } => {
+                effect_kind_raw = kind;
+                effect_target_raw = reference;
+            }
+            C::Transaction { kind } => transaction_raw = kind,
+            C::Failure {
+                code,
+                kinds,
+                message,
+            } => {
+                let mut mapped = Vec::new();
+                for raw in kinds {
+                    match failure_kind(raw) {
+                        Some(kind) => mapped.push(kind),
+                        None => diags.push(site.diag(
+                            ApplicationDiagnosticCode::App008,
+                            format!(
+                                "failure '{code}' of operation '{}' names unknown kind '{raw}'",
+                                decl.name
+                            ),
+                        )),
+                    }
+                }
+                ast_failures.push((code.clone(), mapped, message.clone()));
+            }
+            C::IdempotencyKeyed { .. }
+            | C::IdempotencyInherent
+            | C::IdempotencyNotApplicable { .. } => idem_clause = Some(clause),
+            C::ConcurrencyUnique { .. }
+            | C::ConcurrencyOptimistic { .. }
+            | C::ConcurrencyReadSnapshot => conc_clause = Some(clause),
+            C::Direction { .. }
+            | C::EvidenceOperationTrace
+            | C::LifecycleSynchronousRequestResponse => {}
+        }
+    }
+
+    let effect = match effect_kind_raw {
+        "creates" => EffectKind::Creates,
+        "mutates" => EffectKind::Mutates,
+        "reads" => EffectKind::Reads,
+        other => {
+            diags.push(site.diag(
+                ApplicationDiagnosticCode::App001,
+                format!(
+                    "effect '{other}' of operation '{}' is unsupported",
+                    decl.name
+                ),
+            ));
+            return None;
+        }
+    };
+    let transaction = match transaction_raw {
+        "single_aggregate" => TransactionBoundary::SingleAggregate,
+        _ => TransactionBoundary::ReadOnly, // pairing already validated
+    };
+
+    // Actor.
+    let actor = if actor_raw == "anonymous" {
+        ActorRef::Anonymous
+    } else {
+        let (alias, name) = split_symbol_ref(actor_raw);
+        match ctx.resolve_ref(symbol.module_index, alias, name) {
+            Some((role_symbol, "role")) => ActorRef::Role {
+                role: ConceptId::from_concept(
+                    &Ctx::namespace_of_symbol(role_symbol, "role", name),
+                    name,
+                ),
+            },
+            _ => {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App002,
+                    format!(
+                        "actor '{actor_raw}' of operation '{}' does not resolve to a role",
+                        decl.name
+                    ),
+                ));
+                ActorRef::Anonymous
+            }
+        }
+    };
+
+    // Input / output / state / effect target resolution.
+    let resolve_record = |label: &str, raw: &str, diags: &mut Vec<ApplicationDiagnostic>| {
+        let (alias, name) = split_symbol_ref(raw);
+        match ctx.resolve_ref(symbol.module_index, alias, name) {
+            Some((s, "record")) => contract
+                .records
+                .iter()
+                .find(|r| r.id.0 == s.qualified_id)
+                .map(|r| (s.qualified_id.clone(), r)),
+            Some((_, slug)) => {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App006,
+                    format!(
+                        "{label} '{raw}' of operation '{}' resolves to {slug}; a record is required",
+                        decl.name
+                    ),
+                ));
+                None
+            }
+            None => {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App002,
+                    format!(
+                        "{label} '{raw}' of operation '{}' does not resolve in the symbol table",
+                        decl.name
+                    ),
+                ));
+                None
+            }
+        }
+    };
+    let input = resolve_record("input", input_raw, diags);
+    let output = resolve_record("output", output_raw, diags);
+
+    let state = {
+        let (alias, name) = split_symbol_ref(state_raw);
+        match ctx.resolve_ref(symbol.module_index, alias, name) {
+            Some((s, "entity")) => {
+                if matches!(ctx.decl_node(s), past::AstNode::Entity { body: None, .. }) {
+                    diags.push(site.diag(
+                        ApplicationDiagnosticCode::App011,
+                        format!(
+                            "state '{state_raw}' of operation '{}' lacks a typed body",
+                            decl.name
+                        ),
+                    ));
+                    None
+                } else {
+                    let namespace = Ctx::namespace_of_symbol(s, "entity", name);
+                    let concept_id = ConceptId::from_concept(&namespace, name);
+                    contract
+                        .entities
+                        .iter()
+                        .find(|e| e.concept_id == concept_id)
+                        .map(|e| (s.qualified_id.clone(), e))
+                }
+            }
+            _ => {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App002,
+                    format!(
+                        "state '{state_raw}' of operation '{}' does not resolve to an entity",
+                        decl.name
+                    ),
+                ));
+                None
+            }
+        }
+    };
+    {
+        let (alias, name) = split_symbol_ref(effect_target_raw);
+        let target = ctx.resolve_ref(symbol.module_index, alias, name);
+        match (&state, target) {
+            (Some((state_qid, _)), Some((t, "entity"))) if t.qualified_id != *state_qid => {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App011,
+                    format!(
+                        "effect target '{effect_target_raw}' of operation '{}' differs from state '{state_raw}'",
+                        decl.name
+                    ),
+                ));
+            }
+            (Some(_), Some((_, "entity"))) => {}
+            (Some(_), _) => diags.push(site.diag(
+                ApplicationDiagnosticCode::App002,
+                format!(
+                    "effect target '{effect_target_raw}' of operation '{}' does not resolve to an entity",
+                    decl.name
+                ),
+            )),
+            (None, _) => {}
+        }
+    }
+
+    // Failures.
+    let input_has_constraints = input
+        .as_ref()
+        .is_some_and(|(_, r)| r.fields.iter().any(|f| !f.constraints.is_empty()));
+    let mut required_kinds = Vec::new();
+    if input_has_constraints {
+        required_kinds.push(FailureKind::InputValidation);
+    }
+    if matches!(effect, EffectKind::Reads | EffectKind::Mutates) {
+        required_kinds.push(FailureKind::MissingState);
+    }
+    if matches!(idem_clause, Some(C::IdempotencyKeyed { .. })) {
+        required_kinds.push(FailureKind::IdempotencyConflict);
+    }
+    if matches!(
+        conc_clause,
+        Some(C::ConcurrencyUnique { .. } | C::ConcurrencyOptimistic { .. })
+    ) {
+        required_kinds.push(FailureKind::ConcurrencyConflict);
+    }
+    validate_failures(
+        &decl.name,
+        &ast_failures,
+        &required_kinds,
+        closure_codes,
+        site,
+        diags,
+    );
+    let declared_codes: Vec<&str> = ast_failures.iter().map(|(c, _, _)| c.as_str()).collect();
+
+    // Strategies (APP009/APP010).
+    let strategy_field = |field_name: &str,
+                          want_int: bool,
+                          need_state: bool,
+                          diags: &mut Vec<ApplicationDiagnostic>| {
+        let Some((_, input_rec)) = &input else { return };
+        match field(&input_rec.fields, field_name) {
+            Some(f) if !f.optional && is_scalar(f) => {
+                if want_int
+                    && !matches!(
+                        f.field_type,
+                        FieldType::Scalar {
+                            scalar: ScalarType::Int
+                        }
+                    )
+                {
+                    diags.push(site.diag(
+                        ApplicationDiagnosticCode::App009,
+                        format!(
+                            "strategy field '{field_name}' of operation '{}' must be a required int",
+                            decl.name
+                        ),
+                    ));
+                }
+                if need_state {
+                    let compatible = state.as_ref().is_some_and(|(_, e)| {
+                        field(&e.fields, field_name).is_some_and(|sf| {
+                            sf.field_type == f.field_type && !sf.optional
+                        })
+                    });
+                    if state.is_some() && !compatible {
+                        diags.push(site.diag(
+                            ApplicationDiagnosticCode::App009,
+                            format!(
+                                "strategy field '{field_name}' of operation '{}' has no compatible required state field",
+                                decl.name
+                            ),
+                        ));
+                    }
+                }
+            }
+            _ => diags.push(site.diag(
+                ApplicationDiagnosticCode::App009,
+                format!(
+                    "strategy field '{field_name}' of operation '{}' must be a required scalar input field",
+                    decl.name
+                ),
+            )),
+        }
+    };
+    let pairing = |what: &str, diags: &mut Vec<ApplicationDiagnostic>| {
+        diags.push(site.diag(
+            ApplicationDiagnosticCode::App009,
+            format!(
+                "{what} of operation '{}' falls outside the §4 strategy/effect pairing",
+                decl.name
+            ),
+        ));
+    };
+    let idempotency = match (effect, idem_clause) {
+        (EffectKind::Creates | EffectKind::Mutates, Some(C::IdempotencyKeyed { field: f })) => {
+            strategy_field(f, false, false, diags);
+            IdempotencyStrategy::KeyedBy { field: f.clone() }
+        }
+        (EffectKind::Reads, Some(C::IdempotencyInherent)) => IdempotencyStrategy::Inherent,
+        (
+            EffectKind::Reads,
+            Some(C::IdempotencyNotApplicable {
+                reason,
+                explanation,
+            }),
+        ) => {
+            if reason != "read_only" {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App010,
+                    format!(
+                        "not_applicable reason '{reason}' on operation '{}' is not proven by its effect",
+                        decl.name
+                    ),
+                ));
+            }
+            IdempotencyStrategy::NotApplicable(NotApplicable {
+                explanation: explanation.clone(),
+            })
+        }
+        (_, Some(C::IdempotencyNotApplicable { .. })) => {
+            diags.push(site.diag(
+                ApplicationDiagnosticCode::App010,
+                format!(
+                    "not_applicable idempotency on write operation '{}' has no reachable proof",
+                    decl.name
+                ),
+            ));
+            IdempotencyStrategy::Inherent
+        }
+        _ => {
+            pairing("idempotency strategy", diags);
+            IdempotencyStrategy::Inherent
+        }
+    };
+    let concurrency = match (effect, conc_clause) {
+        (EffectKind::Creates, Some(C::ConcurrencyUnique { field: f })) => {
+            strategy_field(f, false, true, diags);
+            ConcurrencyStrategy::UniqueKey { field: f.clone() }
+        }
+        (EffectKind::Mutates, Some(C::ConcurrencyOptimistic { field: f })) => {
+            strategy_field(f, true, true, diags);
+            ConcurrencyStrategy::OptimisticVersion { field: f.clone() }
+        }
+        (EffectKind::Reads, Some(C::ConcurrencyReadSnapshot)) => ConcurrencyStrategy::ReadSnapshot,
+        _ => {
+            pairing("concurrency strategy", diags);
+            ConcurrencyStrategy::ReadSnapshot
+        }
+    };
+
+    // State lowering and output projection (APP011).
+    if let (Some((_, input_rec)), Some((_, entity))) = (&input, &state) {
+        let app011 = |msg: String, diags: &mut Vec<ApplicationDiagnostic>| {
+            diags.push(site.diag(ApplicationDiagnosticCode::App011, msg));
+        };
+        let key_lookup = |diags: &mut Vec<ApplicationDiagnostic>| match field(
+            &input_rec.fields,
+            &entity.key_field,
+        ) {
+            Some(f) if !f.optional => {}
+            _ => app011(
+                format!(
+                    "operation '{}' has no required input field matching entity key '{}'",
+                    decl.name, entity.key_field
+                ),
+                diags,
+            ),
+        };
+        match effect {
+            EffectKind::Creates => {
+                for sf in &entity.fields {
+                    match field(&input_rec.fields, &sf.name) {
+                        Some(inf) => {
+                            if !type_and_constraints_match(inf, sf) {
+                                app011(
+                                    format!(
+                                        "input field '{}' of operation '{}' is not compatible with its state field",
+                                        sf.name, decl.name
+                                    ),
+                                    diags,
+                                );
+                            } else if inf.optional && !sf.optional && sf.default.is_none() {
+                                app011(
+                                    format!(
+                                        "optional input field '{}' sources required state field of operation '{}' with no default",
+                                        sf.name, decl.name
+                                    ),
+                                    diags,
+                                );
+                            }
+                        }
+                        None if sf.default.is_none() && !sf.optional => app011(
+                            format!(
+                                "create of operation '{}' cannot construct required state field '{}'",
+                                decl.name, sf.name
+                            ),
+                            diags,
+                        ),
+                        None => {}
+                    }
+                }
+            }
+            EffectKind::Mutates => {
+                key_lookup(diags);
+                let strategy_fields: Vec<&str> = [
+                    match &idempotency {
+                        IdempotencyStrategy::KeyedBy { field } => Some(field.as_str()),
+                        _ => None,
+                    },
+                    match &concurrency {
+                        ConcurrencyStrategy::OptimisticVersion { field } => Some(field.as_str()),
+                        _ => None,
+                    },
+                ]
+                .into_iter()
+                .flatten()
+                .collect();
+                for inf in &input_rec.fields {
+                    if inf.name == entity.key_field || strategy_fields.contains(&inf.name.as_str())
+                    {
+                        continue;
+                    }
+                    match field(&entity.fields, &inf.name) {
+                        Some(sf) if fields_compatible(inf, sf) => {}
+                        Some(_) => app011(
+                            format!(
+                                "input field '{}' of operation '{}' is not compatible with its state field",
+                                inf.name, decl.name
+                            ),
+                            diags,
+                        ),
+                        None => app011(
+                            format!(
+                                "mutate of operation '{}' contains unmapped input field '{}'",
+                                decl.name, inf.name
+                            ),
+                            diags,
+                        ),
+                    }
+                }
+            }
+            EffectKind::Reads => key_lookup(diags),
+        }
+        if let Some((_, output_rec)) = &output {
+            for of in &output_rec.fields {
+                match field(&entity.fields, &of.name) {
+                    Some(sf) if fields_compatible(of, sf) => {}
+                    _ => app011(
+                        format!(
+                            "output field '{}' of operation '{}' cannot project a same-named compatible state field",
+                            of.name, decl.name
+                        ),
+                        diags,
+                    ),
+                }
+            }
+        }
+    }
+
+    // Access.
+    let access = match access_clause {
+        Some(C::AccessPolicyGoverned { bindings }) => {
+            let mut lowered = Vec::new();
+            for binding in bindings {
+                if binding.enforcement_point != "precondition" {
+                    diags.push(site.diag(
+                        ApplicationDiagnosticCode::App007,
+                        format!(
+                            "enforcement point '{}' on operation '{}' is reserved; only precondition is executable",
+                            binding.enforcement_point, decl.name
+                        ),
+                    ));
+                    continue;
+                }
+                let (alias, name) = split_symbol_ref(&binding.policy);
+                let policy = match ctx.resolve_ref(symbol.module_index, alias, name) {
+                    Some((s, "policy")) => {
+                        ConceptId::from_concept(&Ctx::namespace_of_symbol(s, "policy", name), name)
+                    }
+                    _ => {
+                        diags.push(site.diag(
+                            ApplicationDiagnosticCode::App007,
+                            format!(
+                                "policy '{}' bound by operation '{}' does not resolve",
+                                binding.policy, decl.name
+                            ),
+                        ));
+                        continue;
+                    }
+                };
+                if !declared_codes.contains(&binding.failure_code.as_str()) {
+                    diags.push(site.diag(
+                        ApplicationDiagnosticCode::App008,
+                        format!(
+                            "policy binding of operation '{}' names undeclared failure code '{}'",
+                            decl.name, binding.failure_code
+                        ),
+                    ));
+                }
+                lowered.push(PolicyBinding {
+                    policy,
+                    enforcement_point: EnforcementPoint::Precondition,
+                    failure_code: binding.failure_code.clone(),
+                });
+            }
+            AccessMode::PolicyGoverned { bindings: lowered }
+        }
+        _ => AccessMode::Public,
+    };
+
+    if diags.len() != before {
+        return None;
+    }
+    Some(OperationContract {
+        id: ApplicationSymbolId(symbol.qualified_id.clone()),
+        name: decl.name.clone(),
+        intent,
+        direction: Direction::Inbound,
+        actor,
+        access,
+        input: ApplicationSymbolId(input.map(|(id, _)| id).unwrap_or_default()),
+        output: ApplicationSymbolId(output.map(|(id, _)| id).unwrap_or_default()),
+        state: state
+            .map(|(_, e)| e.concept_id.clone())
+            .unwrap_or_else(|| ConceptId::from_concept("", "")),
+        effect,
+        transaction,
+        failures: ast_failures
+            .into_iter()
+            .map(|(code, kinds, meaning)| FailureContract {
+                code,
+                kinds,
+                meaning,
+            })
+            .collect(),
+        idempotency,
+        concurrency,
+        evidence: EvidenceKind::OperationTrace,
+        lifecycle: LifecycleKind::SynchronousRequestResponse,
+    })
 }
 
 fn resolve_fields(
