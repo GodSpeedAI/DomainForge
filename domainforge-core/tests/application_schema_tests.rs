@@ -58,15 +58,18 @@ fn contract_document_shares_the_envelope_closure_hash() {
 fn declarations_follow_kind_rank_and_modules_hash_semantics_only() {
     // The query module imports the command module, so its closure has both.
     let doc = resolve_semantic_envelope("flagship/query-read.sea", &flagship_sources()).unwrap();
-    let kinds: Vec<String> = doc
+    let kinds: Vec<(String, String)> = doc
         .envelope
         .semantic_declarations
         .iter()
         .map(|d| {
-            serde_json::to_value(&d.declaration).unwrap()["kind"]
-                .as_str()
-                .unwrap()
-                .to_string()
+            (
+                d.logical_module_id.clone(),
+                serde_json::to_value(&d.declaration).unwrap()["kind"]
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            )
         })
         .collect();
     let rank = |k: &str| {
@@ -91,7 +94,8 @@ fn declarations_follow_kind_rank_and_modules_hash_semantics_only() {
         .position(|x| x == &k)
         .unwrap()
     };
-    let ranks: Vec<usize> = kinds.iter().map(|k| rank(k)).collect();
+    // §6 closure order: logical module ID first, then kind rank.
+    let ranks: Vec<(&str, usize)> = kinds.iter().map(|(m, k)| (m.as_str(), rank(k))).collect();
     let mut sorted = ranks.clone();
     sorted.sort();
     assert_eq!(ranks, sorted);

@@ -2,6 +2,7 @@
 //! (reference §7/§8). Every reference resolves through
 //! `ResolvedModuleSet::symbols`; nothing scans the AST by name.
 
+use crate::application::canonical::nfc;
 use crate::application::contract::*;
 use crate::application::diagnostic::{
     sort_diagnostics, ApplicationDiagnostic, ApplicationDiagnosticCode,
@@ -359,13 +360,13 @@ pub(crate) fn build_contract(
                 check_enum(decl, site, &mut diags);
                 contract.enums.push(EnumContract {
                     id: ApplicationSymbolId(symbol.qualified_id.clone()),
-                    name: decl.name.clone(),
+                    name: nfc(&decl.name),
                     members: decl
                         .members
                         .iter()
                         .map(|m| EnumMember {
-                            name: m.name.clone(),
-                            wire: m.wire.clone(),
+                            name: nfc(&m.name),
+                            wire: nfc(&m.wire),
                         })
                         .collect(),
                 });
@@ -376,7 +377,7 @@ pub(crate) fn build_contract(
                 let fields = resolve_fields(&ctx, symbol, &decl.fields, false, site, &mut diags);
                 contract.records.push(RecordContract {
                     id: ApplicationSymbolId(symbol.qualified_id.clone()),
-                    name: decl.name.clone(),
+                    name: nfc(&decl.name),
                     fields,
                 });
             }
@@ -392,7 +393,7 @@ pub(crate) fn build_contract(
                     contract.entities.push(EntityContract {
                         concept_id: ctx.symbol_concept(symbol),
                         name: name.clone(),
-                        key_field,
+                        key_field: nfc(&key_field),
                         fields,
                     });
                 }
@@ -427,6 +428,13 @@ pub(crate) fn build_contract(
         }
     }
     contract.operations = operations;
+
+    // §6 closure order: contract collections are sets, sorted by canonical
+    // identity; only field/member/failure/binding lists keep authored order.
+    contract.enums.sort_by(|a, b| a.id.0.cmp(&b.id.0));
+    contract.records.sort_by(|a, b| a.id.0.cmp(&b.id.0));
+    contract.entities.sort_by_key(|e| e.concept_id.to_string());
+    contract.operations.sort_by(|a, b| a.id.0.cmp(&b.id.0));
 
     if diags.is_empty() {
         Ok(contract)
@@ -1032,8 +1040,8 @@ fn lower_operation(
     }
     Some(OperationContract {
         id: ApplicationSymbolId(symbol.qualified_id.clone()),
-        name: decl.name.clone(),
-        intent,
+        name: nfc(&decl.name),
+        intent: nfc(&intent),
         direction: Direction::Inbound,
         actor,
         access,
@@ -1049,7 +1057,7 @@ fn lower_operation(
             .map(|(code, kinds, meaning)| FailureContract {
                 code,
                 kinds,
-                meaning,
+                meaning: nfc(&meaning),
             })
             .collect(),
         idempotency,
@@ -1098,7 +1106,7 @@ fn resolve_fields(
                 None // record defaults already reported by check_record_defaults
             };
             Some(FieldContract {
-                name: field.name.clone(),
+                name: nfc(&field.name),
                 field_type,
                 optional: field.is_optional,
                 constraints,
@@ -1568,7 +1576,6 @@ fn resolve_default(
     site: DeclSite,
     diags: &mut Vec<ApplicationDiagnostic>,
 ) -> Option<TypedValue> {
-    use crate::application::canonical::nfc;
     let app003 = |msg: String, diags: &mut Vec<ApplicationDiagnostic>| {
         diags.push(site.diag(ApplicationDiagnosticCode::App003, msg));
     };

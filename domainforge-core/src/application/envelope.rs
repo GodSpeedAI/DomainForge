@@ -688,36 +688,67 @@ pub(crate) fn build_envelope(
         }
     }
 
-    declarations.sort_by(|a, b| (a.0, id_sort_key(&a.1.id)).cmp(&(b.0, id_sort_key(&b.1.id))));
+    // §6 closure order: logical module ID first, then kind rank, then
+    // canonical declaration ID — authored declaration order never survives.
+    declarations.sort_by(|a, b| {
+        (&a.1.logical_module_id, a.0, id_sort_key(&a.1.id)).cmp(&(
+            &b.1.logical_module_id,
+            b.0,
+            id_sort_key(&b.1.id),
+        ))
+    });
     let semantic_declarations: Vec<CanonicalSemanticDeclaration> =
         declarations.into_iter().map(|(_, d)| d).collect();
 
+    module_decl_hashes.sort_by(|a, b| a.0.cmp(&b.0));
     let modules = module_decl_hashes
         .into_iter()
-        .map(|(logical_id, namespace, payloads)| CanonicalModuleRef {
-            logical_id,
-            semantic_content_hash: compute_sha256(
-                canonical_json(&serde_json::Value::Array(payloads)).as_bytes(),
-            ),
-            namespace,
+        .map(|(logical_id, namespace, mut payloads)| {
+            // A module's semantic content hash covers its normalized payload
+            // set, not authored declaration order.
+            payloads.sort_by_key(canonical_json);
+            CanonicalModuleRef {
+                logical_id,
+                semantic_content_hash: compute_sha256(
+                    canonical_json(&serde_json::Value::Array(payloads)).as_bytes(),
+                ),
+                namespace,
+            }
         })
         .collect();
 
-    let resolved_references = collect_references(&semantic_declarations);
+    namespace_bindings.sort_by(
+        |a: &CanonicalNamespaceBinding, b: &CanonicalNamespaceBinding| {
+            (&a.namespace, &a.logical_id).cmp(&(&b.namespace, &b.logical_id))
+        },
+    );
+
+    let mut import_graph: Vec<CanonicalImportEdge> = set
+        .import_graph
+        .iter()
+        .map(|e| CanonicalImportEdge {
+            importer: e.importer.clone(),
+            imported: e.imported.clone(),
+        })
+        .collect();
+    import_graph.sort_by(|a, b| (&a.importer, &a.imported).cmp(&(&b.importer, &b.imported)));
+    import_graph.dedup();
+
+    let mut resolved_references = collect_references(&semantic_declarations);
+    resolved_references.sort_by_key(|r| {
+        (
+            id_sort_key(&r.source),
+            r.field_path.clone(),
+            canonical_json(&serde_json::to_value(&r.target).expect("target serializes")),
+        )
+    });
 
     CanonicalSemanticEnvelope {
         language_schema_version: LANGUAGE_SCHEMA_VERSION.to_string(),
         canonicalization_version: CANONICALIZATION_VERSION.to_string(),
         compiler_interpretation_version: INTERPRETATION_VERSION.to_string(),
         modules,
-        import_graph: set
-            .import_graph
-            .iter()
-            .map(|e| CanonicalImportEdge {
-                importer: e.importer.clone(),
-                imported: e.imported.clone(),
-            })
-            .collect(),
+        import_graph,
         namespace_bindings,
         semantic_packs: Vec::new(), // Milestone 0: empty pack set
         semantic_declarations,
