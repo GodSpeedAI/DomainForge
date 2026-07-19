@@ -196,3 +196,44 @@ fn authored_source_app015_is_distinguishable_from_persisted_artifact_app015() {
     );
     assert_eq!(d.context.field_path.as_deref(), Some("/producer/name"));
 }
+
+/// Gate finding 7: public synchronous entry points enforce a source-map
+/// resource budget before doing any parse/resolution work, denying
+/// memory/latency DoS at the conversational-application boundary.
+#[test]
+fn public_entry_points_reject_oversized_source_maps() {
+    use domainforge_core::application::{
+        resolve_application_contract, resolve_semantic_envelope, SOURCE_MAP_MAX_BYTES,
+        SOURCE_MAP_MAX_MODULES,
+    };
+
+    // Over the byte budget: a JSON object with one giant string value.
+    let padding = "x".repeat(SOURCE_MAP_MAX_BYTES);
+    let oversized = format!("{{\"main.sea\":\"{padding}\"}}");
+    let err = resolve_application_contract("main.sea", &oversized).unwrap_err();
+    assert_eq!(first(&err).code, ApplicationDiagnosticCode::App015);
+    assert_eq!(
+        first(&err).context.document_kind.as_deref(),
+        Some("authored_source")
+    );
+
+    // Over the module-count budget: many small modules.
+    let mut entries: Vec<String> = Vec::new();
+    for i in 0..=(SOURCE_MAP_MAX_MODULES + 1) {
+        entries.push(format!("\"m{i}.sea\":\"@namespace \\\"n{i}\\\"\""));
+    }
+    let many_modules = format!("{{{}}}", entries.join(","));
+    let err = resolve_semantic_envelope("m0.sea", &many_modules).unwrap_err();
+    assert_eq!(first(&err).code, ApplicationDiagnosticCode::App015);
+    assert_eq!(
+        first(&err).context.document_kind.as_deref(),
+        Some("authored_source")
+    );
+
+    // Under both budgets: the smallest valid source map resolves.
+    resolve_application_contract(
+        "main.sea",
+        &json!({"main.sea": "@namespace \"t\"\nrecord R { id: uuid }"}).to_string(),
+    )
+    .expect("small source map is under budget");
+}

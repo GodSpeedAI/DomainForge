@@ -24,5 +24,6 @@ pub use envelope::{
 pub use policy_context::{evaluate_precondition, EvaluationResult};
 pub use resolve::{
     resolve_application_contract, resolve_application_contract_json,
-    resolve_application_contract_with_packs, resolve_application_graph,
+    resolve_application_contract_with_packs, resolve_application_graph, SOURCE_MAP_MAX_BYTES,
+    SOURCE_MAP_MAX_MODULES,
 };

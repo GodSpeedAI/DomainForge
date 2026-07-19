@@ -22,6 +22,73 @@ pub const APPLICATION_CONTRACT_SCHEMA_VERSION: &str = "domainforge-application-c
 pub const LANGUAGE_SCHEMA_VERSION: &str = "domainforge-ast/v3";
 pub const INTERPRETATION_VERSION: &str = "domainforge-interpretation/v1";
 
+/// Public-bound resource budgets for untrusted source maps (gate finding 7).
+/// A source map larger than this in entries or bytes is APP015 before any
+/// parse or resolution work runs. Generous enough for the flagship fixtures
+/// (two modules, ~2 KB), tight enough to deny conversational-workflow DoS.
+pub const SOURCE_MAP_MAX_MODULES: usize = 256;
+pub const SOURCE_MAP_MAX_BYTES: usize = 2 * 1024 * 1024; // 2 MiB
+
+/// Reject oversized source maps before parsing (APP015, authored source).
+pub(crate) fn enforce_source_map_budget(
+    sources_json: &str,
+) -> Result<(), Vec<ApplicationDiagnostic>> {
+    let mut diags = Vec::new();
+    if sources_json.len() > SOURCE_MAP_MAX_BYTES {
+        diags.push(
+            ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                format!(
+                    "sources_json is {} bytes, exceeds the {}-byte public boundary budget",
+                    sources_json.len(),
+                    SOURCE_MAP_MAX_BYTES
+                ),
+            )
+            .with_document_kind("authored_source"),
+        );
+    }
+    // Cheap module-count estimate: count string-literal openings (each
+    // key:value pair has at minimum two — key + value). The full structural
+    // parse happens next; this only gates DoS before it.
+    let mut quote_count = 0usize;
+    let mut in_string = false;
+    let mut escape = false;
+    for ch in sources_json.chars() {
+        if in_string {
+            if escape {
+                escape = false;
+            } else if ch == '\\' {
+                escape = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+        } else if ch == '"' {
+            in_string = true;
+            quote_count += 1;
+        }
+    }
+    // Two string-literal openings per key:value pair is a safe lower bound:
+    // extra string literals inside source text only reduce the pair count.
+    let approx_pairs = quote_count.saturating_div(2);
+    if approx_pairs > SOURCE_MAP_MAX_MODULES {
+        diags.push(
+            ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                format!(
+                    "sources_json has approximately {} modules, exceeds the {}-module public boundary budget",
+                    approx_pairs, SOURCE_MAP_MAX_MODULES
+                ),
+            )
+            .with_document_kind("authored_source"),
+        );
+    }
+    if diags.is_empty() {
+        Ok(())
+    } else {
+        Err(diags)
+    }
+}
+
 /// Resolve an in-memory source map into a validated application contract
 /// document, or the complete deterministic diagnostic list. Milestone 0
 /// binds the empty semantic-pack set at the fixed public boundary (§9).
@@ -40,6 +107,7 @@ pub fn resolve_application_contract_with_packs(
     sources_json: &str,
     semantic_packs: &[(String, String)],
 ) -> Result<ApplicationContractDocument, Vec<ApplicationDiagnostic>> {
+    enforce_source_map_budget(sources_json)?;
     let pack_set_hash = validated_pack_set_hash(semantic_packs)?;
     let sources = SourceMap::parse_json(sources_json)?;
     let resolved = resolve_source_map(entry_logical_path, &sources)?;
@@ -119,6 +187,7 @@ pub fn resolve_application_graph(
     entry_logical_path: &str,
     sources_json: &str,
 ) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
+    enforce_source_map_budget(sources_json)?;
     let sources = SourceMap::parse_json(sources_json)?;
     let set = resolve_source_map(entry_logical_path, &sources)?;
     build_graph_from_set(&set)

@@ -910,6 +910,7 @@ pub fn resolve_semantic_envelope_with_packs(
     semantic_packs: &[(String, String)],
 ) -> Result<CanonicalSemanticEnvelopeDocument, Vec<ApplicationDiagnostic>> {
     use crate::module::resolver::{resolve_source_map, SourceMap};
+    crate::application::resolve::enforce_source_map_budget(sources_json)?;
     let pack_set_hash = crate::application::resolve::validated_pack_set_hash(semantic_packs)?;
     let sources = SourceMap::parse_json(sources_json)?;
     let resolved = resolve_source_map(entry_logical_path, &sources)?;
