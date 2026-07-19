@@ -551,7 +551,8 @@ pub(crate) fn resolve_source_map(
                 let mut d = ApplicationDiagnostic::new(
                     ApplicationDiagnosticCode::App015,
                     format!("module '{logical_id}' failed to parse: {e}"),
-                );
+                )
+                .with_document_kind("authored_source");
                 d.context.logical_module_id = Some(logical_id.clone());
                 diags.push(d);
             }

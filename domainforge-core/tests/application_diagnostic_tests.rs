@@ -154,3 +154,45 @@ fn diagnostics_carry_source_evidence_and_error_severity() {
     assert_eq!(d.context.logical_module_id.as_deref(), Some("a.sea"));
     assert!(d.context.line.is_some() && d.context.column.is_some());
 }
+
+/// Gate finding 1 (last bullet): authored-source APP015 paths (parse, graph
+/// build, malformed pack inputs) are distinguishable from persisted-artifact
+/// APP015 paths via `document_kind`, so the two are not conflated.
+#[test]
+fn authored_source_app015_is_distinguishable_from_persisted_artifact_app015() {
+    use domainforge_core::application::validate_application_contract_document_json;
+
+    // Authored-source APP015: an unparseable module carries document_kind
+    // = "authored_source" and the logical_module_id.
+    let diags = resolve("a.sea", json!({"a.sea": "this is not SEA"}));
+    let d = first(&diags);
+    assert_eq!(d.code, ApplicationDiagnosticCode::App015);
+    assert_eq!(d.context.document_kind.as_deref(), Some("authored_source"));
+    assert_eq!(d.context.logical_module_id.as_deref(), Some("a.sea"));
+
+    // Persisted-artifact APP015: a tampered document carries document_kind
+    // = "application_contract" or "canonical_semantic_envelope" and a JSON
+    // Pointer in field_path, never "authored_source".
+    let mut value = serde_json::json!({
+        "schema_version": "domainforge-application-contract/v1",
+        "producer": {"name": "domainforge-core", "version": "0.0.0"},
+        "inputs": {
+            "source_set_hash": format!("sha256:{}", "0".repeat(64)),
+            "semantic_pack_set_hash": format!("sha256:{}", "0".repeat(64)),
+            "language_schema_version": "domainforge-ast/v3",
+            "interpretation_version": "domainforge-interpretation/v1",
+        },
+        "self_hash": format!("sha256:{}", "0".repeat(64)),
+        "semantic_closure_hash": format!("sha256:{}", "0".repeat(64)),
+        "contract": {"enums": [], "records": [], "entities": [], "operations": []},
+    });
+    value["producer"]["name"] = json!("attacker");
+    let diags = validate_application_contract_document_json(&value.to_string()).unwrap_err();
+    let d = first(&diags);
+    assert_eq!(d.code, ApplicationDiagnosticCode::App015);
+    assert_eq!(
+        d.context.document_kind.as_deref(),
+        Some("application_contract")
+    );
+    assert_eq!(d.context.field_path.as_deref(), Some("/producer/name"));
+}

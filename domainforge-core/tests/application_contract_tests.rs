@@ -300,6 +300,44 @@ fn not_applicable_is_legal_only_on_reads() {
     ));
 }
 
+/// APP010 (M0 gate finding 1): `not_applicable` rejects write operations
+/// outright. The `read_only` reason invariant is enforced earlier by the
+/// grammar (`na_reason = { ^"read_only" }`), so only write-op rejection is
+/// behaviorally testable through the public resolver.
+#[test]
+fn app010_rejects_not_applicable_on_write_operations() {
+    let src = "@namespace \"t\"\n\
+entity \"E\" {\n    key id: uuid\n    n: int\n}\n\
+record In {\n    id: uuid\n    n: int\n}\n\
+record Out {\n    id: uuid\n}\n\
+operation op {\n    intent \"create\"\n    direction inbound\n    actor anonymous\n    access public\n    input In\n    output Out\n    state E\n    effect creates E\n    transaction single_aggregate\n    failure conflict for idempotency_conflict, concurrency_conflict \"dup\"\n    idempotency not_applicable(read_only, \"no retry\")\n    concurrency unique_key id\n    evidence operation_trace\n    lifecycle synchronous_request_response\n}\n";
+    let err = resolve_single(src).unwrap_err();
+    let d = err
+        .iter()
+        .find(|d| d.code == domainforge_core::application::ApplicationDiagnosticCode::App010)
+        .expect("expected APP010 for not_applicable on a write op");
+    assert_eq!(d.context.logical_module_id.as_deref(), Some("main.sea"));
+    assert!(d.context.line.is_some() && d.context.column.is_some());
+}
+
+/// APP009 (M0 gate finding 1): `keyed_by`/`unique_key` strategy fields must
+/// be required scalar input fields of the right type; an optional or wrong-
+/// typed field is rejected.
+#[test]
+fn app009_rejects_non_int_or_optional_strategy_fields() {
+    // unique_key references an optional field — APP009 fires.
+    let src = "@namespace \"t\"\n\
+entity \"E\" {\n    key id: uuid\n}\n\
+record In {\n    id: uuid\n    version: int optional\n}\n\
+record Out {\n    id: uuid\n}\n\
+operation op {\n    intent \"create\"\n    direction inbound\n    actor anonymous\n    access public\n    input In\n    output Out\n    state E\n    effect creates E\n    transaction single_aggregate\n    failure conflict for idempotency_conflict, concurrency_conflict \"dup\"\n    idempotency keyed_by id\n    concurrency optimistic_version version\n    evidence operation_trace\n    lifecycle synchronous_request_response\n}\n";
+    let err = resolve_single(src).unwrap_err();
+    assert!(
+        codes(&err).contains(&"APP009".to_string()),
+        "expected APP009 for optional optimistic_version field, got {err:?}"
+    );
+}
+
 #[test]
 fn app001_missing_semantics_fixture_fails() {
     let sources = serde_json::json!({ "main.sea": include_str!(

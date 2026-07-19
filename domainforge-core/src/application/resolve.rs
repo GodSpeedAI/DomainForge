@@ -75,18 +75,24 @@ pub(crate) fn validated_pack_set_hash(
     let mut diags = Vec::new();
     for (pack_id, content_hash) in semantic_packs {
         if pack_id.is_empty() {
-            diags.push(ApplicationDiagnostic::new(
-                ApplicationDiagnosticCode::App015,
-                "semantic pack input has an empty pack id".to_string(),
-            ));
+            diags.push(
+                ApplicationDiagnostic::new(
+                    ApplicationDiagnosticCode::App015,
+                    "semantic pack input has an empty pack id".to_string(),
+                )
+                .with_document_kind("authored_source"),
+            );
         }
         if !crate::application::envelope::is_hash(content_hash) {
-            diags.push(ApplicationDiagnostic::new(
-                ApplicationDiagnosticCode::App015,
-                format!(
-                    "semantic pack '{pack_id}' content hash '{content_hash}' is not a lowercase sha256:<hex> hash"
-                ),
-            ));
+            diags.push(
+                ApplicationDiagnostic::new(
+                    ApplicationDiagnosticCode::App015,
+                    format!(
+                        "semantic pack '{pack_id}' content hash '{content_hash}' is not a lowercase sha256:<hex> hash"
+                    ),
+                )
+                .with_document_kind("authored_source"),
+            );
         }
     }
     if diags.is_empty() {
@@ -94,7 +100,8 @@ pub(crate) fn validated_pack_set_hash(
             vec![ApplicationDiagnostic::new(
                 ApplicationDiagnosticCode::App015,
                 format!("semantic pack inputs are invalid: {reason}"),
-            )]
+            )
+            .with_document_kind("authored_source")]
         })
     } else {
         Err(diags)
@@ -151,7 +158,8 @@ pub(crate) fn build_graph_from_set(
             vec![ApplicationDiagnostic::new(
                 ApplicationDiagnosticCode::App015,
                 format!("resolved closure failed graph construction: {e}"),
-            )]
+            )
+            .with_document_kind("authored_source")]
         })?;
         graph.absorb(converted);
     }

@@ -179,6 +179,14 @@ impl ApplicationDiagnostic {
         self.context.column = Some(column);
         self
     }
+
+    /// Mark this APP015 as originating from an authored source map (parse,
+    /// graph build, pack-set input) rather than from persisted-artifact
+    /// validation. The two APP015 paths are distinguishable in context.
+    pub fn with_document_kind(mut self, kind: &str) -> Self {
+        self.context.document_kind = Some(kind.to_string());
+        self
+    }
 }
 
 /// Deterministic diagnostic order: logical ID, line, column, then APP code.
