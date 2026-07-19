@@ -14,8 +14,6 @@ use crate::concept_id::ConceptId;
 use crate::module::resolver::{resolve_source_map, ResolvedModuleSet, ResolvedSymbol, SourceMap};
 use crate::parser::ast as past;
 use crate::policy::Expression;
-use serde::Serialize;
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -32,7 +30,7 @@ pub fn resolve_application_contract(
     let sources = SourceMap::parse_json(sources_json)?;
     let resolved = resolve_source_map(entry_logical_path, &sources)?;
     let contract = build_contract(&resolved)?;
-    Ok(ApplicationContractDocument {
+    let mut doc = ApplicationContractDocument {
         schema_version: APPLICATION_CONTRACT_SCHEMA_VERSION.to_string(),
         producer: ProducerIdentity {
             name: "domainforge-core".to_string(),
@@ -44,12 +42,14 @@ pub fn resolve_application_contract(
             language_schema_version: LANGUAGE_SCHEMA_VERSION.to_string(),
             interpretation_version: INTERPRETATION_VERSION.to_string(),
         },
-        // ponytail: placeholder zero hashes until the canonicalization packet
-        // (Tasks 11/12) computes self_hash and semantic_closure_hash.
+        // ponytail: placeholder zero closure hash until the envelope packet
+        // (Task 12) computes semantic_closure_hash.
         self_hash: zero_hash(),
         semantic_closure_hash: zero_hash(),
         contract,
-    })
+    };
+    doc.self_hash = crate::application::canonical::document_self_hash(&doc);
+    Ok(doc)
 }
 
 /// JSON boundary twin of [`resolve_application_contract`].
@@ -70,45 +70,20 @@ fn zero_hash() -> String {
     format!("sha256:{}", "0".repeat(64))
 }
 
-fn sha256_prefixed(bytes: &[u8]) -> String {
-    format!("sha256:{:x}", Sha256::digest(bytes))
-}
-
 /// Reference §6 source-set hash over the authored source map.
 fn source_set_hash(sources: &SourceMap) -> String {
-    #[derive(Serialize)]
-    struct Entry<'a> {
-        logical_id: &'a str,
-        source_utf8: &'a str,
-    }
-    #[derive(Serialize)]
-    struct SourceSet<'a> {
-        schema_version: &'a str,
-        sources: Vec<Entry<'a>>,
-    }
-    let mut entries: Vec<Entry> = sources
-        .0
-        .iter()
-        .map(|(id, source)| Entry {
-            logical_id: id,
-            source_utf8: source,
-        })
-        .collect();
-    entries.sort_by(|a, b| a.logical_id.cmp(b.logical_id));
-    let set = SourceSet {
-        schema_version: "domainforge-source-set/v1",
-        sources: entries,
-    };
-    sha256_prefixed(
-        serde_json::to_string(&set)
-            .expect("source set serializes")
-            .as_bytes(),
+    crate::application::canonical::source_set_hash(
+        sources
+            .0
+            .iter()
+            .map(|(id, src)| (id.as_str(), src.as_str())),
     )
+    .expect("SourceMap::parse_json already rejected duplicate logical ids")
 }
 
 /// Reference §6 semantic-pack-set hash; Milestone 0 uses the empty set.
 fn semantic_pack_set_hash() -> String {
-    sha256_prefixed(br#"{"packs":[],"schema_version":"domainforge-semantic-pack-set/v1"}"#)
+    crate::application::canonical::semantic_pack_set_hash(&[]).expect("empty set has no duplicates")
 }
 
 // ---- contract construction ----

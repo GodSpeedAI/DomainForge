@@ -338,6 +338,69 @@ fn output_projection_must_match_state_fields() {
     assert!(codes(&resolve_single(&bad_out).unwrap_err()).contains(&"APP011".to_string()));
 }
 
+// ---- canonicalization (plan Task 11) ----
+
+#[test]
+fn source_set_hash_is_framed_sorted_and_path_independent() {
+    use domainforge_core::application::source_set_hash;
+    let a = source_set_hash([("b.sea", "Entity \"B\""), ("a.sea", "Entity \"A\"")]).unwrap();
+    let b = source_set_hash([("a.sea", "Entity \"A\""), ("b.sea", "Entity \"B\"")]).unwrap();
+    assert_eq!(a, b);
+    assert!(a.starts_with("sha256:"));
+    assert_eq!(a.len(), 71);
+    // NFC-equivalent logical IDs hash identically; duplicates are rejected.
+    let composed = source_set_hash([("caf\u{e9}.sea", "x")]).unwrap();
+    let decomposed = source_set_hash([("cafe\u{301}.sea", "x")]).unwrap();
+    assert_eq!(composed, decomposed);
+    assert!(source_set_hash([("a.sea", "x"), ("a.sea", "y")]).is_err());
+}
+
+#[test]
+fn canonical_decimal_strips_trailing_zeros() {
+    use domainforge_core::application::canonical_decimal;
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
+    assert_eq!(
+        canonical_decimal(Decimal::from_str("125.00").unwrap()),
+        "125"
+    );
+    assert_eq!(canonical_decimal(Decimal::from_str("0.00").unwrap()), "0");
+    assert_eq!(canonical_decimal(Decimal::from_str("1.50").unwrap()), "1.5");
+}
+
+#[test]
+fn input_fingerprint_is_key_order_and_scale_independent() {
+    use domainforge_core::application::{input_fingerprint, TypedValue};
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
+    let mut a = indexmap::IndexMap::new();
+    a.insert(
+        "total".to_string(),
+        TypedValue::Decimal(Decimal::from_str("125.00").unwrap()),
+    );
+    a.insert("id".to_string(), TypedValue::Int(1));
+    let mut b = indexmap::IndexMap::new();
+    b.insert("id".to_string(), TypedValue::Int(1));
+    b.insert(
+        "total".to_string(),
+        TypedValue::Decimal(Decimal::from_str("125").unwrap()),
+    );
+    assert_eq!(input_fingerprint(&a), input_fingerprint(&b));
+    assert!(input_fingerprint(&a).starts_with("sha256:"));
+}
+
+#[test]
+fn document_self_hash_omits_only_self_hash() {
+    use domainforge_core::application::document_self_hash;
+    let doc = resolve_fixture_contract("flagship/command-write.sea").unwrap();
+    assert_eq!(doc.self_hash, document_self_hash(&doc));
+    assert_ne!(doc.self_hash, format!("sha256:{}", "0".repeat(64)));
+    // The self-hash covers every other field, including inputs hashes.
+    let mut tampered = doc.clone();
+    tampered.inputs.source_set_hash = format!("sha256:{}", "1".repeat(64));
+    assert_ne!(document_self_hash(&tampered), doc.self_hash);
+}
+
 #[test]
 fn invalid_enum_default_wire_is_app003() {
     let err = resolve_single(
