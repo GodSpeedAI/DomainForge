@@ -615,3 +615,107 @@ fn malformed_semantic_packs_are_app015() {
         .iter()
         .all(|d| d.code == domainforge_core::application::ApplicationDiagnosticCode::App015));
 }
+
+/// Gate finding 4 (D10): a real semantic pack built by `build_semantic_pack`
+/// flows through the public boundary. The pack's `(pack_id, content_hash)`
+/// pair is exactly what the resolver consumes and what the envelope emits.
+#[test]
+fn a_real_built_semantic_pack_flows_through_the_boundary() {
+    use domainforge_core::semantic_pack::{
+        build_semantic_pack, ApprovalState, ConceptDef, ConceptDefinition, ConceptKind,
+        ConceptStatus, PackBuildInput, ReviewDecision, ReviewRecord,
+    };
+
+    let supplier = ConceptDef {
+        id: "supplier".to_string(),
+        canonical_name: "Supplier".to_string(),
+        kind: ConceptKind::Entity,
+        status: ConceptStatus::Active,
+        definition: ConceptDefinition {
+            text: "A party that provides goods or services".to_string(),
+            definition_hash: String::new(),
+            decision_ref: "dec_supplier".to_string(),
+        },
+        owner: "owner@test.com".to_string(),
+        source_refs: vec![],
+        examples: vec![],
+        counterexamples: vec![],
+        allowed_predicates: vec![],
+        valid_contexts: vec![],
+    };
+    let review = ReviewRecord {
+        decision_id: "dec_supplier".to_string(),
+        subject_type: "concept".to_string(),
+        subject_id: "supplier".to_string(),
+        decision: ReviewDecision::Approve,
+        rationale: "Review for supplier".to_string(),
+        reviewer: "reviewer@test.com".to_string(),
+        reviewed_at: "2026-06-07T00:00:00Z".to_string(),
+        definition_hash: "sha256:placeholder".to_string(),
+        previous_definition_hash: None,
+        new_definition_hash: None,
+    };
+    let input = PackBuildInput {
+        org_id: "test-org".to_string(),
+        domain_id: "test-domain".to_string(),
+        pack_version: "1.0.0".to_string(),
+        meaning_version: "1.0.0".to_string(),
+        approval: ApprovalState::Candidate,
+        concepts: vec![supplier],
+        relations: vec![],
+        metrics: vec![],
+        dimensions: vec![],
+        units: vec![],
+        aliases: vec![],
+        mapping_rules: vec![],
+        review_records: vec![review],
+        previous_pack: None,
+        allow_first_approved_version: false,
+        source_graph_hash: "sha256:test".to_string(),
+    };
+    let build_output = build_semantic_pack(input).expect("real pack builds");
+    assert!(
+        build_output.pack_content_hash.starts_with("sha256:"),
+        "real built pack must carry a content_hash"
+    );
+
+    let packs = vec![(
+        build_output.pack.pack_id.clone(),
+        build_output.pack_content_hash.clone(),
+    )];
+    let contract = resolve_application_contract_with_packs(
+        "flagship/command-write.sea",
+        &flagship_sources(),
+        &packs,
+    )
+    .expect("real pack crosses the boundary");
+    let envelope = resolve_semantic_envelope_with_packs(
+        "flagship/command-write.sea",
+        &flagship_sources(),
+        &packs,
+    )
+    .expect("real pack crosses the boundary");
+
+    // The envelope's semantic_packs preserve the real pack id and hash.
+    assert_eq!(envelope.envelope.semantic_packs.len(), 1);
+    assert_eq!(
+        envelope.envelope.semantic_packs[0].pack_id,
+        build_output.pack.pack_id
+    );
+    assert_eq!(
+        envelope.envelope.semantic_packs[0].content_hash,
+        build_output.pack_content_hash
+    );
+
+    // The pack-set hash is deterministic and equal across both documents.
+    assert_eq!(
+        contract.inputs.semantic_pack_set_hash,
+        envelope.inputs.semantic_pack_set_hash
+    );
+
+    // Both documents round-trip through the persisted-envelope validators.
+    let contract_json = serde_json::to_string(&contract).unwrap();
+    validate_application_contract_document_json(&contract_json).unwrap();
+    let envelope_json = serde_json::to_string(&envelope).unwrap();
+    validate_semantic_envelope_document_json(&envelope_json).unwrap();
+}
