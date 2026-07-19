@@ -101,6 +101,26 @@ impl Graph {
         self.entities.len()
     }
 
+    /// Merge another graph's nodes into this one. Callers pass graphs built
+    /// from disjoint namespaces, so key overlap cannot occur; the resolver
+    /// rejects duplicate qualified IDs before conversion.
+    pub(crate) fn absorb(&mut self, other: Graph) {
+        self.entities.extend(other.entities);
+        self.roles.extend(other.roles);
+        self.resources.extend(other.resources);
+        self.flows.extend(other.flows);
+        self.relations.extend(other.relations);
+        self.instances.extend(other.instances);
+        self.entity_instances.extend(other.entity_instances);
+        self.policies.extend(other.policies);
+        self.patterns.extend(other.patterns);
+        self.concept_changes.extend(other.concept_changes);
+        self.metrics.extend(other.metrics);
+        self.mappings.extend(other.mappings);
+        self.projections.extend(other.projections);
+        self.entity_roles.extend(other.entity_roles);
+    }
+
     pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
         let id = entity.id().clone();
         if self.entities.contains_key(&id) {

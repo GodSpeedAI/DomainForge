@@ -67,27 +67,42 @@ pub fn resolve_application_graph(
 pub(crate) fn build_graph_from_set(
     set: &ResolvedModuleSet,
 ) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
-    let mut merged = set
-        .modules
-        .first()
-        .expect("a resolved set contains its entry module")
-        .ast
-        .clone();
-    // ponytail: closures spanning several namespaces adopt the first module's
-    // metadata, matching the native ModuleResolver merge; per-declaration
-    // namespaces land when a multi-namespace flagship exists.
-    merged.declarations = set
-        .modules
-        .iter()
-        .flat_map(|module| module.ast.declarations.iter().cloned())
-        .collect();
-    crate::parser::ast::ast_to_graph_with_options(merged, &crate::parser::ParseOptions::default())
+    // One conversion per effective namespace, so every declaration keeps its
+    // authoring module's concept identity (D3). Namespace-less modules use
+    // their logical ID, exactly like contract resolution.
+    let mut groups: indexmap::IndexMap<String, crate::parser::ast::Ast> = indexmap::IndexMap::new();
+    for module in &set.modules {
+        let namespace = module
+            .ast
+            .metadata
+            .namespace
+            .clone()
+            .unwrap_or_else(|| module.logical_id.clone());
+        let group = groups.entry(namespace.clone()).or_insert_with(|| {
+            let mut ast = module.ast.clone();
+            ast.metadata.namespace = Some(namespace);
+            ast.declarations = Vec::new();
+            ast
+        });
+        group
+            .declarations
+            .extend(module.ast.declarations.iter().cloned());
+    }
+    let mut graph = crate::graph::Graph::new();
+    for (_, ast) in groups {
+        let converted = crate::parser::ast::ast_to_graph_with_options(
+            ast,
+            &crate::parser::ParseOptions::default(),
+        )
         .map_err(|e| {
             vec![ApplicationDiagnostic::new(
                 ApplicationDiagnosticCode::App015,
                 format!("resolved closure failed graph construction: {e}"),
             )]
-        })
+        })?;
+        graph.absorb(converted);
+    }
+    Ok(graph)
 }
 
 /// JSON boundary twin of [`resolve_application_contract`].
@@ -159,28 +174,30 @@ impl<'a> Ctx<'a> {
                 )
             })
             .collect();
+        // The resolver pushed exactly one import edge per import statement,
+        // in statement order; a resolved set therefore maps each authored
+        // import to its edge positionally — no specifier re-matching (D3).
+        let mut edges_by_importer: HashMap<&str, Vec<&str>> = HashMap::new();
+        for edge in &set.import_graph {
+            edges_by_importer
+                .entry(edge.importer.as_str())
+                .or_default()
+                .push(edge.imported.as_str());
+        }
         let bindings = set
             .modules
             .iter()
             .map(|module| {
                 let mut named = HashMap::new();
                 let mut wildcard = HashMap::new();
-                for import in &module.ast.metadata.imports {
-                    // Resolve the import target through the already-validated
-                    // import graph edge; specifiers were checked by the resolver.
-                    let target_ns = set
-                        .import_graph
-                        .iter()
-                        .find(|e| e.importer == module.logical_id)
-                        .and_then(|_| {
-                            resolve_specifier_namespace(
-                                set,
-                                &module.logical_id,
-                                &import.from_module,
-                                &namespace_of,
-                            )
-                        });
-                    let Some(target_ns) = target_ns else { continue };
+                let edges = edges_by_importer.get(module.logical_id.as_str());
+                for (index, import) in module.ast.metadata.imports.iter().enumerate() {
+                    let Some(target_id) = edges.and_then(|e| e.get(index).copied()) else {
+                        continue;
+                    };
+                    let Some(target_ns) = namespace_of.get(target_id) else {
+                        continue;
+                    };
                     match &import.specifier {
                         past::ImportSpecifier::Named(items) => {
                             for item in items {
@@ -236,12 +253,21 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    fn namespace_of_symbol(symbol: &ResolvedSymbol, slug: &str, name: &str) -> String {
-        symbol
-            .qualified_id
-            .strip_suffix(&format!(".{slug}.{name}"))
-            .unwrap_or(&symbol.qualified_id)
-            .to_string()
+    fn module_namespace(&self, module_index: usize) -> String {
+        let module = &self.set.modules[module_index];
+        module
+            .ast
+            .metadata
+            .namespace
+            .clone()
+            .unwrap_or_else(|| module.logical_id.clone())
+    }
+
+    /// Exact resolved identity of a symbol: its authoring module's namespace
+    /// plus its declared name — never a local alias (D3).
+    fn symbol_concept(&self, symbol: &ResolvedSymbol) -> ConceptId {
+        let name = declared_name(self.decl_node(symbol)).unwrap_or_default();
+        ConceptId::from_concept(&self.module_namespace(symbol.module_index), name)
     }
 
     fn decl_node(&self, symbol: &ResolvedSymbol) -> &past::AstNode {
@@ -254,28 +280,20 @@ impl<'a> Ctx<'a> {
     }
 }
 
-fn resolve_specifier_namespace(
-    set: &ResolvedModuleSet,
-    importer: &str,
-    specifier: &str,
-    namespace_of: &HashMap<&str, String>,
-) -> Option<String> {
-    // The resolver recorded exactly one edge per resolved import; recover the
-    // target by re-checking which imported module the specifier denotes.
-    set.import_graph
-        .iter()
-        .filter(|e| e.importer == importer)
-        .map(|e| e.imported.as_str())
-        .find(|imported| {
-            if specifier.starts_with("./") || specifier.starts_with("../") {
-                imported.ends_with(specifier.trim_start_matches("./").trim_start_matches("../"))
-            } else if specifier == "std" || specifier.starts_with("std:") {
-                *imported == specifier
-            } else {
-                namespace_of.get(imported).map(String::as_str) == Some(specifier)
-            }
-        })
-        .and_then(|id| namespace_of.get(id).cloned())
+/// The name a declaration itself declares (concept identity input).
+fn declared_name(node: &past::AstNode) -> Option<&str> {
+    match node {
+        past::AstNode::Entity { name, .. }
+        | past::AstNode::Role { name, .. }
+        | past::AstNode::Pattern { name, .. }
+        | past::AstNode::Policy { name, .. }
+        | past::AstNode::Dimension { name } => Some(name),
+        past::AstNode::UnitDeclaration { symbol, .. } => Some(symbol),
+        past::AstNode::Record(decl) => Some(&decl.name),
+        past::AstNode::Enum(decl) => Some(&decl.name),
+        past::AstNode::Operation(decl) => Some(&decl.name),
+        _ => None,
+    }
 }
 
 /// Split a raw `symbol_ref` text (`Name` or `alias.Name`) into parts.
@@ -334,9 +352,8 @@ pub(crate) fn build_contract(
                 let key_field = check_entity_key(name, &body.fields, site, &mut diags);
                 let fields = resolve_fields(&ctx, symbol, &body.fields, true, site, &mut diags);
                 if let Some(key_field) = key_field {
-                    let namespace = Ctx::namespace_of_symbol(symbol, "entity", name);
                     contract.entities.push(EntityContract {
-                        concept_id: ConceptId::from_concept(&namespace, name),
+                        concept_id: ctx.symbol_concept(symbol),
                         name: name.clone(),
                         key_field,
                         fields,
@@ -515,10 +532,7 @@ fn lower_operation(
         let (alias, name) = split_symbol_ref(actor_raw);
         match ctx.resolve_ref(symbol.module_index, alias, name) {
             Some((role_symbol, "role")) => ActorRef::Role {
-                role: ConceptId::from_concept(
-                    &Ctx::namespace_of_symbol(role_symbol, "role", name),
-                    name,
-                ),
+                role: ctx.symbol_concept(role_symbol),
             },
             _ => {
                 diags.push(site.diag(
@@ -581,8 +595,7 @@ fn lower_operation(
                     ));
                     None
                 } else {
-                    let namespace = Ctx::namespace_of_symbol(s, "entity", name);
-                    let concept_id = ConceptId::from_concept(&namespace, name);
+                    let concept_id = ctx.symbol_concept(s);
                     contract
                         .entities
                         .iter()
@@ -944,7 +957,7 @@ fn lower_operation(
                                 ));
                             }
                         }
-                        ConceptId::from_concept(&Ctx::namespace_of_symbol(s, "policy", name), name)
+                        ctx.symbol_concept(s)
                     }
                     _ => {
                         diags.push(site.diag(
@@ -1098,10 +1111,7 @@ fn resolve_field_type(
         past::FieldType::Quantity(r) => {
             match ctx.resolve_ref(module_index, r.alias.as_deref(), &r.symbol) {
                 Some((symbol, "unit")) => Some(FieldType::Quantity {
-                    unit: ConceptId::from_concept(
-                        &Ctx::namespace_of_symbol(symbol, "unit", &r.symbol),
-                        &r.symbol,
-                    ),
+                    unit: ctx.symbol_concept(symbol),
                 }),
                 _ => {
                     unknown(diags, &format!("quantity unit '{}'", r.symbol));
@@ -1112,10 +1122,7 @@ fn resolve_field_type(
         past::FieldType::Ref(r) => {
             match ctx.resolve_ref(module_index, r.alias.as_deref(), &r.symbol) {
                 Some((symbol, "entity")) => Some(FieldType::EntityRef {
-                    entity: ConceptId::from_concept(
-                        &Ctx::namespace_of_symbol(symbol, "entity", &r.symbol),
-                        &r.symbol,
-                    ),
+                    entity: ctx.symbol_concept(symbol),
                 }),
                 Some(_) => {
                     diags.push(site.diag(
@@ -1365,10 +1372,7 @@ fn resolve_constraints(
                 let (alias, name) = split_symbol_ref(raw);
                 match ctx.resolve_ref(module_index, alias, name) {
                     Some((symbol, "pattern")) => resolved.push(FieldConstraint::Pattern {
-                        pattern: ConceptId::from_concept(
-                            &Ctx::namespace_of_symbol(symbol, "pattern", name),
-                            name,
-                        ),
+                        pattern: ctx.symbol_concept(symbol),
                     }),
                     _ => app012(
                         format!(
@@ -1428,7 +1432,7 @@ fn quantity_unit_info(
         return None;
     };
     Some((
-        Ctx::namespace_of_symbol(symbol, "unit", &r.symbol),
+        ctx.module_namespace(symbol.module_index),
         *factor,
         base_unit.clone(),
     ))
