@@ -1,6 +1,6 @@
 # ADR-013 Gate B Adversarial Review
 
-Date: 2026-07-18  
+Date: 2026-07-18
 Outcome: Technical blockers corrected; ADR-013 and amendments accepted by the
 DomainForge repository maintainer on 2026-07-18; ratification commit `1320fed`.
 
