@@ -52,6 +52,44 @@ pub fn resolve_application_contract(
     Ok(doc)
 }
 
+/// Build a Graph from the same resolved module set the application contract
+/// consumes (D3): one resolution, shared existing-concept identity, no
+/// independent module traversal.
+pub fn resolve_application_graph(
+    entry_logical_path: &str,
+    sources_json: &str,
+) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
+    let sources = SourceMap::parse_json(sources_json)?;
+    let set = resolve_source_map(entry_logical_path, &sources)?;
+    build_graph_from_set(&set)
+}
+
+pub(crate) fn build_graph_from_set(
+    set: &ResolvedModuleSet,
+) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
+    let mut merged = set
+        .modules
+        .first()
+        .expect("a resolved set contains its entry module")
+        .ast
+        .clone();
+    // ponytail: closures spanning several namespaces adopt the first module's
+    // metadata, matching the native ModuleResolver merge; per-declaration
+    // namespaces land when a multi-namespace flagship exists.
+    merged.declarations = set
+        .modules
+        .iter()
+        .flat_map(|module| module.ast.declarations.iter().cloned())
+        .collect();
+    crate::parser::ast::ast_to_graph_with_options(merged, &crate::parser::ParseOptions::default())
+        .map_err(|e| {
+            vec![ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                format!("resolved closure failed graph construction: {e}"),
+            )]
+        })
+}
+
 /// JSON boundary twin of [`resolve_application_contract`].
 pub fn resolve_application_contract_json(
     entry_logical_path: &str,

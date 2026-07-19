@@ -3242,7 +3242,13 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                     );
                     match registry.get_unit(symbol) {
                         Ok(existing) => {
-                            if existing != &unit {
+                            // Conflict on semantic fields only; a redeclaration
+                            // matching a preloaded unit's dimension/factor/base
+                            // is compatible even if display names differ.
+                            if existing.dimension() != unit.dimension()
+                                || existing.base_factor() != unit.base_factor()
+                                || existing.base_unit() != unit.base_unit()
+                            {
                                 return Err(ParseError::GrammarError(format!(
                                     "Conflicting unit '{}' already registered (existing: dimension={}, base_factor={}, base_unit={}; new: dimension={}, base_factor={}, base_unit={})",
                                     symbol,

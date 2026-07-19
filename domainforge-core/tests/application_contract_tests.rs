@@ -338,6 +338,53 @@ fn output_projection_must_match_state_fields() {
     assert!(codes(&resolve_single(&bad_out).unwrap_err()).contains(&"APP011".to_string()));
 }
 
+// ---- shared Graph/contract ownership (plan Task 13) ----
+
+fn flagship_sources_json() -> String {
+    serde_json::json!({
+        "flagship/command-write.sea": include_str!(
+            "../../fixtures/application_generation/flagship/command-write.sea"),
+        "flagship/query-read.sea": include_str!(
+            "../../fixtures/application_generation/flagship/query-read.sea"),
+    })
+    .to_string()
+}
+
+#[test]
+fn graph_and_contract_share_order_and_role_concept_ids() {
+    use domainforge_core::application::{resolve_application_graph, ActorRef};
+    let sources = flagship_sources_json();
+    let doc = resolve_fixture_contract("flagship/command-write.sea").unwrap();
+    let graph = resolve_application_graph("flagship/command-write.sea", &sources).unwrap();
+    let order = doc
+        .contract
+        .entities
+        .iter()
+        .find(|e| e.name == "Order")
+        .unwrap();
+    assert!(graph.has_entity(&order.concept_id));
+    let place = operation(&doc, "place_order");
+    let ActorRef::Role { role } = &place.actor else {
+        panic!("place_order must have the Customer actor");
+    };
+    assert!(graph.get_role(role).is_some());
+}
+
+#[test]
+fn diamond_imports_build_one_graph_without_duplicates() {
+    use domainforge_core::application::resolve_application_graph;
+    use domainforge_core::concept_id::ConceptId;
+    let sources = serde_json::json!({
+        "base.sea": "@namespace \"d\"\nexport entity \"Base\" {\n    key id: uuid\n}\n",
+        "left.sea": "@namespace \"d\"\nimport { Base } from \"./base.sea\"\nexport record L {\n    id: uuid\n}\n",
+        "right.sea": "@namespace \"d\"\nimport { Base } from \"./base.sea\"\nexport record R {\n    id: uuid\n}\n",
+        "top.sea": "@namespace \"d\"\nimport { L } from \"./left.sea\"\nimport { R } from \"./right.sea\"\n",
+    })
+    .to_string();
+    let graph = resolve_application_graph("top.sea", &sources).unwrap();
+    assert!(graph.has_entity(&ConceptId::from_concept("d", "Base")));
+}
+
 // ---- canonicalization (plan Task 11) ----
 
 #[test]

@@ -22,4 +22,6 @@ pub use envelope::{
     CanonicalSemanticEnvelopeDocument,
 };
 pub use policy_context::{evaluate_precondition, EvaluationResult};
-pub use resolve::{resolve_application_contract, resolve_application_contract_json};
+pub use resolve::{
+    resolve_application_contract, resolve_application_contract_json, resolve_application_graph,
+};
