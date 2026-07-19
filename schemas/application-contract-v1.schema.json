@@ -14,6 +14,24 @@
   ],
   "properties": {
     "schema_version": { "const": "domainforge-application-contract/v1" },
+    "producer": { "$ref": "#/definitions/producer" },
+    "inputs": { "$ref": "#/definitions/inputs" },
+    "self_hash": { "$ref": "#/definitions/hash" },
+    "semantic_closure_hash": { "$ref": "#/definitions/hash" },
+    "contract": { "$ref": "#/definitions/application_contract" }
+  },
+  "definitions": {
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "concept_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "application_symbol_id": { "type": "string", "minLength": 1 },
+    "decimal": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|\\+00:00)$"
+    },
     "producer": {
       "type": "object",
       "additionalProperties": false,
@@ -39,21 +57,534 @@
         "interpretation_version": { "type": "string", "minLength": 1 }
       }
     },
-    "self_hash": { "$ref": "#/definitions/hash" },
-    "semantic_closure_hash": { "$ref": "#/definitions/hash" },
-    "contract": {
+    "application_contract": {
       "type": "object",
       "additionalProperties": false,
       "required": ["enums", "records", "entities", "operations"],
       "properties": {
-        "enums": { "type": "array" },
-        "records": { "type": "array" },
-        "entities": { "type": "array" },
-        "operations": { "type": "array" }
+        "enums": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/enum_contract" }
+        },
+        "records": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/record_contract" }
+        },
+        "entities": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/entity_contract" }
+        },
+        "operations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/operation_contract" }
+        }
+      }
+    },
+    "enum_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "wire"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "wire": { "type": "string", "minLength": 1 }
+      }
+    },
+    "enum_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "members"],
+      "properties": {
+        "id": { "$ref": "#/definitions/application_symbol_id" },
+        "name": { "type": "string", "minLength": 1 },
+        "members": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/enum_member" }
+        }
+      }
+    },
+    "record_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "fields"],
+      "properties": {
+        "id": { "$ref": "#/definitions/application_symbol_id" },
+        "name": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/field_contract" }
+        }
+      }
+    },
+    "entity_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["concept_id", "name", "key_field", "fields"],
+      "properties": {
+        "concept_id": { "$ref": "#/definitions/concept_id" },
+        "name": { "type": "string", "minLength": 1 },
+        "key_field": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/field_contract" }
+        }
+      }
+    },
+    "field_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "field_type", "optional", "constraints"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "field_type": { "$ref": "#/definitions/field_type" },
+        "optional": { "type": "boolean" },
+        "constraints": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/field_constraint" }
+        },
+        "default": { "$ref": "#/definitions/typed_value" }
+      }
+    },
+    "field_type": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "scalar" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scalar"],
+              "properties": {
+                "scalar": {
+                  "enum": ["string", "int", "decimal", "bool", "timestamp", "uuid"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "quantity" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["unit"],
+              "properties": { "unit": { "$ref": "#/definitions/concept_id" } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "entity_ref" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["entity"],
+              "properties": { "entity": { "$ref": "#/definitions/concept_id" } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "enum" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["symbol"],
+              "properties": {
+                "symbol": { "$ref": "#/definitions/application_symbol_id" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "list" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["element"],
+              "properties": { "element": { "$ref": "#/definitions/field_type" } }
+            }
+          }
+        }
+      ]
+    },
+    "bounded_length": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "field_constraint": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "enum": ["min", "max", "exclusive_min", "exclusive_max"] },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["value"],
+              "properties": { "value": { "$ref": "#/definitions/decimal" } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": {
+              "enum": ["min_length", "max_length", "min_items", "max_items"]
+            },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["value"],
+              "properties": { "value": { "$ref": "#/definitions/bounded_length" } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "pattern" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["pattern"],
+              "properties": { "pattern": { "$ref": "#/definitions/concept_id" } }
+            }
+          }
+        }
+      ]
+    },
+    "typed_value": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "string" },
+            "data": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "int" },
+            "data": { "type": "integer" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "decimal" },
+            "data": { "$ref": "#/definitions/decimal" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "bool" },
+            "data": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "timestamp" },
+            "data": { "$ref": "#/definitions/timestamp" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "uuid" },
+            "data": { "$ref": "#/definitions/concept_id" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "quantity" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["base_value", "unit"],
+              "properties": {
+                "base_value": { "$ref": "#/definitions/decimal" },
+                "unit": { "$ref": "#/definitions/concept_id" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "entity_ref" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["entity", "key"],
+              "properties": {
+                "entity": { "$ref": "#/definitions/concept_id" },
+                "key": { "$ref": "#/definitions/typed_value" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "enum" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["symbol", "wire"],
+              "properties": {
+                "symbol": { "$ref": "#/definitions/application_symbol_id" },
+                "wire": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "list" },
+            "data": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/typed_value" }
+            }
+          }
+        }
+      ]
+    },
+    "actor_ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "anonymous" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "role" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["role"],
+              "properties": { "role": { "$ref": "#/definitions/concept_id" } }
+            }
+          }
+        }
+      ]
+    },
+    "policy_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "enforcement_point", "failure_code"],
+      "properties": {
+        "policy": { "$ref": "#/definitions/concept_id" },
+        "enforcement_point": { "const": "precondition" },
+        "failure_code": { "type": "string", "minLength": 1 }
+      }
+    },
+    "access_mode": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "public" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "policy_governed" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bindings"],
+              "properties": {
+                "bindings": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/policy_binding" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "failure_kind": {
+      "enum": [
+        "input_validation",
+        "policy",
+        "missing_state",
+        "idempotency_conflict",
+        "concurrency_conflict"
+      ]
+    },
+    "failure_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "kinds", "meaning"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "kinds": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/failure_kind" }
+        },
+        "meaning": { "type": "string", "minLength": 1 }
+      }
+    },
+    "idempotency_strategy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "keyed_by" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field"],
+              "properties": { "field": { "type": "string", "minLength": 1 } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "inherent" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "const": "not_applicable" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["explanation"],
+              "properties": {
+                "explanation": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "concurrency_strategy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": { "enum": ["unique_key", "optimistic_version"] },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field"],
+              "properties": { "field": { "type": "string", "minLength": 1 } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "read_snapshot" } }
+        }
+      ]
+    },
+    "operation_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "intent",
+        "direction",
+        "actor",
+        "access",
+        "input",
+        "output",
+        "state",
+        "effect",
+        "transaction",
+        "failures",
+        "idempotency",
+        "concurrency",
+        "evidence",
+        "lifecycle"
+      ],
+      "properties": {
+        "id": { "$ref": "#/definitions/application_symbol_id" },
+        "name": { "type": "string", "minLength": 1 },
+        "intent": { "type": "string", "minLength": 1 },
+        "direction": { "enum": ["inbound", "outbound", "internal"] },
+        "actor": { "$ref": "#/definitions/actor_ref" },
+        "access": { "$ref": "#/definitions/access_mode" },
+        "input": { "$ref": "#/definitions/application_symbol_id" },
+        "output": { "$ref": "#/definitions/application_symbol_id" },
+        "state": { "$ref": "#/definitions/concept_id" },
+        "effect": { "enum": ["creates", "mutates", "reads"] },
+        "transaction": { "enum": ["single_aggregate", "read_only"] },
+        "failures": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/failure_contract" }
+        },
+        "idempotency": { "$ref": "#/definitions/idempotency_strategy" },
+        "concurrency": { "$ref": "#/definitions/concurrency_strategy" },
+        "evidence": { "const": "operation_trace" },
+        "lifecycle": { "const": "synchronous_request_response" }
       }
     }
-  },
-  "definitions": {
-    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
   }
 }

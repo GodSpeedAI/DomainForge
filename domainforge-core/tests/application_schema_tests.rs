@@ -253,3 +253,136 @@ fn documents_satisfy_their_published_json_schemas() {
     let compiled = jsonschema::JSONSchema::compile(&contract_schema).unwrap();
     assert!(!compiled.is_valid(&bad));
 }
+
+type Mutation = Box<dyn Fn(&mut serde_json::Value)>;
+
+/// Gate finding 5: every array member and nested object is typed; malformed
+/// scalars, unknown fields, missing fields, and wrong types must not validate.
+#[test]
+fn strict_schemas_reject_malformed_nested_documents() {
+    let contract_schema: serde_json::Value = serde_json::from_str(include_str!(
+        "../../schemas/application-contract-v1.schema.json"
+    ))
+    .unwrap();
+    let envelope_schema: serde_json::Value = serde_json::from_str(include_str!(
+        "../../schemas/canonical-semantic-envelope-v1.schema.json"
+    ))
+    .unwrap();
+    let contract = serde_json::to_value(
+        resolve_application_contract("flagship/command-write.sea", &flagship_sources()).unwrap(),
+    )
+    .unwrap();
+    let envelope = serde_json::to_value(envelope_for(&flagship_sources())).unwrap();
+
+    // (mutation label, pointer-applied mutation) pairs against the contract.
+    let contract_vectors: Vec<(&str, Mutation)> = vec![
+        (
+            "scalar enum member",
+            Box::new(|v| v["contract"]["enums"][0] = json!(42)),
+        ),
+        (
+            "unknown nested field",
+            Box::new(|v| v["contract"]["records"][0]["surprise"] = json!(1)),
+        ),
+        (
+            "missing operation field",
+            Box::new(|v| {
+                v["contract"]["operations"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("intent");
+            }),
+        ),
+        (
+            "wrong scalar type",
+            Box::new(|v| v["contract"]["enums"][0]["members"][0]["wire"] = json!(5)),
+        ),
+        (
+            "bad field_type kind",
+            Box::new(|v| {
+                v["contract"]["records"][0]["fields"][0]["field_type"] =
+                    json!({"kind": "bogus", "data": {}});
+            }),
+        ),
+        (
+            "non-uuid concept id",
+            Box::new(|v| v["contract"]["entities"][0]["concept_id"] = json!("Order")),
+        ),
+        (
+            "unclosed effect enum",
+            Box::new(|v| v["contract"]["operations"][0]["effect"] = json!("destroys")),
+        ),
+        (
+            "malformed constraint member",
+            Box::new(|v| {
+                v["contract"]["records"][0]["fields"][0]["constraints"] = json!([{"kind": "min"}]);
+            }),
+        ),
+    ];
+    let compiled = jsonschema::JSONSchema::compile(&contract_schema).unwrap();
+    assert!(compiled.is_valid(&contract));
+    for (label, mutate) in contract_vectors {
+        let mut bad = contract.clone();
+        mutate(&mut bad);
+        assert!(
+            !compiled.is_valid(&bad),
+            "contract schema accepted: {label}"
+        );
+    }
+
+    let envelope_vectors: Vec<(&str, Mutation)> = vec![
+        (
+            "scalar declaration member",
+            Box::new(|v| v["envelope"]["semantic_declarations"][0] = json!("junk")),
+        ),
+        (
+            "bad module hash",
+            Box::new(|v| {
+                v["envelope"]["modules"][0]["semantic_content_hash"] = json!("sha256:XYZ");
+            }),
+        ),
+        (
+            "empty import edge",
+            Box::new(|v| v["envelope"]["import_graph"] = json!([{}])),
+        ),
+        (
+            "malformed pack ref",
+            Box::new(|v| v["envelope"]["semantic_packs"] = json!([{"pack_id": "p"}])),
+        ),
+        (
+            "untyped namespace binding",
+            Box::new(|v| v["envelope"]["namespace_bindings"] = json!([17])),
+        ),
+        (
+            "reference without target",
+            Box::new(|v| {
+                v["envelope"]["resolved_references"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("target");
+            }),
+        ),
+        (
+            "malformed nested contract",
+            Box::new(|v| {
+                v["envelope"]["application_contract"]["operations"] = json!([{"id": "x"}]);
+            }),
+        ),
+        (
+            "unknown declaration kind",
+            Box::new(|v| {
+                v["envelope"]["semantic_declarations"][0]["declaration"]["kind"] = json!("mystery");
+            }),
+        ),
+    ];
+    let compiled = jsonschema::JSONSchema::compile(&envelope_schema).unwrap();
+    assert!(compiled.is_valid(&envelope));
+    for (label, mutate) in envelope_vectors {
+        let mut bad = envelope.clone();
+        mutate(&mut bad);
+        assert!(
+            !compiled.is_valid(&bad),
+            "envelope schema accepted: {label}"
+        );
+    }
+}
