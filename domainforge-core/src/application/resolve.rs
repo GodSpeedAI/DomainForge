@@ -887,6 +887,50 @@ fn lower_operation(
                 let (alias, name) = split_symbol_ref(&binding.policy);
                 let policy = match ctx.resolve_ref(symbol.module_index, alias, name) {
                     Some((s, "policy")) => {
+                        if let past::AstNode::Policy {
+                            metadata,
+                            expression,
+                            ..
+                        } = ctx.decl_node(s)
+                        {
+                            if metadata.kind != Some(past::PolicyKind::Constraint) {
+                                diags.push(site.diag(
+                                    ApplicationDiagnosticCode::App007,
+                                    format!(
+                                        "policy '{}' bound by operation '{}' is not a constraint policy",
+                                        binding.policy, decl.name
+                                    ),
+                                ));
+                            }
+                            let input_fields: Vec<&str> = input
+                                .as_ref()
+                                .map(|(_, r)| r.fields.iter().map(|f| f.name.as_str()).collect())
+                                .unwrap_or_default();
+                            let state_fields: Option<Vec<&str>> = state
+                                .as_ref()
+                                .map(|(_, e)| e.fields.iter().map(|f| f.name.as_str()).collect());
+                            let mut resolve_role = |raw: &str| {
+                                let (alias, name) = split_symbol_ref(raw);
+                                matches!(
+                                    ctx.resolve_ref(s.module_index, alias, name),
+                                    Some((_, "role"))
+                                )
+                            };
+                            for defect in crate::application::policy_context::validate_policy_subset(
+                                expression,
+                                &input_fields,
+                                state_fields.as_deref(),
+                                &mut resolve_role,
+                            ) {
+                                diags.push(site.diag(
+                                    ApplicationDiagnosticCode::App007,
+                                    format!(
+                                        "policy '{}' bound by operation '{}' is not evaluable: {defect}",
+                                        binding.policy, decl.name
+                                    ),
+                                ));
+                            }
+                        }
                         ConceptId::from_concept(&Ctx::namespace_of_symbol(s, "policy", name), name)
                     }
                     _ => {
