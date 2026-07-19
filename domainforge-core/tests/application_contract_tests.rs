@@ -338,6 +338,116 @@ fn output_projection_must_match_state_fields() {
     assert!(codes(&resolve_single(&bad_out).unwrap_err()).contains(&"APP011".to_string()));
 }
 
+// ---- Milestone 0 stop gate (plan Task 15) ----
+//
+// Reference coverage matrix (docs/reference/sea-application-contract.md):
+//   §2  grammar/partial AST      -> application_parser_tests.rs
+//   §4  operation semantics      -> command_and_query_lower_to_the_closed_v01_semantics,
+//                                   app001_*, failure_defects_are_app008,
+//                                   strategy_effect_mismatches_are_app009,
+//                                   not_applicable_is_legal_only_on_reads,
+//                                   create_without_required_state_source_is_app011,
+//                                   output_projection_must_match_state_fields
+//   §4  policy subset/evaluator  -> application_policy_tests.rs
+//   §5  diagnostics registry     -> application_diagnostic_tests.rs
+//   §6  canonicalization         -> source_set_hash_is_framed_sorted_and_path_independent,
+//                                   canonical_decimal_strips_trailing_zeros,
+//                                   input_fingerprint_is_key_order_and_scale_independent,
+//                                   document_self_hash_omits_only_self_hash,
+//                                   semantic_pack_compat_tests.rs
+//   §6/§8 envelope               -> application_schema_tests.rs
+//   §7  import/identity          -> module resolver unit tests,
+//                                   resolves_flagship_closure_through_relative_import,
+//                                   diamond_imports_build_one_graph_without_duplicates,
+//                                   application_diagnostic_tests.rs (APP014 reasons)
+//   §8  public types             -> application_public_types_tests.rs
+//   §9  bindings                 -> tests/test_parser.py,
+//                                   typescript-tests/native-binding.test.ts,
+//                                   domainforge-core/tests/wasm_tests.rs
+//   §10 compatibility            -> application_compatibility_tests.rs, printer_tests.rs
+//   §13 traceability             -> fixed_logical_source_set_is_byte_deterministic,
+//                                   d9_flagship_contract_matches_the_accepted_document
+
+#[test]
+fn fixed_logical_source_set_is_byte_deterministic() {
+    use domainforge_core::application::resolve_application_contract_json;
+    let sources = flagship_sources_json();
+    let first = resolve_application_contract_json("flagship/query-read.sea", &sources).unwrap();
+    let second = resolve_application_contract_json("flagship/query-read.sea", &sources).unwrap();
+    assert_eq!(first.as_bytes(), second.as_bytes());
+    let doc: ApplicationContractDocument = serde_json::from_str(&first).unwrap();
+    let again: ApplicationContractDocument = serde_json::from_str(&second).unwrap();
+    assert_eq!(doc.semantic_closure_hash, again.semantic_closure_hash);
+}
+
+#[test]
+fn d9_flagship_contract_matches_the_accepted_document() {
+    use domainforge_core::application::{
+        ActorRef, EnforcementPoint, FailureKind, FieldType, TypedValue,
+    };
+    let doc = resolve_fixture_contract("flagship/command-write.sea").unwrap();
+    let place = operation(&doc, "place_order");
+
+    // Defaulted status on the Order aggregate.
+    let order = doc
+        .contract
+        .entities
+        .iter()
+        .find(|e| e.name == "Order")
+        .unwrap();
+    let status = order.fields.iter().find(|f| f.name == "status").unwrap();
+    assert!(matches!(
+        &status.default,
+        Some(TypedValue::Enum { wire, .. }) if wire == "placed"
+    ));
+    assert!(matches!(&status.field_type, FieldType::Enum { symbol }
+        if symbol.0 == "flagship.orders.enum.OrderStatus"));
+
+    // Failure mapping: kinds may share one declared code.
+    let conflict = place
+        .failures
+        .iter()
+        .find(|f| f.code == "idempotency_conflict")
+        .unwrap();
+    assert_eq!(
+        conflict.kinds,
+        vec![
+            FailureKind::IdempotencyConflict,
+            FailureKind::ConcurrencyConflict
+        ]
+    );
+
+    // Policy binding at the precondition with the declared failure code.
+    let AccessMode::PolicyGoverned { bindings } = &place.access else {
+        panic!("place_order is policy-governed");
+    };
+    assert_eq!(bindings.len(), 1);
+    assert!(matches!(
+        bindings[0].enforcement_point,
+        EnforcementPoint::Precondition
+    ));
+    assert_eq!(bindings[0].failure_code, "order_limit_exceeded");
+    assert!(matches!(&place.actor, ActorRef::Role { .. }));
+
+    // State/effect target the Order aggregate.
+    assert_eq!(place.state, order.concept_id);
+
+    // Public query output projects only non-sensitive state fields.
+    let query = resolve_fixture_contract("flagship/query-read.sea").unwrap();
+    let output = query
+        .contract
+        .records
+        .iter()
+        .find(|r| r.name == "GetOrderStatusOutput")
+        .unwrap();
+    let names: Vec<&str> = output.fields.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(names, ["order_id", "status"]);
+
+    // Restart-stable IDs: identity depends only on the source set.
+    let restarted = resolve_fixture_contract("flagship/command-write.sea").unwrap();
+    assert_eq!(restarted.self_hash, doc.self_hash);
+}
+
 // ---- shared Graph/contract ownership (plan Task 13) ----
 
 fn flagship_sources_json() -> String {

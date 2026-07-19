@@ -1,21 +1,23 @@
 # Next Steps
 
-## 1. Human Gate B: ratify ADR-013
+## 1. Write the Milestone 0 language code plan
 
-Maintainers review `docs/specs/ADR-013-sea-application-contract.md` and
-`docs/reference/sea-application-contract.md`, test the D9 examples mentally
-against domain meaning, and verify every traceability row has one
-authoritative source. If changes are requested, modify only the two documents,
-rerun plan Task 2 Step 4 checks, and resubmit.
+Execute Task 3 from
+`.agents/plans/2026-07-18-conversational-application-generator.md` and create
+`.agents/plans/2026-07-18-conversational-application-generator-m0-language.md`.
+Expected outcome: a codebase-grounded, test-first plan that a lesser coding
+agent can execute without choosing grammar, identity, validation, hashing, or
+binding semantics.
 
-## 2. On explicit acceptance, record ratification
+## 2. Adversarially review the Milestone 0 plan
 
-Set `**Status:** Accepted`, fill ratifier and approval date with
-human-provided values, preserve the accepted decision text, and commit only
-the two documents ("docs: accept SEA application contract").
+Cross-check every task and test against accepted ADR-013, the normative
+reference, actual repository paths/APIs, and the master plan's Milestone 0 stop
+gate. Expected outcome: no unresolved design choice or stale path remains in
+the coding plan.
 
-## 3. After ratification, write the Milestone 0 language code plan
+## 3. Begin implementation only from the reviewed plan
 
-Execute plan Task 3
-(`.agents/plans/2026-07-18-conversational-application-generator-m0-language.md`)
-without implementing the language in the same turn.
+Use the repository's worktree, incremental implementation, and test-driven
+development gates. Expected outcome: implementation starts with the first
+failing Milestone 0 test and preserves cross-binding compatibility.
