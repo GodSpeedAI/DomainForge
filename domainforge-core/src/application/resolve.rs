@@ -30,6 +30,8 @@ pub fn resolve_application_contract(
     let sources = SourceMap::parse_json(sources_json)?;
     let resolved = resolve_source_map(entry_logical_path, &sources)?;
     let contract = build_contract(&resolved)?;
+    let envelope = crate::application::envelope::build_envelope(&resolved, &contract);
+    let closure_hash = crate::application::envelope::semantic_closure_hash(&envelope);
     let mut doc = ApplicationContractDocument {
         schema_version: APPLICATION_CONTRACT_SCHEMA_VERSION.to_string(),
         producer: ProducerIdentity {
@@ -42,10 +44,8 @@ pub fn resolve_application_contract(
             language_schema_version: LANGUAGE_SCHEMA_VERSION.to_string(),
             interpretation_version: INTERPRETATION_VERSION.to_string(),
         },
-        // ponytail: placeholder zero closure hash until the envelope packet
-        // (Task 12) computes semantic_closure_hash.
         self_hash: zero_hash(),
-        semantic_closure_hash: zero_hash(),
+        semantic_closure_hash: closure_hash,
         contract,
     };
     doc.self_hash = crate::application::canonical::document_self_hash(&doc);
@@ -248,7 +248,7 @@ fn split_symbol_ref(raw: &str) -> (Option<&str>, &str) {
     }
 }
 
-fn build_contract(
+pub(crate) fn build_contract(
     set: &ResolvedModuleSet,
 ) -> Result<ApplicationContract, Vec<ApplicationDiagnostic>> {
     let ctx = Ctx::new(set);

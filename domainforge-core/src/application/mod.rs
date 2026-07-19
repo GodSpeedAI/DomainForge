@@ -3,6 +3,7 @@
 pub mod canonical;
 pub mod contract;
 pub mod diagnostic;
+pub mod envelope;
 pub mod policy_context;
 pub mod resolve;
 pub(crate) mod validate;
@@ -14,6 +15,11 @@ pub use canonical::{
 pub use contract::*;
 pub use diagnostic::{
     ApplicationDiagnostic, ApplicationDiagnosticCode, ApplicationDiagnosticContext,
+};
+pub use envelope::{
+    resolve_semantic_envelope, semantic_closure_hash, validate_application_contract_document_json,
+    validate_semantic_envelope_document_json, CanonicalSemanticEnvelope,
+    CanonicalSemanticEnvelopeDocument,
 };
 pub use policy_context::{evaluate_precondition, EvaluationResult};
 pub use resolve::{resolve_application_contract, resolve_application_contract_json};

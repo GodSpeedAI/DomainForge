@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://domainforge.dev/schemas/application-contract-v1.schema.json",
+  "title": "DomainForge Application Contract Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "producer",
+    "inputs",
+    "self_hash",
+    "semantic_closure_hash",
+    "contract"
+  ],
+  "properties": {
+    "schema_version": { "const": "domainforge-application-contract/v1" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_set_hash",
+        "semantic_pack_set_hash",
+        "language_schema_version",
+        "interpretation_version"
+      ],
+      "properties": {
+        "source_set_hash": { "$ref": "#/definitions/hash" },
+        "semantic_pack_set_hash": { "$ref": "#/definitions/hash" },
+        "language_schema_version": { "type": "string", "minLength": 1 },
+        "interpretation_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "self_hash": { "$ref": "#/definitions/hash" },
+    "semantic_closure_hash": { "$ref": "#/definitions/hash" },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enums", "records", "entities", "operations"],
+      "properties": {
+        "enums": { "type": "array" },
+        "records": { "type": "array" },
+        "entities": { "type": "array" },
+        "operations": { "type": "array" }
+      }
+    }
+  },
+  "definitions": {
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

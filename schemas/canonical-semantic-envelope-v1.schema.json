@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://domainforge.dev/schemas/canonical-semantic-envelope-v1.schema.json",
+  "title": "DomainForge Canonical Semantic Envelope Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "producer",
+    "inputs",
+    "self_hash",
+    "semantic_closure_hash",
+    "envelope"
+  ],
+  "properties": {
+    "schema_version": { "const": "domainforge-semantic-envelope/v1" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_set_hash",
+        "semantic_pack_set_hash",
+        "language_schema_version",
+        "interpretation_version"
+      ],
+      "properties": {
+        "source_set_hash": { "$ref": "#/definitions/hash" },
+        "semantic_pack_set_hash": { "$ref": "#/definitions/hash" },
+        "language_schema_version": { "type": "string", "minLength": 1 },
+        "interpretation_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "self_hash": { "$ref": "#/definitions/hash" },
+    "semantic_closure_hash": { "$ref": "#/definitions/hash" },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "language_schema_version",
+        "canonicalization_version",
+        "compiler_interpretation_version",
+        "modules",
+        "import_graph",
+        "namespace_bindings",
+        "semantic_packs",
+        "semantic_declarations",
+        "resolved_references",
+        "application_contract"
+      ],
+      "properties": {
+        "language_schema_version": { "type": "string", "minLength": 1 },
+        "canonicalization_version": { "type": "string", "minLength": 1 },
+        "compiler_interpretation_version": { "type": "string", "minLength": 1 },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["logical_id", "semantic_content_hash", "namespace"],
+            "properties": {
+              "logical_id": { "type": "string", "minLength": 1 },
+              "semantic_content_hash": { "$ref": "#/definitions/hash" },
+              "namespace": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "import_graph": { "type": "array" },
+        "namespace_bindings": { "type": "array" },
+        "semantic_packs": { "type": "array" },
+        "semantic_declarations": { "type": "array" },
+        "resolved_references": { "type": "array" },
+        "application_contract": { "type": "object" }
+      }
+    }
+  },
+  "definitions": {
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

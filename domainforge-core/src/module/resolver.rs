@@ -804,6 +804,15 @@ pub(crate) fn resolve_source_map(
             let Some(name) = declaration_name(&decl.node) else {
                 continue;
             };
+            // Flows are occurrence-identified (reference §8): equal flows are
+            // legal repetitions, not qualified-ID collisions.
+            let inner = match &decl.node {
+                crate::parser::ast::AstNode::Export(inner) => &inner.node,
+                other => other,
+            };
+            if matches!(inner, crate::parser::ast::AstNode::Flow { .. }) {
+                continue;
+            }
             let kind = declaration_kind(&decl.node);
             let name = if kind == ResolvedDeclarationKind::ExistingConcept {
                 name.to_string()
