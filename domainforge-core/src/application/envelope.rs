@@ -6,7 +6,7 @@ use crate::application::canonical::{canonical_decimal, nfc};
 use crate::application::contract::*;
 use crate::application::diagnostic::{ApplicationDiagnostic, ApplicationDiagnosticCode};
 use crate::application::resolve::{
-    APPLICATION_CONTRACT_SCHEMA_VERSION, INTERPRETATION_VERSION, LANGUAGE_SCHEMA_VERSION,
+    Ctx, APPLICATION_CONTRACT_SCHEMA_VERSION, INTERPRETATION_VERSION, LANGUAGE_SCHEMA_VERSION,
 };
 use crate::concept_id::ConceptId;
 use crate::module::resolver::ResolvedModuleSet;
@@ -248,11 +248,8 @@ pub struct CanonicalPolicyDecl {
     pub version: Option<String>,
     /// Serialized ast-v3 schema policy metadata.
     pub metadata: serde_json::Value,
-    /// Serialized ast-v3 schema expression.
-    // ponytail: role<...> references keep authored text here; the executable
-    // path resolves them at binding validation (Task 9), and rewriting the
-    // serialized expression tree can land with a dedicated packet if the
-    // closure hash must cover resolved role identity.
+    /// Serialized ast-v3 schema expression with every `role<...>` leaf
+    /// rewritten to its resolved role `ConceptId`.
     pub expression: serde_json::Value,
 }
 
@@ -301,11 +298,48 @@ fn kind_rank(kind: &str) -> usize {
         .unwrap_or(usize::MAX)
 }
 
-fn concept_target(namespace: &str, name: &str) -> CanonicalReferenceTarget {
+/// Resolve a reference through the shared symbol table (imports and aliases
+/// included); an unresolved reference keeps deterministic local identity so
+/// classification never invents a third form.
+fn resolved_target(
+    ctx: &Ctx,
+    module_index: usize,
+    namespace: &str,
+    raw: &str,
+    slugs: &'static [&'static str],
+) -> CanonicalReferenceTarget {
+    let id = ctx
+        .resolve_concept(module_index, raw, slugs)
+        .unwrap_or_else(|| ConceptId::from_concept(namespace, raw));
     CanonicalReferenceTarget::Declaration {
-        id: CanonicalDeclarationId::Concept {
-            id: ConceptId::from_concept(namespace, name),
-        },
+        id: CanonicalDeclarationId::Concept { id },
+    }
+}
+
+/// Rewrite every `role<...>` leaf in a serialized policy expression to the
+/// resolved role `ConceptId` (§8: envelopes carry resolved identities).
+/// Unresolvable references keep their authored text; APP007 reports them at
+/// binding validation.
+fn rewrite_role_references(value: &mut serde_json::Value, ctx: &Ctx, module_index: usize) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if map.get("type").and_then(serde_json::Value::as_str) == Some("RoleReference") {
+                if let Some(serde_json::Value::String(role)) = map.get_mut("role") {
+                    if let Some(id) = ctx.resolve_concept(module_index, role, &["role"]) {
+                        *role = id.to_string();
+                    }
+                }
+            }
+            for (_, nested) in map.iter_mut() {
+                rewrite_role_references(nested, ctx, module_index);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                rewrite_role_references(item, ctx, module_index);
+            }
+        }
+        _ => {}
     }
 }
 
@@ -331,12 +365,17 @@ fn classify(
     node: &past::AstNode,
     namespace: &str,
     contract: &ApplicationContract,
+    ctx: &Ctx,
+    module_index: usize,
 ) -> Option<(
     &'static str,
     CanonicalDeclarationId,
     CanonicalSemanticPayload,
 )> {
     use past::AstNode as N;
+    let target = |raw: &str, slugs: &'static [&'static str]| {
+        resolved_target(ctx, module_index, namespace, raw, slugs)
+    };
     let concept_id = |name: &str| CanonicalDeclarationId::Concept {
         id: ConceptId::from_concept(namespace, name),
     };
@@ -360,7 +399,7 @@ fn classify(
             concept_id(symbol),
             CanonicalSemanticPayload::Unit(CanonicalUnitDecl {
                 symbol: symbol.clone(),
-                dimension: concept_target(namespace, dimension),
+                dimension: target(dimension, &["dimension"]),
                 factor: canonical_decimal(*factor),
                 base_unit: base_unit.clone(),
             }),
@@ -433,7 +472,7 @@ fn classify(
             concept_id(name),
             CanonicalSemanticPayload::Resource(CanonicalResourceDecl {
                 name: name.clone(),
-                unit: unit_name.as_ref().map(|u| concept_target(namespace, u)),
+                unit: unit_name.as_ref().map(|u| target(u, &["unit"])),
                 domain: domain.clone(),
                 annotations: sorted_annotations(annotations),
             }),
@@ -446,9 +485,9 @@ fn classify(
             quantity,
         } => {
             let payload = CanonicalSemanticPayload::Flow(CanonicalFlowDecl {
-                resource: concept_target(namespace, resource_name),
-                from_entity: concept_target(namespace, from_entity),
-                to_entity: concept_target(namespace, to_entity),
+                resource: target(resource_name, &["resource"]),
+                from_entity: target(from_entity, &["entity"]),
+                to_entity: target(to_entity, &["entity"]),
                 quantity: quantity.map(canonical_decimal),
                 annotations: sorted_annotations(annotations),
             });
@@ -494,10 +533,10 @@ fn classify(
             concept_id(name),
             CanonicalSemanticPayload::Relation(CanonicalRelationDecl {
                 name: name.clone(),
-                subject_role: concept_target(namespace, subject_role),
+                subject_role: target(subject_role, &["role"]),
                 predicate: predicate.clone(),
-                object_role: concept_target(namespace, object_role),
-                via_flow: via_flow.as_ref().map(|f| concept_target(namespace, f)),
+                object_role: target(object_role, &["role"]),
+                via_flow: via_flow.as_ref().map(|f| target(f, &["flow"])),
             }),
         ),
         N::Instance {
@@ -512,7 +551,7 @@ fn classify(
             },
             CanonicalSemanticPayload::Instance(CanonicalInstanceDecl {
                 name: name.clone(),
-                entity_type: concept_target(namespace, entity_type),
+                entity_type: target(entity_type, &["entity"]),
                 fields: fields
                     .iter()
                     .map(|(k, v)| (k.clone(), expr_value(v)))
@@ -524,17 +563,21 @@ fn classify(
             version,
             metadata,
             expression,
-        } => (
-            "policy",
-            concept_id(name),
-            CanonicalSemanticPayload::Policy(CanonicalPolicyDecl {
-                name: name.clone(),
-                version: version.clone(),
-                metadata: serde_json::to_value(schema::PolicyMetadata::from(metadata))
-                    .expect("policy metadata serializes"),
-                expression: expr_value(expression),
-            }),
-        ),
+        } => {
+            let mut expression = expr_value(expression);
+            rewrite_role_references(&mut expression, ctx, module_index);
+            (
+                "policy",
+                concept_id(name),
+                CanonicalSemanticPayload::Policy(CanonicalPolicyDecl {
+                    name: name.clone(),
+                    version: version.clone(),
+                    metadata: serde_json::to_value(schema::PolicyMetadata::from(metadata))
+                        .expect("policy metadata serializes"),
+                    expression,
+                }),
+            )
+        }
         N::ConceptChange {
             name,
             from_version,
@@ -591,11 +634,12 @@ pub(crate) fn build_envelope(
     set: &ResolvedModuleSet,
     contract: &ApplicationContract,
 ) -> CanonicalSemanticEnvelope {
+    let ctx = Ctx::new(set);
     let mut declarations: Vec<(usize, CanonicalSemanticDeclaration)> = Vec::new();
     let mut namespace_bindings = Vec::new();
     let mut module_decl_hashes: Vec<(String, String, Vec<serde_json::Value>)> = Vec::new();
 
-    for module in &set.modules {
+    for (module_index, module) in set.modules.iter().enumerate() {
         let namespace = module
             .ast
             .metadata
@@ -612,7 +656,9 @@ pub(crate) fn build_envelope(
                 past::AstNode::Export(inner) => &inner.node,
                 other => other,
             };
-            if let Some((kind, id, payload)) = classify(node, &namespace, contract) {
+            if let Some((kind, id, payload)) =
+                classify(node, &namespace, contract, &ctx, module_index)
+            {
                 module_payloads.push(serde_json::to_value(&payload).expect("payload serializes"));
                 declarations.push((
                     kind_rank(kind),

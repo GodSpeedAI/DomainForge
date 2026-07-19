@@ -96,6 +96,52 @@ fn aliased_imports_resolve_to_exact_target_identities() {
 }
 
 #[test]
+fn envelope_references_resolve_imported_targets_to_exact_identities() {
+    use domainforge_core::application::resolve_semantic_envelope;
+    // Gate finding 3: imported/aliased envelope references must carry the
+    // target's resolved ConceptId, and policy role<> leaves must be rewritten.
+    let sources = json!({
+        "a.sea": "@namespace \"alpha\"\n\nexport entity \"Tank\" {\n    key id: uuid\n}\nexport role \"Approver\"\n",
+        "main.sea": "@namespace \"m\"\nimport { Tank, Approver } from \"./a.sea\"\n\ninstance tank1 of \"Tank\"\npolicy approver_only per Constraint Obligation priority 1 as: actor.role = role<Approver>\n",
+    })
+    .to_string();
+    let doc = resolve_semantic_envelope("main.sea", &sources).expect("closure resolves");
+
+    let tank_id =
+        serde_json::to_value(ConceptId::from_concept("alpha", "Tank")).expect("id serializes");
+    let approver_id = ConceptId::from_concept("alpha", "Approver").to_string();
+
+    let mut saw_instance = false;
+    let mut saw_policy = false;
+    for decl in &doc.envelope.semantic_declarations {
+        let payload = serde_json::to_value(&decl.declaration).unwrap();
+        match payload["kind"].as_str().unwrap() {
+            "instance" => {
+                saw_instance = true;
+                assert_eq!(
+                    payload["data"]["entity_type"]["data"]["id"]["data"]["id"], tank_id,
+                    "instance entity_type must resolve to alpha.Tank"
+                );
+            }
+            "policy" => {
+                saw_policy = true;
+                let expr = payload["data"]["expression"].to_string();
+                assert!(
+                    expr.contains(&approver_id),
+                    "policy expression must carry the resolved role id: {expr}"
+                );
+                assert!(
+                    !expr.contains("\"role\":\"Approver\""),
+                    "authored role text must be rewritten: {expr}"
+                );
+            }
+            _ => {}
+        }
+    }
+    assert!(saw_instance && saw_policy);
+}
+
+#[test]
 fn same_suffix_modules_resolve_through_recorded_edges() {
     // Two modules whose logical paths share the suffix "orders/x.sea"; the
     // old suffix matcher could bind either. The recorded edge is exact.

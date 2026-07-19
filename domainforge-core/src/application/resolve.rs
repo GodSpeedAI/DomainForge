@@ -149,7 +149,7 @@ struct ModuleBindings {
     wildcard: HashMap<String, String>,
 }
 
-struct Ctx<'a> {
+pub(crate) struct Ctx<'a> {
     set: &'a ResolvedModuleSet,
     bindings: Vec<ModuleBindings>,
 }
@@ -159,7 +159,7 @@ const REFERENCEABLE_SLUGS: &[&str] = &[
 ];
 
 impl<'a> Ctx<'a> {
-    fn new(set: &'a ResolvedModuleSet) -> Self {
+    pub(crate) fn new(set: &'a ResolvedModuleSet) -> Self {
         let namespace_of: HashMap<&str, String> = set
             .modules
             .iter()
@@ -221,12 +221,49 @@ impl<'a> Ctx<'a> {
     }
 
     fn find_symbol(&self, namespace: &str, name: &str) -> Option<(&ResolvedSymbol, &'static str)> {
-        REFERENCEABLE_SLUGS.iter().find_map(|slug| {
+        self.find_symbol_in(namespace, name, REFERENCEABLE_SLUGS)
+    }
+
+    fn find_symbol_in(
+        &self,
+        namespace: &str,
+        name: &str,
+        slugs: &'static [&'static str],
+    ) -> Option<(&ResolvedSymbol, &'static str)> {
+        slugs.iter().find_map(|slug| {
             self.set
                 .symbols
                 .get(&format!("{namespace}.{slug}.{name}"))
                 .map(|s| (s, *slug))
         })
+    }
+
+    /// Resolve a raw possibly alias-qualified reference against specific
+    /// declaration slugs, returning the exact target identity (§8 envelope
+    /// references). `None` when the reference does not resolve.
+    pub(crate) fn resolve_concept(
+        &self,
+        module_index: usize,
+        raw: &str,
+        slugs: &'static [&'static str],
+    ) -> Option<ConceptId> {
+        let (alias, name) = split_symbol_ref(raw);
+        let bindings = &self.bindings[module_index];
+        let found = match alias {
+            Some(alias) => {
+                let ns = bindings.wildcard.get(alias)?;
+                self.find_symbol_in(ns, name, slugs)
+                    .filter(|(symbol, _)| symbol.exported)
+            }
+            None => {
+                if let Some((ns, original)) = bindings.named.get(name) {
+                    self.find_symbol_in(ns, original, slugs)
+                } else {
+                    self.find_symbol_in(&bindings.namespace, name, slugs)
+                }
+            }
+        };
+        found.map(|(symbol, _)| self.symbol_concept(symbol))
     }
 
     /// Resolve a possibly alias-qualified reference from `module_index`.
@@ -253,7 +290,7 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    fn module_namespace(&self, module_index: usize) -> String {
+    pub(crate) fn module_namespace(&self, module_index: usize) -> String {
         let module = &self.set.modules[module_index];
         module
             .ast
