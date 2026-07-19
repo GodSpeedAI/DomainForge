@@ -1028,22 +1028,20 @@ fn resolve_fields(
                 site,
                 diags,
             )?;
-            let constraints = field
-                .constraints
-                .iter()
-                .filter_map(|c| resolve_constraint(ctx, symbol.module_index, c, field, site, diags))
-                .collect();
+            let constraints =
+                resolve_constraints(ctx, symbol.module_index, &field_type, field, site, diags);
             let default = if is_entity {
                 match &field.default {
-                    Some(expr) => Some(resolve_default(
+                    Some(expr) => resolve_default(
                         ctx,
                         symbol,
                         &field_type,
+                        &constraints,
                         expr,
                         field,
                         site,
                         diags,
-                    )?),
+                    ),
                     None => None,
                 }
             } else {
@@ -1182,79 +1180,384 @@ fn resolve_field_type(
     }
 }
 
-fn resolve_constraint(
+/// True when `value` fits the §6 decimal envelope (28 significant digits;
+/// rust_decimal already caps scale at 28).
+fn decimal_fits(value: &rust_decimal::Decimal) -> bool {
+    value.mantissa().unsigned_abs().to_string().len() <= 28
+}
+
+fn describe_field_type(field_type: &FieldType) -> &'static str {
+    match field_type {
+        FieldType::Scalar { scalar } => match scalar {
+            ScalarType::String => "string",
+            ScalarType::Int => "int",
+            ScalarType::Decimal => "decimal",
+            ScalarType::Bool => "bool",
+            ScalarType::Timestamp => "timestamp",
+            ScalarType::Uuid => "uuid",
+        },
+        FieldType::Quantity { .. } => "quantity",
+        FieldType::EntityRef { .. } => "ref",
+        FieldType::Enum { .. } => "enum",
+        FieldType::List { .. } => "list",
+    }
+}
+
+/// Reference §4/§5 constraint semantics (APP012): applicability per field
+/// type, at most one member per bound family, non-empty intervals under the
+/// inclusivity rules, the 28-digit decimal envelope, and pattern resolution.
+/// Stored decimal bounds are scale-normalized so equal values share one
+/// canonical spelling.
+fn resolve_constraints(
     ctx: &Ctx,
     module_index: usize,
-    constraint: &past::FieldConstraintDecl,
+    field_type: &FieldType,
     field: &past::FieldDecl,
     site: DeclSite,
     diags: &mut Vec<ApplicationDiagnostic>,
-) -> Option<FieldConstraint> {
+) -> Vec<FieldConstraint> {
     use past::FieldConstraintDecl as C;
-    let bound = |value: u64, diags: &mut Vec<ApplicationDiagnostic>| -> Option<u32> {
+    let numeric = matches!(
+        field_type,
+        FieldType::Scalar {
+            scalar: ScalarType::Int | ScalarType::Decimal
+        } | FieldType::Quantity { .. }
+    );
+    let stringy = matches!(
+        field_type,
+        FieldType::Scalar {
+            scalar: ScalarType::String
+        }
+    );
+    let listy = matches!(field_type, FieldType::List { .. });
+    let app012 = |msg: String, diags: &mut Vec<ApplicationDiagnostic>| {
+        diags.push(site.diag(ApplicationDiagnosticCode::App012, msg));
+    };
+    let inapplicable = |slug: &str, diags: &mut Vec<ApplicationDiagnostic>| {
+        app012(
+            format!(
+                "constraint '{slug}' on field '{}' does not apply to its {} type",
+                field.name,
+                describe_field_type(field_type)
+            ),
+            diags,
+        );
+    };
+    let u32_bound = |value: u64, diags: &mut Vec<ApplicationDiagnostic>| -> Option<u32> {
         u32::try_from(value).ok().or_else(|| {
-            diags.push(site.diag(
-                ApplicationDiagnosticCode::App012,
+            app012(
                 format!(
                     "length/item bound {value} on field '{}' overflows",
                     field.name
                 ),
-            ));
+                diags,
+            );
             None
         })
     };
-    Some(match constraint {
-        C::Min(v) => FieldConstraint::Min { value: *v },
-        C::Max(v) => FieldConstraint::Max { value: *v },
-        C::ExclusiveMin(v) => FieldConstraint::ExclusiveMin { value: *v },
-        C::ExclusiveMax(v) => FieldConstraint::ExclusiveMax { value: *v },
-        C::MinLength(v) => FieldConstraint::MinLength {
-            value: bound(*v, diags)?,
-        },
-        C::MaxLength(v) => FieldConstraint::MaxLength {
-            value: bound(*v, diags)?,
-        },
-        C::MinItems(v) => FieldConstraint::MinItems {
-            value: bound(*v, diags)?,
-        },
-        C::MaxItems(v) => FieldConstraint::MaxItems {
-            value: bound(*v, diags)?,
-        },
-        C::Pattern(raw) => {
-            let (alias, name) = split_symbol_ref(raw);
-            match ctx.resolve_ref(module_index, alias, name) {
-                Some((symbol, "pattern")) => FieldConstraint::Pattern {
-                    pattern: ConceptId::from_concept(
-                        &Ctx::namespace_of_symbol(symbol, "pattern", name),
-                        name,
-                    ),
-                },
-                _ => {
-                    diags.push(site.diag(
-                        ApplicationDiagnosticCode::App012,
+    // (slug, applicable) per bound family; > 1 member is a duplicate.
+    let mut family_counts: HashMap<&'static str, u32> = HashMap::new();
+    let mut lower: Option<(rust_decimal::Decimal, bool)> = None; // (value, inclusive)
+    let mut upper: Option<(rust_decimal::Decimal, bool)> = None;
+    let mut min_len: Option<u32> = None;
+    let mut max_len: Option<u32> = None;
+    let mut min_items: Option<u32> = None;
+    let mut max_items: Option<u32> = None;
+    let mut resolved = Vec::new();
+
+    for constraint in &field.constraints {
+        let (slug, family, applicable) = match constraint {
+            C::Min(_) => ("min", "lower bound", numeric),
+            C::ExclusiveMin(_) => ("exclusive_min", "lower bound", numeric),
+            C::Max(_) => ("max", "upper bound", numeric),
+            C::ExclusiveMax(_) => ("exclusive_max", "upper bound", numeric),
+            C::MinLength(_) => ("min_length", "min_length", stringy),
+            C::MaxLength(_) => ("max_length", "max_length", stringy),
+            C::MinItems(_) => ("min_items", "min_items", listy),
+            C::MaxItems(_) => ("max_items", "max_items", listy),
+            C::Pattern(_) => ("pattern", "pattern", stringy),
+        };
+        if !applicable {
+            inapplicable(slug, diags);
+            continue;
+        }
+        let count = family_counts.entry(family).or_insert(0);
+        *count += 1;
+        if *count > 1 {
+            app012(
+                format!(
+                    "field '{}' declares more than one {family} constraint",
+                    field.name
+                ),
+                diags,
+            );
+            continue;
+        }
+        let decimal_bound =
+            |v: &rust_decimal::Decimal, diags: &mut Vec<ApplicationDiagnostic>| -> Option<_> {
+                if decimal_fits(v) {
+                    Some(v.normalize())
+                } else {
+                    app012(
+                        format!(
+                            "bound on field '{}' exceeds 28 significant decimal digits",
+                            field.name
+                        ),
+                        diags,
+                    );
+                    None
+                }
+            };
+        match constraint {
+            C::Min(v) => {
+                let Some(v) = decimal_bound(v, diags) else {
+                    continue;
+                };
+                lower = Some((v, true));
+                resolved.push(FieldConstraint::Min { value: v });
+            }
+            C::ExclusiveMin(v) => {
+                let Some(v) = decimal_bound(v, diags) else {
+                    continue;
+                };
+                lower = Some((v, false));
+                resolved.push(FieldConstraint::ExclusiveMin { value: v });
+            }
+            C::Max(v) => {
+                let Some(v) = decimal_bound(v, diags) else {
+                    continue;
+                };
+                upper = Some((v, true));
+                resolved.push(FieldConstraint::Max { value: v });
+            }
+            C::ExclusiveMax(v) => {
+                let Some(v) = decimal_bound(v, diags) else {
+                    continue;
+                };
+                upper = Some((v, false));
+                resolved.push(FieldConstraint::ExclusiveMax { value: v });
+            }
+            C::MinLength(v) => {
+                if let Some(v) = u32_bound(*v, diags) {
+                    min_len = Some(v);
+                    resolved.push(FieldConstraint::MinLength { value: v });
+                }
+            }
+            C::MaxLength(v) => {
+                if let Some(v) = u32_bound(*v, diags) {
+                    max_len = Some(v);
+                    resolved.push(FieldConstraint::MaxLength { value: v });
+                }
+            }
+            C::MinItems(v) => {
+                if let Some(v) = u32_bound(*v, diags) {
+                    min_items = Some(v);
+                    resolved.push(FieldConstraint::MinItems { value: v });
+                }
+            }
+            C::MaxItems(v) => {
+                if let Some(v) = u32_bound(*v, diags) {
+                    max_items = Some(v);
+                    resolved.push(FieldConstraint::MaxItems { value: v });
+                }
+            }
+            C::Pattern(raw) => {
+                let (alias, name) = split_symbol_ref(raw);
+                match ctx.resolve_ref(module_index, alias, name) {
+                    Some((symbol, "pattern")) => resolved.push(FieldConstraint::Pattern {
+                        pattern: ConceptId::from_concept(
+                            &Ctx::namespace_of_symbol(symbol, "pattern", name),
+                            name,
+                        ),
+                    }),
+                    _ => app012(
                         format!(
                             "pattern '{raw}' on field '{}' does not resolve to a declared SEA Pattern",
                             field.name
                         ),
-                    ));
-                    return None;
+                        diags,
+                    ),
                 }
             }
         }
-    })
+    }
+
+    // Interval rules: quantity bounds share the field's declared unit, so the
+    // §4 base-unit normalization cancels out and values compare directly.
+    if let (Some((lo, lo_inclusive)), Some((hi, hi_inclusive))) = (lower, upper) {
+        if lo > hi || (lo == hi && !(lo_inclusive && hi_inclusive)) {
+            app012(
+                format!(
+                    "bounds on field '{}' describe an empty interval under the inclusivity rules",
+                    field.name
+                ),
+                diags,
+            );
+        }
+    }
+    for (label, min, max) in [("length", min_len, max_len), ("item", min_items, max_items)] {
+        if let (Some(min), Some(max)) = (min, max) {
+            if min > max {
+                app012(
+                    format!(
+                        "{label} bounds on field '{}' describe an empty interval",
+                        field.name
+                    ),
+                    diags,
+                );
+            }
+        }
+    }
+    resolved
 }
 
-/// Convert an authored entity-field default literal into a `TypedValue` that
-/// satisfies the resolved field type (APP003 on mismatch).
+/// The declared unit of a quantity field: (namespace, factor, base symbol).
+fn quantity_unit_info(
+    ctx: &Ctx,
+    module_index: usize,
+    field: &past::FieldDecl,
+) -> Option<(String, rust_decimal::Decimal, String)> {
+    let past::FieldType::Quantity(r) = &field.field_type else {
+        return None;
+    };
+    let (symbol, _) = ctx.resolve_ref(module_index, r.alias.as_deref(), &r.symbol)?;
+    let past::AstNode::UnitDeclaration {
+        factor, base_unit, ..
+    } = ctx.decl_node(symbol)
+    else {
+        return None;
+    };
+    Some((
+        Ctx::namespace_of_symbol(symbol, "unit", &r.symbol),
+        *factor,
+        base_unit.clone(),
+    ))
+}
+
+/// Numeric magnitude a default contributes to bound checks. Quantity bounds
+/// are authored in the field's declared unit, so the stored base value is
+/// divided back through the declared factor.
+fn default_magnitude(
+    typed: &TypedValue,
+    unit_factor: Option<rust_decimal::Decimal>,
+) -> Option<rust_decimal::Decimal> {
+    match typed {
+        TypedValue::Int(i) => Some(rust_decimal::Decimal::from(*i)),
+        TypedValue::Decimal(d) => Some(*d),
+        TypedValue::Quantity { base_value, .. } => {
+            let factor = unit_factor?;
+            base_value.checked_div(factor)
+        }
+        _ => None,
+    }
+}
+
+/// First constraint the default violates, as display text (reference §4:
+/// defaults are validated against every field constraint).
+fn default_constraint_violation(
+    ctx: &Ctx,
+    module_index: usize,
+    typed: &TypedValue,
+    constraints: &[FieldConstraint],
+    field: &past::FieldDecl,
+) -> Option<String> {
+    let magnitude = default_magnitude(
+        typed,
+        quantity_unit_info(ctx, module_index, field).map(|(_, f, _)| f),
+    );
+    let text = match typed {
+        TypedValue::String(s) => Some(s.as_str()),
+        _ => None,
+    };
+    for constraint in constraints {
+        let violated = match constraint {
+            FieldConstraint::Min { value } => magnitude.is_some_and(|m| m < *value),
+            FieldConstraint::Max { value } => magnitude.is_some_and(|m| m > *value),
+            FieldConstraint::ExclusiveMin { value } => magnitude.is_some_and(|m| m <= *value),
+            FieldConstraint::ExclusiveMax { value } => magnitude.is_some_and(|m| m >= *value),
+            FieldConstraint::MinLength { value } => {
+                text.is_some_and(|t| t.chars().count() < *value as usize)
+            }
+            FieldConstraint::MaxLength { value } => {
+                text.is_some_and(|t| t.chars().count() > *value as usize)
+            }
+            FieldConstraint::MinItems { .. } | FieldConstraint::MaxItems { .. } => false,
+            FieldConstraint::Pattern { .. } => text.is_some_and(|t| {
+                // Recover the declared regex through the authored pattern ref.
+                field.constraints.iter().any(|c| {
+                    let past::FieldConstraintDecl::Pattern(raw) = c else {
+                        return false;
+                    };
+                    let (alias, name) = split_symbol_ref(raw);
+                    let Some((symbol, "pattern")) = ctx.resolve_ref(module_index, alias, name)
+                    else {
+                        return false;
+                    };
+                    let past::AstNode::Pattern { regex, .. } = ctx.decl_node(symbol) else {
+                        return false;
+                    };
+                    !regex::Regex::new(regex).is_ok_and(|re| re.is_match(t))
+                })
+            }),
+        };
+        if violated {
+            return Some(
+                serde_json::to_value(constraint)
+                    .ok()
+                    .and_then(|v| v["kind"].as_str().map(str::to_string))
+                    .unwrap_or_else(|| "constraint".to_string()),
+            );
+        }
+    }
+    None
+}
+
+/// Convert an authored entity-field default literal into a normalized
+/// `TypedValue` that satisfies the resolved field type and every field
+/// constraint (reference §4; APP003 on violation). Only required, non-key
+/// fields of scalar, quantity, or enum type may carry a default.
+#[allow(clippy::too_many_arguments)]
 fn resolve_default(
     ctx: &Ctx,
     owner: &ResolvedSymbol,
     field_type: &FieldType,
+    constraints: &[FieldConstraint],
     expr: &Expression,
     field: &past::FieldDecl,
     site: DeclSite,
     diags: &mut Vec<ApplicationDiagnostic>,
 ) -> Option<TypedValue> {
+    use crate::application::canonical::nfc;
+    let app003 = |msg: String, diags: &mut Vec<ApplicationDiagnostic>| {
+        diags.push(site.diag(ApplicationDiagnosticCode::App003, msg));
+    };
+    if field.is_optional {
+        app003(
+            format!(
+                "optional field '{}' declares a default; defaults are required-field-only",
+                field.name
+            ),
+            diags,
+        );
+        return None;
+    }
+    if field.is_key {
+        return None; // APP005 already reported by check_entity_key
+    }
+    if matches!(
+        field_type,
+        FieldType::EntityRef { .. } | FieldType::List { .. }
+    ) {
+        app003(
+            format!(
+                "field '{}' declares a default on a {} type; refs and lists must not",
+                field.name,
+                describe_field_type(field_type)
+            ),
+            diags,
+        );
+        return None;
+    }
     let mismatch = |diags: &mut Vec<ApplicationDiagnostic>| {
         diags.push(site.diag(
             ApplicationDiagnosticCode::App003,
@@ -1264,6 +1567,67 @@ fn resolve_default(
             ),
         ));
     };
+
+    // Quantity defaults lower to the base-unit value (§6).
+    if let FieldType::Quantity { .. } = field_type {
+        let Some((unit_namespace, field_factor, base_symbol)) =
+            quantity_unit_info(ctx, owner.module_index, field)
+        else {
+            mismatch(diags);
+            return None;
+        };
+        let authored = match expr {
+            Expression::Literal(serde_json::Value::Number(n)) => Some((
+                rust_decimal::Decimal::from_str(&n.to_string()).ok()?,
+                field_factor,
+            )),
+            Expression::QuantityLiteral { value, unit } => {
+                // Any unit sharing the field unit's base is convertible.
+                match ctx.resolve_ref(owner.module_index, None, unit) {
+                    Some((s, "unit")) => match ctx.decl_node(s) {
+                        past::AstNode::UnitDeclaration {
+                            factor, base_unit, ..
+                        } if *base_unit == base_symbol => Some((*value, *factor)),
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+        let Some((value, factor)) = authored else {
+            mismatch(diags);
+            return None;
+        };
+        let Some(base_value) = value.checked_mul(factor).filter(decimal_fits) else {
+            diags.push(site.diag(
+                ApplicationDiagnosticCode::App012,
+                format!(
+                    "base-unit normalization of the default on field '{}' overflows the decimal envelope",
+                    field.name
+                ),
+            ));
+            return None;
+        };
+        let typed = TypedValue::Quantity {
+            base_value: base_value.normalize(),
+            unit: ConceptId::from_concept(&unit_namespace, &base_symbol),
+        };
+        if let Some(kind) =
+            default_constraint_violation(ctx, owner.module_index, &typed, constraints, field)
+        {
+            app003(
+                format!(
+                    "default on field '{}' violates its {kind} constraint",
+                    field.name
+                ),
+                diags,
+            );
+            return None;
+        }
+        return Some(typed);
+    }
+
     let Expression::Literal(value) = expr else {
         mismatch(diags);
         return None;
@@ -1274,7 +1638,7 @@ fn resolve_default(
                 scalar: ScalarType::String,
             },
             serde_json::Value::String(s),
-        ) => TypedValue::String(s.clone()),
+        ) => TypedValue::String(nfc(s)),
         (
             FieldType::Scalar {
                 scalar: ScalarType::Bool,
@@ -1286,13 +1650,41 @@ fn resolve_default(
                 scalar: ScalarType::Int,
             },
             serde_json::Value::Number(n),
-        ) => TypedValue::Int(n.as_i64()?),
+        ) => {
+            // The parser carries numeric literals as JSON floats; accept any
+            // integral spelling that fits i64.
+            use rust_decimal::prelude::ToPrimitive;
+            let value = rust_decimal::Decimal::from_str(&n.to_string())
+                .ok()
+                .filter(rust_decimal::Decimal::is_integer)
+                .and_then(|d| d.to_i64());
+            match value {
+                Some(i) => TypedValue::Int(i),
+                None => {
+                    mismatch(diags);
+                    return None;
+                }
+            }
+        }
         (
             FieldType::Scalar {
                 scalar: ScalarType::Decimal,
             },
             serde_json::Value::Number(n),
-        ) => TypedValue::Decimal(rust_decimal::Decimal::from_str(&n.to_string()).ok()?),
+        ) => {
+            let d = rust_decimal::Decimal::from_str(&n.to_string()).ok()?;
+            if !decimal_fits(&d) {
+                diags.push(site.diag(
+                    ApplicationDiagnosticCode::App012,
+                    format!(
+                        "default on field '{}' exceeds 28 significant decimal digits",
+                        field.name
+                    ),
+                ));
+                return None;
+            }
+            TypedValue::Decimal(d.normalize())
+        }
         (
             FieldType::Scalar {
                 scalar: ScalarType::Uuid,
@@ -1324,7 +1716,7 @@ fn resolve_default(
             if decl.members.iter().any(|m| m.wire == *wire) {
                 TypedValue::Enum {
                     symbol: symbol.clone(),
-                    wire: wire.clone(),
+                    wire: nfc(wire),
                 }
             } else {
                 diags.push(site.diag(
@@ -1342,5 +1734,17 @@ fn resolve_default(
             return None;
         }
     };
+    if let Some(kind) =
+        default_constraint_violation(ctx, owner.module_index, &typed, constraints, field)
+    {
+        app003(
+            format!(
+                "default on field '{}' violates its {kind} constraint",
+                field.name
+            ),
+            diags,
+        );
+        return None;
+    }
     Some(typed)
 }
