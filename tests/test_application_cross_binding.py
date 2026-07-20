@@ -39,7 +39,7 @@ def _flagship_sources_map() -> dict:
 
 
 def test_cross_binding_contract_bytes_match_rust_golden():
-    sources = json.dumps(_flagship_source_map())
+    sources = json.dumps(_flagship_sources_map(), separators=(",", ":"))
     raw = domainforge.Graph.resolve_application_contract_json(
         "flagship/query-read.sea", sources
     )

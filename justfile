@@ -43,6 +43,10 @@ ts-test:
         npm run test:node --silent; \
     fi
 
+wasm-test:
+    @echo "Running WASM tests in Node..."
+    CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner {{cargo}} test -p domainforge-core --target wasm32-unknown-unknown --features wasm --test wasm_tests
+
 all-tests:
     @echo "Running all tests (Rust, Python, TypeScript)..."
     just rust-test
