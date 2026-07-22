@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.13.0...domainforge-core-v0.14.0) (2026-07-11)
+
+
+### Features
+
+* **projection:** domain code-gen targets, authority signing, proof harness ([#115](https://github.com/GodSpeedAI/DomainForge/issues/115)) ([262b48b](https://github.com/GodSpeedAI/DomainForge/commit/262b48be6b43394b5bec0dc28de4c8bfcb6dabd0))
+
 ## [0.13.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.12.0...domainforge-core-v0.13.0) (2026-06-20)
 
 

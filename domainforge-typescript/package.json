@@ -1,6 +1,6 @@
 {
   "name": "domainforge",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "TypeScript bindings for the SEA (Semantic Enterprise Architecture) DSL",
   "main": "index.js",
   "types": "index.d.ts",
