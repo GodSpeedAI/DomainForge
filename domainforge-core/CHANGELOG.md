@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.14.0...domainforge-core-v0.15.0) (2026-07-22)
+
+
+### Features
+
+* SEA application contract (M0) + full projection-targets line ([#116](https://github.com/GodSpeedAI/DomainForge/issues/116)) ([3802392](https://github.com/GodSpeedAI/DomainForge/commit/380239250305b67c73c8a8bb7c2ed7c9c7199bb7))
+
 ## [0.14.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.13.0...domainforge-core-v0.14.0) (2026-07-11)
 
 
