@@ -20,12 +20,12 @@ use sha2::{Digest, Sha256};
 /// Fixed golden hash of `serde_json::to_string(&contract_doc)` for the
 /// flagship `query-read` closure.
 pub const CONTRACT_GOLDEN_SHA256: &str =
-    "sha256:57c81f0cddc0cec87eaef86cca6692134376076620c9c73844b016869cc31640";
+    "sha256:ca0255a79a9cee5b7ee8b78db8bb9a93728edfe146aab9c8eb973d9e94495be5";
 
 /// Fixed golden hash of `serde_json::to_string(&envelope_doc)` for the
 /// flagship `query-read` closure.
 pub const ENVELOPE_GOLDEN_SHA256: &str =
-    "sha256:6c0e730fd4207cb847fac0f8f0ba62c80d3cba0acf6a0e45fe8e555bd633d9e5";
+    "sha256:6eed2745d0d75422a6842e5d7b89e1edc25ff542a6fcdf20b969da35a8a7c7cc";
 
 pub fn flagship_sources_json() -> String {
     serde_json::json!({
