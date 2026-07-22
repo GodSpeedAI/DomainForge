@@ -1,24 +1,24 @@
 # Next Steps
 
-## 1. Create and execute a Milestone 0 remediation plan
+## 1. Ratify ADR-014
 
-Turn every Critical and High finding in
-`.agents/reports/2026-07-19-m0-human-review-gate.md` into test-first tasks,
-preserving ADR-013 semantics. Expected outcome: strict field/default
-validation, shared resolved identities, normalized canonical envelopes, strict
-schemas, complete persisted-artifact validation, and bounded public inputs.
+Review and explicitly accept or amend
+`docs/specs/ADR-014-application-review-and-approval-contract.md`. Expected
+outcome: fixed, human-approved CLI, artifact, status, diff, and approval
+contracts with no implementation-agent choices left open.
 
-## 2. Produce independent compatibility and parity evidence
+## 2. Write and adversarially review the Milestone 1 plan
 
-Restore or explicitly adjudicate the pre-change oracles and `std/core.sea`
-visibility, exercise non-empty signed semantic packs, fix the D9 contract and
-envelope goldens, and compare rebuilt Rust/Python/TypeScript/WASM outputs from
-the same inputs. Expected outcome: stable accepted oracle values and
-byte-identical cross-target artifacts that cannot pass against stale bindings.
+Create
+`.agents/plans/2026-07-19-conversational-application-generator-m1-review.md`
+from specification Milestone 1 and the remediated Milestone 0 APIs. Expected
+outcome: a test-first, codebase-grounded plan for Domain/Application IR,
+inspection, domain review, semantic diff, and semantic approval capture.
 
-## 3. Re-run the Milestone 0 human gate
+## 3. Implement and gate Milestone 1
 
-Pass every focused suite, `just all-tests`, Clippy, formatting, genuine WASM
-validation, and `git diff --check`; present a finding-to-test/commit matrix and
-all required hashes. Expected outcome: an evidence-backed accept/reject
-decision and, only if explicitly accepted, authorization to begin Milestone 1.
+Execute one independently testable packet at a time, preserving canonical
+hashing and binding parity. Expected outcome: inspect/review/diff/approval
+workflows satisfy an adversarial Milestone 1 human gate without entering
+provider, generation, or skill scope; explicit maintainer ratification remains
+required before Milestone 2.

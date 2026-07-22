@@ -5,6 +5,19 @@ Scope: commits `3550baf` through `e3e82a4`, based on accepted ADR commit
 `1320fed`
 Decision: **REQUEST CHANGES — Milestone 0 is not accepted**
 
+## Subsequent gate disposition
+
+**ACCEPTED by the DomainForge repository maintainer on 2026-07-19.**
+
+The acceptance applies to the remediated branch through commit `56895f2`, not
+the originally reviewed `e3e82a4` snapshot. Remediation commits `cc6036f`
+through `56895f2` address the recorded schema, field-semantics, shared-identity,
+resolved-reference, canonicalization, persisted-metadata, diagnostic,
+resource-budget, compatibility, semantic-pack, and cross-binding findings.
+The maintainer explicitly directed the project to treat Milestone 0 as complete
+and proceed to Milestone 1. This section records that later human decision; the
+original adversarial findings below remain as historical review evidence.
+
 Cross-model review was offered and explicitly skipped by the repository
 maintainer. Three independent fresh-context reviews were reconciled with a
 direct code and test inspection.

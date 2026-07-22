@@ -1,33 +1,39 @@
-# Current State: Milestone 0 Human Gate — Changes Requested
+# Current State: Milestone 0 Accepted — Milestone 1 Planning
 
 Branch: `agent/projection-targets`. Accepted ADR-013 baseline: `1320fed`.
-Milestone 0 implementation: 15 commits from `3550baf` through `e3e82a4`.
+Milestone 0 implementation and remediation run through `56895f2`.
 
-## Review checkpoint (2026-07-19)
+## Milestone 0 gate (2026-07-19)
 
-- [x] Reviewed the complete Milestone 0 diff against ADR-013, the normative
-  reference, and the plan's human-gate checklist. Evidence:
-  `.agents/reports/2026-07-19-m0-human-review-gate.md`; three independent
-  fresh-context reviews plus direct source/test inspection.
-- [x] Ran repository regression and quality checks. Evidence: `just all-tests`
-  PASS; Clippy with `cli,python,typescript,wasm,json-schema` PASS;
-  `cargo fmt --all -- --check` PASS.
-- [x] Tested strict-schema behavior adversarially. Evidence: malformed nested
-  contract/envelope collection values were accepted; schema definitions at
-  `schemas/application-contract-v1.schema.json:49` and
-  `schemas/canonical-semantic-envelope-v1.schema.json:76` lack item schemas.
-- [x] Checked patch hygiene. Evidence:
-  `git diff --check 1320fed..e3e82a4` FAILS on trailing whitespace in
-  `.agents/reports/2026-07-18-adr-013-gate-b-review.md:3`.
-- [x] Issued the gate decision. Evidence: **REQUEST CHANGES** with 6 Critical
-  and 8 High findings in the review report.
-- [ ] Milestone 0 acceptance criteria are satisfied. Blocked by the unresolved
-  findings and missing fixed/cross-binding evidence in the review report.
-- [ ] Human acceptance authorizes Milestone 1. Not authorized; a fresh review
-  and explicit maintainer acceptance are required after remediation.
+- [x] Implemented the 15-task language plan. Evidence: commits `3550baf`
+  through `e3e82a4` and the implementation paths named in
+  `.agents/plans/2026-07-18-conversational-application-generator-m0-language.md`.
+- [x] Completed adversarial human-gate review. Evidence:
+  `.agents/reports/2026-07-19-m0-human-review-gate.md`.
+- [x] Remediated the review findings. Evidence: commits `cc6036f` through
+  `56895f2` cover patch hygiene, strict schemas, field semantics, shared
+  identities, resolved envelope references, canonicalization, persisted
+  metadata, diagnostics, resource budgets, compatibility evidence, semantic
+  packs, and rebuilt cross-binding parity.
+- [x] Human explicitly accepted Milestone 0. Evidence: repository maintainer
+  instruction on 2026-07-19: “milestone 0 is done just accept it”. The gate
+  disposition is recorded in the review report.
+- [x] Drafted the required Milestone 1 public-contract settlement. Evidence:
+  `docs/specs/ADR-014-application-review-and-approval-contract.md` fixes exact
+  commands, artifact schemas, approval arguments, statement binding, statuses,
+  exit codes, and pure-core/binding ownership.
+- [ ] ADR-014 is accepted. Proposed pending explicit maintainer ratification;
+  the executable plan cannot safely freeze its interfaces before this gate.
+- [ ] Milestone 1 executable plan is complete and reviewed. Blocked on ADR-014;
+  expected artifact is
+  `.agents/plans/2026-07-19-conversational-application-generator-m1-review.md`.
+- [ ] Milestone 1 implementation is accepted. Not started; implementation may
+  begin only from the completed Milestone 1 plan.
 
 ## Gate status
 
-Human Gates A and B remain closed/accepted. The Milestone 0 human review gate
-is OPEN with changes requested. Milestone 1 planning and implementation MUST
-NOT begin.
+Human Gates A and B and the Milestone 0 human gate are CLOSED. Milestone 1
+contract settlement is proposed in ADR-014. Plan finalization and implementation
+wait for explicit ADR-014 ratification. Later milestone gates remain closed to
+self-approval: the repository maintainer must explicitly accept each reviewed
+milestone.

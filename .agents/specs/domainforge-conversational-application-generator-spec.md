@@ -548,7 +548,9 @@ again before staged output commits, preventing time-of-check/time-of-use drift.
 
 ### 8.4 Low-effort, high-reward UX requirements
 
-The first implementation MUST include:
+The complete initial v0.1 delivery through Milestone 5 MUST include the
+following. This list is a release boundary, not an assignment of every item to
+Milestone 1; §19 owns milestone scheduling:
 
 - `application inspect`: readiness, missing semantics, and unsupported features;
 - `application diff`: semantic, realization, migration-risk, and file-plan diff;
@@ -790,11 +792,16 @@ Application generation is orchestration, not a pure projection. Use a new
 top-level group rather than overloading all behavior into `project`:
 
 ```text
-domainforge application inspect MODEL --profile rust-local-v1 --json
-domainforge application plan MODEL --providers PROVIDERS --profile rust-local-v1 --dry-run --json
-domainforge application generate MODEL OUT --providers PROVIDERS --profile rust-local-v1 --approval APPROVAL --created-at TIMESTAMP --json
+domainforge application inspect MODEL [--source-root ROOT] [--registry PATH] [--semantic-pack PACK]... [--json]
+domainforge application review MODEL --out REVIEW.json [--review-input REVIEW_INPUT.json] [--source-root ROOT] [--registry PATH] [--semantic-pack PACK]... [--against PREVIOUS_REVIEW.json --approval PREVIOUS_APPROVAL.json] [--json]
+domainforge application diff semantic MODEL --against PREVIOUS_REVIEW.json --approval PREVIOUS_APPROVAL.json [--review-input REVIEW_INPUT.json] [--source-root ROOT] [--registry PATH] [--semantic-pack PACK]... [--json]
+domainforge application approve semantic REVIEW.json --out APPROVAL.json --approver-label LABEL --scope SCOPE --statement STATEMENT --approved-at RFC3339 [--json]
+domainforge application plan MODEL --providers PROVIDERS --profile rust-local-v1 --semantic-approval SEMANTIC_APPROVAL.json --dry-run --json
+domainforge application review realization MODEL OUT --providers PROVIDERS --profile rust-local-v1 --semantic-approval SEMANTIC_APPROVAL.json --out REVIEW.json
+domainforge application approve realization REVIEW.json --semantic-approval SEMANTIC_APPROVAL.json --out APPROVAL.json --approver-label LABEL --scope SCOPE --statement STATEMENT --approved-at RFC3339
+domainforge application generate MODEL OUT --providers PROVIDERS --profile rust-local-v1 --semantic-approval SEMANTIC_APPROVAL.json --realization-approval REALIZATION_APPROVAL.json --created-at TIMESTAMP --json
 domainforge application verify OUT --level integration --json
-domainforge application diff MODEL OUT --providers PROVIDERS --profile rust-local-v1 --json
+domainforge application diff realization MODEL OUT --providers PROVIDERS --profile rust-local-v1 --semantic-approval SEMANTIC_APPROVAL.json --realization-approval REALIZATION_APPROVAL.json --json
 domainforge application status OUT --json
 domainforge application doctor --profile rust-local-v1 --json
 domainforge application clean OUT
@@ -811,10 +818,11 @@ New machine-facing commands return one versioned JSON envelope:
 ```json
 {
   "schema_version": "domainforge-command-result/v1",
-  "status": "ok|invalid|unsupported|blocked|failed|incomplete|verified",
+  "status": "ok|generated|verified|invalid|unsupported|blocked|failed|incomplete",
   "diagnostics": [],
   "inputs": {},
   "artifacts": [],
+  "result": null,
   "proof": null,
   "recoverable": true,
   "next_actions": []
@@ -881,21 +889,21 @@ Required diagnostic classes include:
 
 | Code | Class | Behavior |
 |---|---|---|
-| `APP001` | missing application semantics | Block affected operation before binding. |
-| `APP002` | stale semantic approval | Regenerate review/diff and request approval. |
-| `APP003` | stale realization approval | Re-resolve, regenerate realization review, request approval. |
-| `APP010` | invalid provider binding | Report field/source and permitted values. |
-| `APP011` | provider gap | Emit gap report; emit no affected adapter. |
-| `APP012` | provider untrusted/revoked | Stop before planning. |
-| `APP020` | dependency conflict | Report each contribution and provider provenance. |
-| `APP021` | blocked environment | Preserve plan/output; provide doctor remediation. |
-| `APP030` | unplanned artifact | Abort staging; no output lock. |
-| `APP031` | generated-zone drift | Preserve user bytes; show diff; refuse commit. |
-| `APP032` | concurrent/stale staging | Preserve staging; provide status/clean guidance. |
-| `APP040` | nondeterministic output | Preserve both trees/hashes; classify failed. |
-| `APP041` | proof assertion failed | Preserve redacted bounded evidence; classify failed. |
-| `APP042` | proof skipped | Classify incomplete. |
-| `APP050` | internal compiler error | Preserve safe diagnostics; never claim partial success. |
+| `APP001–APP015` | SEA Application Contract diagnostics | ADR-013 owns this closed range; malformed or incomplete meaning blocks before binding. |
+| `APR001–APR010` | semantic review/approval diagnostics | ADR-014 owns this closed range; regenerate review/diff or correct explicit approval input. |
+| `APR101` | stale realization approval | Re-resolve, regenerate realization review, request approval. |
+| `PRV001` | invalid provider binding | Report field/source and permitted values. |
+| `PRV002` | provider gap | Emit gap report; emit no affected adapter. |
+| `PRV003` | provider untrusted/revoked | Stop before planning. |
+| `PLN001` | dependency conflict | Report each contribution and provider provenance. |
+| `PLN002` | blocked environment | Preserve plan/output; provide doctor remediation. |
+| `GEN001` | unplanned artifact | Abort staging; no output lock. |
+| `GEN002` | generated-zone drift | Preserve user bytes; show diff; refuse commit. |
+| `GEN003` | concurrent/stale staging | Preserve staging; provide status/clean guidance. |
+| `GEN004` | nondeterministic output | Preserve both trees/hashes; classify failed. |
+| `PRF001` | proof assertion failed | Preserve redacted bounded evidence; classify failed. |
+| `PRF002` | proof skipped | Classify incomplete. |
+| `SYS001` | internal compiler error | Preserve safe diagnostics; never claim partial success. |
 
 Errors include a stable code, concise message, source or semantic ref, blast
 radius, secrecy-safe context, and one or more next actions. They never print a
@@ -1019,8 +1027,11 @@ or fixture-derived types.
 ### Milestone 1 — Canonical contracts and review
 
 Deliver serializable Domain/Application IR, semantic closure hashing, schemas,
-valid/invalid fixtures, `application inspect`, domain review, semantic diff, and
-approval capture/validation.
+valid/invalid fixtures, `application inspect`, `application review`,
+`application diff semantic`, and `application approve semantic`. Exact
+commands, review inputs, artifacts, status/exit behavior, and approval
+validation are governed by ADR-014. Milestone 1 has no profile, provider,
+realization, generation, doctor, or skill implementation.
 
 Stop gate: equivalent sources hash equally; consequential changes invalidate
 approval; missing semantics produce stable diagnostics.
