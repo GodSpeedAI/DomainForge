@@ -1,6 +1,9 @@
 {
-  "name": "domainforge",
+  "name": "@godspeedai/domainforge",
   "version": "0.15.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "TypeScript bindings for the SEA (Semantic Enterprise Architecture) DSL",
   "main": "index.js",
   "types": "index.d.ts",
