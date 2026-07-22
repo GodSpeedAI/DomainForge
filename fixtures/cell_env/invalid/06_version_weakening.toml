@@ -1,0 +1,4 @@
+schema = "domainforge-cell-overrides/v1"
+
+[mise.tools]
+uv = "0.8.0"

@@ -30,6 +30,29 @@ impl Graph {
         }
     }
 
+    /// Parse SEA source into serialized AST v3 JSON.
+    #[napi]
+    pub fn parse_to_ast_json(source: String) -> Result<String> {
+        let internal_ast = parser::parse(&source)
+            .map_err(|e| Error::from_reason(format!("Parse error: {}", e)))?;
+        let schema_ast: crate::parser::ast_schema::Ast = internal_ast.into();
+        serde_json::to_string_pretty(&schema_ast)
+            .map_err(|e| Error::from_reason(format!("Serialization error: {}", e)))
+    }
+
+    /// Resolve an in-memory source map into canonical Application Contract
+    /// document JSON (ADR-013 Milestone 0).
+    #[napi]
+    pub fn resolve_application_contract_json(
+        entry_logical_path: String,
+        sources_json: String,
+    ) -> Result<String> {
+        crate::application::resolve_application_contract_json(&entry_logical_path, &sources_json)
+            .map_err(|diags| {
+                Error::from_reason(serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()))
+            })
+    }
+
     #[napi]
     pub fn add_entity(&mut self, entity: &Entity) -> Result<()> {
         self.inner

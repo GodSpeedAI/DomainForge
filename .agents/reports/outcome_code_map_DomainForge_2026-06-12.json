@@ -1,0 +1,226 @@
+{
+  "project": "DomainForge",
+  "date": "2026-06-12",
+  "methodology": "static_analysis",
+  "summary": {
+    "total_outcomes": 14,
+    "verified": 12,
+    "partial": 2,
+    "average_score": 85.7,
+    "total_test_files": 107
+  },
+  "outcomes": [
+    {
+      "id": "OUT-001",
+      "statement": "Users define domain models in a human-readable DSL that machines parse and execute",
+      "score": 95,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/grammar/sea.pest",
+        "sea-core/src/parser/ast.rs",
+        "sea-core/src/graph/mod.rs"
+      ]
+    },
+    {
+      "id": "OUT-002",
+      "statement": "Deterministic policy validation against declared policies",
+      "score": 95,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/graph/mod.rs",
+        "sea-core/src/policy/expression.rs",
+        "sea-core/tests/determinism_tests.rs"
+      ]
+    },
+    {
+      "id": "OUT-003",
+      "statement": "Cross-language parity (Python, TypeScript, Rust, WASM)",
+      "score": 80,
+      "status": "partial",
+      "evidence_files": [
+        "sea-core/src/python/",
+        "sea-core/src/typescript/",
+        "sea-core/src/wasm/"
+      ],
+      "gaps": [
+        "GAP-001: No automated cross-language parity CI gate",
+        "GAP-005: WASM bindings untested"
+      ]
+    },
+    {
+      "id": "OUT-004",
+      "statement": "FINOS CALM export for enterprise architecture workflows",
+      "score": 90,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/calm/export.rs",
+        "sea-core/src/calm/import.rs"
+      ]
+    },
+    {
+      "id": "OUT-005",
+      "statement": "RDF/Turtle Knowledge Graph export",
+      "score": 70,
+      "status": "partial",
+      "evidence_files": [
+        "sea-core/src/kg.rs",
+        "sea-core/src/kg_import.rs"
+      ],
+      "gaps": [
+        "GAP-004: No dedicated KG round-trip test"
+      ]
+    },
+    {
+      "id": "OUT-006",
+      "statement": "Authority system with fact provenance, conflict resolution, audit traces",
+      "score": 90,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/authority/mod.rs",
+        "sea-core/src/authority/trace.rs"
+      ]
+    },
+    {
+      "id": "OUT-007",
+      "statement": "Three-valued logic (True, False, Null) for policy evaluation",
+      "score": 95,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/policy/expression.rs",
+        "sea-core/tests/three_valued_quantifiers_tests.rs"
+      ]
+    },
+    {
+      "id": "OUT-008",
+      "statement": "Structured error diagnostics with fuzzy matching",
+      "score": 75,
+      "status": "partial",
+      "evidence_files": [
+        "sea-core/src/validation_error.rs",
+        "docs/specs/error_codes.md"
+      ],
+      "gaps": [
+        "GAP-002: Fuzzy matching limited to Pest built-in recovery"
+      ]
+    },
+    {
+      "id": "OUT-009",
+      "statement": "Dimensional analysis with unit conversion",
+      "score": 90,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/primitives/",
+        "sea-core/src/units/"
+      ]
+    },
+    {
+      "id": "OUT-010",
+      "statement": "Concept versioning with evolution tracking",
+      "score": 85,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/primitives/concept_change.rs"
+      ]
+    },
+    {
+      "id": "OUT-011",
+      "statement": "CALM round-trip fidelity",
+      "score": 90,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/calm/export.rs",
+        "sea-core/src/calm/import.rs",
+        "sea-core/tests/ (calm_round_trip)"
+      ]
+    },
+    {
+      "id": "OUT-012",
+      "statement": "CLI for validation, export, authority evaluation",
+      "score": 60,
+      "status": "partial",
+      "evidence_files": [],
+      "gaps": [
+        "GAP-003: CLI entry point location unclear"
+      ]
+    },
+    {
+      "id": "OUT-013",
+      "statement": "Semantic packs with signed, hashable domain truth",
+      "score": 85,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/src/authority/"
+      ]
+    },
+    {
+      "id": "OUT-014",
+      "statement": "SBVR-aligned quantified expressions with aggregation",
+      "score": 90,
+      "status": "verified",
+      "evidence_files": [
+        "sea-core/grammar/sea.pest",
+        "sea-core/src/policy/expression.rs"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP-001",
+      "outcome": "OUT-003",
+      "severity": "medium",
+      "description": "No automated cross-language parity test — parity enforced by convention, not CI gate"
+    },
+    {
+      "id": "GAP-002",
+      "outcome": "OUT-008",
+      "severity": "low",
+      "description": "Fuzzy matching limited to Pest built-in error recovery; no custom fuzzy suggestion engine"
+    },
+    {
+      "id": "GAP-003",
+      "outcome": "OUT-012",
+      "severity": "low",
+      "description": "CLI binary entry point unclear; feature flag exists but no src/bin/ found"
+    },
+    {
+      "id": "GAP-004",
+      "outcome": "OUT-005",
+      "severity": "medium",
+      "description": "No dedicated KG round-trip test found"
+    },
+    {
+      "id": "GAP-005",
+      "outcome": "OUT-003",
+      "severity": "medium",
+      "description": "WASM bindings exist but no test suite"
+    }
+  ],
+  "test_inventory": {
+    "rust": 82,
+    "python": 12,
+    "typescript": 13,
+    "total": 107
+  },
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Add cross-language parity CI gate",
+      "gap_ref": "GAP-001"
+    },
+    {
+      "priority": 2,
+      "action": "Add WASM test suite (smoke tests minimum)",
+      "gap_ref": "GAP-005"
+    },
+    {
+      "priority": 3,
+      "action": "Add KG round-trip test",
+      "gap_ref": "GAP-004"
+    },
+    {
+      "priority": 4,
+      "action": "Document CLI entry point",
+      "gap_ref": "GAP-003"
+    }
+  ]
+}

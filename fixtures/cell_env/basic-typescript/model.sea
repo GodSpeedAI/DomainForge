@@ -1,0 +1,10 @@
+@namespace "godspeed.cells.frontend"
+
+Cell "FrontendAgent"
+    @profile "typescript-agent-v1"
+
+DependencySet "ts-application"
+    @ecosystem "typescript"
+    @manifest "package.json"
+    @lockfile "pnpm-lock.yaml"
+    @install "pnpm install --frozen-lockfile"

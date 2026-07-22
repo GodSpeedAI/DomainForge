@@ -1,0 +1,30 @@
+@namespace "flagship.orders"
+@version "0.1.0"
+
+import { Order, OrderStatus } from "./command-write.sea"
+
+record GetOrderStatusInput {
+    order_id: uuid
+}
+
+record GetOrderStatusOutput {
+    order_id: uuid
+    status: OrderStatus
+}
+
+operation get_order_status {
+    intent "return the current non-sensitive status for one opaque ID"
+    direction inbound
+    actor anonymous
+    access public
+    input GetOrderStatusInput
+    output GetOrderStatusOutput
+    state Order
+    effect reads Order
+    transaction read_only
+    failure order_not_found for missing_state "no order exists for the given order_id"
+    idempotency inherent
+    concurrency read_snapshot
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}

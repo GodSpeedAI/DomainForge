@@ -1,0 +1,4 @@
+Cell "BadFlow"
+    @profile "python-agent-v1"
+
+NetworkFlow "dangling" from "BadFlow" to "nowhere"

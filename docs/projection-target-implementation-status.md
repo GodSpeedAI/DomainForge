@@ -34,7 +34,8 @@ check that substitutes for them:
 | Gauge | `gauge` | `scripts/verify/projection-targets/gauge.sh` | Implemented |
 | Alloy | `alloy` | `scripts/verify/projection-targets/alloy.sh` | Implemented |
 | TLA+ | `tla` | `scripts/verify/projection-targets/tla.sh` | Implemented (SANY+TLC verified) |
-| Roundtrip cell | — | `scripts/verify/projection-targets/roundtrip-cell.sh` | Implemented (structural primitives only) |
+| Roundtrip cell | — | `scripts/verify/projection-targets/roundtrip-cell.sh` | Implemented (structural primitives only) — unrelated to the `cell` format below; this is the CALM round-trip gate for `fixtures/projection_cell/` |
+| Cell environment | `cell` | `scripts/verify/cell.sh` | Implemented (byte-determinism + structural checks; native `devbox`/`mise` checks run only when those binaries are on PATH) |
 | Domain Python | `domain-python` | `scripts/verify/projection-targets/domain-python.sh` | Implemented (`compileall` + `mypy --strict` + `unittest`) |
 | Domain TypeScript | `domain-typescript` | `scripts/verify/projection-targets/domain-typescript.sh` | Implemented (`tsc --noEmit` strict) |
 | Domain Rust | `domain-rust` | `scripts/verify/projection-targets/domain-rust.sh` | Implemented (`cargo check` + `cargo test`, zero-dep) |

@@ -251,6 +251,9 @@ impl From<&CoreExpression> for schema::Expression {
                 projection: Box::new(projection.as_ref().into()),
                 target_unit: target_unit.clone(),
             },
+            CoreExpression::RoleReference { role } => {
+                schema::Expression::RoleReference { role: role.clone() }
+            }
         }
     }
 }
@@ -347,11 +350,22 @@ impl From<&ast::AstNode> for schema::AstNode {
                 version,
                 annotations,
                 domain,
+                body,
             } => schema::AstNode::Entity {
                 name: name.clone(),
                 version: version.clone(),
                 annotations: annotations.clone(),
                 domain: domain.clone(),
+                body: body.as_ref().map(|b| b.into()),
+            },
+            ast::AstNode::Record(r) => schema::AstNode::Record {
+                declaration: r.into(),
+            },
+            ast::AstNode::Enum(e) => schema::AstNode::Enum {
+                declaration: e.into(),
+            },
+            ast::AstNode::Operation(o) => schema::AstNode::Operation {
+                declaration: o.into(),
             },
             ast::AstNode::Resource {
                 name,
@@ -470,6 +484,73 @@ impl From<&ast::AstNode> for schema::AstNode {
                 target: target.into(),
                 overrides: overrides.iter().map(|o| o.into()).collect(),
             },
+            ast::AstNode::Cell { name, annotations } => schema::AstNode::Cell {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::SystemDependency {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::SystemDependency {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Runtime {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::Runtime {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Tool {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::Tool {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::DependencySet { name, annotations } => schema::AstNode::DependencySet {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Service {
+                name,
+                version,
+                annotations,
+            } => schema::AstNode::Service {
+                name: name.clone(),
+                version: version.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Mount { name, annotations } => schema::AstNode::Mount {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Endpoint { name, annotations } => schema::AstNode::Endpoint {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::NetworkFlow {
+                name,
+                from_ref,
+                to_ref,
+                annotations,
+            } => schema::AstNode::NetworkFlow {
+                name: name.clone(),
+                from_ref: from_ref.clone(),
+                to_ref: to_ref.clone(),
+                annotations: annotations.clone(),
+            },
+            ast::AstNode::Credential { name, annotations } => schema::AstNode::Credential {
+                name: name.clone(),
+                annotations: annotations.clone(),
+            },
         }
     }
 }
@@ -490,5 +571,214 @@ impl From<&ast::Ast> for schema::Ast {
 impl From<ast::Ast> for schema::Ast {
     fn from(a: ast::Ast) -> Self {
         (&a).into()
+    }
+}
+
+// ---- SEA application contract conversion (ADR-013) ----
+
+impl From<&ast::EntityBody> for schema::EntityBody {
+    fn from(b: &ast::EntityBody) -> Self {
+        schema::EntityBody {
+            fields: b.fields.iter().map(|f| f.into()).collect(),
+        }
+    }
+}
+
+impl From<&ast::FieldDecl> for schema::FieldDecl {
+    fn from(f: &ast::FieldDecl) -> Self {
+        schema::FieldDecl {
+            is_key: f.is_key,
+            name: f.name.clone(),
+            field_type: (&f.field_type).into(),
+            is_optional: f.is_optional,
+            constraints: f.constraints.iter().map(|c| c.into()).collect(),
+            default: f.default.as_ref().map(|e| e.into()),
+        }
+    }
+}
+
+impl From<&ast::FieldType> for schema::FieldType {
+    fn from(t: &ast::FieldType) -> Self {
+        match t {
+            ast::FieldType::Scalar(s) => schema::FieldType::Scalar { symbol: s.into() },
+            ast::FieldType::Quantity(s) => schema::FieldType::Quantity { symbol: s.into() },
+            ast::FieldType::Ref(s) => schema::FieldType::Ref { symbol: s.into() },
+            ast::FieldType::Named(s) => schema::FieldType::Named { symbol: s.into() },
+            ast::FieldType::List(elem) => schema::FieldType::List {
+                element: Box::new(elem.as_ref().into()),
+            },
+        }
+    }
+}
+
+impl From<&ast::FieldTypeRef> for schema::FieldTypeRef {
+    fn from(r: &ast::FieldTypeRef) -> Self {
+        schema::FieldTypeRef {
+            alias: r.alias.clone(),
+            symbol: r.symbol.clone(),
+        }
+    }
+}
+
+impl From<&ast::FieldConstraintDecl> for schema::FieldConstraintDecl {
+    fn from(c: &ast::FieldConstraintDecl) -> Self {
+        match c {
+            ast::FieldConstraintDecl::MinLength(v) => {
+                schema::FieldConstraintDecl::MinLength { value: *v }
+            }
+            ast::FieldConstraintDecl::MaxLength(v) => {
+                schema::FieldConstraintDecl::MaxLength { value: *v }
+            }
+            ast::FieldConstraintDecl::MinItems(v) => {
+                schema::FieldConstraintDecl::MinItems { value: *v }
+            }
+            ast::FieldConstraintDecl::MaxItems(v) => {
+                schema::FieldConstraintDecl::MaxItems { value: *v }
+            }
+            ast::FieldConstraintDecl::ExclusiveMin(v) => {
+                schema::FieldConstraintDecl::ExclusiveMin {
+                    value: v.to_string(),
+                }
+            }
+            ast::FieldConstraintDecl::ExclusiveMax(v) => {
+                schema::FieldConstraintDecl::ExclusiveMax {
+                    value: v.to_string(),
+                }
+            }
+            ast::FieldConstraintDecl::Min(v) => schema::FieldConstraintDecl::Min {
+                value: v.to_string(),
+            },
+            ast::FieldConstraintDecl::Max(v) => schema::FieldConstraintDecl::Max {
+                value: v.to_string(),
+            },
+            ast::FieldConstraintDecl::Pattern(s) => {
+                schema::FieldConstraintDecl::Pattern { symbol: s.clone() }
+            }
+        }
+    }
+}
+
+impl From<&ast::RecordDecl> for schema::RecordDecl {
+    fn from(r: &ast::RecordDecl) -> Self {
+        schema::RecordDecl {
+            name: r.name.clone(),
+            fields: r.fields.iter().map(|f| f.into()).collect(),
+        }
+    }
+}
+
+impl From<&ast::EnumDecl> for schema::EnumDecl {
+    fn from(e: &ast::EnumDecl) -> Self {
+        schema::EnumDecl {
+            name: e.name.clone(),
+            members: e
+                .members
+                .iter()
+                .map(|m| schema::EnumMember {
+                    name: m.name.clone(),
+                    wire: m.wire.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
+impl From<&ast::OperationDecl> for schema::OperationDecl {
+    fn from(o: &ast::OperationDecl) -> Self {
+        schema::OperationDecl {
+            name: o.name.clone(),
+            clauses: o.clauses.iter().map(|c| c.into()).collect(),
+        }
+    }
+}
+
+impl From<&ast::OperationClause> for schema::OperationClause {
+    fn from(c: &ast::OperationClause) -> Self {
+        match c {
+            ast::OperationClause::Intent(text) => {
+                schema::OperationClause::Intent { text: text.clone() }
+            }
+            ast::OperationClause::Direction { kind } => {
+                schema::OperationClause::Direction { kind: kind.clone() }
+            }
+            ast::OperationClause::Actor { actor } => schema::OperationClause::Actor {
+                actor: actor.clone(),
+            },
+            ast::OperationClause::AccessPublic => schema::OperationClause::AccessPublic,
+            ast::OperationClause::AccessPolicyGoverned { bindings } => {
+                schema::OperationClause::AccessPolicyGoverned {
+                    bindings: bindings.iter().map(|b| b.into()).collect(),
+                }
+            }
+            ast::OperationClause::Input { reference } => schema::OperationClause::Input {
+                reference: reference.clone(),
+            },
+            ast::OperationClause::Output { reference } => schema::OperationClause::Output {
+                reference: reference.clone(),
+            },
+            ast::OperationClause::State { reference } => schema::OperationClause::State {
+                reference: reference.clone(),
+            },
+            ast::OperationClause::Effect { kind, reference } => schema::OperationClause::Effect {
+                kind: kind.clone(),
+                reference: reference.clone(),
+            },
+            ast::OperationClause::Transaction { kind } => {
+                schema::OperationClause::Transaction { kind: kind.clone() }
+            }
+            ast::OperationClause::Failure {
+                code,
+                kinds,
+                message,
+            } => schema::OperationClause::Failure {
+                code: code.clone(),
+                kinds: kinds.clone(),
+                message: message.clone(),
+            },
+            ast::OperationClause::IdempotencyKeyed { field } => {
+                schema::OperationClause::IdempotencyKeyed {
+                    field: field.clone(),
+                }
+            }
+            ast::OperationClause::IdempotencyInherent => {
+                schema::OperationClause::IdempotencyInherent
+            }
+            ast::OperationClause::IdempotencyNotApplicable {
+                reason,
+                explanation,
+            } => schema::OperationClause::IdempotencyNotApplicable {
+                reason: reason.clone(),
+                explanation: explanation.clone(),
+            },
+            ast::OperationClause::ConcurrencyUnique { field } => {
+                schema::OperationClause::ConcurrencyUnique {
+                    field: field.clone(),
+                }
+            }
+            ast::OperationClause::ConcurrencyOptimistic { field } => {
+                schema::OperationClause::ConcurrencyOptimistic {
+                    field: field.clone(),
+                }
+            }
+            ast::OperationClause::ConcurrencyReadSnapshot => {
+                schema::OperationClause::ConcurrencyReadSnapshot
+            }
+            ast::OperationClause::EvidenceOperationTrace => {
+                schema::OperationClause::EvidenceOperationTrace
+            }
+            ast::OperationClause::LifecycleSynchronousRequestResponse => {
+                schema::OperationClause::LifecycleSynchronousRequestResponse
+            }
+        }
+    }
+}
+
+impl From<&ast::PolicyBinding> for schema::PolicyBinding {
+    fn from(b: &ast::PolicyBinding) -> Self {
+        schema::PolicyBinding {
+            policy: b.policy.clone(),
+            enforcement_point: b.enforcement_point.clone(),
+            failure_code: b.failure_code.clone(),
+        }
     }
 }

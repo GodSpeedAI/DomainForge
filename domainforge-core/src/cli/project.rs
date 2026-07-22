@@ -87,6 +87,16 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub base_iri: Option<String>,
 
+    /// `domainforge.cell.toml` override document (cell format only)
+    #[arg(long)]
+    pub overrides: Option<PathBuf>,
+
+    /// Comma-separated component subset to write (cell format only):
+    /// devbox, mise, dependencies, sandbox, authority, evidence. The IR and
+    /// `cell.lock` are always written in full regardless of this filter.
+    #[arg(long)]
+    pub only: Option<String>,
+
     pub input: PathBuf,
     pub output: PathBuf,
 }
@@ -135,6 +145,9 @@ pub enum ProjectFormat {
     AsyncApi,
     /// Activation operator: Devbox manifest — domain-aware dev shell with the namespace/entities/resources/flows pre-loaded as env vars (directory output)
     Devbox,
+    /// Activation operator: Cell environment — hermetic agent execution environment (Devbox + Mise + dependency-set + sandbox/network + authority + evidence + cell.lock; directory output)
+    #[value(name = "cell")]
+    Cell,
     /// Activation operator: Dagger module — one @dagger.function per Flow so `dagger call` can activate each step (directory output)
     #[value(name = "dagger")]
     Dagger,
@@ -183,6 +196,14 @@ impl From<CliCompatibilityMode> for CompatibilityMode {
 }
 
 pub fn run(args: ProjectArgs) -> Result<()> {
+    // The cell projection parses the Ast directly (ADR-012 deviation from
+    // ADR-011) and reads namespace/import context the generic Graph builder
+    // discards. Dispatch it before graph construction so the model is parsed
+    // exactly once and the Cell declarations are not silently dropped.
+    if args.format == ProjectFormat::Cell {
+        return run_cell(&args);
+    }
+
     let source = read_to_string(&args.input)
         .with_context(|| format!("Failed to read input file {}", args.input.display()))?;
 
@@ -244,6 +265,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         ProjectFormat::Devbox => {
             run_devbox(&args, &graph)?;
         }
+        // Cell is dispatched before graph construction at the top of `run`;
+        // reaching here is a logic error.
+        ProjectFormat::Cell => unreachable!("Cell dispatched early in run()"),
         ProjectFormat::Dagger => {
             run_dagger(&args, &graph)?;
         }
@@ -607,6 +631,74 @@ fn run_devbox(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("devbox projection failed: {e}"))?;
     println!(
         "Projected Devbox manifest to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_cell(args: &ProjectArgs) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format cell (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    let source = read_to_string(&args.input)
+        .with_context(|| format!("Failed to read input file {}", args.input.display()))?;
+    let ast = crate::parser::parse(&source)
+        .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", args.input.display(), e))?;
+    let source_dir = args.input.parent().unwrap_or_else(|| Path::new("."));
+
+    let overrides_source = args
+        .overrides
+        .as_ref()
+        .map(|path| {
+            read_to_string(path)
+                .with_context(|| format!("Failed to read overrides file {}", path.display()))
+        })
+        .transpose()?;
+    let overrides = overrides_source
+        .as_deref()
+        .map(crate::projection::cell::overrides::parse)
+        .transpose()
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    let components = match &args.only {
+        Some(spec) => crate::projection::cell::CellComponents::parse_only(spec)
+            .map_err(|e| anyhow::anyhow!("{e}"))?,
+        None => crate::projection::cell::CellComponents::default(),
+    };
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the cell projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::cell::emit(
+        &ast,
+        &source,
+        &args.input.display().to_string(),
+        Some(source_dir),
+        args.created_at.clone(),
+        overrides.as_ref(),
+        overrides_source.as_deref(),
+        &components,
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("cell projection failed: {e}"))?;
+    println!(
+        "Projected Cell environment to {} ({} files)",
         args.output.display(),
         files.len()
     );

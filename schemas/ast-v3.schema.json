@@ -63,6 +63,17 @@
               "type": "object",
               "additionalProperties": true
             },
+            "body": {
+              "description": "Optional typed body `entity \"X\" { ... }`. Absent on legacy bodyless entities so existing AST JSON stays byte-identical.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/EntityBody"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "domain": {
               "type": [
                 "string",
@@ -140,10 +151,9 @@
             },
             "quantity": {
               "type": [
-                "integer",
+                "string",
                 "null"
-              ],
-              "format": "int32"
+              ]
             },
             "resource_name": {
               "type": "string"
@@ -479,6 +489,321 @@
               ]
             }
           }
+        },
+        {
+          "description": "Cell declaration - isolated agent execution unit (cell-environment projection)",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Cell"
+              ]
+            }
+          }
+        },
+        {
+          "description": "SystemDependency declaration - OS package or native library",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "SystemDependency"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Runtime declaration - language runtime or compiler toolchain",
+          "type": "object",
+          "required": [
+            "name",
+            "type",
+            "version"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Runtime"
+              ]
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "description": "Tool declaration - package manager, task runner, or developer CLI",
+          "type": "object",
+          "required": [
+            "name",
+            "type",
+            "version"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Tool"
+              ]
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "description": "DependencySet declaration - application dependency closure",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "DependencySet"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Service declaration - background or attached service",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Service"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Mount declaration - filesystem exposure",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Mount"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Endpoint declaration - declared network destination",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Endpoint"
+              ]
+            }
+          }
+        },
+        {
+          "description": "NetworkFlow declaration - allowed communication relation",
+          "type": "object",
+          "required": [
+            "from_ref",
+            "name",
+            "to_ref",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "from_ref": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "to_ref": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "NetworkFlow"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Credential declaration - scoped secret requirement",
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Credential"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Record declaration - structured DTO input/output",
+          "type": "object",
+          "required": [
+            "declaration",
+            "type"
+          ],
+          "properties": {
+            "declaration": {
+              "$ref": "#/definitions/RecordDecl"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Record"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Enum declaration - closed set of named wires",
+          "type": "object",
+          "required": [
+            "declaration",
+            "type"
+          ],
+          "properties": {
+            "declaration": {
+              "$ref": "#/definitions/EnumDecl"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Enum"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Operation declaration - inbound command/query contract",
+          "type": "object",
+          "required": [
+            "declaration",
+            "type"
+          ],
+          "properties": {
+            "declaration": {
+              "$ref": "#/definitions/OperationDecl"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Operation"
+              ]
+            }
+          }
         }
       ]
     },
@@ -506,6 +831,54 @@
         "After",
         "During"
       ]
+    },
+    "EntityBody": {
+      "description": "Typed body of an `entity` declaration (ADR-013).",
+      "type": "object",
+      "required": [
+        "fields"
+      ],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FieldDecl"
+          }
+        }
+      }
+    },
+    "EnumDecl": {
+      "type": "object",
+      "required": [
+        "members",
+        "name"
+      ],
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EnumMember"
+          }
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "EnumMember": {
+      "type": "object",
+      "required": [
+        "name",
+        "wire"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "wire": {
+          "type": "string"
+        }
+      }
     },
     "Expression": {
       "oneOf": [
@@ -855,8 +1228,464 @@
               ]
             }
           }
+        },
+        {
+          "description": "Contextual `role<SymbolRef>` leaf (ADR-013 §2). Opaque until application policy evaluation resolves it.",
+          "type": "object",
+          "required": [
+            "role",
+            "type"
+          ],
+          "properties": {
+            "role": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "RoleReference"
+              ]
+            }
+          }
         }
       ]
+    },
+    "FieldConstraintDecl": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "min_length"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "max_length"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "min_items"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "max_items"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "exclusive_min"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "exclusive_max"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "min"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "max"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "symbol"
+              ],
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "pattern"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "FieldDecl": {
+      "type": "object",
+      "required": [
+        "field_type",
+        "is_key",
+        "is_optional",
+        "name"
+      ],
+      "properties": {
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FieldConstraintDecl"
+          }
+        },
+        "default": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Expression"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field_type": {
+          "$ref": "#/definitions/FieldType"
+        },
+        "is_key": {
+          "type": "boolean"
+        },
+        "is_optional": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "FieldType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "symbol"
+              ],
+              "properties": {
+                "symbol": {
+                  "$ref": "#/definitions/FieldTypeRef"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "scalar"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "symbol"
+              ],
+              "properties": {
+                "symbol": {
+                  "$ref": "#/definitions/FieldTypeRef"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "quantity"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "symbol"
+              ],
+              "properties": {
+                "symbol": {
+                  "$ref": "#/definitions/FieldTypeRef"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ref"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "element"
+              ],
+              "properties": {
+                "element": {
+                  "$ref": "#/definitions/FieldType"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "list"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "symbol"
+              ],
+              "properties": {
+                "symbol": {
+                  "$ref": "#/definitions/FieldTypeRef"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "named"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "FieldTypeRef": {
+      "description": "Alias-qualified symbol reference inside a field type. Stored verbatim until application resolution (Task 7).",
+      "type": "object",
+      "required": [
+        "symbol"
+      ],
+      "properties": {
+        "alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbol": {
+          "type": "string"
+        }
+      }
     },
     "FileMetadata": {
       "description": "File-level metadata from header annotations",
@@ -1041,6 +1870,504 @@
         }
       }
     },
+    "OperationClause": {
+      "description": "Authored operation clause. Stored verbatim; the application module resolves and lowers each clause.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "intent"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "direction"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "actor"
+              ],
+              "properties": {
+                "actor": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "actor"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "access_public"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "bindings"
+              ],
+              "properties": {
+                "bindings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/PolicyBinding"
+                  }
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "access_policy_governed"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "reference"
+              ],
+              "properties": {
+                "reference": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "input"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "reference"
+              ],
+              "properties": {
+                "reference": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "output"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "reference"
+              ],
+              "properties": {
+                "reference": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "state"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "kind",
+                "reference"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "reference": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "effect"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "transaction"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "code",
+                "kinds",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "kinds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "failure"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "field"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "idempotency_keyed"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "idempotency_inherent"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "explanation",
+                "reason"
+              ],
+              "properties": {
+                "explanation": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "idempotency_not_applicable"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "field"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "concurrency_unique"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "data",
+            "kind"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "field"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                }
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "concurrency_optimistic"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "concurrency_read_snapshot"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "evidence_operation_trace"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "lifecycle_synchronous_request_response"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "OperationDecl": {
+      "type": "object",
+      "required": [
+        "clauses",
+        "name"
+      ],
+      "properties": {
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OperationClause"
+          }
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "PolicyBinding": {
+      "type": "object",
+      "required": [
+        "enforcement_point",
+        "failure_code",
+        "policy"
+      ],
+      "properties": {
+        "enforcement_point": {
+          "type": "string"
+        },
+        "failure_code": {
+          "type": "string"
+        },
+        "policy": {
+          "type": "string"
+        }
+      }
+    },
     "PolicyKind": {
       "type": "string",
       "enum": [
@@ -1128,6 +2455,24 @@
         "Exists",
         "ExistsUnique"
       ]
+    },
+    "RecordDecl": {
+      "type": "object",
+      "required": [
+        "fields",
+        "name"
+      ],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FieldDecl"
+          }
+        },
+        "name": {
+          "type": "string"
+        }
+      }
     },
     "Severity": {
       "type": "string",

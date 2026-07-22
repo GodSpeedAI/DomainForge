@@ -1,0 +1,6 @@
+@namespace "compat.legacy"
+
+Entity "LegacyWidget"
+Resource "WidgetStock" operation
+Entity "LegacyWarehouse"
+Flow "WidgetStock" from "LegacyWarehouse" to "LegacyWidget"

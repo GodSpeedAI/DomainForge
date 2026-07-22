@@ -399,6 +399,9 @@ impl Policy {
                 Err("Cannot evaluate interval literal in boolean context".to_string())
             }
             Expression::GroupBy { .. } => Err("Cannot evaluate non-expanded group_by".to_string()),
+            Expression::RoleReference { .. } => {
+                Err("Cannot evaluate role reference outside application policy context".to_string())
+            }
         }
     }
 
@@ -660,6 +663,9 @@ impl Policy {
             Expression::TimeLiteral(_) => Err("Cannot convert time to boolean; use temporal comparison operators".to_string()),
             Expression::IntervalLiteral { .. } => Err("Cannot convert interval to boolean; use temporal comparison operators".to_string()),
             Expression::GroupBy { .. } => Err("Cannot evaluate non-expanded group_by".to_string()),
+            Expression::RoleReference { .. } => Err(
+                "Cannot evaluate role reference outside application policy context".to_string(),
+            ),
         }
     }
 

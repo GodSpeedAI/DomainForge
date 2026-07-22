@@ -212,6 +212,13 @@ export declare function semanticNormalizeKey(text: string): string
 export declare function semanticResolveConcept(rawText: string, packJson: string, optionsJson: string): string
 export declare class Graph {
   constructor()
+  /** Parse SEA source into serialized AST v3 JSON. */
+  static parseToAstJson(source: string): string
+  /**
+   * Resolve an in-memory source map into canonical Application Contract
+   * document JSON (ADR-013 Milestone 0).
+   */
+  static resolveApplicationContractJson(entryLogicalPath: string, sourcesJson: string): string
   addEntity(entity: Entity): void
   addResource(resource: Resource): void
   addFlow(flow: Flow): void

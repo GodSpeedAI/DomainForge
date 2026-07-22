@@ -2,9 +2,13 @@
 
 use crate::formatter::config::FormatConfig;
 use crate::parser::ast::{
-    parse_source, Ast, AstNode, FileMetadata, ImportDecl, ImportItem, ImportSpecifier,
+    parse_source, Ast, AstNode, EnumDecl, EnumMember, FieldConstraintDecl, FieldDecl, FieldType,
+    FieldTypeRef, FileMetadata, ImportDecl, ImportItem, ImportSpecifier, OperationClause,
+    OperationDecl, PolicyBinding, RecordDecl,
 };
 use crate::policy::Expression;
+use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 use std::fmt;
 
 /// Error type for formatting operations.
@@ -90,7 +94,7 @@ pub fn format_preserving_comments(
 }
 
 /// Internal formatter state.
-struct Formatter {
+pub(crate) struct Formatter {
     config: FormatConfig,
     output: String,
     indent_level: usize,
@@ -237,6 +241,7 @@ impl Formatter {
                 version,
                 annotations,
                 domain,
+                body,
             } => {
                 self.write("Entity ");
                 self.write_string_literal(name);
@@ -286,6 +291,19 @@ impl Formatter {
                 if let Some(d) = domain {
                     self.write(" in ");
                     self.write(d);
+                }
+                if let Some(b) = body {
+                    self.write(" {");
+                    self.newline();
+                    self.indent();
+                    for field in &b.fields {
+                        self.write_indent();
+                        self.format_field_decl(field);
+                        self.newline();
+                    }
+                    self.dedent();
+                    self.write_indent();
+                    self.write("}");
                 }
                 self.newline();
             }
@@ -716,7 +734,364 @@ impl Formatter {
                 self.write("}");
                 self.newline();
             }
+            AstNode::Cell { name, annotations } => {
+                self.format_generic_decl("Cell", name, None, None, annotations)
+            }
+            AstNode::SystemDependency {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl(
+                "SystemDependency",
+                name,
+                version.as_deref(),
+                None,
+                annotations,
+            ),
+            AstNode::Runtime {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl("Runtime", name, Some(version), None, annotations),
+            AstNode::Tool {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl("Tool", name, Some(version), None, annotations),
+            AstNode::DependencySet { name, annotations } => {
+                self.format_generic_decl("DependencySet", name, None, None, annotations)
+            }
+            AstNode::Service {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl("Service", name, version.as_deref(), None, annotations),
+            AstNode::Mount { name, annotations } => {
+                self.format_generic_decl("Mount", name, None, None, annotations)
+            }
+            AstNode::Endpoint { name, annotations } => {
+                self.format_generic_decl("Endpoint", name, None, None, annotations)
+            }
+            AstNode::NetworkFlow {
+                name,
+                from_ref,
+                to_ref,
+                annotations,
+            } => self.format_generic_decl(
+                "NetworkFlow",
+                name,
+                None,
+                Some((from_ref.as_str(), to_ref.as_str())),
+                annotations,
+            ),
+            AstNode::Credential { name, annotations } => {
+                self.format_generic_decl("Credential", name, None, None, annotations)
+            }
+            AstNode::Record(r) => {
+                self.format_record(r);
+                self.newline();
+            }
+            AstNode::Enum(e) => {
+                self.format_enum(e);
+                self.newline();
+            }
+            AstNode::Operation(o) => {
+                self.format_operation(o);
+                self.newline();
+            }
         }
+    }
+
+    // ponytail: single canonical implementation; parser::printer delegates here.
+    pub(crate) fn node_to_string(node: &AstNode, indent_level: usize) -> String {
+        let mut f = Formatter::new(FormatConfig::default(), None);
+        f.indent_level = indent_level;
+        match node {
+            AstNode::Record(r) => f.format_record(r),
+            AstNode::Enum(e) => f.format_enum(e),
+            AstNode::Operation(o) => f.format_operation(o),
+            other => f.format_declaration(other),
+        }
+        f.output.trim_end().to_string()
+    }
+
+    fn format_field_decl(&mut self, field: &FieldDecl) {
+        if field.is_key {
+            self.write("key ");
+        }
+        self.write(&field.name);
+        self.write(": ");
+        self.format_field_type(&field.field_type);
+        if field.is_optional {
+            self.write(" optional");
+        }
+        if !field.constraints.is_empty() {
+            self.write(" (");
+            for (i, c) in field.constraints.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.format_field_constraint(c);
+            }
+            self.write(")");
+        }
+        if let Some(default) = &field.default {
+            self.write(" default ");
+            self.format_expression_default(default);
+        }
+    }
+
+    fn format_field_type(&mut self, ty: &FieldType) {
+        match ty {
+            FieldType::Scalar(s) => self.write(&s.symbol),
+            FieldType::Quantity(s) => self.format_param_type("quantity", s),
+            FieldType::Ref(s) => self.format_param_type("ref", s),
+            FieldType::Named(s) => self.format_field_type_ref(s),
+            FieldType::List(elem) => {
+                self.write("list<");
+                self.format_field_type(elem);
+                self.write(">");
+            }
+        }
+    }
+
+    fn format_param_type(&mut self, kw: &str, s: &FieldTypeRef) {
+        self.write(kw);
+        self.write("<");
+        self.format_field_type_ref(s);
+        self.write(">");
+    }
+
+    fn format_field_type_ref(&mut self, s: &FieldTypeRef) {
+        if let Some(alias) = &s.alias {
+            self.write(alias);
+            self.write(".");
+        }
+        self.write(&s.symbol);
+    }
+
+    fn format_field_constraint(&mut self, c: &FieldConstraintDecl) {
+        match c {
+            FieldConstraintDecl::MinLength(v) => {
+                self.write("min_length ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::MaxLength(v) => {
+                self.write("max_length ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::MinItems(v) => {
+                self.write("min_items ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::MaxItems(v) => {
+                self.write("max_items ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::ExclusiveMin(v) => {
+                self.write("exclusive_min ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::ExclusiveMax(v) => {
+                self.write("exclusive_max ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::Min(v) => {
+                self.write("min ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::Max(v) => {
+                self.write("max ");
+                self.write(&v.to_string());
+            }
+            FieldConstraintDecl::Pattern(s) => {
+                self.write("pattern ");
+                self.write(s);
+            }
+        }
+    }
+
+    fn format_expression_default(&mut self, expr: &Expression) {
+        match expr {
+            Expression::Literal(v) => match v {
+                JsonValue::String(s) => self.write_string_literal(s),
+                other => self.write(&other.to_string()),
+            },
+            Expression::QuantityLiteral { value, unit } => {
+                self.write(&value.to_string());
+                self.write(" ");
+                self.write_string_literal(unit);
+            }
+            other => self.write(&other.to_string()),
+        }
+    }
+
+    fn format_record(&mut self, r: &RecordDecl) {
+        self.write("record ");
+        self.write(&r.name);
+        self.write(" {");
+        self.newline();
+        self.indent();
+        for field in &r.fields {
+            self.write_indent();
+            self.format_field_decl(field);
+            self.newline();
+        }
+        self.dedent();
+        self.write_indent();
+        self.write("}");
+    }
+
+    fn format_enum(&mut self, e: &EnumDecl) {
+        self.write("enum ");
+        self.write(&e.name);
+        self.write(" {");
+        self.newline();
+        self.indent();
+        for (i, m) in e.members.iter().enumerate() {
+            self.write_indent();
+            self.format_enum_member(m);
+            if i + 1 < e.members.len() {
+                self.write(",");
+            }
+            self.newline();
+        }
+        self.dedent();
+        self.write_indent();
+        self.write("}");
+    }
+
+    fn format_enum_member(&mut self, m: &EnumMember) {
+        self.write(&m.name);
+        self.write(" = ");
+        self.write_string_literal(&m.wire);
+    }
+
+    fn format_operation(&mut self, o: &OperationDecl) {
+        self.write("operation ");
+        self.write(&o.name);
+        self.write(" {");
+        self.newline();
+        self.indent();
+        let order = canonical_clause_order(&o.clauses);
+        for c in order {
+            self.write_indent();
+            self.format_operation_clause(c);
+            self.newline();
+        }
+        self.dedent();
+        self.write_indent();
+        self.write("}");
+    }
+
+    fn format_operation_clause(&mut self, clause: &OperationClause) {
+        match clause {
+            OperationClause::Intent(text) => {
+                self.write("intent ");
+                self.write_string_literal(text);
+            }
+            OperationClause::Direction { kind } => {
+                self.write("direction ");
+                self.write(kind);
+            }
+            OperationClause::Actor { actor } => {
+                self.write("actor ");
+                self.write(actor);
+            }
+            OperationClause::AccessPublic => {
+                self.write("access public");
+            }
+            OperationClause::AccessPolicyGoverned { bindings } => {
+                self.write("access policy_governed by ");
+                for (i, b) in bindings.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.format_policy_binding(b);
+                }
+            }
+            OperationClause::Input { reference } => {
+                self.write("input ");
+                self.write(reference);
+            }
+            OperationClause::Output { reference } => {
+                self.write("output ");
+                self.write(reference);
+            }
+            OperationClause::State { reference } => {
+                self.write("state ");
+                self.write(reference);
+            }
+            OperationClause::Effect { kind, reference } => {
+                self.write("effect ");
+                self.write(kind);
+                self.write(" ");
+                self.write(reference);
+            }
+            OperationClause::Transaction { kind } => {
+                self.write("transaction ");
+                self.write(kind);
+            }
+            OperationClause::Failure {
+                code,
+                kinds,
+                message,
+            } => {
+                self.write("failure ");
+                self.write(code);
+                self.write(" for ");
+                for (i, k) in kinds.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.write(k);
+                }
+                self.write(" ");
+                self.write_string_literal(message);
+            }
+            OperationClause::IdempotencyKeyed { field } => {
+                self.write("idempotency keyed_by ");
+                self.write(field);
+            }
+            OperationClause::IdempotencyInherent => {
+                self.write("idempotency inherent");
+            }
+            OperationClause::IdempotencyNotApplicable {
+                reason,
+                explanation,
+            } => {
+                self.write("idempotency not_applicable(");
+                self.write(reason);
+                self.write(", ");
+                self.write_string_literal(explanation);
+                self.write(")");
+            }
+            OperationClause::ConcurrencyUnique { field } => {
+                self.write("concurrency unique_key ");
+                self.write(field);
+            }
+            OperationClause::ConcurrencyOptimistic { field } => {
+                self.write("concurrency optimistic_version ");
+                self.write(field);
+            }
+            OperationClause::ConcurrencyReadSnapshot => {
+                self.write("concurrency read_snapshot");
+            }
+            OperationClause::EvidenceOperationTrace => {
+                self.write("evidence operation_trace");
+            }
+            OperationClause::LifecycleSynchronousRequestResponse => {
+                self.write("lifecycle synchronous_request_response");
+            }
+        }
+    }
+
+    fn format_policy_binding(&mut self, b: &PolicyBinding) {
+        self.write(&b.policy);
+        self.write(" at ");
+        self.write(&b.enforcement_point);
+        self.write(" fails with ");
+        self.write(&b.failure_code);
     }
 
     /// Format an expression using the Expression's Display implementation.
@@ -724,6 +1099,45 @@ impl Formatter {
     /// The Expression type has a proper Display that outputs SEA-compatible syntax.
     fn format_expression(&mut self, expr: &Expression) {
         self.write(&format!("{}", expr));
+    }
+
+    /// Shared formatter for the cell-environment declarations, all of which
+    /// share the `Keyword "name" [version "v"] [from "x" to "y"] @ann val*`
+    /// shape (see `parser::printer` for the mirrored debug-printer helper).
+    fn format_generic_decl(
+        &mut self,
+        keyword: &str,
+        name: &str,
+        version: Option<&str>,
+        from_to: Option<(&str, &str)>,
+        annotations: &HashMap<String, JsonValue>,
+    ) {
+        self.write(keyword);
+        self.write(" ");
+        self.write_string_literal(name);
+        if let Some(v) = version {
+            self.write(" version ");
+            self.write_string_literal(v);
+        }
+        if let Some((from, to)) = from_to {
+            self.write(" from ");
+            self.write_string_literal(from);
+            self.write(" to ");
+            self.write_string_literal(to);
+        }
+        let mut keys: Vec<_> = annotations.keys().collect();
+        keys.sort();
+        for key in keys {
+            self.newline();
+            self.indent();
+            self.write_indent();
+            self.write("@");
+            self.write(key);
+            self.write(" ");
+            self.write(&annotations[key].to_string());
+            self.dedent();
+        }
+        self.newline();
     }
 
     // Helper methods
@@ -767,6 +1181,113 @@ impl Formatter {
         if self.indent_level > 0 {
             self.indent_level -= 1;
         }
+    }
+}
+
+/// Return the clause order to print. A "complete" operation (one of each
+/// non-failure clause and at least one failure) prints in canonical order;
+/// partial operations keep authored order so APP001 evidence survives.
+fn canonical_clause_order(clauses: &[OperationClause]) -> Vec<&OperationClause> {
+    use OperationClause::*;
+    let has = |k: &OperationClauseKind| clauses.iter().any(|c| clause_kind(c) == *k);
+    let complete = [
+        OperationClauseKind::Intent,
+        OperationClauseKind::Direction,
+        OperationClauseKind::Actor,
+        OperationClauseKind::Access,
+        OperationClauseKind::Input,
+        OperationClauseKind::Output,
+        OperationClauseKind::State,
+        OperationClauseKind::Effect,
+        OperationClauseKind::Transaction,
+        OperationClauseKind::Idempotency,
+        OperationClauseKind::Concurrency,
+        OperationClauseKind::Evidence,
+        OperationClauseKind::Lifecycle,
+    ]
+    .iter()
+    .all(has)
+        && clauses.iter().any(|c| matches!(c, Failure { .. }));
+
+    if !complete {
+        return clauses.iter().collect();
+    }
+
+    // Canonical order: intent, direction, actor, access, input, output,
+    // state, effect, transaction, all failures in authored relative order,
+    // idempotency, concurrency, evidence, lifecycle.
+    let mut ordered: Vec<&OperationClause> = Vec::with_capacity(clauses.len());
+    let kinds = [
+        OperationClauseKind::Intent,
+        OperationClauseKind::Direction,
+        OperationClauseKind::Actor,
+        OperationClauseKind::Access,
+        OperationClauseKind::Input,
+        OperationClauseKind::Output,
+        OperationClauseKind::State,
+        OperationClauseKind::Effect,
+        OperationClauseKind::Transaction,
+    ];
+    for k in kinds {
+        if let Some(c) = clauses.iter().find(|c| clause_kind(c) == k) {
+            ordered.push(c);
+        }
+    }
+    for c in clauses.iter().filter(|c| matches!(c, Failure { .. })) {
+        ordered.push(c);
+    }
+    for k in [
+        OperationClauseKind::Idempotency,
+        OperationClauseKind::Concurrency,
+        OperationClauseKind::Evidence,
+        OperationClauseKind::Lifecycle,
+    ] {
+        if let Some(c) = clauses.iter().find(|c| clause_kind(c) == k) {
+            ordered.push(c);
+        }
+    }
+    ordered
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum OperationClauseKind {
+    Intent,
+    Direction,
+    Actor,
+    Access,
+    Input,
+    Output,
+    State,
+    Effect,
+    Transaction,
+    Failure,
+    Idempotency,
+    Concurrency,
+    Evidence,
+    Lifecycle,
+}
+
+fn clause_kind(c: &OperationClause) -> OperationClauseKind {
+    use OperationClause::*;
+    match c {
+        Intent { .. } => OperationClauseKind::Intent,
+        Direction { .. } => OperationClauseKind::Direction,
+        Actor { .. } => OperationClauseKind::Actor,
+        AccessPublic | AccessPolicyGoverned { .. } => OperationClauseKind::Access,
+        Input { .. } => OperationClauseKind::Input,
+        Output { .. } => OperationClauseKind::Output,
+        State { .. } => OperationClauseKind::State,
+        Effect { .. } => OperationClauseKind::Effect,
+        Transaction { .. } => OperationClauseKind::Transaction,
+        Failure { .. } => OperationClauseKind::Failure,
+        IdempotencyKeyed { .. } | IdempotencyInherent | IdempotencyNotApplicable { .. } => {
+            OperationClauseKind::Idempotency
+        }
+        ConcurrencyUnique { .. } | ConcurrencyOptimistic { .. } | ConcurrencyReadSnapshot => {
+            OperationClauseKind::Concurrency
+        }
+        EvidenceOperationTrace => OperationClauseKind::Evidence,
+        LifecycleSynchronousRequestResponse => OperationClauseKind::Lifecycle,
     }
 }
 

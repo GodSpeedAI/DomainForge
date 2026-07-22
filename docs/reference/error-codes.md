@@ -559,6 +559,36 @@ import "a"
 - Remove unnecessary imports
 - Merge tightly coupled modules
 
+## APP001-APP015: Application Contract Diagnostics
+
+Application contract resolution (ADR-013, `docs/reference/sea-application-contract.md` §5)
+emits stable `APPNNN code_slug` diagnostics. Every APP diagnostic has `error`
+severity and blocks contract emission. The structured context carries `reason`,
+`expected`, `actual`, and `remediation` (the smallest authored-source change
+that satisfies the invariant); inapplicable values are omitted, never empty
+strings. APP001–APP014 carry the source module logical ID, line, and column;
+APP015 identifies the artifact document kind, schema version, and failing JSON
+Pointer or hash field instead. Diagnostics sort by logical module ID, line,
+column, then code.
+
+| Code | Slug | Invariant violated |
+|------|------|--------------------|
+| APP001 | `missing_application_semantics` | An operation clause is missing, duplicated, out of canonical order, unsupported in v0.1 (e.g. `direction outbound`), or inconsistent (transaction/effect pairing, anonymous actor without public access, empty intent). One APP001 lists every defect for the operation. |
+| APP002 | `unknown_contract_reference` | A named type, `ref`, `quantity` unit, `pattern`, `input`, `output`, `state`, or `actor` does not resolve in the symbol table or resolves to the wrong declaration kind where APP006/APP007/APP011 do not apply. |
+| APP003 | `invalid_record_shape` | Nested record or nested list field, a record field declaring a default, or an entity default that does not satisfy its field type. |
+| APP004 | `duplicate_field` | Duplicate field name inside one record or entity body. |
+| APP005 | `invalid_aggregate_key` | Zero or multiple `key` fields, a non-`uuid`/`string` key, or an optional/defaulted key. |
+| APP006 | `operation_type_mismatch` | Operation `input`/`output` resolves to an entity or enum instead of a record. |
+| APP007 | `policy_scope_error` | Dangling policy binding, non-constraint policy, expression outside the closed executable subset (forbidden node/operator, unresolved field or role reference, misplaced `role<...>`), or a reserved `invariant`/`postcondition` enforcement point. |
+| APP008 | `invalid_failure_declaration` | Failure code not lower_snake_case or not unique in the closure, a failure kind repeated within one operation, empty meaning, or a reachable failure path with no declared code. |
+| APP009 | `invalid_strategy_reference` | `keyed_by`/`unique_key`/`optimistic_version` field missing, optional, non-scalar, wrong type, lacking its compatible state field, or a strategy/effect pairing outside §4. |
+| APP010 | `invalid_not_applicable` | `not_applicable` reason not proven by the operation's effect and direction (legal only as `idempotency not_applicable(read_only, ...)` on a `reads` operation). |
+| APP011 | `effect_state_mismatch` | Effect target differs from state, state lacks a typed body, key lookup absent, a create cannot construct every required state field, a mutate carries an unmapped input field, or an output field cannot project a same-named compatible state field. |
+| APP012 | `constraint_error` | Constraint bound overflow, or `pattern` not resolving to a declared SEA `Pattern`. |
+| APP013 | `enum_error` | Duplicate enum member identifier or duplicate wire string within one enum. |
+| APP014 | `closure_resolution_error` | Closure resolution failed; `context.reason` is exactly one of `symbol_collision`, `import_cycle`, `unresolved_specifier`, `unresolved_alias`, `not_exported`. |
+| APP015 | `artifact_schema_violation` | A source failed to parse, or an Application Contract / Canonical Semantic Envelope document fails its declared schema or hash validation. |
+
 ## Using Error Codes
 
 ### In CLI

@@ -1,0 +1,10 @@
+Cell "Dup"
+    @profile "python-agent-v1"
+
+Mount "workspace"
+    @source "."
+    @target "/workspace"
+
+Mount "workspace"
+    @source "./other"
+    @target "/other"

@@ -26,6 +26,7 @@ fn test_pretty_print_ast() {
                 version: None,
                 annotations: HashMap::new(),
                 domain: None,
+                body: None,
             }),
             spanned(AstNode::Resource {
                 name: "Widget".to_string(),
@@ -201,4 +202,92 @@ fn test_pretty_print_policy_kind_modality_display() {
             assert!(output.contains("priority 7"));
         }
     }
+}
+
+#[test]
+fn flagship_format_is_canonical_and_idempotent() {
+    use domainforge_core::formatter::{format, FormatConfig};
+    use domainforge_core::parser::parse;
+
+    let source =
+        std::fs::read_to_string("../fixtures/application_generation/flagship/command-write.sea")
+            .expect("flagship command fixture must exist");
+    let once = format(&source, FormatConfig::default()).expect("first format");
+    let twice = format(&once, FormatConfig::default()).expect("second format");
+    assert_eq!(once, twice, "format must be idempotent");
+    assert!(
+        once.contains("    key order_id: uuid\n"),
+        "entity body field must be canonically indented: {}",
+        once
+    );
+    assert!(
+        once.contains("    placed = \"placed\"\n"),
+        "enum member must serialize as `name = \"wire\"`: {}",
+        once
+    );
+    // Round-trip must be node-identical; span line/column legitimately shifts
+    // when whitespace is normalized, so we compare node-for-node.
+    let source_ast = parse(&source).expect("source parses");
+    let once_ast = parse(&once).expect("formatted output parses");
+    assert_eq!(
+        node_list(&source_ast.declarations),
+        node_list(&once_ast.declarations),
+        "format must round-trip parse-equal (modulo spans)"
+    );
+}
+
+fn node_list(decls: &[domainforge_core::parser::ast::Spanned<AstNode>]) -> Vec<AstNode> {
+    decls.iter().map(|d| strip_spans(&d.node)).collect()
+}
+
+/// Return a clone of `node` with all `Spanned` line/column zeroed so two
+/// ASTs that differ only by source positions compare equal.
+fn strip_spans(node: &AstNode) -> AstNode {
+    match node {
+        AstNode::Export(inner) => {
+            AstNode::Export(Box::new(domainforge_core::parser::ast::Spanned {
+                node: strip_spans(&inner.node),
+                line: 0,
+                column: 0,
+            }))
+        }
+        other => other.clone(),
+    }
+}
+
+#[test]
+fn query_fixture_round_trips() {
+    use domainforge_core::formatter::{format, FormatConfig};
+    use domainforge_core::parser::parse;
+
+    let source =
+        std::fs::read_to_string("../fixtures/application_generation/flagship/query-read.sea")
+            .expect("flagship query fixture must exist");
+    let once = format(&source, FormatConfig::default()).expect("format");
+    let twice = format(&once, FormatConfig::default()).expect("re-format");
+    assert_eq!(once, twice);
+    let s = parse(&source).unwrap();
+    let o = parse(&once).unwrap();
+    assert_eq!(node_list(&s.declarations), node_list(&o.declarations));
+}
+
+#[test]
+fn partial_operation_preserves_authored_clause_order() {
+    use domainforge_core::formatter::{format, FormatConfig};
+    use domainforge_core::parser::parse;
+
+    // Authored order: direction, then intent. Valid canonical order would be
+    // intent then direction. Partial operation must keep authored order so
+    // APP001 evidence (missing/duplicate/out-of-order) survives formatting.
+    let src = "@namespace \"app\"\noperation o {\n  direction inbound\n  intent \"late\"\n}";
+    let once = format(src, FormatConfig::default()).expect("format");
+    let dir_pos = once.find("direction").unwrap();
+    let intent_pos = once.find("intent").unwrap();
+    assert!(
+        dir_pos < intent_pos,
+        "partial operation must keep authored order"
+    );
+    let s = parse(src).unwrap();
+    let o = parse(&once).unwrap();
+    assert_eq!(node_list(&s.declarations), node_list(&o.declarations));
 }

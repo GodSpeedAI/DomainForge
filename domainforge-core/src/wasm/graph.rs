@@ -47,6 +47,19 @@ impl Graph {
             .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
     }
 
+    /// Resolve an in-memory source map into canonical Application Contract
+    /// document JSON (ADR-013 Milestone 0).
+    #[wasm_bindgen(js_name = resolveApplicationContractJson)]
+    pub fn resolve_application_contract_json(
+        entry_logical_path: String,
+        sources_json: String,
+    ) -> Result<String, JsValue> {
+        crate::application::resolve_application_contract_json(&entry_logical_path, &sources_json)
+            .map_err(|diags| {
+                JsValue::from_str(&serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()))
+            })
+    }
+
     #[wasm_bindgen(js_name = isEmpty)]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()

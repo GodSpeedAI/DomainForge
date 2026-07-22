@@ -1,0 +1,35 @@
+@namespace "invalid.app011"
+@version "0.1.0"
+
+entity "Order" {
+    key order_id: uuid
+}
+
+entity "Shipment" {
+    key shipment_id: uuid
+}
+
+record ShipInput {
+    shipment_id: uuid
+}
+
+record ShipOutput {
+    shipment_id: uuid
+}
+
+operation ship_order {
+    intent "effect targets a different entity than state"
+    direction inbound
+    actor anonymous
+    access public
+    input ShipInput
+    output ShipOutput
+    state Order
+    effect creates Shipment
+    transaction single_aggregate
+    failure conflict for idempotency_conflict, concurrency_conflict "duplicate shipment"
+    idempotency keyed_by shipment_id
+    concurrency unique_key shipment_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}

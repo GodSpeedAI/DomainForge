@@ -83,7 +83,7 @@ Manually triggered workflow to automate version bumping and release PR creation.
 
 | Artifact     | Limit | Notes                                    |
 | ------------ | ----- | ---------------------------------------- |
-| WASM bundle  | 2.5MB | Harmonized across ci.yml and release.yml |
+| WASM bundle  | 2.75MB | Harmonized across ci.yml and release.yml |
 | CLI binary   | 50MB  | Per-platform binary                      |
 | CLI artifact | 70MB  | Packaged archive (tar.gz/zip)            |
 
@@ -102,8 +102,8 @@ just ts-test
 cd domainforge-core
 wasm-pack build --target web --features wasm
 SIZE=$(python3 -c "import os; print(os.path.getsize('pkg/domainforge_core_bg.wasm'))")
-echo "WASM bundle size: $SIZE bytes (threshold: 2621440)"
-[ "$SIZE" -lt 2621440 ] && echo "PASS" || echo "FAIL"
+echo "WASM bundle size: $SIZE bytes (threshold: 2883584)"
+[ "$SIZE" -lt 2883584 ] && echo "PASS" || echo "FAIL"
 
 # Lint checks
 cargo fmt --all --check

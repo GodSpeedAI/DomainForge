@@ -1,9 +1,7 @@
 #[cfg(feature = "wasm")]
 mod wasm_tests {
     use domainforge_core::wasm::{Entity, Flow, Graph, Instance, Resource};
-    use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
-
-    wasm_bindgen_test_configure!(run_in_browser);
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
     fn test_entity_creation() {
@@ -225,5 +223,76 @@ Flow "Materials" from "Warehouse" to "Factory" quantity 500
 
         let json_result = graph.to_json();
         assert!(json_result.is_ok());
+    }
+}
+
+#[cfg(feature = "wasm")]
+mod application_contract_wasm_tests {
+    use domainforge_core::wasm::Graph;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    fn flagship_sources_json() -> String {
+        serde_json::json!({
+            "flagship/command-write.sea": include_str!(
+                "../../fixtures/application_generation/flagship/command-write.sea"),
+            "flagship/query-read.sea": include_str!(
+                "../../fixtures/application_generation/flagship/query-read.sea"),
+        })
+        .to_string()
+    }
+
+    #[wasm_bindgen_test]
+    fn resolve_application_contract_json_is_canonical() {
+        let sources = flagship_sources_json();
+        let raw = Graph::resolve_application_contract_json(
+            "flagship/query-read.sea".into(),
+            sources.clone(),
+        )
+        .unwrap();
+        let again =
+            Graph::resolve_application_contract_json("flagship/query-read.sea".into(), sources)
+                .unwrap();
+        assert_eq!(raw, again);
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["schema_version"], "domainforge-application-contract/v1");
+    }
+
+    #[wasm_bindgen_test]
+    fn resolve_application_contract_json_rejects_bad_source_map() {
+        let err =
+            Graph::resolve_application_contract_json("a.sea".into(), "[]".into()).unwrap_err();
+        let message = err.as_string().unwrap_or_default();
+        assert!(message.contains("APP"));
+    }
+
+    /// Cross-binding byte parity (M0 gate finding 2): WASM must hash to the
+    /// same golden as Rust, Python, and TypeScript. See
+    /// `application_cross_binding_golden_tests.rs` for the canonical
+    /// constants.
+    #[wasm_bindgen_test]
+    fn cross_binding_golden_hashes() {
+        use sha2::{Digest, Sha256};
+        const CONTRACT_GOLDEN_SHA256: &str =
+            "sha256:ca0255a79a9cee5b7ee8b78db8bb9a93728edfe146aab9c8eb973d9e94495be5";
+        let raw = Graph::resolve_application_contract_json(
+            "flagship/query-read.sea".into(),
+            flagship_sources_json(),
+        )
+        .unwrap();
+        let mut hasher = Sha256::new();
+        hasher.update(raw.as_bytes());
+        let digest = hasher.finalize();
+        let hex: String = {
+            let mut s = String::with_capacity(digest.len() * 2);
+            for b in digest {
+                s.push_str(&format!("{b:02x}"));
+            }
+            s
+        };
+        assert_eq!(
+            format!("sha256:{hex}"),
+            CONTRACT_GOLDEN_SHA256,
+            "WASM binding bytes drifted from the Rust golden"
+        );
     }
 }

@@ -1,0 +1,42 @@
+@namespace "godspeed.cells.format"
+@version "1.0.0"
+@owner "godspeed-platform"
+
+Cell "FormatCheck"
+    @architecture "x86_64"
+    @network_default "deny"
+    @profile "python-agent-v1"
+
+SystemDependency "git" version "2.45"
+SystemDependency "pkg-config"
+
+Runtime "python" version "3.13"
+
+Tool "uv" version "0.9"
+
+DependencySet "python-application"
+    @ecosystem "python"
+    @install "uv sync --frozen"
+    @lockfile "uv.lock"
+    @manifest "pyproject.toml"
+
+Service "postgres" version "16"
+    @activation "optional"
+
+Mount "workspace"
+    @mode "read-write"
+    @source "."
+    @target "/workspace"
+
+Endpoint "package-mirror"
+    @host "pypi.godspeed.internal"
+    @port "443"
+    @protocol "https"
+
+NetworkFlow "resolve-python-packages" from "FormatCheck" to "package-mirror"
+    @operation "read"
+
+Credential "package-mirror-token"
+    @delivery "ephemeral"
+    @provider "broker"
+    @scope "package-mirror:read"

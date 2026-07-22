@@ -1,0 +1,54 @@
+@namespace "godspeed.cells.repair"
+@version "1.0.0"
+@owner "godspeed-platform"
+
+Cell "RepairAgent"
+    @architecture "x86_64"
+    @network_default "deny"
+    @runtime_user "agent"
+    @profile "python-agent-v1"
+    @cpu "4"
+    @memory_mb "8192"
+    @disk_mb "20480"
+    @timeout_seconds "1800"
+
+SystemDependency "git" version "2.45"
+SystemDependency "openssl" version "3"
+SystemDependency "pkg-config"
+SystemDependency "ca-certificates"
+
+Runtime "python" version "3.13"
+
+Tool "uv" version "0.9"
+Tool "just" version "1.43"
+
+DependencySet "python-application"
+    @ecosystem "python"
+    @manifest "pyproject.toml"
+    @lockfile "uv.lock"
+    @install "uv sync --frozen"
+    @mutation "escalate"
+
+Mount "workspace"
+    @source "."
+    @target "/workspace"
+    @mode "read-write"
+
+Endpoint "package-mirror"
+    @host "pypi.godspeed.internal"
+    @port "443"
+    @protocol "https"
+
+NetworkFlow "resolve-python-packages" from "RepairAgent" to "package-mirror"
+    @operation "read"
+
+Credential "package-mirror-token"
+    @provider "sea-forge"
+    @scope "package-mirror:read"
+    @delivery "ephemeral"
+
+Policy dependency_files_immutable per Constraint Prohibition priority 5
+    @rationale "Agents may not modify dependency manifests or lockfiles without escalation."
+    as: true
+
+Metric "environment-proof" as: count(entities) >= 0

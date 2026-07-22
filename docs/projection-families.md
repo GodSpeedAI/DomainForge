@@ -54,6 +54,7 @@ for gate/toolchain details.
 | Event-API | AsyncAPI 3.0 YAML | `--format asyncapi` | Channels/operations/messages per Flow; spec-validated |
 | Activation | Devbox manifest | `--format devbox` | Domain-aware dev shell |
 | Activation | Dagger module | `--format dagger` | One `@dagger.function` per Flow |
+| Activation | Cell environment | `--format cell` | Devbox + Mise + dependency-set + sandbox/network + authority + evidence + `cell.lock` for a `Cell` declaration (see `docs/cell-environment-projections.md`) |
 | Authority | Cedar schema + policies | `--format cedar` | **Permissive baseline** (see below) |
 | Verification | Gauge spec | `--format gauge` | One scenario per Flow |
 | Verification | Alloy model | `--format alloy` | Sigs + facts per Flow |

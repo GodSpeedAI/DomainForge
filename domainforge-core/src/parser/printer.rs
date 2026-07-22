@@ -128,6 +128,7 @@ impl PrettyPrinter {
                 version,
                 annotations,
                 domain,
+                body: _,
             } => self.format_entity(name, version, annotations, domain),
             AstNode::Resource {
                 name,
@@ -203,7 +204,122 @@ impl PrettyPrinter {
                 target,
                 overrides,
             } => self.format_projection(name, target, overrides),
+            AstNode::Cell { name, annotations } => {
+                self.format_generic_decl("Cell", name, None, annotations, None, None)
+            }
+            AstNode::SystemDependency {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl(
+                "SystemDependency",
+                name,
+                version.as_deref(),
+                annotations,
+                None,
+                None,
+            ),
+            AstNode::Runtime {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl(
+                "Runtime",
+                name,
+                Some(version.as_str()),
+                annotations,
+                None,
+                None,
+            ),
+            AstNode::Tool {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl(
+                "Tool",
+                name,
+                Some(version.as_str()),
+                annotations,
+                None,
+                None,
+            ),
+            AstNode::DependencySet { name, annotations } => {
+                self.format_generic_decl("DependencySet", name, None, annotations, None, None)
+            }
+            AstNode::Service {
+                name,
+                version,
+                annotations,
+            } => self.format_generic_decl(
+                "Service",
+                name,
+                version.as_deref(),
+                annotations,
+                None,
+                None,
+            ),
+            AstNode::Mount { name, annotations } => {
+                self.format_generic_decl("Mount", name, None, annotations, None, None)
+            }
+            AstNode::Endpoint { name, annotations } => {
+                self.format_generic_decl("Endpoint", name, None, annotations, None, None)
+            }
+            AstNode::NetworkFlow {
+                name,
+                from_ref,
+                to_ref,
+                annotations,
+            } => self.format_generic_decl(
+                "NetworkFlow",
+                name,
+                None,
+                annotations,
+                Some(from_ref.as_str()),
+                Some(to_ref.as_str()),
+            ),
+            AstNode::Credential { name, annotations } => {
+                self.format_generic_decl("Credential", name, None, annotations, None, None)
+            }
+            AstNode::Record(_) | AstNode::Enum(_) | AstNode::Operation(_) => {
+                crate::formatter::printer::Formatter::node_to_string(node, indent_level)
+            }
         }
+    }
+
+    /// Shared formatter for the cell-environment declarations, all of which
+    /// share the `Keyword "name" [version "v"] [from "x" to "y"] @ann val*`
+    /// shape. `version` and `from`/`to` are mutually exclusive per keyword.
+    #[allow(clippy::too_many_arguments)]
+    fn format_generic_decl(
+        &self,
+        keyword: &str,
+        name: &str,
+        version: Option<&str>,
+        annotations: &HashMap<String, JsonValue>,
+        from_ref: Option<&str>,
+        to_ref: Option<&str>,
+    ) -> String {
+        let mut head = format!("{} {}", keyword, self.quote(name));
+        if let Some(v) = version {
+            head.push_str(&format!(" version {}", self.quote(v)));
+        }
+        if let (Some(from), Some(to)) = (from_ref, to_ref) {
+            head.push_str(&format!(" from {} to {}", self.quote(from), self.quote(to)));
+        }
+
+        let mut lines = vec![head];
+        let mut keys: Vec<_> = annotations.keys().collect();
+        keys.sort();
+        for key in keys {
+            let value = &annotations[key];
+            lines.push(format!(
+                "{}@{} {}",
+                self.indent(1),
+                key,
+                self.format_mapping_value(value, ObjectStyle::ColonSeparated)
+            ));
+        }
+        lines.join("\n")
     }
 
     fn format_export(&self, node: &AstNode, indent_level: usize) -> String {
