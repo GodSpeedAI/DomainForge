@@ -200,7 +200,9 @@ mod tests {
     #[test]
     fn absolute_lockfile_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
-        let ir = minimal_ir("/etc/passwd");
+        let abs = dir.path().join("Cargo.lock");
+        std::fs::write(&abs, "# lock").unwrap();
+        let ir = minimal_ir(abs.to_str().unwrap());
         let err = render(&ir, Some(dir.path())).unwrap_err();
         assert!(err.starts_with("CELL022"), "{err}");
         assert!(err.contains("relative"), "{err}");

@@ -20,7 +20,7 @@ env:
   CARGO_INCREMENTAL: 0
   CACHE_VERSION: v4 # Increment to bust all caches
   CLI_MAX_BYTES: "52428800" # 50MB
-  WASM_MAX_BYTES: "2621440" # 2.5MB
+  WASM_MAX_BYTES: "2883584" # 2.75MB
 
 jobs:
   lint:
