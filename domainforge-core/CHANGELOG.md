@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.15.0...domainforge-core-v0.15.1) (2026-07-23)
+
+
+### Miscellaneous
+
+* **domainforge-core:** Synchronize domainforge versions
+
 ## [0.15.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.14.0...domainforge-core-v0.15.0) (2026-07-22)
 
 
