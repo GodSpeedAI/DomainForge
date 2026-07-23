@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "domainforge"
-version = "0.15.0"
+version = "0.15.1"
 description = "SEA DSL - Semantic Enterprise Architecture Domain Specific Language"
 readme = "README.md"
 requires-python = ">=3.11"

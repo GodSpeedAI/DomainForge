@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-typescript-v0.15.0...domainforge-typescript-v0.15.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **release:** align all version files, fix npm package name for 0.15.0 ([#118](https://github.com/GodSpeedAI/DomainForge/issues/118)) ([21f836a](https://github.com/GodSpeedAI/DomainForge/commit/21f836a8a261bb22cec90b0ce74731152647b151))
+
 ## [0.15.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-typescript-v0.14.0...domainforge-typescript-v0.15.0) (2026-07-22)
 
 
