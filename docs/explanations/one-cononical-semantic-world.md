@@ -12,15 +12,11 @@ The governing principle is:
 
 ## Current DomainForge behavior
 
-DomainForge 0.15.0 does not allow an imported entity type to back instances declared in another module, even when both modules use the same namespace.
+DomainForge 0.15.0 did not allow an imported entity type to back instances declared in another module, even when both modules used the same namespace. DomainForge 0.16.0 resolves the deterministic transitive filesystem module closure for CLI parse, validate, and project commands, so an imported entity type can back same-namespace instances.
 
 For example, one `.sea` file cannot define the canonical `Journey` entity type while another imports `Journey` and declares concrete journey instances as members of the same validated world.
 
-Consequently:
-
-> One validated semantic world currently requires one canonical `.sea` file.
-
-Smaller `.sea` files may remain useful as focused explanations, examples, or views, but DomainForge does not compose them into the canonical world. They are explanatory companions rather than authoritative semantic modules.
+Consequently, a validated semantic world may be one canonical `.sea` file or a deterministic closure of modules under the same semantic authority. Smaller `.sea` files may remain useful as focused explanations, examples, views, or composable authoritative modules when their imports and namespaces resolve unambiguously.
 
 ## Why this constraint is acceptable
 
@@ -101,7 +97,7 @@ The current technical limitation and the desired architectural policy should be 
 
 ### Current technical limitation
 
-DomainForge cannot compose a type defined in one `.sea` module with instances declared in another module as members of one validated semantic world.
+Before DomainForge 0.16.0, DomainForge could not compose a type defined in one `.sea` module with instances declared in another module as members of one validated semantic world. The filesystem CLI now supports that composition through its deterministic transitive module closure.
 
 ### Desired architectural policy
 
@@ -143,7 +139,7 @@ For the current interaction model:
 * Smaller `.sea` files will remain valid explanatory companions.
 * Companion files will not be treated as composable fragments of the canonical model.
 * Concrete specialization will occur through projections, provider configuration, and adapters at the distal boundaries.
-* Cross-module entity instantiation will remain documented as a DomainForge capability gap, but resolving it is not required to fragment the canonical model.
+* Cross-module entity instantiation is available where the module closure resolves deterministically; it does not require fragmenting canonical authority.
 
 This is an intentional trade:
 

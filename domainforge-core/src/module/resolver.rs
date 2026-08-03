@@ -14,6 +14,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use unicode_normalization::UnicodeNormalization;
 
+const MAX_FILESYSTEM_IMPORT_DEPTH: usize = 128;
+const MAX_FILESYSTEM_MODULES: usize = 1024;
+
 #[derive(Debug, Clone)]
 pub struct ModuleInfo {
     pub namespace: String,
@@ -414,6 +417,7 @@ pub(crate) fn source_map_from_filesystem(
     };
     let mut sources: IndexMap<PathBuf, String> = IndexMap::new();
 
+    #[allow(clippy::too_many_arguments)]
     fn visit(
         path: PathBuf,
         supplied_source: Option<&str>,
@@ -421,7 +425,17 @@ pub(crate) fn source_map_from_filesystem(
         default_namespace: Option<&str>,
         bindings: &[NamespaceBinding],
         sources: &mut IndexMap<PathBuf, String>,
+        is_entry: bool,
+        depth: usize,
     ) -> Result<(), Vec<ApplicationDiagnostic>> {
+        if depth > MAX_FILESYSTEM_IMPORT_DEPTH {
+            return Err(vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                format!(
+                    "filesystem module closure exceeds the maximum import depth of {MAX_FILESYSTEM_IMPORT_DEPTH}"
+                ),
+            )]);
+        }
         let path = path.canonicalize().map_err(|error| {
             vec![ApplicationDiagnostic::closure_error(
                 APP014_UNRESOLVED_SPECIFIER,
@@ -433,6 +447,14 @@ pub(crate) fn source_map_from_filesystem(
         })?;
         if sources.contains_key(&path) {
             return Ok(());
+        }
+        if sources.len() >= MAX_FILESYSTEM_MODULES {
+            return Err(vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                format!(
+                    "filesystem module closure exceeds the maximum of {MAX_FILESYSTEM_MODULES} modules"
+                ),
+            )]);
         }
         let source = match supplied_source {
             Some(source) => source.to_string(),
@@ -463,8 +485,17 @@ pub(crate) fn source_map_from_filesystem(
         } else {
             let namespace = registry
                 .and_then(|registry| registry.namespace_for(&path))
-                .or(default_namespace)
-                .unwrap_or("default");
+                .or_else(|| is_entry.then_some(default_namespace).flatten())
+                .or_else(|| is_entry.then_some("default"))
+                .ok_or_else(|| {
+                    vec![ApplicationDiagnostic::closure_error(
+                        APP014_UNRESOLVED_SPECIFIER,
+                        format!(
+                            "imported module '{}' has no declared or registry namespace",
+                            path.display()
+                        ),
+                    )]
+                })?;
             let namespace = serde_json::to_string(namespace)
                 .expect("serializing a Rust string as a SEA string literal cannot fail");
             format!("@namespace {namespace}\n{source}")
@@ -505,6 +536,8 @@ pub(crate) fn source_map_from_filesystem(
                 default_namespace,
                 bindings,
                 sources,
+                false,
+                depth + 1,
             )?;
         }
         Ok(())
@@ -517,6 +550,8 @@ pub(crate) fn source_map_from_filesystem(
         default_namespace,
         &bindings,
         &mut sources,
+        true,
+        0,
     )?;
 
     let mut root = entry_path

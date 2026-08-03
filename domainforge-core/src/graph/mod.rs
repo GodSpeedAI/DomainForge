@@ -474,12 +474,12 @@ impl Graph {
     }
 
     pub fn add_entity_instance(&mut self, instance: Instance) -> Result<(), String> {
-        let mut candidate = self.clone();
-        candidate.insert_entity_instance(instance)?;
-        candidate
-            .validate_entity_instances()
-            .map_err(|errors| errors.join("; "))?;
-        *self = candidate;
+        let id = instance.id().clone();
+        self.insert_entity_instance(instance)?;
+        if let Err(errors) = self.validate_entity_instances() {
+            self.entity_instances.shift_remove(&id);
+            return Err(errors.join("; "));
+        }
         Ok(())
     }
 

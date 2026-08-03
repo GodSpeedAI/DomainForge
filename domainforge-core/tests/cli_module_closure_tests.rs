@@ -96,3 +96,29 @@ fn validate_rejects_invalid_typed_data_from_imported_contract() {
                 .and(predicate::str::contains("unknown")),
         );
 }
+
+#[test]
+fn validate_does_not_apply_entry_default_namespace_to_imported_modules() {
+    let directory = tempdir().expect("temp fixture directory");
+    let types = directory.path().join("types.sea");
+    let entry = directory.path().join("instances.sea");
+    std::fs::write(&types, "export entity \"Journey\" { key id: string }\n")
+        .expect("write unnamespaced imported module");
+    std::fs::write(
+        &entry,
+        r#"@namespace "sea_forge.interaction"
+import { Journey } from "./types.sea"
+instance cj01 of "Journey" { id: "CJ01" }
+"#,
+    )
+    .expect("write entry module");
+
+    Command::new(assert_cmd::cargo::cargo_bin!("domainforge"))
+        .arg("validate")
+        .arg(&entry)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "has no declared or registry namespace",
+        ));
+}

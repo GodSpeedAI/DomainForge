@@ -1,15 +1,15 @@
 use super::Graph;
 use crate::application::{FieldConstraint, FieldContract, FieldType, ScalarType};
 use crate::primitives::Instance;
+use indexmap::IndexMap;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde_json::Value;
-use std::collections::HashMap;
 use std::str::FromStr;
 
 pub(super) fn validate(graph: &Graph) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
-    let mut keys: HashMap<crate::ConceptId, HashMap<String, String>> = HashMap::new();
+    let mut keys: IndexMap<crate::ConceptId, IndexMap<String, String>> = IndexMap::new();
 
     for instance in graph.entity_instances.values() {
         let Some(entity) =
