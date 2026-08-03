@@ -1,3 +1,4 @@
+use crate::application::{ApplicationContract, ApplicationSymbolId, EntityContract, EnumContract};
 use crate::patterns::Pattern;
 use crate::policy::{Policy, Severity, Violation};
 use crate::primitives::{
@@ -9,6 +10,7 @@ use crate::ConceptId;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+mod entity_validation;
 pub mod to_ast;
 
 /// Configuration for graph evaluation behavior
@@ -51,6 +53,10 @@ pub struct Graph {
     projections: IndexMap<ConceptId, ProjectionContract>,
     #[serde(default)]
     entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    entity_contracts: IndexMap<ConceptId, EntityContract>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    enum_contracts: IndexMap<ApplicationSymbolId, EnumContract>,
     #[serde(default)]
     config: GraphConfig,
 }
@@ -119,6 +125,8 @@ impl Graph {
         self.mappings.extend(other.mappings);
         self.projections.extend(other.projections);
         self.entity_roles.extend(other.entity_roles);
+        self.entity_contracts.extend(other.entity_contracts);
+        self.enum_contracts.extend(other.enum_contracts);
     }
 
     pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
@@ -467,6 +475,16 @@ impl Graph {
 
     pub fn add_entity_instance(&mut self, instance: Instance) -> Result<(), String> {
         let id = instance.id().clone();
+        self.insert_entity_instance(instance)?;
+        if let Err(errors) = self.validate_entity_instances() {
+            self.entity_instances.shift_remove(&id);
+            return Err(errors.join("; "));
+        }
+        Ok(())
+    }
+
+    fn insert_entity_instance(&mut self, instance: Instance) -> Result<(), String> {
+        let id = instance.id().clone();
         if self.entity_instances.contains_key(&id) {
             return Err(format!(
                 "Entity instance '{}' already exists",
@@ -493,6 +511,34 @@ impl Graph {
 
         self.entity_instances.insert(id, instance);
         Ok(())
+    }
+
+    pub(crate) fn attach_application_contract(
+        &mut self,
+        contract: ApplicationContract,
+    ) -> Result<(), Vec<String>> {
+        let mut candidate = self.clone();
+        candidate.entity_contracts = contract
+            .entities
+            .into_iter()
+            .map(|contract| (contract.concept_id.clone(), contract))
+            .collect();
+        candidate.enum_contracts = contract
+            .enums
+            .into_iter()
+            .map(|contract| (contract.id.clone(), contract))
+            .collect();
+        candidate.validate_entity_instances()?;
+        *self = candidate;
+        Ok(())
+    }
+
+    pub fn entity_contract(&self, entity_id: &ConceptId) -> Option<&EntityContract> {
+        self.entity_contracts.get(entity_id)
+    }
+
+    pub fn validate_entity_instances(&self) -> Result<(), Vec<String>> {
+        entity_validation::validate(self)
     }
 
     pub fn get_entity_instance(&self, name: &str) -> Option<&Instance> {
@@ -785,6 +831,8 @@ impl Graph {
             mappings,
             projections,
             entity_roles,
+            entity_contracts,
+            enum_contracts,
             config: _,
         } = other;
 
@@ -805,7 +853,9 @@ impl Graph {
         }
 
         for entity_instance in entity_instances.into_values() {
-            self.add_entity_instance(entity_instance)?;
+            // The incoming contracts are installed below, so defer schema
+            // validation until the complete atomic merge candidate exists.
+            self.insert_entity_instance(entity_instance)?;
         }
 
         for flow in flows.into_values() {
@@ -825,6 +875,11 @@ impl Graph {
                 self.assign_role_to_entity(entity_id.clone(), role_id)?;
             }
         }
+
+        self.entity_contracts.extend(entity_contracts);
+        self.enum_contracts.extend(enum_contracts);
+        self.validate_entity_instances()
+            .map_err(|errors| errors.join("; "))?;
 
         for policy in policies.into_values() {
             self.add_policy(policy)?;
@@ -854,6 +909,14 @@ impl Graph {
     pub fn validate(&self) -> ValidationResult {
         let mut all_violations: Vec<Violation> = Vec::new();
         let use_three_valued_logic = self.config.use_three_valued_logic;
+
+        if let Err(errors) = self.validate_entity_instances() {
+            all_violations.extend(
+                errors
+                    .into_iter()
+                    .map(|error| Violation::new("entity_instance_schema", error, Severity::Error)),
+            );
+        }
 
         for policy in self.policies.values() {
             match policy.evaluate_with_mode(self, use_three_valued_logic) {

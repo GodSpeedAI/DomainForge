@@ -1,0 +1,15 @@
+@namespace "sea_forge.interaction"
+
+import { CanonicalJourney, JourneyBinding, Maturity } from "./types.sea"
+
+instance cj99 of "CanonicalJourney" {
+    journey_id: "CJ99",
+    maturity: "unknown",
+    verified: true
+}
+
+instance binding99 of "JourneyBinding" {
+    binding_id: "JB99",
+    journey: "MISSING",
+    verified: true
+}

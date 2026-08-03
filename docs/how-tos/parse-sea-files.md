@@ -85,7 +85,7 @@ ast_json = Graph.parse_to_ast_json(text)
 - Call `graph.all_entities()` or `graph.find_entity_by_name("Customer")` to inspect the parsed model.
 - Errors raise `ValueError` with the same message as the Rust parser.
 
-7. **Parse programmatically in TypeScript**
+1. **Parse programmatically in TypeScript**
 
    ```ts
    import { readFileSync } from "fs";
@@ -103,13 +103,13 @@ ast_json = Graph.parse_to_ast_json(text)
 
    - Use `graph.allResources()` or `graph.findRoleByName("Payer")` after parsing relation-enabled models.
 
-8. **Handle parse warnings and errors**
+2. **Handle parse warnings and errors**
 
    - **Unknown identifiers**: The parser emits `UnknownEntity` or `UnknownResource` errors; add missing declarations or fix typos.
    - **Unit mismatches**: If a flow references an undefined unit, define it in the `Dimension/Unit` section before the flow.
    - **Namespace resolution**: If you see `NamespaceMissing`, create `.sea-registry.toml` near the entry file or pass fully qualified names (e.g., `finance/Invoice`).
 
-9. **Integrate parsing into CI**
+3. **Integrate parsing into CI**
 
    ```bash
    just rust-test  # runs `cargo test -p domainforge-core --features cli` and exercises parser paths

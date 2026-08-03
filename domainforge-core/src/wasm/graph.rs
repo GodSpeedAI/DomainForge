@@ -110,6 +110,20 @@ impl Graph {
             .map(|id| id.to_string())
     }
 
+    /// Return the resolved typed entity contract as compact JSON.
+    /// Bodyless legacy entities intentionally return `undefined`.
+    #[wasm_bindgen(js_name = entityContractJson)]
+    pub fn entity_contract_json(&self, entity_id: String) -> Result<Option<String>, JsValue> {
+        let uuid = Uuid::from_str(&entity_id)
+            .map_err(|error| JsValue::from_str(&format!("Invalid UUID: {error}")))?;
+        let cid = crate::ConceptId::from(uuid);
+        self.inner
+            .entity_contract(&cid)
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|error| JsValue::from_str(&format!("Serialization error: {error}")))
+    }
+
     #[wasm_bindgen(js_name = entityCount)]
     pub fn entity_count(&self) -> usize {
         self.inner.entity_count()

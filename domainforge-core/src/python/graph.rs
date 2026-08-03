@@ -161,6 +161,17 @@ impl Graph {
             .map(|uuid| uuid.to_string())
     }
 
+    /// Return the resolved typed entity contract as compact JSON.
+    /// Bodyless legacy entities intentionally return `None`.
+    fn entity_contract_json(&self, entity_id: String) -> PyResult<Option<String>> {
+        let cid = parse_concept_id(&entity_id)?;
+        self.inner
+            .entity_contract(&cid)
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|error| PyValueError::new_err(format!("Serialization error: {error}")))
+    }
+
     fn find_resource_by_name(&self, name: String) -> Option<String> {
         self.inner
             .find_resource_by_name(&name)

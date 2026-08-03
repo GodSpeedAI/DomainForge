@@ -186,6 +186,20 @@ reads `Order`).
 
 ## 4. Field-by-field semantics of `generation_ready`
 
+### Concrete typed entity instances
+
+When a typed entity participates in a semantic Graph, each `instance of` that
+entity is checked against its resolved `EntityContract`. Required fields must
+be present, optional fields may be omitted, undeclared fields are rejected, and
+scalar, enum, list, quantity, and typed-reference values must satisfy their
+declared types and supported constraints. Entity keys are unique per entity
+type. A `ref<Entity>` value is the referenced entity's key value and must match
+an instance in the complete resolved module closure; forward references are
+valid, dangling references are not.
+
+Bodyless entities remain schemaless: their existing free-form instances and
+serialized Graph shape are unchanged.
+
 An operation is `generation_ready` only when every row below is satisfied
 after resolution and validation. Every value set is closed; anything outside
 it makes the operation not generation-ready.

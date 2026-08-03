@@ -44,6 +44,30 @@ pub fn run(args: ParseArgs) -> Result<()> {
     let source = fs::read_to_string(&args.input)
         .with_context(|| format!("Failed to read file: {}", args.input.display()))?;
 
+    let graph = || -> Result<crate::Graph> {
+        let registry = crate::NamespaceRegistry::discover(&args.input)
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+        let default_namespace = registry
+            .as_ref()
+            .and_then(|registry| registry.namespace_for(&args.input));
+        crate::application::resolve::resolve_filesystem_graph(
+            &args.input,
+            &source,
+            registry.as_ref(),
+            default_namespace,
+        )
+        .map_err(|diagnostics| {
+            anyhow::anyhow!(
+                "Parse error: {}",
+                diagnostics
+                    .iter()
+                    .map(|diagnostic| diagnostic.message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            )
+        })
+    };
+
     let output = match (args.ast || args.ast_v3, args.format) {
         // AST output (uses schema types for stable JSON format)
         (true, ParseFormat::Json) => {
@@ -68,13 +92,11 @@ pub fn run(args: ParseArgs) -> Result<()> {
         }
         // Graph output (default)
         (false, ParseFormat::Json) => {
-            let graph = crate::parser::parse_to_graph(&source)
-                .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
+            let graph = graph()?;
             serde_json::to_string_pretty(&graph).context("Failed to serialize Graph to JSON")?
         }
         (false, ParseFormat::Human) => {
-            let graph = crate::parser::parse_to_graph(&source)
-                .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
+            let graph = graph()?;
             format!(
                 "Graph parsed successfully: {}\n\
                  Entities: {}\n\

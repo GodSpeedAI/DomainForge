@@ -1,5 +1,26 @@
 # Next Steps
 
+## 1. Review and integrate I1-I3
+
+Review the completed I1-I3 diff and verification record, then choose whether to
+commit or open a pull request. Expected outcome: the implementation is
+integrated without staging, reverting, or rewriting the pre-existing unrelated
+worktree changes.
+
+## 2. Restore model-checker-backed TLA evidence when available
+
+Install Java and provide `tla2tools.jar`, then rerun `just prove`. Expected
+outcome: TLA evidence upgrades from the recorded structural-only fallback to a
+model-checker-backed result. This is an environment limitation, not a failing
+I1-I3 behavior or test.
+
+## 3. Continue the prior Milestone 1 contract gate
+
+Resume ADR-014 ratification only after this I1-I3 change is reviewed. Do not
+combine Milestone 1 implementation with this intervention diff.
+
+## Prior milestone next steps (superseded while I1-I3 is active)
+
 ## 1. Ratify ADR-014
 
 Review and explicitly accept or amend

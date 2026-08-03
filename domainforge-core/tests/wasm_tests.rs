@@ -265,6 +265,19 @@ mod application_contract_wasm_tests {
         assert!(message.contains("APP"));
     }
 
+    #[wasm_bindgen_test]
+    fn graph_exposes_typed_entity_contract_json() {
+        let graph = Graph::parse(
+            "@namespace \"binding\"\nentity \"Item\" { key item_id: string value: int }".into(),
+        )
+        .unwrap();
+        let entity_id = graph.find_entity_by_name("Item".into()).unwrap();
+        let raw = graph.entity_contract_json(entity_id).unwrap().unwrap();
+        let contract: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(contract["key_field"], "item_id");
+        assert_eq!(contract["fields"].as_array().unwrap().len(), 2);
+    }
+
     /// Cross-binding byte parity (M0 gate finding 2): WASM must hash to the
     /// same golden as Rust, Python, and TypeScript. See
     /// `application_cross_binding_golden_tests.rs` for the canonical

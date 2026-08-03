@@ -12,6 +12,8 @@ use crate::application::validate::{
     validate_clause_shape, validate_failures, DeclSite,
 };
 use crate::concept_id::ConceptId;
+#[cfg(feature = "cli")]
+use crate::module::resolver::source_map_from_filesystem;
 use crate::module::resolver::{resolve_source_map, ResolvedModuleSet, ResolvedSymbol, SourceMap};
 use crate::parser::ast as past;
 use crate::policy::Expression;
@@ -193,9 +195,33 @@ pub fn resolve_application_graph(
     build_graph_from_set(&set)
 }
 
+#[cfg(feature = "cli")]
+pub(crate) fn resolve_filesystem_graph(
+    entry_path: &std::path::Path,
+    entry_source: &str,
+    registry: Option<&crate::registry::NamespaceRegistry>,
+    default_namespace: Option<&str>,
+) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
+    let (entry_logical_path, sources) =
+        source_map_from_filesystem(entry_path, entry_source, registry, default_namespace)?;
+    let sources_json = serde_json::to_string(&sources.0).map_err(|error| {
+        vec![ApplicationDiagnostic::new(
+            ApplicationDiagnosticCode::App015,
+            format!("failed to serialize filesystem source map: {error}"),
+        )]
+    })?;
+    enforce_source_map_budget(&sources_json)?;
+    let set = resolve_source_map(&entry_logical_path, &sources)?;
+    build_graph_from_set(&set)
+}
+
 pub(crate) fn build_graph_from_set(
     set: &ResolvedModuleSet,
 ) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
+    // Graph construction owns concrete entity-instance validation, not the
+    // application operation contract. Build only the enum/entity slice so an
+    // unrelated operation diagnostic cannot change legacy graph projections.
+    let contract = build_graph_type_contract(set)?;
     // One conversion per effective namespace, so every declaration keeps its
     // authoring module's concept identity (D3). Namespace-less modules use
     // their logical ID, exactly like contract resolution.
@@ -232,6 +258,17 @@ pub(crate) fn build_graph_from_set(
         })?;
         graph.absorb(converted);
     }
+    graph
+        .attach_application_contract(contract)
+        .map_err(|errors| {
+            errors
+                .into_iter()
+                .map(|message| {
+                    ApplicationDiagnostic::new(ApplicationDiagnosticCode::App015, message)
+                        .with_document_kind("authored_source")
+                })
+                .collect::<Vec<_>>()
+        })?;
     Ok(graph)
 }
 
@@ -472,62 +509,7 @@ pub(crate) fn build_contract(
     let ctx = Ctx::new(set);
     let mut contract = ApplicationContract::default();
     let mut diags: Vec<ApplicationDiagnostic> = Vec::new();
-
-    for symbol in set.symbols.values() {
-        let site = DeclSite {
-            logical_module_id: &symbol.origin.logical_module_id,
-            line: symbol.origin.line,
-            column: symbol.origin.column,
-        };
-        match ctx.decl_node(symbol) {
-            past::AstNode::Enum(decl) => {
-                check_enum(decl, site, &mut diags);
-                contract.enums.push(EnumContract {
-                    id: ApplicationSymbolId(symbol.qualified_id.clone()),
-                    name: nfc(&decl.name),
-                    members: decl
-                        .members
-                        .iter()
-                        .map(|m| EnumMember {
-                            name: nfc(&m.name),
-                            wire: nfc(&m.wire),
-                        })
-                        .collect(),
-                });
-            }
-            past::AstNode::Record(decl) => {
-                check_duplicate_fields(&decl.name, &decl.fields, site, &mut diags);
-                check_record_defaults(&decl.name, &decl.fields, site, &mut diags);
-                let fields = resolve_fields(&ctx, symbol, &decl.fields, false, site, &mut diags);
-                contract.records.push(RecordContract {
-                    id: ApplicationSymbolId(symbol.qualified_id.clone()),
-                    name: nfc(&decl.name),
-                    fields,
-                });
-            }
-            past::AstNode::Entity {
-                name,
-                body: Some(body),
-                ..
-            } => {
-                check_duplicate_fields(name, &body.fields, site, &mut diags);
-                let key_field = check_entity_key(name, &body.fields, site, &mut diags);
-                let fields = resolve_fields(&ctx, symbol, &body.fields, true, site, &mut diags);
-                if let Some(key_field) = key_field {
-                    contract.entities.push(EntityContract {
-                        concept_id: ctx.symbol_concept(symbol),
-                        name: name.clone(),
-                        key_field: nfc(&key_field),
-                        fields,
-                    });
-                }
-            }
-            // Operations lower in a second pass, after every record/entity
-            // contract they reference has been constructed.
-            past::AstNode::Operation(_) => {}
-            _ => {}
-        }
-    }
+    lower_data_contracts(&ctx, true, &mut contract, &mut diags);
 
     let mut closure_codes: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut operations = Vec::new();
@@ -560,6 +542,93 @@ pub(crate) fn build_contract(
     contract.entities.sort_by_key(|e| e.concept_id.to_string());
     contract.operations.sort_by(|a, b| a.id.0.cmp(&b.id.0));
 
+    if diags.is_empty() {
+        Ok(contract)
+    } else {
+        sort_diagnostics(&mut diags);
+        Err(diags)
+    }
+}
+
+/// Lower the shared enum/entity contract slice once. Full application
+/// contracts additionally include records; Graph intentionally does not.
+fn lower_data_contracts(
+    ctx: &Ctx<'_>,
+    include_records: bool,
+    contract: &mut ApplicationContract,
+    diags: &mut Vec<ApplicationDiagnostic>,
+) {
+    for symbol in ctx.set.symbols.values() {
+        let site = DeclSite {
+            logical_module_id: &symbol.origin.logical_module_id,
+            line: symbol.origin.line,
+            column: symbol.origin.column,
+        };
+        match ctx.decl_node(symbol) {
+            past::AstNode::Enum(decl) => {
+                check_enum(decl, site, diags);
+                contract.enums.push(EnumContract {
+                    id: ApplicationSymbolId(symbol.qualified_id.clone()),
+                    name: nfc(&decl.name),
+                    members: decl
+                        .members
+                        .iter()
+                        .map(|member| EnumMember {
+                            name: nfc(&member.name),
+                            wire: nfc(&member.wire),
+                        })
+                        .collect(),
+                });
+            }
+            past::AstNode::Record(decl) if include_records => {
+                check_duplicate_fields(&decl.name, &decl.fields, site, diags);
+                check_record_defaults(&decl.name, &decl.fields, site, diags);
+                let fields = resolve_fields(ctx, symbol, &decl.fields, false, site, diags);
+                contract.records.push(RecordContract {
+                    id: ApplicationSymbolId(symbol.qualified_id.clone()),
+                    name: nfc(&decl.name),
+                    fields,
+                });
+            }
+            past::AstNode::Entity {
+                name,
+                body: Some(body),
+                ..
+            } => {
+                check_duplicate_fields(name, &body.fields, site, diags);
+                let key_field = check_entity_key(name, &body.fields, site, diags);
+                let fields = resolve_fields(ctx, symbol, &body.fields, true, site, diags);
+                if let Some(key_field) = key_field {
+                    contract.entities.push(EntityContract {
+                        concept_id: ctx.symbol_concept(symbol),
+                        name: name.clone(),
+                        key_field: nfc(&key_field),
+                        fields,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Build the resolved type information that the graph needs to validate
+/// concrete entity instances. Records and operations remain application-only
+/// contracts (ADR-013) and therefore cannot make graph construction fail.
+fn build_graph_type_contract(
+    set: &ResolvedModuleSet,
+) -> Result<ApplicationContract, Vec<ApplicationDiagnostic>> {
+    let ctx = Ctx::new(set);
+    let mut contract = ApplicationContract::default();
+    let mut diags = Vec::new();
+    lower_data_contracts(&ctx, false, &mut contract, &mut diags);
+
+    contract
+        .enums
+        .sort_by(|left, right| left.id.0.cmp(&right.id.0));
+    contract
+        .entities
+        .sort_by_key(|entity| entity.concept_id.to_string());
     if diags.is_empty() {
         Ok(contract)
     } else {

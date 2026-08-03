@@ -7,6 +7,10 @@ This reference captures the available CLI commands provided by the `sea` binary 
 - Replace `model.sea` with your own file paths.
 - Commands exit non-zero on validation or parsing errors; examples note expected exit codes when relevant.
 - Use `--format json` when integrating with tooling.
+- File-based graph commands (`parse` without `--ast`, `validate`, and
+  `project`) resolve the entry file's deterministic transitive import closure.
+  Imported declarations therefore participate in graph semantics and typed
+  entity-instance validation. AST output remains the authored entry-file AST.
 
 ## Global options
 
@@ -29,7 +33,8 @@ domainforge parse path/to/model.sea
 Options:
 
 - `--format <human|json>`: default `human` shows counts; `json` output depends on `--ast`.
-  - Without `--ast`: outputs semantic Graph JSON (entities, resources, flows)
+  - Without `--ast`: outputs semantic Graph JSON, including declarations and
+    instances resolved from the transitive module closure
   - With `--ast`: outputs Abstract Syntax Tree JSON (declarations, source locations)
 - `--ast`: output AST structure instead of semantic graph.
 - `--out <path>`: write output to a file instead of stdout.
@@ -50,7 +55,7 @@ Expected output includes entity/resource/flow counts and the active namespace. A
 
 ## validate
 
-Validate syntax and semantics of a SEA file.
+Validate syntax and semantics of a SEA file and its transitive module closure.
 
 ```
 domainforge validate path/to/model.sea

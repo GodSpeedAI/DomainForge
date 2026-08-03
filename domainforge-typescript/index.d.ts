@@ -242,6 +242,7 @@ export declare class Graph {
   getInstance(id: string): ResourceInstance | null
   findRoleByName(name: string): string | null
   findEntityByName(name: string): string | null
+  entityContractJson(entityId: string): string | null
   findResourceByName(name: string): string | null
   flowsFrom(entityId: string): Array<Flow>
   flowsTo(entityId: string): Array<Flow>

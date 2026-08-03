@@ -14,6 +14,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use unicode_normalization::UnicodeNormalization;
 
+const MAX_FILESYSTEM_IMPORT_DEPTH: usize = 128;
+const MAX_FILESYSTEM_MODULES: usize = 1024;
+
 #[derive(Debug, Clone)]
 pub struct ModuleInfo {
     pub namespace: String,
@@ -383,6 +386,205 @@ impl SourceMap {
             Err(diags)
         }
     }
+}
+
+/// Adapt one filesystem entry and its deterministic transitive import closure
+/// into the same normalized `SourceMap` consumed by application resolution.
+#[cfg(feature = "cli")]
+pub(crate) fn source_map_from_filesystem(
+    entry_path: &Path,
+    entry_source: &str,
+    registry: Option<&NamespaceRegistry>,
+    default_namespace: Option<&str>,
+) -> Result<(String, SourceMap), Vec<ApplicationDiagnostic>> {
+    let entry_path = entry_path.canonicalize().map_err(|error| {
+        vec![ApplicationDiagnostic::closure_error(
+            APP014_UNRESOLVED_SPECIFIER,
+            format!(
+                "failed to resolve filesystem entry '{}': {error}",
+                entry_path.display()
+            ),
+        )]
+    })?;
+    let bindings = match registry {
+        Some(registry) => registry.resolve_files().map_err(|error| {
+            vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                format!("failed to resolve namespace registry files: {error}"),
+            )]
+        })?,
+        None => Vec::new(),
+    };
+    let mut sources: IndexMap<PathBuf, String> = IndexMap::new();
+
+    #[allow(clippy::too_many_arguments)]
+    fn visit(
+        path: PathBuf,
+        supplied_source: Option<&str>,
+        registry: Option<&NamespaceRegistry>,
+        default_namespace: Option<&str>,
+        bindings: &[NamespaceBinding],
+        sources: &mut IndexMap<PathBuf, String>,
+        is_entry: bool,
+        depth: usize,
+    ) -> Result<(), Vec<ApplicationDiagnostic>> {
+        if depth > MAX_FILESYSTEM_IMPORT_DEPTH {
+            return Err(vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                format!(
+                    "filesystem module closure exceeds the maximum import depth of {MAX_FILESYSTEM_IMPORT_DEPTH}"
+                ),
+            )]);
+        }
+        let path = path.canonicalize().map_err(|error| {
+            vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                format!(
+                    "failed to resolve imported module '{}': {error}",
+                    path.display()
+                ),
+            )]
+        })?;
+        if sources.contains_key(&path) {
+            return Ok(());
+        }
+        if sources.len() >= MAX_FILESYSTEM_MODULES {
+            return Err(vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                format!(
+                    "filesystem module closure exceeds the maximum of {MAX_FILESYSTEM_MODULES} modules"
+                ),
+            )]);
+        }
+        let source = match supplied_source {
+            Some(source) => source.to_string(),
+            None => fs::read_to_string(&path).map_err(|error| {
+                vec![ApplicationDiagnostic::closure_error(
+                    APP014_UNRESOLVED_SPECIFIER,
+                    format!(
+                        "failed to read imported module '{}': {error}",
+                        path.display()
+                    ),
+                )]
+            })?,
+        };
+        let ast = parse_source(&source).map_err(|error| {
+            let mut diagnostic = ApplicationDiagnostic::new(
+                ApplicationDiagnosticCode::App015,
+                format!("module '{}' failed to parse: {error}", path.display()),
+            )
+            .with_document_kind("authored_source");
+            diagnostic.context.logical_module_id = Some(path.display().to_string());
+            vec![diagnostic]
+        })?;
+
+        // Insert before recursion so cycles terminate here and are diagnosed by
+        // the canonical resolver from the complete collected source set.
+        let effective_source = if ast.metadata.namespace.is_some() {
+            source
+        } else {
+            let namespace = registry
+                .and_then(|registry| registry.namespace_for(&path))
+                .or_else(|| is_entry.then_some(default_namespace).flatten())
+                .or_else(|| is_entry.then_some("default"))
+                .ok_or_else(|| {
+                    vec![ApplicationDiagnostic::closure_error(
+                        APP014_UNRESOLVED_SPECIFIER,
+                        format!(
+                            "imported module '{}' has no declared or registry namespace",
+                            path.display()
+                        ),
+                    )]
+                })?;
+            let namespace = serde_json::to_string(namespace)
+                .expect("serializing a Rust string as a SEA string literal cannot fail");
+            format!("@namespace {namespace}\n{source}")
+        };
+        sources.insert(path.clone(), effective_source);
+
+        for import in &ast.metadata.imports {
+            let specifier = import.from_module.as_str();
+            if specifier == "std" || specifier.starts_with("std:") {
+                continue;
+            }
+            let dependency = if specifier.starts_with("./") || specifier.starts_with("../") {
+                path.parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(specifier)
+            } else {
+                let mut matches = bindings
+                    .iter()
+                    .filter(|binding| binding.namespace == specifier);
+                let Some(first) = matches.next() else {
+                    return Err(vec![ApplicationDiagnostic::closure_error(
+                        APP014_UNRESOLVED_SPECIFIER,
+                        format!(
+                            "namespace import '{specifier}' in '{}' matches no registry module",
+                            path.display()
+                        ),
+                    )]);
+                };
+                // `resolve_files` is path-sorted; choosing its first exact
+                // namespace binding preserves the legacy resolver's deterministic
+                // selection while the canonical resolver owns symbol semantics.
+                first.path.clone()
+            };
+            visit(
+                dependency,
+                None,
+                registry,
+                default_namespace,
+                bindings,
+                sources,
+                false,
+                depth + 1,
+            )?;
+        }
+        Ok(())
+    }
+
+    visit(
+        entry_path.clone(),
+        Some(entry_source),
+        registry,
+        default_namespace,
+        &bindings,
+        &mut sources,
+        true,
+        0,
+    )?;
+
+    let mut root = entry_path
+        .parent()
+        .unwrap_or(entry_path.as_path())
+        .to_path_buf();
+    while sources.keys().any(|path| !path.starts_with(&root)) {
+        if !root.pop() {
+            return Err(vec![ApplicationDiagnostic::closure_error(
+                APP014_UNRESOLVED_SPECIFIER,
+                "filesystem module closure has no common root".to_string(),
+            )]);
+        }
+    }
+
+    let mut ordered: Vec<(String, String)> = sources
+        .into_iter()
+        .map(|(path, source)| {
+            let logical = path
+                .strip_prefix(&root)
+                .expect("common root contains every collected module")
+                .to_string_lossy()
+                .replace('\\', "/");
+            (logical, source)
+        })
+        .collect();
+    ordered.sort_by(|left, right| left.0.cmp(&right.0));
+    let entry_logical = entry_path
+        .strip_prefix(&root)
+        .expect("common root contains the entry module")
+        .to_string_lossy()
+        .replace('\\', "/");
+    Ok((entry_logical, SourceMap(ordered.into_iter().collect())))
 }
 
 /// Deserialize a JSON object into ordered (key, string-value) pairs without

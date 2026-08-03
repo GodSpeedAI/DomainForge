@@ -434,7 +434,7 @@ quantified_expr = {
 quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }
 
 collection = {
-    ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
+    ^"entity_instances" | ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
 }
 
 // Member access (e.g., Flow.quantity, Entity.name)
