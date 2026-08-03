@@ -1,0 +1,19 @@
+@namespace "sea_forge.interaction"
+
+export enum Maturity {
+    specified = "specified",
+    exercised = "exercised"
+}
+
+export entity "CanonicalJourney" {
+    key journey_id: string (min_length 1)
+    maturity: Maturity
+    verified: bool
+    title: string optional
+}
+
+export entity "JourneyBinding" {
+    key binding_id: string
+    journey: ref<CanonicalJourney>
+    verified: bool
+}

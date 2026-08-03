@@ -374,6 +374,39 @@ impl Expression {
                         .collect();
                     Ok(entities)
                 }
+                "entity_instances" => {
+                    let instances = graph
+                        .all_entity_instances()
+                        .iter()
+                        .map(|instance| {
+                            let mut map = serde_json::Map::new();
+                            map.insert(
+                                "id".to_string(),
+                                serde_json::json!(instance.id().to_string()),
+                            );
+                            map.insert("name".to_string(), serde_json::json!(instance.name()));
+                            map.insert(
+                                "entity".to_string(),
+                                serde_json::json!(instance.entity_type()),
+                            );
+                            map.insert(
+                                "namespace".to_string(),
+                                serde_json::json!(instance.namespace()),
+                            );
+
+                            let mut fields: Vec<_> = instance.fields().iter().collect();
+                            fields.sort_by(|left, right| left.0.cmp(right.0));
+                            for (name, value) in fields {
+                                if matches!(name.as_str(), "id" | "name" | "entity" | "namespace") {
+                                    continue;
+                                }
+                                map.insert(name.clone(), value.clone());
+                            }
+                            serde_json::Value::Object(map)
+                        })
+                        .collect();
+                    Ok(instances)
+                }
                 "relations" => {
                     let relations: Vec<serde_json::Value> = graph
                         .all_relations()
@@ -493,6 +526,7 @@ impl Expression {
                 Expression::Variable(name) => match name.as_str() {
                     "flows" => "flow",
                     "entities" => "entity",
+                    "entity_instances" => "entity_instance",
                     "resources" => "resource",
                     "instances" => "instance",
                     "relations" => "relation",

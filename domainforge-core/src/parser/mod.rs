@@ -52,7 +52,38 @@ pub fn parse(source: &str) -> ParseResult<Ast> {
 /// Parse SEA DSL source code directly into a Graph
 pub fn parse_to_graph(source: &str) -> ParseResult<Graph> {
     let ast = parse(source)?;
-    ast::ast_to_graph_with_options(ast, &ParseOptions::default())
+    graph_from_parsed_source(source, ast, &ParseOptions::default())
+}
+
+fn graph_from_parsed_source(source: &str, ast: Ast, options: &ParseOptions) -> ParseResult<Graph> {
+    if !ast.declarations.iter().any(|declaration| {
+        let node = match &declaration.node {
+            AstNode::Export(inner) => &inner.node,
+            node => node,
+        };
+        matches!(node, AstNode::Entity { body: Some(_), .. })
+    }) {
+        return ast::ast_to_graph_with_options(ast, options);
+    }
+
+    let effective_source = if ast.metadata.namespace.is_some() {
+        source.to_string()
+    } else {
+        let namespace = options.default_namespace.as_deref().unwrap_or("default");
+        let namespace = serde_json::to_string(namespace)
+            .expect("serializing a Rust string as a SEA string literal cannot fail");
+        format!("@namespace {namespace}\n{source}")
+    };
+    let sources = serde_json::json!({ "main.sea": effective_source }).to_string();
+    crate::application::resolve_application_graph("main.sea", &sources).map_err(|diagnostics| {
+        ParseError::Validation(
+            diagnostics
+                .iter()
+                .map(|diagnostic| diagnostic.message.as_str())
+                .collect::<Vec<_>>()
+                .join("; "),
+        )
+    })
 }
 
 /// Parses SEA DSL `source` directly into a `Graph`, honoring the provided `options`.
@@ -96,7 +127,7 @@ pub fn parse_to_graph_with_options(source: &str, options: &ParseOptions) -> Pars
                     );
             }
             let ast = parse(source)?;
-            ast::ast_to_graph_with_options(ast, options)
+            graph_from_parsed_source(source, ast, options)
         }
     }
 }

@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `formatting`         | ICU-based number formatting              | ❌      |
 | `three_valued_logic` | Three-valued logic for policy evaluation | ❌      |
 
-### Enable features:
+### Enable features
 
 ```toml
 # CLI binary

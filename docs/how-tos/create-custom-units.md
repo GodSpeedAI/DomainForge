@@ -6,9 +6,9 @@ Goal: Define custom dimensions/units and validate quantities using them in SEA m
 
 - SEA CLI installed.
 
-   - For developers building from source: `cargo install --path domainforge-core --features cli` (produces the `sea` binary).
-   - Recommended: install the official GitHub Releases binary for your platform.
-   - Alternates: `cargo install domainforge-core` from crates.io when published, or use the packaged release/installer provided for your OS.
+  - For developers building from source: `cargo install --path domainforge-core --features cli` (produces the `sea` binary).
+  - Recommended: install the official GitHub Releases binary for your platform.
+  - Alternates: `cargo install domainforge-core` from crates.io when published, or use the packaged release/installer provided for your OS.
 - Familiarity with resources and flows in the SEA DSL.
 - Optional: Python/TypeScript bindings if you want to assert units programmatically.
 
@@ -34,10 +34,10 @@ Entity "Bob"
 Flow "Money" from "Alice" to "Bob" quantity 100
 ```
 
-   - Resources reference the canonical unit.
-   - Flows inherit the resource unit unless explicitly overridden.
+- Resources reference the canonical unit.
+- Flows inherit the resource unit unless explicitly overridden.
 
-3. **Convert units in policies or aggregations**
+1. **Convert units in policies or aggregations**
 
    ```sea
    Policy euro_cap as:
@@ -46,7 +46,7 @@ Flow "Money" from "Alice" to "Bob" quantity 100
 
    - Keep comparisons in the resource's canonical unit to avoid ambiguous conversions.
 
-4. **Create the example file and validate with the CLI**
+2. **Create the example file and validate with the CLI**
 
    Create `examples/custom_units.sea` (this file contains the model used by the following examples):
 
@@ -72,7 +72,7 @@ SEA
 
    This validation will fail if a unit or dimension is missing, duplicated, or forms a circular base chain.
 
-5. **Inspect units in Python (re-using examples/custom_units.sea)**
+1. **Inspect units in Python (re-using examples/custom_units.sea)**
 
 ```python
 from domainforge import Graph
@@ -83,7 +83,7 @@ resource = graph.all_resources()[0]
 assert resource.unit == "USD"
 ```
 
-6. **Inspect units in TypeScript (re-using examples/custom_units.sea)**
+1. **Inspect units in TypeScript (re-using examples/custom_units.sea)**
 
    ```ts
    import { Graph } from "domainforge";

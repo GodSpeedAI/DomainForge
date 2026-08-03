@@ -1,4 +1,4 @@
-use crate::parser::{parse_to_graph_with_options, ParseOptions};
+use crate::parser::ParseOptions;
 use crate::projection::protobuf::{CompatibilityMode, SchemaHistory};
 use crate::projection::ProtobufEngine;
 use crate::NamespaceRegistry;
@@ -219,8 +219,23 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         entry_path: Some(args.input.clone()),
         ..Default::default()
     };
-    let graph = parse_to_graph_with_options(&source, &options)
-        .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", args.input.display(), e))?;
+    let graph = crate::application::resolve::resolve_filesystem_graph(
+        &args.input,
+        &source,
+        options.namespace_registry.as_ref(),
+        options.default_namespace.as_deref(),
+    )
+    .map_err(|diagnostics| {
+        anyhow::anyhow!(
+            "Parse failed for {}: {}",
+            args.input.display(),
+            diagnostics
+                .iter()
+                .map(|diagnostic| diagnostic.message.as_str())
+                .collect::<Vec<_>>()
+                .join("; ")
+        )
+    })?;
 
     match args.format {
         ProjectFormat::AiLlm

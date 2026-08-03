@@ -1,0 +1,18 @@
+@namespace "sea_forge.interaction"
+
+import { CanonicalJourney, JourneyBinding, Maturity } from "./types.sea"
+
+instance binding01 of "JourneyBinding" {
+    binding_id: "JB01",
+    journey: "CJ01",
+    verified: true
+}
+
+instance cj01 of "CanonicalJourney" {
+    journey_id: "CJ01",
+    maturity: "exercised",
+    verified: true
+}
+
+Policy verified_interaction_instances as:
+    forall entity_instance in entity_instances: (entity_instance.verified = true)

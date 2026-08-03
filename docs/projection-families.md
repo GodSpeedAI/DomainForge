@@ -84,5 +84,6 @@ SEA→DDD mapping and the `@cqrs` annotation switch.
 | Code | Python DDD/CQRS package | `--format domain-python` | stdlib only; `compileall` + `mypy --strict` + `unittest` verified |
 | Code | TypeScript DDD/CQRS package | `--format domain-typescript` | zero runtime deps; `tsc --noEmit` (strict) verified |
 | Code | Rust DDD/CQRS crate | `--format domain-rust` | zero deps; `cargo check` + `cargo test` verified |
+
 </content>
 </invoke>

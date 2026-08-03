@@ -34,6 +34,13 @@ When a quantifier is evaluated (e.g., `forall f in Flow`), the engine:
 2. Binds the current item to the variable name (`f`).
 3. Evaluates the inner expression body with this context.
 
+The built-in plural collections are `flows`, `entities`, `resources`,
+`instances`, `relations`, and `entity_instances`. An `entity_instances` item
+exposes reserved `id`, `name`, `entity`, and `namespace` properties followed by
+its authored fields; authored fields cannot overwrite the reserved properties.
+Aggregate filters over this collection use the singular binding
+`entity_instance`.
+
 ## Evaluation Order
 
 Evaluation is strictly deterministic due to the use of `IndexMap` in the underlying graph store.

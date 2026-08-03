@@ -1,6 +1,7 @@
 # Temporary files
 /tmp/
 tmp/*
+.tmp/
 
 # Node.js / TypeScript
 node_modules/

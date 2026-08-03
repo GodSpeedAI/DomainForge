@@ -55,8 +55,23 @@ fn validate_file(
         entry_path: Some(path.to_path_buf()),
         ..Default::default()
     };
-    let graph = parse_to_graph_with_options(&source, &options)
-        .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", path.display(), e))?;
+    let graph = crate::application::resolve::resolve_filesystem_graph(
+        path,
+        &source,
+        options.namespace_registry.as_ref(),
+        options.default_namespace.as_deref(),
+    )
+    .map_err(|diagnostics| {
+        anyhow::anyhow!(
+            "Parse failed for {}: {}",
+            path.display(),
+            diagnostics
+                .iter()
+                .map(|diagnostic| diagnostic.message.as_str())
+                .collect::<Vec<_>>()
+                .join("; ")
+        )
+    })?;
     report_validation(graph, format, use_color, show_source, Some(&source))
 }
 

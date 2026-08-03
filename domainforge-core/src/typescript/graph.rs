@@ -204,6 +204,18 @@ impl Graph {
             .map(|uuid| uuid.to_string())
     }
 
+    /// Return the resolved typed entity contract as compact JSON.
+    /// Bodyless legacy entities intentionally return `null`.
+    #[napi]
+    pub fn entity_contract_json(&self, entity_id: String) -> Result<Option<String>> {
+        let cid = parse_concept_id(&entity_id)?;
+        self.inner
+            .entity_contract(&cid)
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|error| Error::from_reason(format!("Serialization error: {error}")))
+    }
+
     #[napi]
     pub fn find_resource_by_name(&self, name: String) -> Option<String> {
         self.inner
