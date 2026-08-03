@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-typescript-v0.15.0...domainforge-typescript-v0.16.0) (2026-08-03)
+
+
+### Features
+
+* **application:** complete typed entity interaction support ([#120](https://github.com/GodSpeedAI/DomainForge/issues/120)) ([5ad44be](https://github.com/GodSpeedAI/DomainForge/commit/5ad44be3db92fa41e6eef9eb1b4da0797eb66bac))
+
 ## [0.15.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-typescript-v0.14.0...domainforge-typescript-v0.15.0) (2026-07-22)
 
 
