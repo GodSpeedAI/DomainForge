@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { Graph } from '../domainforge-typescript';
 
 describe('typed entity contract binding', () => {
