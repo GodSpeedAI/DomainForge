@@ -242,6 +242,10 @@ export declare class Graph {
   getInstance(id: string): ResourceInstance | null
   findRoleByName(name: string): string | null
   findEntityByName(name: string): string | null
+  /**
+   * Return the resolved typed entity contract as compact JSON.
+   * Bodyless legacy entities intentionally return `null`.
+   */
   entityContractJson(entityId: string): string | null
   findResourceByName(name: string): string | null
   flowsFrom(entityId: string): Array<Flow>

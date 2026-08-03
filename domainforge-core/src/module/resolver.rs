@@ -14,7 +14,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use unicode_normalization::UnicodeNormalization;
 
+#[cfg(feature = "cli")]
 const MAX_FILESYSTEM_IMPORT_DEPTH: usize = 128;
+#[cfg(feature = "cli")]
 const MAX_FILESYSTEM_MODULES: usize = 1024;
 
 #[derive(Debug, Clone)]
