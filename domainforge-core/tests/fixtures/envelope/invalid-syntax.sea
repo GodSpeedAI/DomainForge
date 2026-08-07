@@ -1,0 +1,6 @@
+@namespace "broken"
+@version "1.0.0"
+
+Entity "A" in broken
+Entity "B" in broken
+Flow "X" from "A" to "B" quantity this is not valid

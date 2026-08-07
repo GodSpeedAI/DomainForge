@@ -1227,3 +1227,359 @@ pub fn validate_semantic_envelope_document_json(
         Err(diags)
     }
 }
+
+// ---- CEP-0008 semantic snapshot emission (Slice 0B) ----
+
+/// §5.2.1: every sxr snapshot Representation MUST carry these known omissions.
+pub const CEP_SNAPSHOT_KNOWN_OMISSIONS: [&str; 3] = [
+    "source_comments",
+    "source_formatting",
+    "source_line_positions",
+];
+
+/// §5.2.1 reason text for the mandatory representation omission record.
+pub const CEP_SNAPSHOT_OMISSION_REASON: &str =
+    "domainforge canonical envelope is formatting- and comment-independent by construction";
+
+/// §5.2.1 recoverable-from text for the mandatory representation omission record.
+pub const CEP_SNAPSHOT_OMISSION_RECOVERABLE_FROM: &str =
+    "the .sea sources at the recorded git blob hashes";
+
+/// CEP envelope version emitted by DomainForge (spec §5.4 table).
+pub const CEP_ENVELOPE_VERSION: &str = "1.0.0";
+
+/// CEP envelope kind for resolved semantic closures (spec §5.3b).
+pub const CEP_ENVELOPE_KIND_SEMANTIC_SNAPSHOT: &str = "semantic_snapshot";
+
+/// Producer name used in emitted CEP envelopes (spec §5.4 `created_by`).
+pub const CEP_PRODUCER_NAME: &str = "domainforge";
+
+/// CEP version declared by DomainForge emissions.
+pub const CEP_VERSION: &str = "0.1.0";
+
+/// Deterministic inputs for [`build_cep_envelope`]. `doc` is present exactly
+/// when the declared model produced a canonical D; on the failure path the
+/// checkpoint hash and diagnostics carry the §14.4 failure identity.
+pub struct CepEnvelopeParams<'a> {
+    pub doc: Option<&'a CanonicalSemanticEnvelopeDocument>,
+    pub model_valid: bool,
+    pub source_set_hash: &'a str,
+    pub invalid_declared_checkpoint_hash: Option<&'a str>,
+    pub diagnostics: &'a [String],
+    pub scope: serde_json::Value,
+    pub entry_logical_path: &'a str,
+    pub inline_threshold_bytes: u64,
+    pub envelope_id: &'a str,
+    pub created_at: &'a str,
+    pub registry_content_hash: Option<&'a str>,
+    pub resolved_namespaces: &'a [(String, String)],
+}
+
+/// Build the CEP-0008 canonical full-profile `semantic_snapshot` envelope for
+/// one DomainForge emission (spec §5.2/§5.4/§10.7a/§14.4). Pure and
+/// deterministic given inputs; the CLI supplies a fresh `envelope_id` and
+/// `created_at` per emission (I-DET: only those two fields vary across runs).
+pub fn build_cep_envelope(p: &CepEnvelopeParams<'_>) -> serde_json::Value {
+    let created_by = format!("{} {}", CEP_PRODUCER_NAME, env!("CARGO_PKG_VERSION"));
+    let source_set_ref = format!("source-set:{}", p.source_set_hash);
+
+    let mut known_omissions: Vec<String> = CEP_SNAPSHOT_KNOWN_OMISSIONS
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    if p.doc.is_none() {
+        known_omissions.push("canonical_representation_D".to_string());
+    }
+    let included_sections: Vec<&str> = if p.doc.is_some() {
+        vec!["representations", "references", "provenance"]
+    } else {
+        vec!["omissions", "references", "provenance"]
+    };
+
+    let mut envelope = serde_json::Map::new();
+    envelope.insert("envelope_id".to_string(), serde_json::json!(p.envelope_id));
+    envelope.insert("cep_version".to_string(), serde_json::json!(CEP_VERSION));
+    envelope.insert(
+        "envelope_version".to_string(),
+        serde_json::json!(CEP_ENVELOPE_VERSION),
+    );
+    envelope.insert(
+        "envelope_kind".to_string(),
+        serde_json::json!(CEP_ENVELOPE_KIND_SEMANTIC_SNAPSHOT),
+    );
+    envelope.insert("created_at".to_string(), serde_json::json!(p.created_at));
+    envelope.insert("created_by".to_string(), serde_json::json!(created_by));
+    envelope.insert("scope".to_string(), p.scope.clone());
+    envelope.insert(
+        "boundary_record".to_string(),
+        serde_json::json!({
+            "scope": p.entry_logical_path,
+            "included_sections": included_sections,
+            "excluded_sections": [],
+            "known_omissions": known_omissions,
+            "unknowns": [],
+            "redactions": [],
+            "compression_notes": [],
+            "out_of_scope_entities": [],
+            "limitations": [],
+        }),
+    );
+    envelope.insert(
+        "completeness_status".to_string(),
+        serde_json::json!(if p.doc.is_some() {
+            "complete_for_declared_state"
+        } else {
+            "incomplete_for_declared_state"
+        }),
+    );
+    envelope.insert(
+        "provenance_refs".to_string(),
+        serde_json::json!([source_set_ref]),
+    );
+    envelope.insert(
+        "omission_status".to_string(),
+        serde_json::json!("known_omissions_recorded"),
+    );
+    envelope.insert("lineage_refs".to_string(), serde_json::json!([]));
+
+    // §15.1 provenance section: this envelope's own production provenance.
+    envelope.insert(
+        "provenance".to_string(),
+        serde_json::json!([{
+            "provenance_id": format!("provenance:{}", p.envelope_id),
+            "source_system_refs": [format!("source-set:{}", p.source_set_hash)],
+            "producer_refs": [created_by],
+            "production_method": "domainforge envelope --emit cep",
+            "created_at": p.created_at,
+            "verification_status": "unverified",
+            "review_status": "unreviewed",
+        }]),
+    );
+
+    // §13.1 reference record: the resolved source set this snapshot derives from.
+    envelope.insert(
+        "references".to_string(),
+        serde_json::json!([{
+            "ref_id": format!(
+                "source-set:{}",
+                p.source_set_hash.strip_prefix("sha256:").unwrap_or(p.source_set_hash)
+            ),
+            "ref_type": "source_set",
+            "target_uri_or_id": p.entry_logical_path,
+            "target_hash": p.source_set_hash,
+            "availability_status": "available",
+            "integrity_status": "verifiable",
+            "scope": p.entry_logical_path,
+        }]),
+    );
+
+    match p.doc {
+        Some(doc) => {
+            envelope.insert(
+                "validation_status".to_string(),
+                serde_json::json!("validated"),
+            );
+            let representation = build_representation(p, doc, &created_by);
+            envelope.insert(
+                "representations".to_string(),
+                serde_json::json!([representation]),
+            );
+            if !p.model_valid {
+                envelope.insert(
+                    "extensions".to_string(),
+                    serde_json::json!({
+                        "domainforge": {
+                            "model_validation_status": "invalid",
+                            "diagnostics": p.diagnostics,
+                        }
+                    }),
+                );
+            }
+        }
+        None => {
+            envelope.insert(
+                "conformance_status".to_string(),
+                serde_json::json!("non_conformant"),
+            );
+            envelope.insert(
+                "omissions".to_string(),
+                serde_json::json!([{
+                    "omission_id": format!(
+                        "omission:representation:{}",
+                        p.invalid_declared_checkpoint_hash
+                            .unwrap_or_default()
+                            .strip_prefix("sha256:")
+                            .unwrap_or_default()
+                    ),
+                    "omission_type": "representation_unavailable",
+                    "description": "canonical D not constructed; declared model invalid",
+                    "reason": "model validation failed",
+                    "known_or_suspected": "known",
+                    "impact": "no semantic hash derivable",
+                    "affected_entities": [p.entry_logical_path],
+                }]),
+            );
+            envelope.insert(
+                "extensions".to_string(),
+                serde_json::json!({
+                    "domainforge": {
+                        "model_validation_status": "invalid",
+                        "invalid_declared_checkpoint_hash": p.invalid_declared_checkpoint_hash,
+                        "diagnostics": p.diagnostics,
+                    }
+                }),
+            );
+        }
+    }
+
+    serde_json::Value::Object(envelope)
+}
+
+/// §22 representation record for the canonical document D (spec §5.2/§10.7a).
+fn build_representation(
+    p: &CepEnvelopeParams<'_>,
+    doc: &CanonicalSemanticEnvelopeDocument,
+    created_by: &str,
+) -> serde_json::Value {
+    let canonical_bytes = canonical_json(&serde_json::to_value(doc).expect("document serializes"));
+    let size_bytes = canonical_bytes.len() as u64;
+
+    let inline = size_bytes <= p.inline_threshold_bytes;
+    let mut representation = serde_json::Map::new();
+    representation.insert(
+        "representation_id".to_string(),
+        serde_json::json!(format!("representation:{}", doc.self_hash)),
+    );
+    representation.insert(
+        "representation_kind".to_string(),
+        serde_json::json!("derived"),
+    );
+    representation.insert(
+        "representation_type".to_string(),
+        serde_json::json!("domainforge_semantic_envelope_document"),
+    );
+    representation.insert("scope".to_string(), serde_json::json!(p.entry_logical_path));
+    representation.insert("source".to_string(), serde_json::json!(created_by));
+    if inline {
+        representation.insert(
+            "inline_content".to_string(),
+            serde_json::json!(canonical_bytes),
+        );
+    } else {
+        representation.insert(
+            "content_ref".to_string(),
+            serde_json::json!(format!(
+                "cas://sha256:{}",
+                doc.self_hash
+                    .strip_prefix("sha256:")
+                    .unwrap_or(&doc.self_hash)
+            )),
+        );
+    }
+    representation.insert("content_hash".to_string(), serde_json::json!(doc.self_hash));
+    representation.insert(
+        "semantic_hash".to_string(),
+        serde_json::json!(doc.semantic_closure_hash),
+    );
+    representation.insert(
+        "content_availability".to_string(),
+        serde_json::json!("available"),
+    );
+    representation.insert("size_bytes".to_string(), serde_json::json!(size_bytes));
+    representation.insert(
+        "media_type".to_string(),
+        serde_json::json!("application/json"),
+    );
+    representation.insert(
+        "preserved_entities".to_string(),
+        serde_json::json!(doc
+            .envelope
+            .semantic_declarations
+            .iter()
+            .map(|declaration| declaration_entity_ref(&declaration.id))
+            .collect::<Vec<_>>()),
+    );
+    representation.insert(
+        "preserved_distinctions".to_string(),
+        serde_json::json!(["declared_vs_observed", "representation_vs_reality"]),
+    );
+    representation.insert(
+        "omission_record".to_string(),
+        serde_json::json!({
+            "known_omissions": CEP_SNAPSHOT_KNOWN_OMISSIONS,
+            "reason": CEP_SNAPSHOT_OMISSION_REASON,
+            "recoverable_from": CEP_SNAPSHOT_OMISSION_RECOVERABLE_FROM,
+        }),
+    );
+    representation.insert(
+        "provenance_record".to_string(),
+        serde_json::json!({
+            "producer": {
+                "name": doc.producer.name,
+                "version": doc.producer.version,
+            },
+            "inputs": {
+                "source_set_hash": doc.inputs.source_set_hash,
+                "semantic_pack_set_hash": doc.inputs.semantic_pack_set_hash,
+                "language_schema_version": doc.inputs.language_schema_version,
+                "interpretation_version": doc.inputs.interpretation_version,
+            },
+            "resolution_inputs": {
+                "entry_logical_path": p.entry_logical_path,
+                "registry_content_hash": p.registry_content_hash,
+                "resolved_namespaces": p.resolved_namespaces
+                    .iter()
+                    .map(|(id, namespace)| (id.clone(), namespace.clone()))
+                    .collect::<BTreeMap<String, String>>(),
+            },
+        }),
+    );
+    representation.insert(
+        "validation_status".to_string(),
+        serde_json::json!(if p.model_valid { "valid" } else { "invalid" }),
+    );
+    serde_json::Value::Object(representation)
+}
+
+/// Entity reference strings for one canonical declaration id.
+pub fn declaration_entity_ref(id: &CanonicalDeclarationId) -> String {
+    match id {
+        CanonicalDeclarationId::Concept { id } => format!("concept:{}", id),
+        CanonicalDeclarationId::Application { id } => format!("application:{}", id.0),
+        CanonicalDeclarationId::Occurrence {
+            kind,
+            content_hash,
+            duplicate_index,
+        } => format!("occurrence:{}:{}:{}", kind, content_hash, duplicate_index),
+    }
+}
+
+/// §14.4: deterministic identity of a declared model whose canonical D could
+/// not be constructed. Field encodings are DomainForge's; the formula
+/// sha256(canonical_json(8 fields)) is normative.
+pub fn invalid_declared_checkpoint_hash(
+    source_set_hash: &str,
+    semantic_pack_set_hash: &str,
+    entry_logical_path: &str,
+    registry_content_hash: Option<&str>,
+    resolved_namespaces: &[(String, String)],
+) -> String {
+    let namespaces: serde_json::Map<String, serde_json::Value> = resolved_namespaces
+        .iter()
+        .map(|(id, namespace)| (id.clone(), serde_json::Value::String(namespace.clone())))
+        .collect();
+    let payload = serde_json::json!({
+        "source_set_hash": source_set_hash,
+        "semantic_pack_set_hash": semantic_pack_set_hash,
+        "language_schema_version": LANGUAGE_SCHEMA_VERSION,
+        "interpretation_version": INTERPRETATION_VERSION,
+        "producer": {
+            "name": CEP_PRODUCER_NAME,
+            "version": env!("CARGO_PKG_VERSION"),
+        },
+        "entry_logical_path": entry_logical_path,
+        "registry_content_hash": registry_content_hash,
+        "resolved_namespaces": namespaces,
+    });
+    compute_sha256(canonical_json(&payload).as_bytes())
+}
