@@ -370,3 +370,92 @@ fn build_cep_envelope_is_pure_and_deterministic() {
         "envelope_id/created_at must be the only varying fields"
     );
 }
+
+// ── Slice 2: verification-contract projection (§14.0) ─────────────────────
+
+fn emit_verification_contract(path: &str) -> (std::process::ExitStatus, Value) {
+    let output = domainforge(&[
+        "envelope",
+        "--emit",
+        "verification-contract",
+        &fixture(path).to_string_lossy(),
+    ]);
+    let envelope: Value = serde_json::from_slice(&output.stdout)
+        .unwrap_or_else(|e| panic!("stdout is not a JSON envelope: {e}"));
+    (output.status, envelope)
+}
+
+#[test]
+fn verification_contract_is_a_valid_work_request() {
+    for model in VALID_MODELS {
+        let (status, envelope) = emit_verification_contract(model);
+        assert!(status.success(), "{model}: verification-contract exit 0");
+        assert_eq!(envelope["envelope_kind"], "work_request");
+        assert_eq!(envelope["validation_status"], "valid");
+        assert_eq!(
+            envelope["extensions"]["domainforge"]["profile"],
+            "domainforge-semantic-verification/v1"
+        );
+        let questions = envelope["questions"].as_array().unwrap();
+        let obligations = envelope["extensions"]["domainforge"]["obligations"]
+            .as_array()
+            .unwrap();
+        assert_eq!(questions.len(), obligations.len());
+        assert_eq!(
+            envelope["constraints"].as_array().unwrap().len(),
+            obligations.len()
+        );
+        for obligation in obligations {
+            for field in [
+                "obligation_id",
+                "decl_key",
+                "claim_id",
+                "question_id",
+                "question_form",
+                "expected_answer_shape",
+                "evidence_types",
+                "projection_artifact_refs",
+                "limitations",
+            ] {
+                assert!(
+                    obligation.as_object().unwrap().contains_key(field),
+                    "{field}"
+                );
+            }
+            assert!(!obligation["evidence_types"].as_array().unwrap().is_empty());
+        }
+    }
+}
+
+#[test]
+fn verification_contract_outer_varies_inner_stable() {
+    for model in VALID_MODELS {
+        let (_, first) = emit_verification_contract(model);
+        let (_, second) = emit_verification_contract(model);
+        assert_ne!(first["envelope_id"], second["envelope_id"]);
+        let ob_first = first["extensions"]["domainforge"]["obligations"].clone();
+        let ob_second = second["extensions"]["domainforge"]["obligations"].clone();
+        assert_eq!(ob_first, ob_second, "{model}: obligations byte-stable");
+        assert_eq!(
+            first["extensions"]["domainforge"]["semantic_hash"],
+            second["extensions"]["domainforge"]["semantic_hash"]
+        );
+    }
+}
+
+#[test]
+fn verification_contract_requires_valid_model() {
+    let output = domainforge(&[
+        "envelope",
+        "--emit",
+        "verification-contract",
+        &fixture(INVALID_MODEL).to_string_lossy(),
+    ]);
+    assert_ne!(output.status.code(), Some(0));
+    // A syntax-invalid model takes the §14.4 failure path (emits the failed
+    // snapshot envelope, not a work_request); either way it is not a success.
+    if !output.stdout.is_empty() {
+        let envelope: Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_ne!(envelope["envelope_kind"], "work_request");
+    }
+}

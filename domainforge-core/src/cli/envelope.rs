@@ -55,6 +55,8 @@ pub enum EmitMode {
     Cep,
     /// Both, as {"representation": D, "cep_envelope": E}
     Both,
+    /// CEP `work_request` verification contract (§14.0)
+    VerificationContract,
 }
 
 fn parse_pack(raw: &str) -> Result<(String, String), String> {
@@ -179,9 +181,32 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
             });
             let representation = serde_json::to_string_pretty(&doc)
                 .context("failed to serialize canonical envelope document")?;
+            if args.emit == EmitMode::VerificationContract {
+                if !model_valid {
+                    eprintln!(
+                        "error: verification contract requires a valid declared model; {} error(s)",
+                        diagnostics.len()
+                    );
+                    exit(1);
+                }
+                let contract =
+                    crate::application::verification_contract::build_verification_contract(
+                        &doc,
+                        &entry_logical_path,
+                        &sources_json,
+                        &doc.inputs.source_set_hash,
+                        &envelope_id,
+                        &created_at,
+                        registry_content_hash.as_deref(),
+                        &resolved_namespaces,
+                    )
+                    .map_err(|e| anyhow::anyhow!("failed to build verification contract: {e}"))?;
+                emit(&args, &EmitPayload::Envelope(contract))?;
+                return Ok(());
+            }
             let payload = match args.emit {
                 EmitMode::Representation => EmitPayload::Representation(representation),
-                EmitMode::Cep => EmitPayload::Envelope(envelope),
+                EmitMode::Cep | EmitMode::VerificationContract => EmitPayload::Envelope(envelope),
                 EmitMode::Both => EmitPayload::Both(representation, envelope),
             };
             emit(&args, &payload)?;
@@ -227,9 +252,10 @@ enum EmitPayload {
 fn emit(args: &EnvelopeArgs, payload: &EmitPayload) -> Result<()> {
     let text = match (args.emit, payload) {
         (EmitMode::Representation, EmitPayload::Representation(document)) => document.clone(),
-        (EmitMode::Cep | EmitMode::Both, EmitPayload::Envelope(envelope)) => {
-            serde_json::to_string_pretty(envelope)?
-        }
+        (
+            EmitMode::Cep | EmitMode::Both | EmitMode::VerificationContract,
+            EmitPayload::Envelope(envelope),
+        ) => serde_json::to_string_pretty(envelope)?,
         (EmitMode::Cep, EmitPayload::Both(_, envelope)) => serde_json::to_string_pretty(envelope)?,
         (EmitMode::Both, EmitPayload::Both(representation, envelope)) => {
             let representation: Value = serde_json::from_str(representation)?;
@@ -244,7 +270,13 @@ fn emit(args: &EnvelopeArgs, payload: &EmitPayload) -> Result<()> {
             );
             exit(1);
         }
-        (EmitMode::Cep | EmitMode::Both, EmitPayload::Representation(_)) => unreachable!(),
+        (
+            EmitMode::Cep | EmitMode::Both | EmitMode::VerificationContract,
+            EmitPayload::Representation(_),
+        ) => {
+            unreachable!()
+        }
+        (EmitMode::VerificationContract, EmitPayload::Both(_, _)) => unreachable!(),
     };
     match &args.out {
         Some(path) => {
