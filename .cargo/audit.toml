@@ -31,4 +31,31 @@ ignore = [
     # against quick-xml >= 0.41, then bump oxigraph and remove both entries.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
+
+    # rkyv 0.7.46 — insufficient archive validation can cause out-of-bounds
+    # reads when deserializing an rkyv archive containing Rc/Arc.
+    #
+    # Reach in DomainForge: rkyv is pulled ONLY through rust_decimal's
+    # OPTIONAL "rkyv" Cargo feature. domainforge-core depends on rust_decimal
+    # with `features = ["serde"]` only — "rkyv" is never enabled by any
+    # shipped feature set (default, cli, wasm, python, typescript). Confirmed
+    # via `cargo tree --all-features -i rkyv` and `cargo metadata
+    # --all-features`: rkyv has zero live dependents in the resolved graph.
+    # It remains in Cargo.lock only because Cargo pre-resolves every
+    # optional dependency a manifest declares, for lockfile stability across
+    # future feature toggles — not because it is compiled into any build.
+    #
+    # Threat model: the advisory is about deserializing an untrusted rkyv
+    # archive. DomainForge never constructs or deserializes an rkyv archive
+    # anywhere in its own code; the dependency is dead weight in the lock
+    # graph, not reachable code.
+    #
+    # Why not fixed: upstream-blocked. rust_decimal 1.42.1 pins its optional
+    # dependency to `rkyv = "0.7.46"` exactly; the fix (>=0.8.17) is a
+    # breaking rewrite rust_decimal has not adopted, so no available
+    # rust_decimal 1.x release can move this pin.
+    #
+    # Lift this ignore when rust_decimal publishes a release depending on
+    # rkyv >= 0.8.17, then run `cargo update -p rkyv` and remove this entry.
+    "RUSTSEC-2026-0235",
 ]
