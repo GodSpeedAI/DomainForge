@@ -806,6 +806,18 @@ impl KnowledgeGraph {
     }
 
     /// Convert the knowledge graph back into a Graph by interpreting triples exported by `to_turtle`.
+    ///
+    /// Known gap: this reconstructs `Entity`/`Resource`/`Flow`/`Relation` but
+    /// not the `sea:EntityInstance` or `sea:Policy` triples `to_turtle`
+    /// emits — round-tripping a graph that has instances or policies through
+    /// `to_turtle`/`from_turtle`/`to_graph` silently drops them rather than
+    /// erroring. Closing this requires reversing `xsd_datatype` dispatch per
+    /// declared field type and re-deriving a `Policy`'s `Expression` from
+    /// its normalized-text triple, which is real reconstruction work, not a
+    /// quick addition; tracked in `.agents/next_steps.md`. Do not rely on
+    /// this method for instance/policy round-tripping — use the Canonical
+    /// Semantic Envelope instead (`.sea/interaction/README.md` "Known
+    /// Toolchain Boundaries").
     pub fn to_graph(&self) -> Result<crate::graph::Graph, KgError> {
         use crate::graph::Graph;
         use crate::primitives::{Entity, Flow, Resource};
@@ -1309,12 +1321,38 @@ impl KnowledgeGraph {
             },
         };
 
+        // `Value::Number` literals are stored as f64 (see the parser's
+        // Decimal -> f64 conversion for numeric literals), so a field
+        // declared `int` with value 50000 stringifies as "50000.0" —
+        // not a valid xsd:integer lexical form (XSD forbids a decimal
+        // point in the integer value space). Normalize to signed-integer
+        // text when the value is whole; a genuinely fractional value under
+        // a declared `int` field is an upstream data inconsistency, not
+        // something to paper over as malformed Turtle, so it downgrades to
+        // xsd:string like any other value that fails the decimal guard.
+        if datatype == "xsd:integer" {
+            if let Value::Number(number) = value {
+                match number.as_f64() {
+                    Some(f) if f.is_finite() && f.fract() == 0.0 && f.abs() < 1e18 => {
+                        return Some(format!(
+                            "\"{}\"^^xsd:integer",
+                            Self::escape_turtle_literal(&(f as i64).to_string())
+                        ));
+                    }
+                    _ => {
+                        return Some(format!(
+                            "\"{}\"^^xsd:string",
+                            Self::escape_turtle_literal(&literal)
+                        ));
+                    }
+                }
+            }
+        }
+
         // Numeric literals go through the same decimal guard as flow quantities;
         // a value that cannot be a safe Turtle decimal degrades to a string rather
         // than emitting malformed Turtle.
-        if matches!(datatype, "xsd:decimal" | "xsd:integer")
-            && Self::validate_turtle_decimal(&literal).is_err()
-        {
+        if datatype == "xsd:decimal" && Self::validate_turtle_decimal(&literal).is_err() {
             return Some(format!(
                 "\"{}\"^^xsd:string",
                 Self::escape_turtle_literal(&literal)

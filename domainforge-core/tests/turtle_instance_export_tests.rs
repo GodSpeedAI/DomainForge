@@ -193,3 +193,34 @@ Entity "Warehouse" in demo
     assert!(!files["model.ttl"].contains("sea:instance_"));
     assert!(!files["model.ttl"].contains("sea:policy_"));
 }
+
+/// A typed `int` field's value is stored as f64 internally (the parser's
+/// Decimal -> f64 conversion for numeric literals), so `50000` used to
+/// stringify as "50000.0" and combine with the declared `xsd:integer`
+/// datatype into `"50000.0"^^xsd:integer` — not a valid XSD integer lexical
+/// form (the integer value space forbids a decimal point). A declared `int`
+/// field must emit a clean signed-integer literal instead.
+#[test]
+fn typed_int_field_emits_a_valid_xsd_integer_literal() {
+    const TYPED_INT: &str = r#"
+@namespace "typed_int_test"
+
+export entity "Order" {
+    key order_id: string (min_length 1)
+    total: int
+}
+
+instance order1 of "Order" { order_id: "O1", total: 50000 }
+"#;
+
+    let ttl = project(TYPED_INT).remove("model.ttl").expect("model.ttl");
+
+    assert!(
+        ttl.contains(r#"sea:instance_order1 sea:total "50000"^^xsd:integer"#),
+        "expected a clean xsd:integer literal, got:\n{ttl}"
+    );
+    assert!(
+        !ttl.contains("50000.0"),
+        "an int field must never emit a decimal-point lexical form:\n{ttl}"
+    );
+}
