@@ -4,6 +4,7 @@
   "tag-separator": "-",
   "component-no-space": true,
   "pull-request-title-pattern": "chore: release ${component} ${version}",
+  "release-title-pattern": "v${version}",
   "plugins": [
     {
       "type": "linked-versions",
