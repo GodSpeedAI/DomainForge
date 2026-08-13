@@ -323,7 +323,7 @@ impl Expression {
             .all_entity_instances()
             .iter()
             .filter(|instance| {
-                entity_type_filter.is_none_or(|filter| instance.entity_type() == filter)
+                entity_type_filter.map_or(true, |filter| instance.entity_type() == filter)
             })
             .map(|instance| {
                 let mut map = serde_json::Map::new();
