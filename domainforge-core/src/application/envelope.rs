@@ -555,7 +555,14 @@ fn classify(
             // No declaration name of its own: identity is the resolved
             // (role, entity) pair, matching how the graph key's uniqueness
             // works (Graph::assign_role_to_entity is idempotent per pair).
-            concept_id(&format!("role_binding:{role}:{entity}")),
+            // Encoded as a JSON array (not raw `role:entity` interpolation)
+            // so a `:` inside either name cannot make two distinct pairs
+            // collide on the same id — e.g. ("A:B", "C") vs ("A", "B:C").
+            concept_id(&format!(
+                "role_binding:{}",
+                serde_json::to_string(&[role.as_str(), entity.as_str()])
+                    .expect("role/entity pair serializes")
+            )),
             CanonicalSemanticPayload::RoleBinding(CanonicalRoleBindingDecl {
                 role: target(role, &["role"]),
                 entity: target(entity, &["entity"]),

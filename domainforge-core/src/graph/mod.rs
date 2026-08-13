@@ -57,14 +57,15 @@ pub struct Graph {
     entity_contracts: IndexMap<ConceptId, EntityContract>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     enum_contracts: IndexMap<ApplicationSymbolId, EnumContract>,
-    /// Names of policies referenced by some operation's
-    /// `access policy_governed by <name> at precondition ...` clause (raw
-    /// authored name, or its final `.`-segment for a qualified reference).
+    /// Resolved identities of policies referenced by some operation's
+    /// `access policy_governed by <name> at precondition ...` clause.
     /// `validate()` evaluates these in the operation's typed contract
     /// context, not against the bare graph, where their terms (e.g. an
-    /// input record field) do not resolve (limitation L9).
+    /// input record field) do not resolve (limitation L9). Keyed by
+    /// `ConceptId` (not bare name) so two same-named policies in different
+    /// namespaces, only one of which is operation-bound, are not conflated.
     #[serde(default, skip_serializing_if = "std::collections::HashSet::is_empty")]
-    operation_bound_policy_names: std::collections::HashSet<String>,
+    operation_bound_policy_names: std::collections::HashSet<ConceptId>,
     #[serde(default)]
     config: GraphConfig,
 }
@@ -139,14 +140,14 @@ impl Graph {
             .extend(other.operation_bound_policy_names);
     }
 
-    /// Record that `name` is bound to some operation's `access
+    /// Record that `id` is bound to some operation's `access
     /// policy_governed by` clause, so `validate()` skips it: its terms are
     /// meaningful only in that operation's typed contract context.
     pub(crate) fn mark_operation_bound_policies(
         &mut self,
-        names: impl IntoIterator<Item = String>,
+        ids: impl IntoIterator<Item = ConceptId>,
     ) {
-        self.operation_bound_policy_names.extend(names);
+        self.operation_bound_policy_names.extend(ids);
     }
 
     pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
@@ -949,7 +950,7 @@ impl Graph {
         // `contract`/`envelope` check them in the right context instead.
         let mut evaluated = 0usize;
         for policy in self.policies.values() {
-            if self.operation_bound_policy_names.contains(&policy.name) {
+            if self.operation_bound_policy_names.contains(&policy.id) {
                 continue;
             }
             evaluated += 1;

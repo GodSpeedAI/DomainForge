@@ -12,7 +12,9 @@
 //! `AccessPolicyGoverned` binding; `--application`/`contract`/`envelope`
 //! check them in the operation's own context instead.
 
+use domainforge_core::application::resolve_application_graph;
 use domainforge_core::parser::parse_to_graph;
+use serde_json::json;
 
 const OPERATION_BOUND_POLICY_SOURCE: &str = r#"
 @namespace "operation_bound_policy_test"
@@ -99,5 +101,78 @@ fn a_second_graph_evaluable_policy_still_catches_a_real_violation() {
         result.error_count > 0,
         "a violated graph-evaluable policy must still be reported even when an \
          operation-bound policy is present in the same file"
+    );
+}
+
+#[test]
+fn a_violated_policy_is_not_skipped_by_an_unrelated_same_named_operation_bound_policy() {
+    // The skip-list used to match on the bare policy name, so a namespace's
+    // own operation-bound "shared_name" could accidentally suppress graph
+    // validation of an entirely unrelated "shared_name" policy declared in
+    // a different namespace. Two namespaces here share the local name
+    // "shared_name": one binds it to an operation (must be skipped), the
+    // other is a plain graph-evaluable policy that is genuinely violated
+    // (must still be reported).
+    let sources = json!({
+        "operation_ns.sea": r#"
+@namespace "operation_ns"
+
+policy shared_name as: total <= 10000
+
+record PlaceOrderInput {
+    order_id: string
+    total: int
+}
+
+record PlaceOrderOutput {
+    order_id: string
+}
+
+export entity "Order" {
+    key order_id: string (min_length 1)
+    total: int
+}
+
+operation place_order {
+    intent "persist one valid order"
+    direction inbound
+    actor anonymous
+    access policy_governed by shared_name at precondition fails with order_limit_exceeded
+    input PlaceOrderInput
+    output PlaceOrderOutput
+    state Order
+    effect creates Order
+    transaction single_aggregate
+    failure order_limit_exceeded for policy "order total exceeds 10000"
+    idempotency inherent
+    concurrency unique_key order_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+"#,
+        "plain_ns.sea": r#"
+@namespace "plain_ns"
+
+export entity "Widget" {
+    key widget_id: string (min_length 1)
+}
+
+policy shared_name as: count(i in entity_instances of "Widget": i.widget_id) >= 1
+"#,
+    })
+    .to_string();
+
+    let graph = resolve_application_graph("plain_ns.sea", &sources)
+        .expect("both namespaces resolve to one graph");
+
+    // No "Widget" instance is declared, so plain_ns's own "shared_name"
+    // policy is genuinely violated and must be reported, regardless of
+    // operation_ns's unrelated same-named operation-bound policy.
+    let result = graph.validate();
+    assert!(
+        result.error_count > 0,
+        "plain_ns's violated 'shared_name' policy must not be silently skipped just because \
+         operation_ns has an unrelated operation-bound policy sharing the same local name: {:?}",
+        result.violations
     );
 }

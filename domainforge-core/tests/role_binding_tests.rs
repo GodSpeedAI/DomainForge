@@ -6,7 +6,9 @@
 //! out of the parser (limitation L3). `role_binding "Role" for "Entity"`
 //! exposes the existing graph capability through text.
 
+use domainforge_core::application::resolve_semantic_envelope;
 use domainforge_core::parser::parse_to_graph;
+use serde_json::json;
 
 const SOURCE: &str = r#"
 @namespace "role_binding_test"
@@ -122,5 +124,79 @@ role_binding "Approver" for "Case"
         bound.len(),
         1,
         "a repeated identical binding must not duplicate"
+    );
+}
+
+#[test]
+fn distinct_role_entity_pairs_with_embedded_colons_get_distinct_envelope_ids() {
+    // The envelope's role_binding declaration id used to interpolate the
+    // raw role/entity names as "role_binding:{role}:{entity}", so a colon
+    // inside either name could make two genuinely distinct pairs collide on
+    // the same id: role "A:B" for "C" and role "A" for "B:C" both produced
+    // "role_binding:A:B:C". The id must now be built from an unambiguous
+    // encoding of the resolved (role, entity) pair.
+    let first = json!({
+        "main.sea": r#"
+@namespace "role_binding_colon_test_one"
+
+role "A:B"
+
+export entity "C" {
+    key id: string (min_length 1)
+}
+
+role_binding "A:B" for "C"
+"#
+    })
+    .to_string();
+    let second = json!({
+        "main.sea": r#"
+@namespace "role_binding_colon_test_two"
+
+role "A"
+
+export entity "B:C" {
+    key id: string (min_length 1)
+}
+
+role_binding "A" for "B:C"
+"#
+    })
+    .to_string();
+
+    let doc_one = resolve_semantic_envelope("main.sea", &first).expect("first source resolves");
+    let doc_two = resolve_semantic_envelope("main.sea", &second).expect("second source resolves");
+
+    let id_one = doc_one
+        .envelope
+        .semantic_declarations
+        .iter()
+        .find(|d| {
+            matches!(
+                &d.declaration,
+                domainforge_core::application::envelope::CanonicalSemanticPayload::RoleBinding(_)
+            )
+        })
+        .expect("first envelope has a role_binding declaration")
+        .id
+        .clone();
+    let id_two = doc_two
+        .envelope
+        .semantic_declarations
+        .iter()
+        .find(|d| {
+            matches!(
+                &d.declaration,
+                domainforge_core::application::envelope::CanonicalSemanticPayload::RoleBinding(_)
+            )
+        })
+        .expect("second envelope has a role_binding declaration")
+        .id
+        .clone();
+
+    assert_ne!(
+        id_one, id_two,
+        "role \"A:B\" for \"C\" and role \"A\" for \"B:C\" must not collide on the same \
+         declaration id just because they share namespaces and their raw names contain colons"
     );
 }

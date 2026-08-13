@@ -269,25 +269,34 @@ pub(crate) fn build_graph_from_set(
                 })
                 .collect::<Vec<_>>()
         })?;
-    graph.mark_operation_bound_policies(collect_operation_bound_policy_names(set));
+    graph.mark_operation_bound_policies(collect_operation_bound_policy_names(set, &Ctx::new(set)));
     Ok(graph)
 }
 
-/// Names of policies referenced by some operation's `access
-/// policy_governed by <name> ...` clause across the resolved module set —
-/// the bare authored name, or a qualified `namespace.name` reference's
-/// final segment. `Graph::validate()` must not evaluate these against the
-/// bare graph (limitation L9): their terms (e.g. an input record field) are
-/// only meaningful in the referencing operation's typed contract context,
-/// which `--application`/`contract`/`envelope` resolve separately. This
-/// reads the raw clause only — it does not build or validate the operation
-/// itself, preserving the "graph construction owns entity-instance
-/// validation, not the operation contract" boundary above.
+/// Resolved identities of policies referenced by some operation's `access
+/// policy_governed by <name> ...` clause across the resolved module set.
+/// `Graph::validate()` must not evaluate these against the bare graph
+/// (limitation L9): their terms (e.g. an input record field) are only
+/// meaningful in the referencing operation's typed contract context, which
+/// `--application`/`contract`/`envelope` resolve separately. This reads the
+/// raw clause only — it does not build or validate the operation itself,
+/// preserving the "graph construction owns entity-instance validation, not
+/// the operation contract" boundary above.
+///
+/// Resolves each reference through `Ctx` (the same alias/import resolution
+/// used for envelope references) rather than matching on the bare authored
+/// name: two policies sharing a local name in different namespaces, only
+/// one of which is operation-bound, must not be conflated. A reference that
+/// fails to resolve is dropped rather than guessed at — an unresolvable
+/// `access policy_governed by` target is a separate authoring error,
+/// reported elsewhere, not something this skip-list should paper over by
+/// excluding an unrelated same-named policy from graph validation.
 fn collect_operation_bound_policy_names(
     set: &ResolvedModuleSet,
-) -> std::collections::HashSet<String> {
-    let mut names = std::collections::HashSet::new();
-    for module in &set.modules {
+    ctx: &Ctx,
+) -> std::collections::HashSet<ConceptId> {
+    let mut ids = std::collections::HashSet::new();
+    for (module_index, module) in set.modules.iter().enumerate() {
         for decl in &module.ast.declarations {
             let node = match &decl.node {
                 past::AstNode::Export(inner) => &inner.node,
@@ -299,19 +308,17 @@ fn collect_operation_bound_policy_names(
             for clause in &op.clauses {
                 if let past::OperationClause::AccessPolicyGoverned { bindings } = clause {
                     for binding in bindings {
-                        let local_name = binding
-                            .policy
-                            .rsplit('.')
-                            .next()
-                            .unwrap_or(&binding.policy)
-                            .to_string();
-                        names.insert(local_name);
+                        if let Some(id) =
+                            ctx.resolve_concept(module_index, &binding.policy, &["policy"])
+                        {
+                            ids.insert(id);
+                        }
                     }
                 }
             }
         }
     }
-    names
+    ids
 }
 
 /// JSON boundary twin of [`resolve_application_contract`].
