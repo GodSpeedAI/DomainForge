@@ -1,8 +1,13 @@
+use crate::application::{FieldType, ScalarType};
 use crate::graph::Graph;
 use crate::parser::ast::TargetFormat;
+use crate::policy::{Policy, PolicyKind, PolicyModality};
+use crate::primitives::Instance;
 use crate::projection::{find_projection_override, ProjectionRegistry};
 use percent_encoding::{percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -377,6 +382,141 @@ impl KnowledgeGraph {
             });
         }
 
+        // Entity instances are authored model content, not derived structure, so
+        // they must survive projection. Their ConceptId is already content-derived
+        // (`namespace` + `Type:name`), so their IRIs are stable without routing
+        // through the projection-level `canonicalize_node_ids` remap.
+        for instance in graph.all_entity_instances() {
+            let subject = Self::entity_instance_iri(instance);
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "rdf:type".to_string(),
+                object: "sea:EntityInstance".to_string(),
+            });
+
+            // `sea:instanceOf` rather than typing the instance directly by its
+            // entity IRI: entity names are themselves individuals here, and
+            // punning them as classes would make the emitted ontology OWL Full.
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "sea:instanceOf".to_string(),
+                object: format!("sea:{}", Self::uri_encode(instance.entity_type())),
+            });
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "rdfs:label".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(instance.name())),
+            });
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "sea:namespace".to_string(),
+                object: format!("\"{}\"", Self::escape_turtle_literal(instance.namespace())),
+            });
+
+            // Typed entities (0.16.0 `entity` contracts) give each field a declared
+            // datatype; untyped instances fall back to the JSON value's own shape.
+            let contract = graph
+                .find_entity_by_name_and_namespace(instance.entity_type(), instance.namespace())
+                .and_then(|entity_id| graph.entity_contract(&entity_id));
+
+            // `Instance::fields` is a HashMap; sort before emitting or the byte
+            // -identical-output guarantee (and the verify-rdf CI gate) breaks.
+            let ordered: BTreeMap<&str, &Value> = instance
+                .fields()
+                .iter()
+                .map(|(key, value)| (key.as_str(), value))
+                .collect();
+
+            for (key, value) in ordered {
+                let declared = contract.and_then(|contract| {
+                    contract
+                        .fields
+                        .iter()
+                        .find(|field| field.name == key)
+                        .map(|field| &field.field_type)
+                });
+                let Some(object) = Self::instance_field_object(value, declared) else {
+                    continue;
+                };
+                kg.triples.push(Triple {
+                    subject: subject.clone(),
+                    predicate: format!("sea:{}", Self::uri_encode(key)),
+                    object,
+                });
+            }
+        }
+
+        // Policies are declared, not derived. They are emitted as traceable
+        // individuals carrying their normalized expression; they are deliberately
+        // NOT lowered into SHACL constraints, because a partial translation would
+        // silently change what a policy means.
+        for policy in graph.all_policies() {
+            let subject = Self::policy_iri(policy);
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "rdf:type".to_string(),
+                object: "sea:Policy".to_string(),
+            });
+
+            let mut literals: Vec<(&str, String)> = vec![
+                ("rdfs:label", policy.name.clone()),
+                ("sea:namespace", policy.namespace.clone()),
+                ("sea:version", policy.version.to_string()),
+                (
+                    "sea:modality",
+                    match policy.modality {
+                        PolicyModality::Obligation => "obligation",
+                        PolicyModality::Prohibition => "prohibition",
+                        PolicyModality::Permission => "permission",
+                    }
+                    .to_string(),
+                ),
+                (
+                    "sea:policyKind",
+                    match policy.kind {
+                        PolicyKind::Constraint => "constraint",
+                        PolicyKind::Derivation => "derivation",
+                        PolicyKind::Obligation => "obligation",
+                    }
+                    .to_string(),
+                ),
+                ("sea:expression", policy.normalized_expression().to_string()),
+            ];
+            if let Some(rationale) = policy.rationale.as_ref() {
+                literals.push(("sea:rationale", rationale.clone()));
+            }
+
+            for (predicate, literal) in literals {
+                kg.triples.push(Triple {
+                    subject: subject.clone(),
+                    predicate: predicate.to_string(),
+                    object: format!("\"{}\"", Self::escape_turtle_literal(&literal)),
+                });
+            }
+
+            kg.triples.push(Triple {
+                subject: subject.clone(),
+                predicate: "sea:priority".to_string(),
+                object: format!("\"{}\"^^xsd:integer", policy.priority),
+            });
+
+            // Tags are an unordered set on the model; sort for stable output.
+            let mut tags: Vec<&str> = policy.tags.iter().map(String::as_str).collect();
+            tags.sort_unstable();
+            tags.dedup();
+            for tag in tags {
+                kg.triples.push(Triple {
+                    subject: subject.clone(),
+                    predicate: "sea:tag".to_string(),
+                    object: format!("\"{}\"", Self::escape_turtle_literal(tag)),
+                });
+            }
+        }
+
         kg.shapes.push(ShaclShape {
             target_class: "sea:Flow".to_string(),
             properties: vec![
@@ -461,6 +601,20 @@ impl KnowledgeGraph {
 
         turtle.push_str("sea:to a owl:ObjectProperty ;\n");
         turtle.push_str("    rdfs:domain sea:Flow ;\n");
+        turtle.push_str("    rdfs:range sea:Entity .\n\n");
+
+        turtle.push_str("sea:EntityInstance a owl:Class ;\n");
+        turtle.push_str("    rdfs:label \"EntityInstance\" ;\n");
+        turtle.push_str(
+            "    rdfs:comment \"Declared instance of an entity with field values\" .\n\n",
+        );
+
+        turtle.push_str("sea:Policy a owl:Class ;\n");
+        turtle.push_str("    rdfs:label \"Policy\" ;\n");
+        turtle.push_str("    rdfs:comment \"Declared rule over the model; expression is stated, not enforced here\" .\n\n");
+
+        turtle.push_str("sea:instanceOf a owl:ObjectProperty ;\n");
+        turtle.push_str("    rdfs:domain sea:EntityInstance ;\n");
         turtle.push_str("    rdfs:range sea:Entity .\n\n");
 
         turtle.push_str("# Instances\n");
@@ -652,6 +806,18 @@ impl KnowledgeGraph {
     }
 
     /// Convert the knowledge graph back into a Graph by interpreting triples exported by `to_turtle`.
+    ///
+    /// Known gap: this reconstructs `Entity`/`Resource`/`Flow`/`Relation` but
+    /// not the `sea:EntityInstance` or `sea:Policy` triples `to_turtle`
+    /// emits — round-tripping a graph that has instances or policies through
+    /// `to_turtle`/`from_turtle`/`to_graph` silently drops them rather than
+    /// erroring. Closing this requires reversing `xsd_datatype` dispatch per
+    /// declared field type and re-deriving a `Policy`'s `Expression` from
+    /// its normalized-text triple, which is real reconstruction work, not a
+    /// quick addition; tracked in `.agents/next_steps.md`. Do not rely on
+    /// this method for instance/policy round-tripping — use the Canonical
+    /// Semantic Envelope instead (`.sea/interaction/README.md` "Known
+    /// Toolchain Boundaries").
     pub fn to_graph(&self) -> Result<crate::graph::Graph, KgError> {
         use crate::graph::Graph;
         use crate::primitives::{Entity, Flow, Resource};
@@ -1093,6 +1259,111 @@ impl KnowledgeGraph {
 
     fn uri_encode(s: &str) -> String {
         utf8_percent_encode(s, URI_ENCODE_SET).to_string()
+    }
+
+    /// Mint a stable IRI for an entity instance, kind-prefixed like the existing
+    /// `flow_`/`pattern_` nodes.
+    ///
+    /// The name alone is sufficient: `Graph::insert_entity_instance` rejects any
+    /// instance whose name already exists, so instance names are unique across the
+    /// whole graph. Keeping the entity type out of the IRI also means retyping an
+    /// instance does not change its identity. If that uniqueness rule is ever
+    /// relaxed, this scheme must be revisited.
+    fn entity_instance_iri(instance: &Instance) -> String {
+        format!("sea:instance_{}", Self::uri_encode(instance.name()))
+    }
+
+    fn policy_iri(policy: &Policy) -> String {
+        format!("sea:policy_{}", Self::uri_encode(&policy.name))
+    }
+
+    /// XSD datatype for a declared field type. `EntityRef` deliberately maps to a
+    /// literal: the referenced key value is preserved verbatim rather than minted
+    /// into an IRI that could dangle when the model has not been validated.
+    fn xsd_datatype(field_type: &FieldType) -> &'static str {
+        match field_type {
+            FieldType::Scalar { scalar } => match scalar {
+                ScalarType::String | ScalarType::Uuid => "xsd:string",
+                ScalarType::Int => "xsd:integer",
+                ScalarType::Decimal => "xsd:decimal",
+                ScalarType::Bool => "xsd:boolean",
+                ScalarType::Timestamp => "xsd:dateTime",
+            },
+            FieldType::Quantity { .. } => "xsd:decimal",
+            FieldType::EntityRef { .. } | FieldType::Enum { .. } | FieldType::List { .. } => {
+                "xsd:string"
+            }
+        }
+    }
+
+    /// Render one instance field as a Turtle object term. Returns `None` for JSON
+    /// null, which represents an absent field rather than an empty value.
+    fn instance_field_object(value: &Value, declared: Option<&FieldType>) -> Option<String> {
+        if value.is_null() {
+            return None;
+        }
+
+        let literal = match value {
+            Value::String(text) => text.clone(),
+            Value::Bool(flag) => flag.to_string(),
+            Value::Number(number) => number.to_string(),
+            // Lists and nested objects have no lossless RDF literal form; keep the
+            // authored JSON verbatim rather than flattening it away.
+            other => other.to_string(),
+        };
+
+        let datatype = match declared {
+            Some(field_type) => Self::xsd_datatype(field_type),
+            None => match value {
+                Value::Bool(_) => "xsd:boolean",
+                Value::Number(_) => "xsd:decimal",
+                _ => "xsd:string",
+            },
+        };
+
+        // `Value::Number` literals are stored as f64 (see the parser's
+        // Decimal -> f64 conversion for numeric literals), so a field
+        // declared `int` with value 50000 stringifies as "50000.0" —
+        // not a valid xsd:integer lexical form (XSD forbids a decimal
+        // point in the integer value space). Normalize to signed-integer
+        // text when the value is whole; a genuinely fractional value under
+        // a declared `int` field is an upstream data inconsistency, not
+        // something to paper over as malformed Turtle, so it downgrades to
+        // xsd:string like any other value that fails the decimal guard.
+        if datatype == "xsd:integer" {
+            if let Value::Number(number) = value {
+                match number.as_f64() {
+                    Some(f) if f.is_finite() && f.fract() == 0.0 && f.abs() < 1e18 => {
+                        return Some(format!(
+                            "\"{}\"^^xsd:integer",
+                            Self::escape_turtle_literal(&(f as i64).to_string())
+                        ));
+                    }
+                    _ => {
+                        return Some(format!(
+                            "\"{}\"^^xsd:string",
+                            Self::escape_turtle_literal(&literal)
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Numeric literals go through the same decimal guard as flow quantities;
+        // a value that cannot be a safe Turtle decimal degrades to a string rather
+        // than emitting malformed Turtle.
+        if datatype == "xsd:decimal" && Self::validate_turtle_decimal(&literal).is_err() {
+            return Some(format!(
+                "\"{}\"^^xsd:string",
+                Self::escape_turtle_literal(&literal)
+            ));
+        }
+
+        Some(format!(
+            "\"{}\"^^{}",
+            Self::escape_turtle_literal(&literal),
+            datatype
+        ))
     }
 
     fn validate_turtle_decimal(decimal_str: &str) -> Result<(), String> {

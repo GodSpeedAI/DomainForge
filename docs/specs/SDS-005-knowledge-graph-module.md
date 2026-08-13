@@ -110,26 +110,76 @@ pub struct ShaclProperty {
 
 ### 4.2 Class Mappings
 
-| SEA Concept | RDF Class      |
-| ----------- | -------------- |
-| Entity      | `sea:Entity`   |
-| Resource    | `sea:Resource` |
-| Flow        | `sea:Flow`     |
-| Role        | `sea:Role`     |
-| Relation    | `sea:Relation` |
-| Pattern     | `sea:Pattern`  |
+| SEA Concept     | RDF Class            |
+| --------------- | -------------------- |
+| Entity          | `sea:Entity`         |
+| Resource        | `sea:Resource`       |
+| Flow            | `sea:Flow`           |
+| Role            | `sea:Role`           |
+| Relation        | `sea:Relation`       |
+| Pattern         | `sea:Pattern`        |
+| Instance        | `sea:EntityInstance` |
+| Policy          | `sea:Policy`         |
+
+`ResourceInstance` has no class mapping. Its identity is a `Uuid::new_v4()`
+rather than a content-derived `ConceptId`, so emitting it would break the
+byte-identical output guarantee (§ Determinism in `docs/rdf-projections.md`).
+Giving it a content-derived identity is a prerequisite, not a projection change.
 
 ### 4.3 Property Mappings
 
-| SEA Attribute   | RDF Property      |
-| --------------- | ----------------- |
-| name            | `rdfs:label`      |
-| namespace       | `sea:namespace`   |
-| unit            | `sea:unit`        |
-| quantity        | `sea:quantity`    |
-| from (Flow)     | `sea:from`        |
-| to (Flow)       | `sea:to`          |
-| resource (Flow) | `sea:hasResource` |
+| SEA Attribute        | RDF Property      |
+| -------------------- | ----------------- |
+| name                 | `rdfs:label`      |
+| namespace            | `sea:namespace`   |
+| unit                 | `sea:unit`        |
+| quantity             | `sea:quantity`    |
+| from (Flow)          | `sea:from`        |
+| to (Flow)            | `sea:to`          |
+| resource (Flow)      | `sea:hasResource` |
+| entity (Instance)    | `sea:instanceOf`  |
+| field (Instance)     | `sea:<fieldName>` |
+| expression (Policy)  | `sea:expression`  |
+| modality (Policy)    | `sea:modality`    |
+| kind (Policy)        | `sea:policyKind`  |
+| priority (Policy)    | `sea:priority`    |
+| rationale (Policy)   | `sea:rationale`   |
+| tags (Policy)        | `sea:tag`         |
+| version (Policy)     | `sea:version`     |
+
+### 4.4 Instance and Policy Identity
+
+- Instance IRIs are `sea:instance_<name>`, and policy IRIs are
+  `sea:policy_<name>`. Both are kind-prefixed like the existing `flow_` and
+  `pattern_` nodes. The name alone identifies an instance because
+  `Graph::insert_entity_instance` rejects any instance whose name already exists,
+  making instance names unique graph-wide; keeping the entity type out of the IRI
+  also means retyping an instance does not change its identity. If that
+  uniqueness rule is ever relaxed, this scheme MUST be revisited — the invariant
+  is pinned by `instance_names_are_unique_graph_wide` in
+  `domainforge-core/tests/turtle_instance_export_tests.rs`.
+- Both are derived from already content-stable `ConceptId`s, so they MUST NOT be
+  routed through `canonicalize_node_ids`; `is_minted_node` stays limited to
+  `sea:flow_` and `sea:pattern_`.
+- Instance field values carry the `xsd:` datatype declared by the entity's
+  `EntityContract` when one exists, and fall back to the JSON value's own shape
+  otherwise. Field keys are sorted before emission — `Instance::fields` is a
+  `HashMap`, and unsorted iteration breaks determinism.
+- `FieldType::EntityRef` emits the referenced key **value** as a literal, not an
+  IRI. Minting a cross-instance IRI would produce dangling references in models
+  that have not passed validation. Typed instance-to-instance edges are a
+  separate change.
+
+### 4.5 Policies Are Stated, Not Enforced
+
+A `Policy` is emitted as an individual carrying its normalized expression,
+modality, kind, priority, rationale, and tags. Policies are deliberately **not**
+lowered into SHACL constraints. The SHACL shapes in `kg.rs` remain the fixed
+structural invariants over `sea:Flow` and `sea:Entity`.
+
+Lowering the subset of policy expressions that SHACL can carry faithfully is a
+possible later change. It is out of scope here because a partial translation
+silently changes what a policy means, which is worse than stating it verbatim.
 
 ---
 

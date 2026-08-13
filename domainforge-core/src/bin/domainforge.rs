@@ -1,7 +1,7 @@
 use clap::Parser;
 use domainforge_core::cli::{
-    authority, format, import, normalize, pack, parse, project, registry, test, validate,
-    validate_kg, Cli, Commands,
+    authority, contract, envelope, format, import, normalize, pack, parse, project, registry, test,
+    validate, validate_kg, Cli, Commands,
 };
 
 fn main() -> anyhow::Result<()> {
@@ -21,5 +21,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Registry(args) => registry::run(args),
         Commands::Authority(args) => authority::run(args),
         Commands::Pack(args) => pack::run(args),
+        Commands::Contract(args) => contract::run(args),
+        Commands::Envelope(args) => envelope::run(args),
     }
 }

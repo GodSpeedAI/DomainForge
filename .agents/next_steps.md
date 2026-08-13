@@ -1,45 +1,31 @@
 # Next Steps
 
-## 1. Review and integrate I1-I3
+## 1. Close the RDF completeness gaps: `ResourceInstance` identity and `to_graph()` reconstruction
 
-Review the completed I1-I3 diff and verification record, then choose whether to
-commit or open a pull request. Expected outcome: the implementation is
-integrated without staging, reverting, or rewriting the pre-existing unrelated
-worktree changes.
+`ResourceInstance` is the one declared concept still missing from RDF output —
+its identity is `Uuid::new_v4()`, so projecting it today would break the
+byte-identical output guarantee. Separately, `KnowledgeGraph::to_graph()`
+reconstructs `Entity`/`Resource`/`Flow`/`Relation` from Turtle but not the
+`sea:EntityInstance`/`sea:Policy` triples `to_turtle()` now emits, so a
+`to_turtle` -> `from_turtle` -> `to_graph` round trip silently drops instances
+and policies (documented at the `to_graph()` call site). Expected outcome: a
+content-derived `ConceptId` for `ResourceInstance`, plus either a `to_graph()`
+that reconstructs instances/policies or one that errors instead of silently
+dropping them.
 
-## 2. Restore model-checker-backed TLA evidence when available
+## 2. Decide whether policies should lower into SHACL
 
-Install Java and provide `tla2tools.jar`, then rerun `just prove`. Expected
-outcome: TLA evidence upgrades from the recorded structural-only fallback to a
-model-checker-backed result. This is an environment limitation, not a failing
-I1-I3 behavior or test.
+Policies currently project as individuals carrying their normalized expression;
+they are not translated into SHACL constraints, because a partial translation
+would silently change what a policy means. Expected outcome: either an explicit
+decision to keep policies stated-only, or a specification of the exact expression
+subset SHACL can carry faithfully plus the rejection behavior for the rest.
 
-## 3. Continue the prior Milestone 1 contract gate
+## 3. Resume the ADR-014 contract gate
 
-Resume ADR-014 ratification only after this I1-I3 change is reviewed. Do not
-combine Milestone 1 implementation with this intervention diff.
-
-## Prior milestone next steps (superseded while I1-I3 is active)
-
-## 1. Ratify ADR-014
-
-Review and explicitly accept or amend
-`docs/specs/ADR-014-application-review-and-approval-contract.md`. Expected
-outcome: fixed, human-approved CLI, artifact, status, diff, and approval
-contracts with no implementation-agent choices left open.
-
-## 2. Write and adversarially review the Milestone 1 plan
-
-Create
-`.agents/plans/2026-07-19-conversational-application-generator-m1-review.md`
-from specification Milestone 1 and the remediated Milestone 0 APIs. Expected
-outcome: a test-first, codebase-grounded plan for Domain/Application IR,
-inspection, domain review, semantic diff, and semantic approval capture.
-
-## 3. Implement and gate Milestone 1
-
-Execute one independently testable packet at a time, preserving canonical
-hashing and binding parity. Expected outcome: inspect/review/diff/approval
-workflows satisfy an adversarial Milestone 1 human gate without entering
-provider, generation, or skill scope; explicit maintainer ratification remains
-required before Milestone 2.
+Ratify `docs/specs/ADR-014-application-review-and-approval-contract.md`, then
+proceed with the Milestone 1 plan (Domain/Application IR, inspection, domain
+review, semantic diff, semantic approval capture) as one independently testable
+packet at a time. Expected outcome: fixed, human-approved contracts with no
+implementation-agent choices left open, and inspect/review/diff/approval
+workflows satisfying an adversarial Milestone 1 human gate before Milestone 2.

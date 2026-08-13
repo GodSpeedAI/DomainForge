@@ -412,6 +412,10 @@ impl From<&ast::AstNode> for schema::AstNode {
                 object_role: object_role.clone(),
                 via_flow: via_flow.clone(),
             },
+            ast::AstNode::RoleBinding { role, entity } => schema::AstNode::RoleBinding {
+                role: role.clone(),
+                entity: entity.clone(),
+            },
             ast::AstNode::Dimension { name } => schema::AstNode::Dimension { name: name.clone() },
             ast::AstNode::UnitDeclaration {
                 symbol,

@@ -58,6 +58,8 @@ impl OntologyIR {
         let has_resources = !graph.all_resources().is_empty();
         let has_flows = !graph.all_flows().is_empty();
         let has_relations = !graph.all_relations().is_empty();
+        let has_entity_instances = !graph.all_entity_instances().is_empty();
+        let has_policies = !graph.all_policies().is_empty();
 
         let mut classes = Vec::new();
         if has_entities {
@@ -88,6 +90,18 @@ impl OntologyIR {
             classes.push(ClassAxiom {
                 local: "Relation",
                 comment: "Typed association between two roles",
+            });
+        }
+        if has_entity_instances {
+            classes.push(ClassAxiom {
+                local: "EntityInstance",
+                comment: "Declared instance of an entity with field values",
+            });
+        }
+        if has_policies {
+            classes.push(ClassAxiom {
+                local: "Policy",
+                comment: "Declared rule over the model; stated here, not enforced",
             });
         }
 
@@ -133,6 +147,34 @@ impl OntologyIR {
                 range: "Role",
             });
         }
+        if has_entity_instances {
+            object_props.push(PropAxiom {
+                local: "instanceOf",
+                object: true,
+                domain: "EntityInstance",
+                range: "Entity",
+            });
+        }
+        if has_policies {
+            data_props.push(PropAxiom {
+                local: "expression",
+                object: false,
+                domain: "Policy",
+                range: "xsd:string",
+            });
+            data_props.push(PropAxiom {
+                local: "modality",
+                object: false,
+                domain: "Policy",
+                range: "xsd:string",
+            });
+            data_props.push(PropAxiom {
+                local: "priority",
+                object: false,
+                domain: "Policy",
+                range: "xsd:integer",
+            });
+        }
 
         // Individuals from the closed entity / role / resource domains.
         let mut seen = BTreeSet::new();
@@ -154,6 +196,23 @@ impl OntologyIR {
         }
         for r in graph.all_resources() {
             push_individual(sanitize_qname(r.name()), "Resource", r.name().to_string());
+        }
+        // Declared instances and policies. Instance names are unique graph-wide
+        // (`Graph::insert_entity_instance` enforces it), so the name alone
+        // identifies the individual.
+        for i in graph.all_entity_instances() {
+            push_individual(
+                format!("instance_{}", sanitize_qname(i.name())),
+                "EntityInstance",
+                i.name().to_string(),
+            );
+        }
+        for p in graph.all_policies() {
+            push_individual(
+                format!("policy_{}", sanitize_qname(&p.name)),
+                "Policy",
+                p.name.clone(),
+            );
         }
         individuals.sort_by(|a, b| (&a.label, &a.local).cmp(&(&b.label, &b.local)));
 

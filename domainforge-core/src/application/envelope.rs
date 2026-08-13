@@ -149,6 +149,7 @@ pub enum CanonicalSemanticPayload {
     Pattern(CanonicalPatternDecl),
     Role(CanonicalRoleDecl),
     Relation(CanonicalRelationDecl),
+    RoleBinding(CanonicalRoleBindingDecl),
     Instance(CanonicalInstanceDecl),
     Policy(CanonicalPolicyDecl),
     ConceptChange(CanonicalConceptChangeDecl),
@@ -229,6 +230,16 @@ pub struct CanonicalRelationDecl {
     pub object_role: CanonicalReferenceTarget,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub via_flow: Option<CanonicalReferenceTarget>,
+}
+
+/// A role-to-entity binding (`role_binding "Role" for "Entity"`). Unlike
+/// `CanonicalRelationDecl` this declaration has no name of its own — its
+/// identity is the resolved (role, entity) pair.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CanonicalRoleBindingDecl {
+    pub role: CanonicalReferenceTarget,
+    pub entity: CanonicalReferenceTarget,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -537,6 +548,24 @@ fn classify(
                 predicate: predicate.clone(),
                 object_role: target(object_role, &["role"]),
                 via_flow: via_flow.as_ref().map(|f| target(f, &["flow"])),
+            }),
+        ),
+        N::RoleBinding { role, entity } => (
+            "role_binding",
+            // No declaration name of its own: identity is the resolved
+            // (role, entity) pair, matching how the graph key's uniqueness
+            // works (Graph::assign_role_to_entity is idempotent per pair).
+            // Encoded as a JSON array (not raw `role:entity` interpolation)
+            // so a `:` inside either name cannot make two distinct pairs
+            // collide on the same id — e.g. ("A:B", "C") vs ("A", "B:C").
+            concept_id(&format!(
+                "role_binding:{}",
+                serde_json::to_string(&[role.as_str(), entity.as_str()])
+                    .expect("role/entity pair serializes")
+            )),
+            CanonicalSemanticPayload::RoleBinding(CanonicalRoleBindingDecl {
+                role: target(role, &["role"]),
+                entity: target(entity, &["entity"]),
             }),
         ),
         N::Instance {

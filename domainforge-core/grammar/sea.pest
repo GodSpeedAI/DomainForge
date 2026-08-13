@@ -31,7 +31,7 @@ annotation_name = {
 
 // Declarations
 declaration = { export_decl | declaration_inner }
-declaration_inner = { dimension_decl | unit_decl | record_decl | enum_decl | operation_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
+declaration_inner = { dimension_decl | unit_decl | record_decl | enum_decl | operation_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_binding_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
 
 // Cell environment declarations (godspeed cell-environment projection).
 // All share a generic annotation form: "@" key value. Category-specific
@@ -163,6 +163,16 @@ pattern_decl = {
 // Syntax: Role "Approver" in governance
 role_decl = {
     ^"role" ~ name ~ (in_keyword ~ identifier)?
+}
+
+// Role Binding Declaration — the graph has long supported an entity-to-role
+// binding (Graph::entity_roles / assign_role_to_entity), but no text syntax
+// authored it, so entity_roles was always empty out of the parser. This
+// binds one previously-declared role to one previously-declared entity;
+// repeat the declaration for one-to-many or many-to-many bindings.
+// Syntax: role_binding "Approver" for "Case"
+role_binding_decl = {
+    ^"role_binding" ~ string_literal ~ ^"for" ~ string_literal
 }
 
 // Relation Declaration
@@ -433,15 +443,29 @@ quantified_expr = {
 
 quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }
 
+// `entity_instances of "EntityType"` narrows the collection to instances of
+// one declared entity type before a quantifier or aggregation sees it, so
+// `forall`/`exists` can be scoped to a type without a field absent on other
+// entity types in a heterogeneous entity_instances collection producing an
+// unrelated NULL.
 collection = {
-    ^"entity_instances" | ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
+    (^"entity_instances" ~ (^"of" ~ string_literal)?)
+    | ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
 }
 
 // Member access (e.g., Flow.quantity, Entity.name)
 member_access = { identifier ~ "." ~ identifier }
 
 // Literals
-literal = { time_literal | multiline_string | string_literal | interval_literal | quantity_literal | number | boolean }
+literal = { time_literal | multiline_string | string_literal | interval_literal | quantity_literal | array_literal | number | boolean }
+
+// Array literal — makes a declared `list<T>` field instantiable. Elements
+// are plain literals: for `list<ref<Entity>>` an element is the target's
+// key value, exactly like a scalar `ref<Entity>` field.
+// Syntax: ["CJ01", "CJ02"]
+array_literal = {
+    "[" ~ (literal ~ ("," ~ literal)* ~ ","?)? ~ "]"
+}
 
 // Time literal (ISO 8601 timestamp with required timezone)
 // Syntax: "2025-12-31T23:59:59Z" or "2025-12-31T23:59:59+05:00"

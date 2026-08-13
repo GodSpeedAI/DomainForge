@@ -347,6 +347,10 @@ pub enum AstNode {
         object_role: String,
         via_flow: Option<String>,
     },
+    RoleBinding {
+        role: String,
+        entity: String,
+    },
     Dimension {
         name: String,
     },
@@ -551,6 +555,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
         Rule::flow_decl => parse_flow(pair),
         Rule::pattern_decl => parse_pattern(pair),
         Rule::role_decl => parse_role(pair),
+        Rule::role_binding_decl => parse_role_binding(pair),
         Rule::relation_decl => parse_relation(pair),
         Rule::instance_decl => parse_instance(pair),
         Rule::policy_decl => parse_policy(pair),
@@ -1682,6 +1687,17 @@ fn parse_relation(pair: Pair<Rule>) -> ParseResult<AstNode> {
     })
 }
 
+fn parse_role_binding(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let role = parse_string_literal(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected role name in role_binding".to_string())
+    })?)?;
+    let entity = parse_string_literal(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected entity name in role_binding".to_string())
+    })?)?;
+    Ok(AstNode::RoleBinding { role, entity })
+}
+
 /// Parse instance declaration
 fn parse_instance(pair: Pair<Rule>) -> ParseResult<AstNode> {
     let mut inner = pair.into_inner();
@@ -2370,9 +2386,26 @@ fn parse_quantifier(pair: Pair<Rule>) -> ParseResult<PolicyQuantifier> {
     }
 }
 
-/// Parse collection type
+/// Parse collection type. `entity_instances of "EntityType"` carries an
+/// inner `string_literal`; encode it as `entity_instances:EntityType` in
+/// the returned name (matching how a bound-variable member access is
+/// already encoded as `variable.field` — see `Expression::substitute`), so
+/// every existing site that keys on a plain `Expression::Variable(String)`
+/// collection name needs no new AST variant.
 fn parse_collection(pair: Pair<Rule>) -> ParseResult<String> {
-    Ok(pair.as_str().to_lowercase())
+    // `.trim()`: the optional `of "EntityType"` suffix means pest's implicit
+    // whitespace-skip between it and the base keyword can end up inside this
+    // rule's span even when the suffix itself does not match (bare
+    // `entity_instances`), so the untrimmed text can carry trailing
+    // whitespace that would otherwise defeat the exact-match lookups below.
+    let text = pair.as_str().trim().to_lowercase();
+    for inner in pair.into_inner() {
+        if inner.as_rule() == Rule::string_literal {
+            let entity_type = parse_string_literal(inner)?;
+            return Ok(format!("entity_instances:{entity_type}"));
+        }
+    }
+    Ok(text)
 }
 
 /// Parse member access
@@ -2463,6 +2496,24 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
         Rule::boolean => {
             let b = inner.as_str().eq_ignore_ascii_case("true");
             Ok(Expression::Literal(JsonValue::Bool(b)))
+        }
+        Rule::array_literal => {
+            let mut values = Vec::new();
+            for element in inner.into_inner() {
+                if element.as_rule() != Rule::literal {
+                    continue;
+                }
+                match parse_literal_expr(element)? {
+                    Expression::Literal(v) => values.push(v),
+                    other => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Array literal elements must be plain literals, got {:?}",
+                            other
+                        )))
+                    }
+                }
+            }
+            Ok(Expression::Literal(JsonValue::Array(values)))
         }
         _ => Err(ParseError::InvalidExpression(format!(
             "Unknown literal type: {:?}",
@@ -3508,6 +3559,37 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 ParseError::GrammarError(format!("Failed to add relation '{}': {}", name, e))
             })?;
             relation_map.insert(name.clone(), relation_id);
+        }
+    }
+
+    // Role binding pass: bind previously-declared roles to previously-
+    // declared entities (Graph::assign_role_to_entity already rejects a
+    // dangling reference on either side).
+    for node in &ast.declarations {
+        let node = unwrap_export(node);
+        if let AstNode::RoleBinding { role, entity } = node {
+            let role_id =
+                resolve_by_name(&role_map, role, &default_namespace)?.ok_or_else(|| {
+                    ParseError::GrammarError(format!(
+                        "role_binding references undefined role '{}'",
+                        role
+                    ))
+                })?;
+            let entity_id =
+                resolve_by_name(&entity_map, entity, &default_namespace)?.ok_or_else(|| {
+                    ParseError::GrammarError(format!(
+                        "role_binding references undefined entity '{}'",
+                        entity
+                    ))
+                })?;
+            graph
+                .assign_role_to_entity(entity_id, role_id)
+                .map_err(|e| {
+                    ParseError::GrammarError(format!(
+                        "Failed to bind role '{}' to entity '{}': {}",
+                        role, entity, e
+                    ))
+                })?;
         }
     }
 

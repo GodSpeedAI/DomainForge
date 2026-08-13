@@ -398,6 +398,10 @@ pub enum AstNode {
         via_flow: Option<String>,
     },
 
+    /// Role binding declaration - binds a previously-declared role to a
+    /// previously-declared entity
+    RoleBinding { role: String, entity: String },
+
     /// Dimension declaration for units
     Dimension { name: String },
 

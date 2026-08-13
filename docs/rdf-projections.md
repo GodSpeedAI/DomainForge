@@ -32,6 +32,16 @@ const artifacts = JSON.parse(graph.exportRdfProjection(undefined, '2026-07-02T00
 All three files share one vocabulary: entities/roles/resources appear as
 `sea:<Name>`, and the `sea:` prefix expands to the same base IRI in every file.
 
+Declared `Instance` and `Policy` declarations are model content, not derived
+structure, so they project too: an instance becomes `sea:instance_<name>` typed
+`sea:EntityInstance`, linked to its entity with `sea:instanceOf` and carrying one
+`sea:<fieldName>` triple per field; a policy becomes `sea:policy_<name>` typed
+`sea:Policy`. Instance names are unique graph-wide, so the name alone identifies
+the individual and retyping an instance does not change its IRI. Field values
+carry the `xsd:` datatype declared by the entity's contract when the entity is
+typed, and fall back to the JSON value's own shape otherwise. See
+`docs/specs/SDS-005-knowledge-graph-module.md` §4.2–§4.5 for the full mapping.
+
 ## IRI policy
 
 - Every minted local name is routed through
@@ -76,8 +86,19 @@ cargo run --features cli,shacl -- validate-kg out/model.ttl
 
 - **OWL reasoning / consistency checking is not performed** — the ontology
   states class and property axioms; DomainForge does not run a reasoner.
-- **No typed entity attributes.** Attributes are untyped in the IR today, so the
-  ontology derives classes, relations, and named individuals only.
+- **Policies are stated, not enforced.** A declared `Policy` projects as a
+  `sea:Policy` individual carrying its normalized expression, modality, kind,
+  priority, rationale, and tags. Policies are not lowered into SHACL
+  constraints; the emitted shapes remain the fixed structural invariants over
+  `sea:Flow` and `sea:Entity`. A partial translation would silently change what
+  a policy means.
+- **No typed instance-to-instance edges.** A `FieldType::EntityRef` field emits
+  the referenced key value as a literal, not as an IRI, so a model that has not
+  passed validation cannot produce dangling references.
+- **Resource instances are not projected.** `ResourceInstance` identity is a
+  random UUIDv4 rather than a content-derived `ConceptId`, so emitting it would
+  break the determinism guarantee. A content-derived identity is the
+  prerequisite, not a projection change.
 - **`model.ttl` uses the canonical SEA vocabulary IRI regardless of
   `--base-iri`** (it is produced by the legacy `kg.rs` serializer, which is not
   forked). `--base-iri` reparameterizes the JSON-LD and OWL files only; keep the

@@ -256,6 +256,9 @@ fn declaration_name(node: &AstNode) -> Option<&str> {
         | AstNode::Endpoint { name, .. }
         | AstNode::NetworkFlow { name, .. }
         | AstNode::Credential { name, .. } => Some(name),
+        // A role binding relates two previously-declared, independently
+        // named symbols; it has no name of its own to export or import.
+        AstNode::RoleBinding { .. } => None,
         AstNode::Export(inner) => declaration_name(&inner.node),
         AstNode::Record(r) => Some(&r.name),
         AstNode::Enum(e) => Some(&e.name),
@@ -714,6 +717,7 @@ fn kind_slug(node: &AstNode) -> &'static str {
         AstNode::Endpoint { .. } => "endpoint",
         AstNode::NetworkFlow { .. } => "network_flow",
         AstNode::Credential { .. } => "credential",
+        AstNode::RoleBinding { .. } => "role_binding",
         AstNode::Record(_) => "record",
         AstNode::Enum(_) => "enum",
         AstNode::Operation(_) => "operation",
