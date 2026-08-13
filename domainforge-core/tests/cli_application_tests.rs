@@ -164,6 +164,24 @@ fn envelope_subcommand_prints_the_resolved_declarations() {
 }
 
 #[test]
+fn flagship_command_write_fixture_passes_graph_validation() {
+    // DomainForge's own flagship fixture declares an operation-bound policy
+    // (`order_total_within_limit`, referenced via `access policy_governed
+    // by ... at precondition`). Before the L9 fix, this failed
+    // `domainforge validate` with "Policy evaluation is UNKNOWN (NULL)"
+    // because the graph validator evaluated it against the bare graph,
+    // where `total` (an input-record field, not a graph field) does not
+    // resolve. This is the natural, pre-existing acceptance test for that
+    // fix — no new fixture needed.
+    Command::new(assert_cmd::cargo::cargo_bin!("domainforge"))
+        .arg("validate")
+        .arg(flagship_fixture("command-write.sea"))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Validation succeeded"));
+}
+
+#[test]
 fn contract_subcommand_reports_diagnostics_for_a_broken_operation() {
     let dir = tempdir().expect("tempdir");
     let path = dir.path().join("broken.sea");

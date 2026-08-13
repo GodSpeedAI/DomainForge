@@ -57,6 +57,14 @@ pub struct Graph {
     entity_contracts: IndexMap<ConceptId, EntityContract>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     enum_contracts: IndexMap<ApplicationSymbolId, EnumContract>,
+    /// Names of policies referenced by some operation's
+    /// `access policy_governed by <name> at precondition ...` clause (raw
+    /// authored name, or its final `.`-segment for a qualified reference).
+    /// `validate()` evaluates these in the operation's typed contract
+    /// context, not against the bare graph, where their terms (e.g. an
+    /// input record field) do not resolve (limitation L9).
+    #[serde(default, skip_serializing_if = "std::collections::HashSet::is_empty")]
+    operation_bound_policy_names: std::collections::HashSet<String>,
     #[serde(default)]
     config: GraphConfig,
 }
@@ -127,6 +135,18 @@ impl Graph {
         self.entity_roles.extend(other.entity_roles);
         self.entity_contracts.extend(other.entity_contracts);
         self.enum_contracts.extend(other.enum_contracts);
+        self.operation_bound_policy_names
+            .extend(other.operation_bound_policy_names);
+    }
+
+    /// Record that `name` is bound to some operation's `access
+    /// policy_governed by` clause, so `validate()` skips it: its terms are
+    /// meaningful only in that operation's typed contract context.
+    pub(crate) fn mark_operation_bound_policies(
+        &mut self,
+        names: impl IntoIterator<Item = String>,
+    ) {
+        self.operation_bound_policy_names.extend(names);
     }
 
     pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
@@ -833,6 +853,7 @@ impl Graph {
             entity_roles,
             entity_contracts,
             enum_contracts,
+            operation_bound_policy_names,
             config: _,
         } = other;
 
@@ -878,6 +899,8 @@ impl Graph {
 
         self.entity_contracts.extend(entity_contracts);
         self.enum_contracts.extend(enum_contracts);
+        self.operation_bound_policy_names
+            .extend(operation_bound_policy_names);
         self.validate_entity_instances()
             .map_err(|errors| errors.join("; "))?;
 
@@ -918,7 +941,18 @@ impl Graph {
             );
         }
 
+        // Policies bound to an operation's `access policy_governed by`
+        // clause are meant to be evaluated in that operation's typed
+        // contract context (an input record field, a state precondition),
+        // not against the bare graph, where their terms do not resolve and
+        // evaluation returns UNKNOWN (limitation L9). `--application`/
+        // `contract`/`envelope` check them in the right context instead.
+        let mut evaluated = 0usize;
         for policy in self.policies.values() {
+            if self.operation_bound_policy_names.contains(&policy.name) {
+                continue;
+            }
+            evaluated += 1;
             match policy.evaluate_with_mode(self, use_three_valued_logic) {
                 Ok(eval) => {
                     all_violations.extend(eval.violations);
@@ -937,6 +971,6 @@ impl Graph {
             }
         }
 
-        ValidationResult::new(self.policies.len(), all_violations)
+        ValidationResult::new(evaluated, all_violations)
     }
 }
