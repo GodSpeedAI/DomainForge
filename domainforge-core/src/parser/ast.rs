@@ -2370,9 +2370,26 @@ fn parse_quantifier(pair: Pair<Rule>) -> ParseResult<PolicyQuantifier> {
     }
 }
 
-/// Parse collection type
+/// Parse collection type. `entity_instances of "EntityType"` carries an
+/// inner `string_literal`; encode it as `entity_instances:EntityType` in
+/// the returned name (matching how a bound-variable member access is
+/// already encoded as `variable.field` — see `Expression::substitute`), so
+/// every existing site that keys on a plain `Expression::Variable(String)`
+/// collection name needs no new AST variant.
 fn parse_collection(pair: Pair<Rule>) -> ParseResult<String> {
-    Ok(pair.as_str().to_lowercase())
+    // `.trim()`: the optional `of "EntityType"` suffix means pest's implicit
+    // whitespace-skip between it and the base keyword can end up inside this
+    // rule's span even when the suffix itself does not match (bare
+    // `entity_instances`), so the untrimmed text can carry trailing
+    // whitespace that would otherwise defeat the exact-match lookups below.
+    let text = pair.as_str().trim().to_lowercase();
+    for inner in pair.into_inner() {
+        if inner.as_rule() == Rule::string_literal {
+            let entity_type = parse_string_literal(inner)?;
+            return Ok(format!("entity_instances:{entity_type}"));
+        }
+    }
+    Ok(text)
 }
 
 /// Parse member access

@@ -304,204 +304,217 @@ impl Expression {
         graph: &Graph,
     ) -> Result<Vec<serde_json::Value>, String> {
         match expr {
-            Expression::Variable(name) => match name.as_str() {
-                "flows" => {
-                    let flows: Result<Vec<serde_json::Value>, String> = graph
-                        .all_flows()
-                        .iter()
-                        .map(|f| {
-                            let quantity = f.quantity().to_f64().ok_or_else(|| {
-                                format!("Failed to convert flow quantity {} to f64", f.quantity())
-                            })?;
-
-                            let mut map = serde_json::Map::new();
-                            map.insert("id".to_string(), serde_json::json!(f.id().to_string()));
-                            map.insert(
-                                "from_entity".to_string(),
-                                serde_json::json!(f.from_id().to_string()),
-                            );
-                            map.insert(
-                                "to_entity".to_string(),
-                                serde_json::json!(f.to_id().to_string()),
-                            );
-                            map.insert(
-                                "resource".to_string(),
-                                serde_json::json!(f.resource_id().to_string()),
-                            );
-                            map.insert("quantity".to_string(), serde_json::json!(quantity));
-
-                            for (k, v) in f.attributes().iter() {
-                                if matches!(
-                                    k.as_str(),
-                                    "id" | "from_entity" | "to_entity" | "resource" | "quantity"
-                                ) || map.contains_key(k)
-                                {
-                                    continue;
-                                }
-                                map.insert(k.clone(), v.clone());
-                            }
-                            Ok(serde_json::Value::Object(map))
-                        })
-                        .collect();
-                    flows
+            Expression::Variable(name) => {
+                if let Some(entity_type) = name.strip_prefix("entity_instances:") {
+                    return Ok(Self::collect_entity_instances(graph, Some(entity_type)));
                 }
-                "entities" => {
-                    let entities: Vec<serde_json::Value> = graph
-                        .all_entities()
-                        .iter()
-                        .map(|e| {
-                            let mut map = serde_json::Map::new();
-                            map.insert("id".to_string(), serde_json::json!(e.id().to_string()));
-                            map.insert("name".to_string(), serde_json::json!(e.name()));
-                            map.insert("namespace".to_string(), serde_json::json!(e.namespace()));
-
-                            let roles = graph.role_names_for_entity(e.id());
-                            if !roles.is_empty() {
-                                map.insert("roles".to_string(), serde_json::json!(roles));
-                            }
-
-                            for (k, v) in e.attributes().iter() {
-                                if matches!(k.as_str(), "id" | "name" | "namespace")
-                                    || map.contains_key(k)
-                                {
-                                    continue;
-                                }
-                                map.insert(k.clone(), v.clone());
-                            }
-
-                            serde_json::Value::Object(map)
-                        })
-                        .collect();
-                    Ok(entities)
-                }
-                "entity_instances" => {
-                    let instances = graph
-                        .all_entity_instances()
-                        .iter()
-                        .map(|instance| {
-                            let mut map = serde_json::Map::new();
-                            map.insert(
-                                "id".to_string(),
-                                serde_json::json!(instance.id().to_string()),
-                            );
-                            map.insert("name".to_string(), serde_json::json!(instance.name()));
-                            map.insert(
-                                "entity".to_string(),
-                                serde_json::json!(instance.entity_type()),
-                            );
-                            map.insert(
-                                "namespace".to_string(),
-                                serde_json::json!(instance.namespace()),
-                            );
-
-                            let mut fields: Vec<_> = instance.fields().iter().collect();
-                            fields.sort_by(|left, right| left.0.cmp(right.0));
-                            for (name, value) in fields {
-                                if matches!(name.as_str(), "id" | "name" | "entity" | "namespace") {
-                                    continue;
-                                }
-                                map.insert(name.clone(), value.clone());
-                            }
-                            serde_json::Value::Object(map)
-                        })
-                        .collect();
-                    Ok(instances)
-                }
-                "relations" => {
-                    let relations: Vec<serde_json::Value> = graph
-                        .all_relations()
-                        .iter()
-                        .map(|relation| {
-                            let mut map = serde_json::Map::new();
-                            map.insert(
-                                "id".to_string(),
-                                serde_json::json!(relation.id().to_string()),
-                            );
-                            map.insert("name".to_string(), serde_json::json!(relation.name()));
-                            map.insert(
-                                "predicate".to_string(),
-                                serde_json::json!(relation.predicate()),
-                            );
-
-                            if let Some(subject) = graph.get_role(relation.subject_role()) {
-                                map.insert(
-                                    "subject_role".to_string(),
-                                    serde_json::json!(subject.name()),
-                                );
-                            }
-
-                            if let Some(object) = graph.get_role(relation.object_role()) {
-                                map.insert(
-                                    "object_role".to_string(),
-                                    serde_json::json!(object.name()),
-                                );
-                            }
-
-                            if let Some(flow) = relation.via_flow() {
-                                map.insert("via".to_string(), serde_json::json!(flow.to_string()));
-                            }
-
-                            serde_json::Value::Object(map)
-                        })
-                        .collect();
-
-                    Ok(relations)
-                }
-                "resources" => {
-                    let resources: Vec<serde_json::Value> = graph
-                        .all_resources()
-                        .iter()
-                        .map(|r| {
-                            let mut map = serde_json::Map::new();
-                            map.insert("id".to_string(), serde_json::json!(r.id().to_string()));
-                            map.insert("name".to_string(), serde_json::json!(r.name()));
-                            map.insert("namespace".to_string(), serde_json::json!(r.namespace()));
-                            map.insert("unit".to_string(), serde_json::json!(r.unit()));
-                            for (k, v) in r.attributes().iter() {
-                                if matches!(k.as_str(), "id" | "name" | "namespace" | "unit")
-                                    || map.contains_key(k)
-                                {
-                                    continue;
-                                }
-                                map.insert(k.clone(), v.clone());
-                            }
-                            serde_json::Value::Object(map)
-                        })
-                        .collect();
-                    Ok(resources)
-                }
-                "instances" => {
-                    let instances: Vec<serde_json::Value> = graph
-                        .all_instances()
-                        .iter()
-                        .map(|i| {
-                            let mut map = serde_json::Map::new();
-                            map.insert("id".to_string(), serde_json::json!(i.id().to_string()));
-                            map.insert(
-                                "entity".to_string(),
-                                serde_json::json!(i.entity_id().to_string()),
-                            );
-                            map.insert(
-                                "resource".to_string(),
-                                serde_json::json!(i.resource_id().to_string()),
-                            );
-                            for (k, v) in i.attributes().iter() {
-                                if matches!(k.as_str(), "id" | "entity" | "resource")
-                                    || map.contains_key(k)
-                                {
-                                    continue;
-                                }
-                                map.insert(k.clone(), v.clone());
-                            }
-                            serde_json::Value::Object(map)
-                        })
-                        .collect();
-                    Ok(instances)
-                }
-                _ => Err(format!("Unknown collection: {}", name)),
-            },
+                Self::get_named_collection(name, graph)
+            }
             Expression::Literal(serde_json::Value::Array(arr)) => Ok(arr.clone()),
             _ => Err("Collection expression must be a variable or array literal".to_string()),
+        }
+    }
+
+    fn collect_entity_instances(
+        graph: &Graph,
+        entity_type_filter: Option<&str>,
+    ) -> Vec<serde_json::Value> {
+        graph
+            .all_entity_instances()
+            .iter()
+            .filter(|instance| {
+                entity_type_filter.is_none_or(|filter| instance.entity_type() == filter)
+            })
+            .map(|instance| {
+                let mut map = serde_json::Map::new();
+                map.insert(
+                    "id".to_string(),
+                    serde_json::json!(instance.id().to_string()),
+                );
+                map.insert("name".to_string(), serde_json::json!(instance.name()));
+                map.insert(
+                    "entity".to_string(),
+                    serde_json::json!(instance.entity_type()),
+                );
+                map.insert(
+                    "namespace".to_string(),
+                    serde_json::json!(instance.namespace()),
+                );
+
+                let mut fields: Vec<_> = instance.fields().iter().collect();
+                fields.sort_by(|left, right| left.0.cmp(right.0));
+                for (name, value) in fields {
+                    if matches!(name.as_str(), "id" | "name" | "entity" | "namespace") {
+                        continue;
+                    }
+                    map.insert(name.clone(), value.clone());
+                }
+                serde_json::Value::Object(map)
+            })
+            .collect()
+    }
+
+    fn get_named_collection(name: &str, graph: &Graph) -> Result<Vec<serde_json::Value>, String> {
+        match name {
+            "flows" => {
+                let flows: Result<Vec<serde_json::Value>, String> = graph
+                    .all_flows()
+                    .iter()
+                    .map(|f| {
+                        let quantity = f.quantity().to_f64().ok_or_else(|| {
+                            format!("Failed to convert flow quantity {} to f64", f.quantity())
+                        })?;
+
+                        let mut map = serde_json::Map::new();
+                        map.insert("id".to_string(), serde_json::json!(f.id().to_string()));
+                        map.insert(
+                            "from_entity".to_string(),
+                            serde_json::json!(f.from_id().to_string()),
+                        );
+                        map.insert(
+                            "to_entity".to_string(),
+                            serde_json::json!(f.to_id().to_string()),
+                        );
+                        map.insert(
+                            "resource".to_string(),
+                            serde_json::json!(f.resource_id().to_string()),
+                        );
+                        map.insert("quantity".to_string(), serde_json::json!(quantity));
+
+                        for (k, v) in f.attributes().iter() {
+                            if matches!(
+                                k.as_str(),
+                                "id" | "from_entity" | "to_entity" | "resource" | "quantity"
+                            ) || map.contains_key(k)
+                            {
+                                continue;
+                            }
+                            map.insert(k.clone(), v.clone());
+                        }
+                        Ok(serde_json::Value::Object(map))
+                    })
+                    .collect();
+                flows
+            }
+            "entities" => {
+                let entities: Vec<serde_json::Value> = graph
+                    .all_entities()
+                    .iter()
+                    .map(|e| {
+                        let mut map = serde_json::Map::new();
+                        map.insert("id".to_string(), serde_json::json!(e.id().to_string()));
+                        map.insert("name".to_string(), serde_json::json!(e.name()));
+                        map.insert("namespace".to_string(), serde_json::json!(e.namespace()));
+
+                        let roles = graph.role_names_for_entity(e.id());
+                        if !roles.is_empty() {
+                            map.insert("roles".to_string(), serde_json::json!(roles));
+                        }
+
+                        for (k, v) in e.attributes().iter() {
+                            if matches!(k.as_str(), "id" | "name" | "namespace")
+                                || map.contains_key(k)
+                            {
+                                continue;
+                            }
+                            map.insert(k.clone(), v.clone());
+                        }
+
+                        serde_json::Value::Object(map)
+                    })
+                    .collect();
+                Ok(entities)
+            }
+            "entity_instances" => Ok(Self::collect_entity_instances(graph, None)),
+            "relations" => {
+                let relations: Vec<serde_json::Value> = graph
+                    .all_relations()
+                    .iter()
+                    .map(|relation| {
+                        let mut map = serde_json::Map::new();
+                        map.insert(
+                            "id".to_string(),
+                            serde_json::json!(relation.id().to_string()),
+                        );
+                        map.insert("name".to_string(), serde_json::json!(relation.name()));
+                        map.insert(
+                            "predicate".to_string(),
+                            serde_json::json!(relation.predicate()),
+                        );
+
+                        if let Some(subject) = graph.get_role(relation.subject_role()) {
+                            map.insert(
+                                "subject_role".to_string(),
+                                serde_json::json!(subject.name()),
+                            );
+                        }
+
+                        if let Some(object) = graph.get_role(relation.object_role()) {
+                            map.insert("object_role".to_string(), serde_json::json!(object.name()));
+                        }
+
+                        if let Some(flow) = relation.via_flow() {
+                            map.insert("via".to_string(), serde_json::json!(flow.to_string()));
+                        }
+
+                        serde_json::Value::Object(map)
+                    })
+                    .collect();
+
+                Ok(relations)
+            }
+            "resources" => {
+                let resources: Vec<serde_json::Value> = graph
+                    .all_resources()
+                    .iter()
+                    .map(|r| {
+                        let mut map = serde_json::Map::new();
+                        map.insert("id".to_string(), serde_json::json!(r.id().to_string()));
+                        map.insert("name".to_string(), serde_json::json!(r.name()));
+                        map.insert("namespace".to_string(), serde_json::json!(r.namespace()));
+                        map.insert("unit".to_string(), serde_json::json!(r.unit()));
+                        for (k, v) in r.attributes().iter() {
+                            if matches!(k.as_str(), "id" | "name" | "namespace" | "unit")
+                                || map.contains_key(k)
+                            {
+                                continue;
+                            }
+                            map.insert(k.clone(), v.clone());
+                        }
+                        serde_json::Value::Object(map)
+                    })
+                    .collect();
+                Ok(resources)
+            }
+            "instances" => {
+                let instances: Vec<serde_json::Value> = graph
+                    .all_instances()
+                    .iter()
+                    .map(|i| {
+                        let mut map = serde_json::Map::new();
+                        map.insert("id".to_string(), serde_json::json!(i.id().to_string()));
+                        map.insert(
+                            "entity".to_string(),
+                            serde_json::json!(i.entity_id().to_string()),
+                        );
+                        map.insert(
+                            "resource".to_string(),
+                            serde_json::json!(i.resource_id().to_string()),
+                        );
+                        for (k, v) in i.attributes().iter() {
+                            if matches!(k.as_str(), "id" | "entity" | "resource")
+                                || map.contains_key(k)
+                            {
+                                continue;
+                            }
+                            map.insert(k.clone(), v.clone());
+                        }
+                        serde_json::Value::Object(map)
+                    })
+                    .collect();
+                Ok(instances)
+            }
+            _ => Err(format!("Unknown collection: {}", name)),
         }
     }
 
@@ -523,6 +536,9 @@ impl Expression {
         let filtered_items = if let Some(filter_expr) = filter {
             // Determine the variable name based on collection type
             let variable_name = match collection {
+                Expression::Variable(name) if name.starts_with("entity_instances:") => {
+                    "entity_instance"
+                }
                 Expression::Variable(name) => match name.as_str() {
                     "flows" => "flow",
                     "entities" => "entity",

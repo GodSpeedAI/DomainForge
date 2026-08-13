@@ -433,8 +433,14 @@ quantified_expr = {
 
 quantifier = { ^"exists_unique" | ^"forall" | ^"exists" }
 
+// `entity_instances of "EntityType"` narrows the collection to instances of
+// one declared entity type before a quantifier or aggregation sees it, so
+// `forall`/`exists` can be scoped to a type without a field absent on other
+// entity types in a heterogeneous entity_instances collection producing an
+// unrelated NULL.
 collection = {
-    ^"entity_instances" | ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
+    (^"entity_instances" ~ (^"of" ~ string_literal)?)
+    | ^"flows" | ^"entities" | ^"resources" | ^"instances" | ^"relations"
 }
 
 // Member access (e.g., Flow.quantity, Entity.name)
