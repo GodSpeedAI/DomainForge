@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
 pub mod authority;
+pub mod contract;
+pub mod envelope;
 pub mod format;
 pub mod import;
 pub mod normalize;
@@ -54,6 +56,10 @@ pub enum Commands {
     Authority(authority::AuthorityArgs),
     /// Semantic pack management commands
     Pack(pack::PackArgs),
+    /// Resolve and print the Application Contract document
+    Contract(contract::ContractArgs),
+    /// Resolve and print the Canonical Semantic Envelope document
+    Envelope(envelope::EnvelopeArgs),
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy)]
