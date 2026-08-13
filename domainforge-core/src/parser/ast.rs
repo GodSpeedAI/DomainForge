@@ -2497,6 +2497,24 @@ fn parse_literal_expr(pair: Pair<Rule>) -> ParseResult<Expression> {
             let b = inner.as_str().eq_ignore_ascii_case("true");
             Ok(Expression::Literal(JsonValue::Bool(b)))
         }
+        Rule::array_literal => {
+            let mut values = Vec::new();
+            for element in inner.into_inner() {
+                if element.as_rule() != Rule::literal {
+                    continue;
+                }
+                match parse_literal_expr(element)? {
+                    Expression::Literal(v) => values.push(v),
+                    other => {
+                        return Err(ParseError::GrammarError(format!(
+                            "Array literal elements must be plain literals, got {:?}",
+                            other
+                        )))
+                    }
+                }
+            }
+            Ok(Expression::Literal(JsonValue::Array(values)))
+        }
         _ => Err(ParseError::InvalidExpression(format!(
             "Unknown literal type: {:?}",
             inner.as_rule()

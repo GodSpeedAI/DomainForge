@@ -457,7 +457,15 @@ collection = {
 member_access = { identifier ~ "." ~ identifier }
 
 // Literals
-literal = { time_literal | multiline_string | string_literal | interval_literal | quantity_literal | number | boolean }
+literal = { time_literal | multiline_string | string_literal | interval_literal | quantity_literal | array_literal | number | boolean }
+
+// Array literal — makes a declared `list<T>` field instantiable. Elements
+// are plain literals: for `list<ref<Entity>>` an element is the target's
+// key value, exactly like a scalar `ref<Entity>` field.
+// Syntax: ["CJ01", "CJ02"]
+array_literal = {
+    "[" ~ (literal ~ ("," ~ literal)* ~ ","?)? ~ "]"
+}
 
 // Time literal (ISO 8601 timestamp with required timezone)
 // Syntax: "2025-12-31T23:59:59Z" or "2025-12-31T23:59:59+05:00"
