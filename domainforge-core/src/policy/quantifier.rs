@@ -535,21 +535,19 @@ impl Expression {
                 _ => "item",
             };
 
-            items
-                .into_iter()
-                .filter(|item| {
-                    // Substitute collection-specific variables in the filter
-                    let substituted = filter_expr
-                        .substitute(variable_name, item)
-                        .unwrap_or_else(|_| filter_expr.as_ref().clone());
-                    // Expand and check if true
-                    if let Ok(expanded) = substituted.expand(graph) {
-                        Self::is_true_literal(&expanded)
-                    } else {
-                        false
-                    }
-                })
-                .collect::<Vec<_>>()
+            let mut kept = Vec::new();
+            for item in items {
+                // Substitute collection-specific variables in the filter. A missing
+                // field yields NULL (three-valued semantics — see `substitute`), not
+                // an error, so this only fails for a genuinely malformed filter
+                // expression, and such failures must not be read as "row excluded".
+                let substituted = filter_expr.substitute(variable_name, &item)?;
+                let expanded = substituted.expand(graph)?;
+                if Self::is_true_literal(&expanded) {
+                    kept.push(item);
+                }
+            }
+            kept
         } else {
             items
         };
@@ -937,6 +935,24 @@ impl Expression {
                                 } else {
                                     serde_json::json!(left_bool.unwrap() || right_bool.unwrap())
                                 }
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                    BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Multiply | BinaryOp::Divide => {
+                        let left_num = Self::value_to_f64(left_value)
+                            .ok_or_else(|| "Left operand is not numeric".to_string())?;
+                        let right_num = Self::value_to_f64(right_value)
+                            .ok_or_else(|| "Right operand is not numeric".to_string())?;
+                        match op {
+                            BinaryOp::Plus => serde_json::json!(left_num + right_num),
+                            BinaryOp::Minus => serde_json::json!(left_num - right_num),
+                            BinaryOp::Multiply => serde_json::json!(left_num * right_num),
+                            BinaryOp::Divide => {
+                                if right_num == 0.0 {
+                                    return Err("Division by zero".to_string());
+                                }
+                                serde_json::json!(left_num / right_num)
                             }
                             _ => unreachable!(),
                         }
