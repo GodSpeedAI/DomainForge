@@ -32,13 +32,11 @@ pub fn run(args: ContractArgs) -> Result<()> {
         default_namespace.as_deref(),
     )
     .map_err(|diagnostics| {
-        anyhow::anyhow!(
-            diagnostics
-                .iter()
-                .map(|d| d.message.as_str())
-                .collect::<Vec<_>>()
-                .join("; ")
-        )
+        anyhow::anyhow!(diagnostics
+            .iter()
+            .map(|d| d.message.as_str())
+            .collect::<Vec<_>>()
+            .join("; "))
     })?;
 
     let sources_json =

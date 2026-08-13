@@ -255,6 +255,29 @@
           }
         },
         {
+          "description": "Role binding declaration - binds a previously-declared role to a previously-declared entity",
+          "type": "object",
+          "required": [
+            "entity",
+            "role",
+            "type"
+          ],
+          "properties": {
+            "entity": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "RoleBinding"
+              ]
+            }
+          }
+        },
+        {
           "description": "Dimension declaration for units",
           "type": "object",
           "required": [

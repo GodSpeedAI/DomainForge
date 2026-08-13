@@ -118,19 +118,16 @@ fn report_application_contract(
     format: OutputFormat,
     use_color: bool,
 ) -> Result<()> {
-    let (entry_logical_path, source_map) =
-        crate::module::resolver::source_map_from_filesystem(
-            path,
-            source,
-            registry,
-            default_namespace,
-        )
-        .map_err(|diagnostics| {
-            anyhow::anyhow!(format_application_diagnostics(&diagnostics))
-        })?;
+    let (entry_logical_path, source_map) = crate::module::resolver::source_map_from_filesystem(
+        path,
+        source,
+        registry,
+        default_namespace,
+    )
+    .map_err(|diagnostics| anyhow::anyhow!(format_application_diagnostics(&diagnostics)))?;
 
-    let sources_json = serde_json::to_string(&source_map.0)
-        .context("Failed to serialize resolved source map")?;
+    let sources_json =
+        serde_json::to_string(&source_map.0).context("Failed to serialize resolved source map")?;
 
     match crate::application::resolve::resolve_application_contract(
         &entry_logical_path,
@@ -178,11 +175,17 @@ fn report_application_contract(
                     );
                     print_line(&msg, use_color, false);
                     for d in &diagnostics {
-                        print_line(&format!("- [{}] {}: {}", d.slug, d.severity, d.message), use_color, false);
+                        print_line(
+                            &format!("- [{}] {}: {}", d.slug, d.severity, d.message),
+                            use_color,
+                            false,
+                        );
                     }
                 }
             }
-            Err(anyhow::anyhow!("Application contract validation errors detected"))
+            Err(anyhow::anyhow!(
+                "Application contract validation errors detected"
+            ))
         }
     }
 }

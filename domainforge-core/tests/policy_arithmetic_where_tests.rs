@@ -43,7 +43,9 @@ fn arithmetic_where_predicate_rejects_violating_data() {
     // and must NOT be reported as satisfied.
     let graph = graph_with_total(6);
     let policy = &graph.all_policies()[0];
-    let result = policy.evaluate(&graph).expect("policy evaluates without error");
+    let result = policy
+        .evaluate(&graph)
+        .expect("policy evaluates without error");
     assert!(
         !result.is_satisfied,
         "count(... i.a + i.b != i.total ...) = 0 must be false when a row violates the sum, \
@@ -56,7 +58,9 @@ fn arithmetic_where_predicate_accepts_conforming_data() {
     // a + b = 5 = total: the invariant genuinely holds.
     let graph = graph_with_total(5);
     let policy = &graph.all_policies()[0];
-    let result = policy.evaluate(&graph).expect("policy evaluates without error");
+    let result = policy
+        .evaluate(&graph)
+        .expect("policy evaluates without error");
     assert!(
         result.is_satisfied,
         "count(... i.a + i.b != i.total ...) = 0 must be true when every row's sum is correct"
