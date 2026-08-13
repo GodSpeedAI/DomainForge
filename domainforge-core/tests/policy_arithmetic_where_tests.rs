@@ -66,3 +66,42 @@ fn arithmetic_where_predicate_accepts_conforming_data() {
         "count(... i.a + i.b != i.total ...) = 0 must be true when every row's sum is correct"
     );
 }
+
+/// 0.1 + 0.2 != 0.3 under naive f64 arithmetic (binary floating point cannot
+/// represent 0.1 or 0.2 exactly), so this invariant would have been
+/// (wrongly) reported as violated if `reduce_binary_expression` computed
+/// arithmetic in f64 rather than `rust_decimal::Decimal`, the same type
+/// `fold_numeric` already uses for aggregation to avoid this exact problem.
+#[test]
+fn arithmetic_where_predicate_is_exact_for_decimal_fields() {
+    let source = r#"
+@namespace "arithmetic_decimal_precision_test"
+
+export entity "Row" {
+    key row_id: string (min_length 1)
+    a: decimal
+    b: decimal
+    total: decimal
+}
+
+instance row1 of "Row" {
+    row_id: "R1",
+    a: 0.1,
+    b: 0.2,
+    total: 0.3
+}
+
+Policy sum_matches_total as:
+    count(i in entity_instances where i.entity = "Row" and i.a + i.b != i.total: i.row_id) = 0
+"#;
+    let graph = parse_to_graph(source).expect("fixture source parses to a graph");
+    let policy = &graph.all_policies()[0];
+    let result = policy
+        .evaluate(&graph)
+        .expect("policy evaluates without error");
+    assert!(
+        result.is_satisfied,
+        "0.1 + 0.2 = 0.3 must hold exactly under Decimal arithmetic, not report a false \
+         violation from f64 rounding"
+    );
+}

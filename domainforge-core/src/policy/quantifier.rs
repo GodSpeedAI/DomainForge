@@ -956,22 +956,31 @@ impl Expression {
                         }
                     }
                     BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Multiply | BinaryOp::Divide => {
-                        let left_num = Self::value_to_f64(left_value)
+                        // Decimal, not f64: fold_numeric() above already
+                        // avoids float rounding for aggregation, and an
+                        // arithmetic `where` predicate comparing e.g.
+                        // `i.a + i.b != i.total` needs the same guarantee —
+                        // 0.1 + 0.2 != 0.3 is true under f64.
+                        let left_dec = Self::value_to_decimal(left_value)
                             .ok_or_else(|| "Left operand is not numeric".to_string())?;
-                        let right_num = Self::value_to_f64(right_value)
+                        let right_dec = Self::value_to_decimal(right_value)
                             .ok_or_else(|| "Right operand is not numeric".to_string())?;
-                        match op {
-                            BinaryOp::Plus => serde_json::json!(left_num + right_num),
-                            BinaryOp::Minus => serde_json::json!(left_num - right_num),
-                            BinaryOp::Multiply => serde_json::json!(left_num * right_num),
+                        let result = match op {
+                            BinaryOp::Plus => left_dec + right_dec,
+                            BinaryOp::Minus => left_dec - right_dec,
+                            BinaryOp::Multiply => left_dec * right_dec,
                             BinaryOp::Divide => {
-                                if right_num == 0.0 {
+                                if right_dec.is_zero() {
                                     return Err("Division by zero".to_string());
                                 }
-                                serde_json::json!(left_num / right_num)
+                                left_dec / right_dec
                             }
                             _ => unreachable!(),
-                        }
+                        };
+                        serde_json::json!(result.to_f64().ok_or_else(|| format!(
+                            "Failed to convert arithmetic result {} to f64",
+                            result
+                        ))?)
                     }
                     BinaryOp::Contains | BinaryOp::StartsWith | BinaryOp::EndsWith => {
                         let left_str = left_value
@@ -1002,5 +1011,21 @@ impl Expression {
             .as_f64()
             .or_else(|| value.as_i64().map(|v| v as f64))
             .or_else(|| value.as_u64().map(|v| v as f64))
+    }
+
+    /// Like [`Self::value_to_f64`], but keeps integers exact and routes
+    /// floats through their shortest round-trip string form (matching
+    /// [`Self::fold_numeric`]) instead of losing precision to binary
+    /// floating point.
+    fn value_to_decimal(value: &serde_json::Value) -> Option<Decimal> {
+        if let Some(i) = value.as_i64() {
+            return Some(Decimal::from(i));
+        }
+        if let Some(u) = value.as_u64() {
+            return Some(Decimal::from(u));
+        }
+        value
+            .as_f64()
+            .and_then(|f| Decimal::from_str(&f.to_string()).ok())
     }
 }
