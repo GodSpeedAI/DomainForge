@@ -280,7 +280,10 @@ impl PrettyPrinter {
             AstNode::Credential { name, annotations } => {
                 self.format_generic_decl("Credential", name, None, annotations, None, None)
             }
-            AstNode::Record(_) | AstNode::Enum(_) | AstNode::Operation(_) => {
+            AstNode::Record(_)
+            | AstNode::Enum(_)
+            | AstNode::Operation(_)
+            | AstNode::RoleBinding { .. } => {
                 crate::formatter::printer::Formatter::node_to_string(node, indent_level)
             }
         }

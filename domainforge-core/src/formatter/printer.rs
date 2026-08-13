@@ -787,6 +787,13 @@ impl Formatter {
             AstNode::Credential { name, annotations } => {
                 self.format_generic_decl("Credential", name, None, None, annotations)
             }
+            AstNode::RoleBinding { role, entity } => {
+                self.write("role_binding ");
+                self.write_string_literal(role);
+                self.write(" for ");
+                self.write_string_literal(entity);
+                self.newline();
+            }
             AstNode::Record(r) => {
                 self.format_record(r);
                 self.newline();

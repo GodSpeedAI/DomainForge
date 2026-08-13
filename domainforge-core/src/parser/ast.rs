@@ -347,6 +347,10 @@ pub enum AstNode {
         object_role: String,
         via_flow: Option<String>,
     },
+    RoleBinding {
+        role: String,
+        entity: String,
+    },
     Dimension {
         name: String,
     },
@@ -551,6 +555,7 @@ fn parse_declaration(pair: Pair<Rule>) -> ParseResult<Spanned<AstNode>> {
         Rule::flow_decl => parse_flow(pair),
         Rule::pattern_decl => parse_pattern(pair),
         Rule::role_decl => parse_role(pair),
+        Rule::role_binding_decl => parse_role_binding(pair),
         Rule::relation_decl => parse_relation(pair),
         Rule::instance_decl => parse_instance(pair),
         Rule::policy_decl => parse_policy(pair),
@@ -1680,6 +1685,17 @@ fn parse_relation(pair: Pair<Rule>) -> ParseResult<AstNode> {
         object_role,
         via_flow,
     })
+}
+
+fn parse_role_binding(pair: Pair<Rule>) -> ParseResult<AstNode> {
+    let mut inner = pair.into_inner();
+    let role = parse_string_literal(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected role name in role_binding".to_string())
+    })?)?;
+    let entity = parse_string_literal(inner.next().ok_or_else(|| {
+        ParseError::GrammarError("Expected entity name in role_binding".to_string())
+    })?)?;
+    Ok(AstNode::RoleBinding { role, entity })
 }
 
 /// Parse instance declaration
@@ -3525,6 +3541,37 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 ParseError::GrammarError(format!("Failed to add relation '{}': {}", name, e))
             })?;
             relation_map.insert(name.clone(), relation_id);
+        }
+    }
+
+    // Role binding pass: bind previously-declared roles to previously-
+    // declared entities (Graph::assign_role_to_entity already rejects a
+    // dangling reference on either side).
+    for node in &ast.declarations {
+        let node = unwrap_export(node);
+        if let AstNode::RoleBinding { role, entity } = node {
+            let role_id =
+                resolve_by_name(&role_map, role, &default_namespace)?.ok_or_else(|| {
+                    ParseError::GrammarError(format!(
+                        "role_binding references undefined role '{}'",
+                        role
+                    ))
+                })?;
+            let entity_id =
+                resolve_by_name(&entity_map, entity, &default_namespace)?.ok_or_else(|| {
+                    ParseError::GrammarError(format!(
+                        "role_binding references undefined entity '{}'",
+                        entity
+                    ))
+                })?;
+            graph
+                .assign_role_to_entity(entity_id, role_id)
+                .map_err(|e| {
+                    ParseError::GrammarError(format!(
+                        "Failed to bind role '{}' to entity '{}': {}",
+                        role, entity, e
+                    ))
+                })?;
         }
     }
 

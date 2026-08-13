@@ -31,7 +31,7 @@ annotation_name = {
 
 // Declarations
 declaration = { export_decl | declaration_inner }
-declaration_inner = { dimension_decl | unit_decl | record_decl | enum_decl | operation_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
+declaration_inner = { dimension_decl | unit_decl | record_decl | enum_decl | operation_decl | entity_decl | resource_decl | flow_decl | pattern_decl | role_binding_decl | role_decl | relation_decl | instance_decl | policy_decl | concept_change_decl | metric_decl | mapping_decl | projection_decl | cell_decl | system_dependency_decl | runtime_decl | tool_decl | dependency_set_decl | service_decl | mount_decl | endpoint_decl | network_flow_decl | credential_decl }
 
 // Cell environment declarations (godspeed cell-environment projection).
 // All share a generic annotation form: "@" key value. Category-specific
@@ -163,6 +163,16 @@ pattern_decl = {
 // Syntax: Role "Approver" in governance
 role_decl = {
     ^"role" ~ name ~ (in_keyword ~ identifier)?
+}
+
+// Role Binding Declaration — the graph has long supported an entity-to-role
+// binding (Graph::entity_roles / assign_role_to_entity), but no text syntax
+// authored it, so entity_roles was always empty out of the parser. This
+// binds one previously-declared role to one previously-declared entity;
+// repeat the declaration for one-to-many or many-to-many bindings.
+// Syntax: role_binding "Approver" for "Case"
+role_binding_decl = {
+    ^"role_binding" ~ string_literal ~ ^"for" ~ string_literal
 }
 
 // Relation Declaration
