@@ -108,10 +108,10 @@ publish process.
 ```
 
 - `type` must be a conventional type (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `revert`, etc.)
-- `scope` is **required** and must be one of 29 allowed values (see `commitlint.config.cjs` for the full list)
+- `scope` is **required** and must use kebab-case; choose a specific component or area
 - `subject` must be non-empty
 
-### Allowed scopes
+### Recommended scopes
 
 **Release-please components:** `domainforge-core`, `domainforge`, `domainforge-typescript`
 

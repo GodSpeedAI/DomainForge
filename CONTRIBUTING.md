@@ -190,6 +190,10 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`
 
+The scope is required and must use kebab-case. The commit hook rejects unscoped
+messages such as `docs: update guide`. Use a scoped message such as
+`docs(repo): update guide` instead.
+
 Examples:
 
 ```

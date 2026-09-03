@@ -1,4 +1,18 @@
-# Current State: RDF Instance and Policy Projection Implemented
+# Current State: Repository Documentation Architecture Completed
+
+## Repository Documentation Architecture (2026-09-02)
+
+Delivered a comprehensive, self-contained technical knowledge system for DomainForge adhering to Diátaxis, DeepWiki, and Google Code Wiki principles.
+
+- [x] Canonical high-level architecture documented. Evidence: `docs/architecture.md` (and root pointer `architecture.md`) with logical, runtime, dependency, and data transformation architectures, plus detailed Mermaid diagrams and prose analysis.
+- [x] Documentation map and source map delivered. Evidence: `docs/documentation-map.md` (Diátaxis classification, audience needs, prerequisite tracks) and `docs/source-map.md` (symbol-level source traceability).
+- [x] Layer 0 and Layer 1 orientation and mental model delivered. Evidence: `docs/index.md` (knowledge portal), `docs/orientation.md` (5-minute fast track), and `docs/mental-model.md` (deep conceptual abstractions and 3VL rationale).
+- [x] Layer 3 Subsystem Guides completed (9 subsystems). Evidence: `docs/subsystems/` covers `parser-grammar.md`, `graph-store.md`, `policy-engine.md`, `units-dimensions.md`, `semantic-packs.md`, `authority-engine.md`, `application-contracts.md`, `projections-engine.md`, and `language-bindings.md`.
+- [x] Layer 4 Execution Traces completed (5 workflows). Evidence: `docs/workflows/` covers `parse-and-validate.md`, `projection-generation.md`, `pack-lifecycle.md`, `application-resolution.md`, and `authority-evaluation.md`.
+- [x] Layer 5 Explanations completed (5 deep rationales). Evidence: `docs/explanations/` covers `canonical-semantic-core.md`, `indexmap-determinism.md`, `three-valued-logic-rationale.md`, `adr-013-application-contract.md`, and `operator-family-design.md`.
+- [x] Layer 6 Tutorials & Layer 7 How-Tos delivered. Evidence: `docs/tutorials/01-first-sea-model.md`, `02-multi-target-projection.md`, `03-building-signing-packs.md`; `docs/how-tos/add-projection-target.md`, `add-grammar-construct.md`, `configure-module-resolution.md`, `debug-policy-evaluations.md`.
+- [x] Layer 8 Reference & Troubleshooting delivered. Evidence: `docs/reference/` (`dsl-grammar-reference.md`, `cli-reference.md`, `error-code-reference.md`, `primitives-api-reference.md`, `configuration-reference.md`) and `docs/troubleshooting.md`.
+- [x] 100% relative markdown link verification passed. Evidence: automated PowerShell check traversed all markdown links in `docs/` and confirmed 0 missing targets.
 
 ## RDF instance/policy projection (2026-08-06)
 
@@ -155,3 +169,9 @@ contract settlement remains proposed in ADR-014, with plan finalization and
 implementation waiting on explicit ratification. Later milestone gates remain
 closed to self-approval: the repository maintainer must explicitly accept each
 reviewed milestone.
+
+## Commit workflow blocker resolved (2026-09-02)
+
+- [x] Made the required scoped commit format explicit. Evidence: `CONTRIBUTING.md` now states that scopes are mandatory, and `docs/governance.md` matches `commitlint.config.cjs` by documenting kebab-case scopes without claiming a static allowlist.
+- [x] Made hook failures actionable. Evidence: `scripts/run_commitlint.sh` now prints the required `<type>(<scope>): <subject>` format and an example after commitlint rejects a message.
+- [x] Validated the fix. Evidence: `sh -n scripts/run_commitlint.sh` passed; `docs: update guide` failed with the new hint; `docs(repo): update guide` passed; `git diff --cached --check` passed; 135 relative links in staged Markdown resolved.
