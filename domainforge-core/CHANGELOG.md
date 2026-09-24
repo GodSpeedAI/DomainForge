@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.16.0...domainforge-core-v0.17.0) (2026-09-24)
+
+
+### Features
+
+* integrate verification contracts, documentation architecture, and fix SEA-Forge limitations ([#123](https://github.com/GodSpeedAI/DomainForge/issues/123)) ([7117294](https://github.com/GodSpeedAI/DomainForge/commit/7117294fa8e93e76e9520e7021a8a5d88642cbbe))
+
 ## [0.16.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.15.0...domainforge-core-v0.16.0) (2026-08-03)
 
 
