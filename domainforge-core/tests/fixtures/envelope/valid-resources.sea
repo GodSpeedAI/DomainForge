@@ -1,0 +1,9 @@
+@namespace "ops"
+@version "1.0.0"
+
+Entity "Host" in ops
+Entity "Cluster" in ops
+Resource "CPU" units in ops
+Resource "Memory" units in ops
+Flow "CPU" from "Host" to "Cluster" quantity 10
+Flow "Memory" from "Host" to "Cluster" quantity 20

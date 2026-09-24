@@ -927,3 +927,13 @@ Fixture line numbers count from line 1 of each fenced fixture in §11.
 | Idempotency/concurrency behavior | `idempotency keyed_by client_order_id`, `concurrency unique_key client_order_id` / `inherent`, `read_snapshot` | `OperationContract.idempotency`, `.concurrency`; `NotApplicable` | strategy/effect pairing; referenced fields required scalars; not_applicable proven by effect/direction | APP009, APP010 | command-write.sea 48–49; query-read.sea 26–27 |
 | Evidence/observation obligations | `evidence operation_trace` | `OperationContract.evidence` | mandatory on inbound v0.1 operations | APP001 | command-write.sea 50; query-read.sea 28 |
 | Externally visible lifecycle | `lifecycle synchronous_request_response` | `OperationContract.lifecycle` | mandatory on inbound v0.1 operations | APP001 | command-write.sea 51; query-read.sea 29 |
+
+## 14. Domain model identity
+
+`DomainModelIdentity::canonical_digest()` computes SHA-256 over canonical JSON of the identity fields. The current preimage has eleven fields:
+
+- `identity_scheme_version` (`v2-full-preimage`), `producer`, `producer_version`, `language_schema_version`, `compiler_interpretation_version`, and `canonicalization_version`;
+- `source_set_hash`, `content_hash`, and `semantic_closure_hash`;
+- optional `semantic_pack_set_hash` and `registry_content_hash` (serialized as `null` when absent).
+
+The digest binds the model to its producer, compiler interpretation, canonicalization rules, source set, semantic content, packs, and registry when supplied.

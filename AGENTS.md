@@ -1,216 +1,134 @@
-# DomainForge - SEA DSL Agent Router
+# AGENTS.md
 
-Primary routing and execution guidance for AI coding agents working on DomainForge (Semantic Enterprise Architecture DSL). Copilot-specific behavior belongs in `.github/copilot-instructions.md`; repository-wide execution policy and work-state management belong here.
+Durable operating contract for DomainForge agents. Keep this file project-specific, behavior-changing, and earned; task state belongs in `.agents/`, detailed domain rules in scoped specs/docs, and Copilot-specific behavior in `.github/copilot-instructions.md`.
 
-## Normative Language
+DomainForge is a Semantic Enterprise Architecture DSL. The Rust core is canonical; Python, TypeScript, and WASM bindings expose core behavior and must not duplicate business logic.
 
-The key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL in this document are to be interpreted as described in RFC 2119.
+## 1. Scope, Precedence, and Instruction Topology
 
-## Instruction Routing
+Before substantial work:
 
-This file is the canonical router for agent behavior in this repository.
+1. Read this file.
+2. Read `.agents/current_state.md` and `.agents/next_steps.md` when present.
+3. Read the governing plan/spec under `.agents/`.
+4. Inspect affected code, tests, configuration, and bindings.
+5. Load additional documentation only when needed.
 
-- `.agents/` is the active shared local state store for ongoing work and MUST be used for plans, specs, reports, lessons, and execution state.
-- `.agents/` SHOULD remain gitignored unless a task explicitly requires committing agent working state.
-- When `.agents/` or any required subfolder is missing, the agent MUST create it before relying on it.
+Instruction precedence:
 
-## Shared State In `.agents/`
+1. Runtime/system safety and user constraints.
+2. Nearest applicable scoped `AGENTS.md` (`domainforge-core/AGENTS.md`, `.agents/AGENTS.md`).
+3. This root `AGENTS.md`.
+4. Governing specs/plans and repository instructions.
+5. Current implementation and tests.
+6. General engineering defaults.
 
-Agents MUST treat `.agents/` as the durable working memory for this repository.
+Instructions live at the narrowest scope that completely governs them:
+* **`domainforge-core/` (`domainforge-core/AGENTS.md`)**: Governs the canonical Rust core library, CLI binary, Pest grammar, AST/parser, semantic kernel, projections, and FFI binding implementations (`src/python/`, `src/typescript/`, `src/wasm/`).
+* **`.agents/` (`.agents/AGENTS.md`)**: Governs durable agent working memory, task state, handoff contracts (`current_state.md`, `next_steps.md`), and memory ledgers (`OBSERVED_DEBT.md`, `lessons/`).
 
-Required structure:
+Trust current executable behavior and tests over stale prose; surface conflicts instead of resolving them silently.
 
-- `.agents/plans/` for active or approved implementation plans
-- `.agents/reports/` for investigation notes, reviews, and execution reports
-- `.agents/specs/` for feature or architecture specs
-- `.agents/lessons/` for generalizable lessons, recurring pitfalls, and workflow improvements
-- `.agents/current_state.md` for the current phase of work and checklist-backed execution state
-- `.agents/next_steps.md` for the next two or three concrete steps and expected outcomes
+## 2. Investigation and Retrieval
 
-Minimum operating rules:
+Investigate before asking. Use deterministic tools and repository utilities to settle mechanically answerable questions; do not spend reasoning effort inferring facts those tools can establish directly.
 
-1. Before starting substantial work, read `.agents/current_state.md` and `.agents/next_steps.md` if they exist.
-2. If the task is non-trivial, create or update a plan or spec in `.agents/plans/` or `.agents/specs/` before broad implementation.
-3. While executing, update `.agents/current_state.md` as checkpoints are completed.
-4. At handoff or completion, update `.agents/next_steps.md` so the next agent can continue without re-discovery.
-5. When a reusable challenge, failure mode, or efficiency improvement is discovered, record it in `.agents/lessons/`.
+Use the cheapest tool that can settle the question:
 
-Rules for `.agents/current_state.md`:
+* `graft map` for first-pass repository orientation.
+* `graft ask "<question>" --source` for ranked architectural/behavioral context with source spans.
+* `graft callers <symbol>` (`--direction out`, `--depth N`) for call-graph/blast-radius questions.
+* `graft skeleton <file>` for signatures/spans without whole-file reads.
+* `graft grep "<literal>"` for exhaustive literal matches across indexed files.
+* `zvec_grep_search` or `zg` for semantic/conceptual discovery when wording/location is unknown.
+* `rg --files` for inventory and `rg` for known paths, symbols, identifiers, literals, config keys, errors, or regexes.
+* `rust-analyzer` for Rust structural/semantic questions before grep-and-recompile loops.
 
-- It MUST be checklist-based.
-- Every checked item MUST include implementation evidence.
-- Documentation references alone are NOT sufficient evidence.
-- Valid evidence includes modified or created file paths, added tests, command lines used for validation, and the resulting pass/fail outcome.
+Use Graft/zvec to narrow, then verify anchors with `rg` and read only relevant source/test/spec/history ranges. Ranked semantic results are not exhaustive. If Graft truncates a span, open that exact range before finalizing.
 
-Rules for `.agents/next_steps.md`:
+## 3. Universal Change Boundaries
 
-- Keep only the next two or three steps.
-- Each step MUST include the expected outcome.
-- Each expected outcome MUST contribute to the intended plan, spec, or project objective.
+Always:
 
-## Architecture Overview
+* Make the smallest effective change that fully satisfies the requested outcome; do not deliver MVP-like, partial, placeholder, or knowingly incomplete work unless explicitly requested.
+* Inspect existing patterns and nearby tests before adding new ones.
+* Keep diffs task-bounded and preserve unrelated worktree changes.
+* Run verification proportional to the changed surface.
+* Update `.agents/` when consequential state, evidence, lessons, or next actions change.
 
-```text
-domainforge-core/                    # Canonical Rust implementation (authoritative)
-├── grammar/sea.pest         # PEG grammar (Pest) - ALL syntax changes start here
-├── src/
-│   ├── primitives/          # Core domain types: Entity, Resource, Flow, Instance, Policy
-│   ├── graph/mod.rs         # Graph store (uses IndexMap for deterministic iteration)
-│   ├── parser/              # AST generation from grammar
-│   ├── policy/              # Expression evaluation, three-valued logic, type inference
-│   ├── calm/                # FINOS CALM export/import (architecture-as-code)
-│   ├── kg.rs, kg_import.rs  # RDF/Turtle Knowledge Graph projections
-│   ├── python/              # PyO3 bindings (wraps core types)
-│   ├── typescript/          # napi-rs bindings (wraps core types)
-│   └── wasm/                # wasm-bindgen bindings
-└── tests/                   # Integration tests (60+ test files)
+Ask before:
 
-tests/                       # Python integration tests
-typescript-tests/            # TypeScript/Vitest integration tests
-```
+* adding/upgrading dependencies;
+* changing public API semantics, persisted formats, architecture boundaries, CI, deployment, or generated interfaces;
+* deleting files or substantially widening task scope.
 
-**Key principle**: Rust core is canonical. Bindings wrap core types — never duplicate business logic.
+Never:
 
-## Developer Commands
+* duplicate Rust business logic in bindings;
+* hand-edit generated artifacts merely to make checks pass;
+* fabricate passing tests, benchmark results, or completion evidence;
+* weaken assertions, remove failing tests, or update goldens merely because implementation differs.
 
-```bash
-# Essential commands (use just task runner)
-just all-tests              # Run Rust + Python + TypeScript tests (recommended)
-just rust-test              # Rust tests with CLI: cargo test -p domainforge-core --features cli
-just python-test            # Python tests (uses .venv if present)
-just ts-test                # TypeScript tests via Vitest (uses Bun, falls back to npm)
-just bun-test               # TypeScript tests via Bun explicitly (faster)
+## 4. Cross-Surface Invariants
 
-# Setup
-just setup                  # Install TypeScript (Bun) + Python dependencies
-just bun-install            # Install only TypeScript deps with Bun
-just python-setup           # Create .venv, install deps, build Python bindings via maturin
+For core primitive/data-structure changes, update every affected public surface:
 
-# Debugging
-just prepare-rust-debug     # Symlink test binary for codelldb debugging
+1. Rust core (`domainforge-core`) + Rust tests (`domainforge-core/tests/`).
+2. PyO3 bindings (`domainforge-core/src/python/`) + Python tests (`tests/`).
+3. napi-rs bindings (`domainforge-core/src/typescript/`) + TypeScript tests (`typescript-tests/`).
+4. WASM bindings (`domainforge-core/src/wasm/`) + WASM tests (`domainforge-core/tests/wasm_tests.rs`).
 
-# Pre-PR checks
-cargo clippy -- -D warnings && cargo fmt
-```
+Generated artifacts are projections, not competing sources of truth.
 
-> **Note**: This project uses [Bun](https://bun.sh/) as the primary JavaScript runtime and package manager for TypeScript tooling. Node.js is available as a fallback (use `npm run test:node`).
+## 5. Repository Topology & Surface Routing
 
-## Change Workflow (Non-Negotiable)
+Primary surfaces:
 
-When modifying **core data structures or primitives**, you MUST update ALL of:
+* `domainforge-core/` — canonical Rust core library, CLI, and FFI bindings (`domainforge-core/AGENTS.md`).
+* `domainforge-python/` — Python package distribution (`pyproject.toml`, maturin). Integration tests in `tests/`.
+* `domainforge-typescript/` — TypeScript package distribution (`package.json`, napi-rs). Integration tests in `typescript-tests/`.
+* `docs/` — architecture, ADRs, projection status, error codes.
+* `.agents/` — durable agent working memory (`.agents/AGENTS.md`).
 
-1. Rust core (`domainforge-core/src/primitives/`, `graph/`, `policy/`) + tests
-2. PyO3 bindings (`domainforge-core/src/python/`) + Python tests (`tests/test_*.py`)
-3. napi-rs bindings (`domainforge-core/src/typescript/`) + TypeScript tests (`typescript-tests/`)
-4. WASM bindings if applicable (`domainforge-core/src/wasm/`)
+Do not create competing layouts or place new root files when an established location owns the concern.
 
-When modifying **parser/grammar**:
+## 6. Commands and Verification
 
-1. Update `domainforge-core/grammar/sea.pest` first
-2. Update AST in `domainforge-core/src/parser/ast.rs`
-3. Add parser tests in `domainforge-core/tests/parser_*.rs`
-4. Update projections (CALM, KG) if the change affects export format
+Use `just` as the canonical repository CLI; prefer existing recipes over equivalent raw commands.
 
-## Code Conventions
+Core commands:
+* `just rust-test` — Rust core test suite (`domainforge-core`).
+* `just python-test` — Python test suite (`tests/`).
+* `just ts-test` — TypeScript test suite (`typescript-tests/`).
+* `just all-tests` — all language test suites (Rust, Python, TypeScript).
+* `just enterprise-verify` — full enterprise release gate (fmt, clippy, tests, doctests, all-tests, audit).
+* `just prove` — full self-proving evidence harness (`PROOFS.md`).
 
-- **Deterministic iteration**: Use `IndexMap` (not `HashMap`) in `graph/mod.rs` for policy-relevant collections
-- **IDs**: `ConceptId` from namespace+name; `Uuid::new_v4()` for unique identifiers
-- **Quantities**: `rust_decimal::Decimal` for precise calculations
-- **Units**: `Unit::new()` constructor; `domainforge_core::units::unit_from_string()` for parsing
-- **Namespaces**: `namespace()` returns `&str`, defaults to `"default"`
-- **Flows**: `Flow::new()` takes `ConceptId` for resource/from/to (IDs, not references)
+Run the narrowest command that can settle the current claim, then broaden with blast radius:
 
-## Testing Patterns
+* Rust-only localized behavior -> focused Rust test (`cargo test -p domainforge-core --features cli --test <name>`).
+* Primitive/core API -> Rust + affected bindings/tests.
+* Parser/grammar -> parser tests + affected projections/bindings + ADR check.
+* Cross-binding/public-core change -> `just all-tests`.
+* Pre-PR Rust quality -> `cargo clippy --workspace --all-targets --all-features -- -D warnings` + `cargo fmt --all --check`.
 
-- **Cross-language parity**: Changes to core must pass all three test suites
-- **Round-trip tests**: CALM export/import (`cargo test calm_round_trip`) validates serialization
-- **Golden tests**: Check `domainforge-core/tests/` for expected output patterns
-- **Policy evaluation**: Three-valued logic tests in `three_valued_quantifiers_tests.rs`
+A passing Rust suite does not prove binding parity. A passing binding suite does not prove all language surfaces. Verification must match the claim.
 
-## Key References
+Bun is the primary TypeScript runtime/package manager; Node/npm is fallback only where repository tooling explicitly supports it.
 
-| What                 | Where                                                                 |
-| -------------------- | --------------------------------------------------------------------- |
-| Grammar syntax       | `domainforge-core/grammar/sea.pest`                                           |
-| Primitives           | `domainforge-core/src/primitives/` (Entity, Resource, Flow, Instance, Policy) |
-| Graph operations     | `domainforge-core/src/graph/mod.rs`                                           |
-| Policy expressions   | `domainforge-core/src/policy/expression.rs`                                   |
-| CALM mapping spec    | `docs/reference/specs/calm-mapping.md`                                |
-| Implementation plans | `docs/plans/` (phase roadmaps, feature plans)                         |
-| DSL examples         | `examples/`, `domainforge-core/examples/`                                     |
-| Error codes          | `docs/specs/error_codes.md`, `domainforge-core/src/validation_error.rs`       |
+## 7. State, Handoff, and Completion
 
-## Feature Flags
+Follow `.agents/AGENTS.md` for handoff state requirements (`current_state.md`, `next_steps.md`, `OBSERVED_DEBT.md`).
 
-```bash
-cargo build --features python      # Build Python bindings
-cargo build --features typescript  # Build TypeScript bindings
-cargo build --features wasm        # Build WASM bindings
-cargo build --features cli         # Build CLI tools
-```
+Before declaring completion:
 
-## Common Mistakes (AI Agent Anti-Patterns)
+1. Inspect the final diff.
+2. Run proof proportional to every claim and affected surface.
+3. Confirm no test, invariant, or canonical source was weakened/bypassed.
+4. Update `.agents/current_state.md` with actual implementation evidence.
+5. Update `.agents/next_steps.md` so another agent can resume without rediscovery.
+6. Record reusable failures in `.agents/lessons/`.
+7. Run `graft build` after code changes that affect indexing.
+8. Leave unresolved debt or uncertainty explicit in `.agents/OBSERVED_DEBT.md`.
 
-**DO NOT:**
-
-```rust
-// ❌ WRONG: HashMap causes non-deterministic policy evaluation
-use std::collections::HashMap;
-let entities: HashMap<String, Entity> = ...;
-
-// ✅ CORRECT: IndexMap preserves insertion order
-use indexmap::IndexMap;
-let entities: IndexMap<String, Entity> = ...;
-```
-
-```rust
-// ❌ WRONG: Passing entity object to Flow
-Flow::new(resource, from_entity, to_entity)
-
-// ✅ CORRECT: Pass ConceptId (IDs, not references)
-Flow::new(resource.concept_id(), from.concept_id(), to.concept_id())
-```
-
-```rust
-// ❌ WRONG: Modifying parser without grammar
-// Editing src/parser/ast.rs first
-
-// ✅ CORRECT: Grammar-first workflow
-// 1. domainforge-core/grammar/sea.pest
-// 2. src/parser/ast.rs
-// 3. tests/parser_*.rs
-```
-
-**Cross-binding rule**: If you touch `domainforge-core/src/primitives/*.rs`, you MUST also update:
-
-- `domainforge-core/src/python/primitives.rs`
-- `domainforge-core/src/typescript/primitives.rs`
-- `domainforge-core/src/wasm/primitives.rs` (if public API)
-
-Run `just all-tests` to verify all bindings remain in sync.
-
-## Maintaining These Instructions
-
-**When you discover a new anti-pattern** (a mistake that causes test failures or unexpected behavior):
-
-1. Add it to the "Common Mistakes" section above with ❌/✅ examples
-2. Keep examples minimal (3-5 lines max) — show the wrong way and right way
-3. If the pattern is project-specific (not general Rust), it belongs here
-
-**When project structure changes**:
-
-- Update the Architecture Overview tree if directories are added/moved
-- Update Key References table if key files are renamed
-- Update Developer Commands if `justfile` recipes change
-
-**Self-check**: Before submitting code, ask: "Did I make a mistake that future AI agents might repeat?" If yes, document it here.
-
-## General Guidance
-
-- prioritize clarity and maintainability in code
-- follow existing project conventions unless there's a strong reason to deviate
-- ensure all changes are well-tested across all language bindings
-- adhere strictly to the change workflow to maintain cross-language parity
-- Ensure all changes are well-documented in the project's documentation and specs
-- consult `.agents/current_state.md` and `.agents/next_steps.md` before duplicating discovery work
-- leave behind enough state in `.agents/` for another agent to resume execution directly
+Hard cap for this file: fewer than 150 lines and no more than 32 KiB.

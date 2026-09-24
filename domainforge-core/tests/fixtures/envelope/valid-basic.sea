@@ -1,0 +1,8 @@
+@namespace "auth"
+@version "1.0.0"
+
+Entity "User" in auth
+Entity "Role" in auth
+Resource "Token" units in auth
+Flow "Token" from "User" to "User" quantity 1
+Flow "Token" from "User" to "Role" quantity 1

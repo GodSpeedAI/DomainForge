@@ -1,0 +1,6 @@
+@namespace "std"
+@version "1.0.0"
+
+export Entity "System"
+export Entity "User"
+export Entity "Service"

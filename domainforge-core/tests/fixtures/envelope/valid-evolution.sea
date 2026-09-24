@@ -1,0 +1,8 @@
+@namespace "procurement"
+@version "1.0.0"
+
+Entity "Vendor" v1.0.0 in procurement
+Entity "VendorV2" v2.0.0
+  @replaces "Vendor" v1.0.0
+  @changes ["added credit_limit field"]
+  in procurement

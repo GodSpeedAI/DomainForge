@@ -1,0 +1,1054 @@
+# =============================================================================
+# AGENT-FACING NORMATIVE SPECIFICATION TEMPLATE
+# =============================================================================
+#
+# PURPOSE
+# -------
+# Use this file to create the normative specification for a service, subsystem,
+# runtime, integration, workflow, API, library, tool, daemon, or operating
+# process BEFORE projecting it into an implementation plan.
+#
+# This artifact answers:
+#   - What MUST be true?
+#   - What result MUST the system produce?
+#   - What evidence makes that result believable?
+#   - What fails safely?
+#   - What remains an assumption or roadmap item?
+#   - Which requirements need adversarial/independent confirmation?
+#
+# REPRESENTATION RULE
+# -------------------
+# Keep this specification about MEANING, CONTRACT, and PROOF.
+# Do not turn it into an implementation plan.
+#
+# Put:
+#   - normative behavior here;
+#   - dependency ordering / implementation tasks in the plan;
+#   - repository-specific hot context in the implementation brief;
+#   - mutable execution state in current-status.yaml;
+#   - proof artifacts under the project evidence root.
+#
+# AUTHORING RULES FOR AGENTS
+# --------------------------
+# 1. Replace every {{PLACEHOLDER}}.
+# 2. Delete unused OPTIONAL examples/blocks rather than filling them artificially.
+# 3. Preserve stable requirement IDs once the spec is used by a plan.
+# 4. Use RFC 2119 terms deliberately. "MUST" means conformance depends on it.
+# 5. Do not silently promote assumptions into evidence-backed facts.
+# 6. Do not invent implementation details that repository inspection must discover.
+#    Mark such choices "implementation-defined" and constrain the outcome instead.
+# 7. Prefer the SMALLEST domain model that preserves required distinctions.
+# 8. Keep transient vendor/runtime/provider nouns below stable abstractions unless
+#    the requirement genuinely depends on them.
+# 9. Every REQUIRED normative requirement should eventually map to a plan task and
+#    evidence. Requirement IDs are the traceability bridge.
+# 10. A spec is not complete if a cold developer/agent must guess what success,
+#     failure, evidence, or handoff means.
+#
+# REQUIREMENT ID CONVENTION
+# -------------------------
+# Use stable families such as:
+#   REQ-GOAL-###
+#   REQ-OUT-###
+#   REQ-VERIFY-###
+#   REQ-CONFIG-###
+#   REQ-<DOMAIN>-###
+#   REQ-SAFE-###
+#   REQ-SEC-###
+#
+# Do not renumber IDs merely for cosmetic ordering after a plan/evidence refers
+# to them. Add new IDs instead.
+# =============================================================================
+
+schema: agent.spec
+schema_version: "1.0"
+
+metadata:
+  id: "{{SPEC_ID}}"
+  title: "{{SPEC_TITLE}}"
+  status: "{{draft|review|approved|deprecated}}"
+  version: "{{SEMVER}}"
+  created: "{{YYYY-MM-DD}}"
+  scope: >-
+    {{CONCISE_PLATFORM_LANGUAGE_OR_SYSTEM_SCOPE}}
+  purpose: >-
+    {{ONE_OR_TWO_SENTENCE_NORMATIVE_PURPOSE}}
+  owner: "{{SPEC_OWNER_OR_TEAM}}"
+
+  # KEEP unless the project already defines equivalent normative semantics.
+  normative_language: "RFC 2119"
+  normative_keywords:
+    - MUST
+    - MUST_NOT
+    - REQUIRED
+    - SHOULD
+    - SHOULD_NOT
+    - RECOMMENDED
+    - MAY
+    - OPTIONAL
+  implementation_defined_meaning: >-
+    Behavior is part of the implementation contract but this specification does
+    not prescribe one universal mechanism. The implementation MUST document the
+    selected behavior and prove conformance to the surrounding requirements.
+
+# -----------------------------------------------------------------------------
+# SOURCE CONTEXT
+# -----------------------------------------------------------------------------
+# List the artifacts from which this spec is derived.
+# Distinguish normative sources from evidence/context. Do not let a prose brief
+# silently override this spec once this spec is approved.
+sources:
+  primary_brief:
+    role: "{{e.g. non-normative implementation context; normative product brief}}"
+    expected_path: "{{PATH_OR_REFERENCE}}"
+
+  evidence_source:
+    role: "{{WHAT_THIS_SOURCE_PROVES_OR_INFORMS}}"
+    path: "{{PATH_OR_REFERENCE}}"
+
+  existing_implementation:
+    role: >-
+      {{e.g. pre-existing implementation to evolve; evidence of current state;
+      not automatically the normative target}}
+    location: "{{PATH_OR_IMPLEMENTATION_DEFINED}}"
+
+  # Add/remove source entries as needed.
+
+# -----------------------------------------------------------------------------
+# 0. SPEC FRAME
+# -----------------------------------------------------------------------------
+spec_frame:
+  # KEEP these questions unless the product genuinely needs a different quality gate.
+  quality_gate_questions:
+    - "What should be built?"
+    - "What result should it produce?"
+    - "How will we know the result is real?"
+    - "What capability should become reliably available after repeated successful use?"
+    - "What evidence proves the capability claim?"
+    - "What fails safely?"
+    - "What must repeat until reliable?"
+    - "What changes when evidence disagrees with the design?"
+
+  # OPTIONAL: Keep if the flow helps reviewers. Replace labels only if necessary.
+  proof_loop:
+    mermaid: |-
+      flowchart LR
+        JTBD["Job-to-be-done / failure mode"] --> Build["Build target"]
+        Build --> Output["Output produced"]
+        Output --> Verify["Verification"]
+        Verify -->|passes| Outcome["Verified outcome"]
+        Verify -->|fails| Blocked["Blocked / failed / incomplete state"]
+        Outcome --> Evidence["Evidence artifacts"]
+        Evidence --> Repeat["Repeatability and variation tests"]
+        Repeat --> Capability["Capability claim decision"]
+        Evidence -->|contradicts design| Revise["Revise spec or implementation"]
+
+# -----------------------------------------------------------------------------
+# 1. PROBLEM STATEMENT
+# -----------------------------------------------------------------------------
+problem_statement:
+  system_name: "{{SYSTEM_NAME}}"
+
+  problem_summary: >-
+    {{OBSERVABLE_PROBLEM_OR_OPERATIONAL_FAILURE_THIS_SYSTEM_EXISTS_TO_SOLVE}}
+
+  job_to_be_done:
+    actor: "{{PRIMARY_ACTOR_OR_CALLING_SYSTEM}}"
+    trigger: >-
+      {{WHEN_OR_UNDER_WHAT_CONDITIONS_THE_JOB_ARISES}}
+    job: >-
+      {{WHAT_THE_SYSTEM_MUST_ENABLE_OR_DO}}
+    outcome: >-
+      {{DESIRED_PROGRESS_OR_RESULT_FOR_THE_ACTOR}}
+
+  current_failure_modes:
+    - "{{CURRENT_FAILURE_MODE_1}}"
+    - "{{CURRENT_FAILURE_MODE_2}}"
+    - "{{CURRENT_FAILURE_MODE_3}}"
+    # Add only failures that materially justify the system.
+
+  why_existing_approaches_fail: >-
+    {{WHY_CURRENT_TOOLS_PROCESSES_OR_ARCHITECTURE_DO_NOT_RELIABLY_SOLVE_IT}}
+
+  important_boundary:
+    is: >-
+      {{WHAT_THIS_SYSTEM_IS}}
+    is_not: >-
+      {{WHAT_THIS_SYSTEM_EXPLICITLY_IS_NOT}}
+    successful_execution: >-
+      {{WHAT_COUNTS_AS_SUCCESS_BEYOND_MERE_OUTPUT_OR_PROCESS_LIVENESS}}
+    false_success_boundary: >-
+      {{PLAUSIBLE_BUT_INSUFFICIENT_SIGNAL_THAT_MUST_NOT_BE_CALLED_SUCCESS}}
+
+# -----------------------------------------------------------------------------
+# 2. GOALS AND NON-GOALS
+# -----------------------------------------------------------------------------
+requirements:
+  goals:
+    - id: REQ-GOAL-001
+      text: "{{TESTABLE_BUILD_OR_CAPABILITY_GOAL_1}}"
+    - id: REQ-GOAL-002
+      text: "{{TESTABLE_BUILD_OR_CAPABILITY_GOAL_2}}"
+    - id: REQ-GOAL-003
+      text: "{{TESTABLE_BUILD_OR_CAPABILITY_GOAL_3}}"
+    # Add/remove goals. Each goal should be independently reviewable.
+
+  non_goals:
+    - id: NONGOAL-001
+      text: "{{ATTRACTIVE_BUT_OUT_OF_SCOPE_THING_1}}"
+    - id: NONGOAL-002
+      text: "{{ATTRACTIVE_BUT_OUT_OF_SCOPE_THING_2}}"
+    - id: NONGOAL-003
+      text: "{{ATTRACTIVE_BUT_OUT_OF_SCOPE_THING_3}}"
+
+# -----------------------------------------------------------------------------
+# 3. OUTCOME CONTRACT
+# -----------------------------------------------------------------------------
+outcome_contract:
+  output_produced:
+    primary_output: >-
+      {{PRIMARY_ARTIFACT_STATE_CHANGE_OR_RUNNING_CAPABILITY}}
+
+    requirements:
+      - id: REQ-OUT-001
+        text: "{{OUTPUT_REQUIREMENT_1}}"
+      - id: REQ-OUT-002
+        text: "{{OUTPUT_REQUIREMENT_2}}"
+      - id: REQ-OUT-003
+        text: "{{OUTPUT_REQUIREMENT_3}}"
+
+  outcome_verified:
+    condition: >-
+      {{CONDITION_UNDER_WHICH_OUTPUT_COUNTS_AS_A_VERIFIED_OUTCOME}}
+
+    signals:
+      - id: REQ-VERIFY-001
+        text: "{{VERIFICATION_SIGNAL_OR_REQUIREMENT_1}}"
+      - id: REQ-VERIFY-002
+        text: "{{VERIFICATION_SIGNAL_OR_REQUIREMENT_2}}"
+      - id: REQ-VERIFY-003
+        text: "{{VERIFICATION_SIGNAL_OR_REQUIREMENT_3}}"
+
+    false_completion_conditions:
+      - "{{OUTPUT_EXISTS_BUT_OUTCOME_IS_NOT_PROVEN_CASE_1}}"
+      - "{{FALSE_COMPLETION_CASE_2}}"
+      - "{{FALSE_COMPLETION_CASE_3}}"
+
+  consumer_and_handoff:
+    consumers:
+      - "{{PRIMARY_CONSUMER}}"
+      - "{{SECONDARY_CONSUMER_IF_ANY}}"
+
+    handoff_complete_when:
+      - "{{HANDOFF_REQUIREMENT_1}}"
+      - "{{HANDOFF_REQUIREMENT_2}}"
+      - "{{HANDOFF_REQUIREMENT_3}}"
+
+    unverified_state: "{{blocked|failed|degraded|incomplete|other}}"
+    unverified_surface:
+      - "{{ERROR_STATUS_OR_EVIDENCE_SURFACE_1}}"
+      - "{{ERROR_STATUS_OR_EVIDENCE_SURFACE_2}}"
+
+# -----------------------------------------------------------------------------
+# 4. CAPABILITY CLAIM
+# -----------------------------------------------------------------------------
+# Do NOT force an adaptive-learning claim onto a system that does not learn.
+# For pure utilities, set applicability to "not_applicable" and explain why.
+capability_claim:
+  applicability: "{{applicable|not_applicable|operational_reliability_only}}"
+  owner: "{{USER_TEAM_OR_SYSTEM_WHO_GAINS_THE_CAPABILITY}}"
+
+  delta: >-
+    {{WHAT_BECOMES_MORE_RELIABLY_POSSIBLE_AFTER_REPEATED_SUCCESSFUL_USE}}
+
+  why_in_scope: >-
+    {{WHY_THIS_CAPABILITY_DELTA_MATTERS_TO_THE_PRODUCT}}
+
+  proven_only_if:
+    - "{{CAPABILITY_EVIDENCE_1}}"
+    - "{{CAPABILITY_EVIDENCE_2}}"
+    - "{{CAPABILITY_EVIDENCE_3}}"
+
+  not_proven_by:
+    - "{{PLAUSIBLE_NON_EVIDENCE_1}}"
+    - "{{PLAUSIBLE_NON_EVIDENCE_2}}"
+    - "{{PLAUSIBLE_NON_EVIDENCE_3}}"
+
+  learning_claim: >-
+    {{STATE_EXPLICITLY_WHETHER_REPETITION_ESTABLISHES_RELIABILITY_OR_ACTUAL_LEARNING.
+    DO_NOT_CLAIM_AUTONOMOUS_LEARNING_UNLESS_THE_PRODUCT_REALLY_DOES_IT.}}
+
+# -----------------------------------------------------------------------------
+# 5. EVIDENCE AND CLAIM DISCIPLINE
+# -----------------------------------------------------------------------------
+claim_discipline:
+  # KEEP these levels unless an established project taxonomy supersedes them.
+  levels:
+    evidence_backed: >-
+      Supported by implementation, tests, logs, proof commands, reviewable artifacts,
+      integration results, benchmark evidence, or other inspectable evidence.
+    partially_proven: >-
+      Implemented in meaningful pieces but not yet proven end-to-end, under required
+      variation, or in the target environment.
+    assumption: >-
+      Required for the design to hold but not yet proven.
+    roadmap: >-
+      Intended future behavior that is not required for current conformance.
+
+  claims:
+    - id: CLAIM-001
+      claim: "{{MATERIAL_CLAIM_1}}"
+      level: "{{evidence_backed|partially_proven|assumption|roadmap}}"
+      required_evidence: "{{WHAT_WOULD_JUSTIFY_THIS_LEVEL_OR_PROMOTION}}"
+      current_evidence: "{{CURRENT_EVIDENCE_OR_NONE}}"
+      gap: "{{REMAINING_GAP_OR_NONE}}"
+
+    - id: CLAIM-002
+      claim: "{{MATERIAL_CLAIM_2}}"
+      level: "{{LEVEL}}"
+      required_evidence: "{{REQUIRED_EVIDENCE}}"
+      current_evidence: "{{CURRENT_EVIDENCE}}"
+      gap: "{{GAP}}"
+
+    # Add claims for facts that are easy to overstate, especially:
+    # - measured performance;
+    # - compatibility;
+    # - target-environment feasibility;
+    # - replaceability;
+    # - self-healing;
+    # - future architecture.
+
+# -----------------------------------------------------------------------------
+# 6. SYSTEM OVERVIEW
+# -----------------------------------------------------------------------------
+system_overview:
+  architecture_pattern:
+    primary: "{{PRIMARY_ARCHITECTURE_PATTERN}}"
+    rationale: >-
+      {{WHY_THIS_PATTERN_FITS_THE_JOB_AND_FAILURE_MODEL}}
+    intentionally_not_used:
+      - pattern: "{{REJECTED_PATTERN_1}}"
+        reason: "{{WHY_IT_IS_NOT_APPROPRIATE}}"
+      - pattern: "{{REJECTED_PATTERN_2}}"
+        reason: "{{WHY_IT_IS_NOT_APPROPRIATE}}"
+
+  # Define only meaningful components. Usually 3-8 is enough.
+  main_components:
+    - name: "{{COMPONENT_1_NAME}}"
+      responsibility: "{{ONE_AUTHORITY_OR_RESPONSIBILITY}}"
+      inputs:
+        - "{{INPUT_1}}"
+      outputs:
+        - "{{OUTPUT_1}}"
+
+    - name: "{{COMPONENT_2_NAME}}"
+      responsibility: "{{RESPONSIBILITY}}"
+      inputs:
+        - "{{INPUT}}"
+      outputs:
+        - "{{OUTPUT}}"
+
+    - name: "{{COMPONENT_3_NAME}}"
+      responsibility: "{{RESPONSIBILITY}}"
+      inputs:
+        - "{{INPUT}}"
+      outputs:
+        - "{{OUTPUT}}"
+
+  # OPTIONAL: delete if the component list is clearer than a diagram.
+  component_diagram:
+    mermaid: |-
+      flowchart LR
+        Actor["{{PRIMARY_ACTOR}}"] --> C1["{{COMPONENT_1_NAME}}"]
+        C1 --> C2["{{COMPONENT_2_NAME}}"]
+        C2 --> C3["{{COMPONENT_3_NAME}}"]
+        C3 --> Output["{{PRIMARY_OUTPUT}}"]
+
+  external_dependencies:
+    - name: "{{DEPENDENCY_1}}"
+      purpose: "{{WHY_THE_SYSTEM_DEPENDS_ON_IT}}"
+      failure_behavior: "{{WHAT_HAPPENS_WHEN_IT_IS_UNAVAILABLE_OR_WRONG}}"
+
+    - name: "{{DEPENDENCY_2}}"
+      purpose: "{{PURPOSE}}"
+      failure_behavior: "{{FAILURE_BEHAVIOR}}"
+
+# -----------------------------------------------------------------------------
+# 7. CORE DOMAIN MODEL
+# -----------------------------------------------------------------------------
+# Domain-model rule:
+# - Define only objects implementation must store/pass/validate/route/reconcile/
+#   retry/audit/expose.
+# - 3-7 core entities is usually enough.
+# - More than ~8 should trigger a check that implementation/governance nouns have
+#   leaked into the domain.
+core_domain_model:
+  scope_rule: >-
+    {{ONE_PARAGRAPH_DESCRIBING_WHAT_DESERVES_A_STABLE_REPRESENTATION_AND_WHAT_MUST
+    REMAIN_AN_ADAPTER_OR_IMPLEMENTATION_DETAIL}}
+
+  entities:
+    - name: "{{ENTITY_1_NAME}}"
+      purpose: "{{WHY_THIS_ENTITY_EXISTS}}"
+      used_by:
+        - "{{COMPONENT_1}}"
+        - "{{COMPONENT_2}}"
+
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "{{IDENTITY_CORRELATION_OR_IDEMPOTENCY_PURPOSE}}"
+        - name: "{{FIELD_1}}"
+          type: "{{TYPE}}"
+          meaning: "{{FIELD_MEANING_AND_VALIDATION}}"
+        - name: "{{FIELD_2}}"
+          type: "{{TYPE}}"
+          meaning: "{{FIELD_MEANING_AND_VALIDATION}}"
+
+      optional_fields:
+        - "{{OPTIONAL_FIELD_1}}"
+
+      rules:
+        - "{{ENTITY_INVARIANT_OR_AUTHORITY_RULE_1}}"
+        - "{{ENTITY_INVARIANT_OR_AUTHORITY_RULE_2}}"
+
+    - name: "{{ENTITY_2_NAME}}"
+      purpose: "{{PURPOSE}}"
+      used_by:
+        - "{{COMPONENT}}"
+      required_fields:
+        - name: "id"
+          type: "string"
+          meaning: "{{IDENTITY_MEANING}}"
+        - name: "{{FIELD}}"
+          type: "{{TYPE}}"
+          meaning: "{{MEANING}}"
+      optional_fields: []
+
+  # OPTIONAL: include only if the architecture is a daemon/orchestrator/scheduler.
+  orchestrator_daemon_add_on:
+    applicability: "{{applicable|not_applicable}}"
+    guidance: >-
+      If applicable, consider whether WorkUnit, RunAttempt, ActiveExecution,
+      DeferredWorkEntry, RuntimeState, and ResourceAllocation are actually needed.
+      Do not create them merely because this template names them.
+    entities:
+      - "{{ONLY_INCLUDE_ACTUAL_ENTITY_NAMES_OR_DELETE_THIS_LIST}}"
+
+  identifiers_and_normalization:
+    primary_id_rule: "{{STABLE_ID_RULE}}"
+    human_readable_rule: "{{LOG_DISPLAY_IDENTIFIER_RULE}}"
+    normalized_identifier_rule: >-
+      {{CONCRETE_CHARACTER_CLASS_CASE_REPLACEMENT_AND_COLLISION_RULE}}
+    path_or_resource_rule: >-
+      {{BOUNDARY_NORMALIZATION_RULE_IF_PATHS_KEYS_URLS_OR_NAMESPACES_EXIST}}
+    unsafe_input_rule: >-
+      {{HOW_UNTRUSTED_STRINGS_ARE_VALIDATED_ESCAPED_OR_REJECTED_AT_PRIVILEGED_BOUNDARIES}}
+
+# -----------------------------------------------------------------------------
+# 8. CONFIGURATION AND INPUT CONTRACT
+# -----------------------------------------------------------------------------
+configuration_and_input_contract:
+  # Highest precedence first.
+  configuration_sources_precedence:
+    - order: 1
+      source: "{{HIGHEST_PRECEDENCE_SOURCE}}"
+    - order: 2
+      source: "{{AUTHORITATIVE_CONFIG_SOURCE}}"
+    - order: 3
+      source: "{{DOCUMENTED_DEFAULTS}}"
+    - order: 4
+      source: "{{OPTIONAL_SECRET_OR_ENV_REFERENCE_SOURCE}}"
+
+  resolution_rules:
+    - id: REQ-CONFIG-001
+      text: "{{CONFIG_AUTHORITY_OR_PRECEDENCE_REQUIREMENT}}"
+    - id: REQ-CONFIG-002
+      text: "{{ENVIRONMENT_OR_INDIRECTION_REQUIREMENT}}"
+    - id: REQ-CONFIG-003
+      text: "{{PATH_PORT_PROVIDER_THRESHOLD_CONFIGURATION_REQUIREMENT}}"
+    - id: REQ-CONFIG-004
+      text: "{{CONFIG_GENERATION_OR_DUPLICATION_REQUIREMENT_IF_APPLICABLE}}"
+
+  # Intentionally redundant: an implementer should be able to implement config
+  # validation from this table alone.
+  required_config_fields:
+    - field: "{{CONFIG_FIELD_1}}"
+      type: "{{TYPE}}"
+      required: true
+      default: null
+      validation: "{{VALIDATION_RULE}}"
+
+    - field: "{{CONFIG_FIELD_2}}"
+      type: "{{TYPE}}"
+      required: false
+      default: "{{DEFAULT}}"
+      validation: "{{VALIDATION_RULE}}"
+
+  # Use project-native names if a typed error taxonomy already exists.
+  error_classes:
+    - code: "missing_config_error"
+      blast_radius: "{{WHAT_WORK_IS_BLOCKED}}"
+    - code: "parse_error"
+      blast_radius: "{{BLAST_RADIUS}}"
+    - code: "schema_error"
+      blast_radius: "{{BLAST_RADIUS}}"
+    - code: "unsupported_kind_error"
+      blast_radius: "{{BLAST_RADIUS}}"
+    - code: "missing_credential_error"
+      blast_radius: "{{BLAST_RADIUS}}"
+    - code: "input_validation_error"
+      blast_radius: "{{TYPICALLY_AFFECTED_OPERATION_ONLY}}"
+    # Add system-specific typed errors such as compatibility_error,
+    # admission_error, policy_evaluation_error, etc.
+
+  error_surface_requirements:
+    - "Errors MUST include a stable code, concise message, and recoverability hint where possible."
+    - "Errors MUST NOT include secrets or excessive raw configuration."
+    - "{{SYSTEM_SPECIFIC_ERROR_SURFACE_REQUIREMENT}}"
+
+  dynamic_reload:
+    status: "{{required|optional|not_applicable}}"
+    requirements:
+      - "{{HOW_CHANGE_IS_DETECTED_OR_EXPLICITLY_RECONCILED}}"
+      - "{{VALIDATE_BEFORE_ACTIVATION_RULE}}"
+      - "{{IN_FLIGHT_OPERATION_BEHAVIOR}}"
+      - "{{INVALID_RELOAD_BEHAVIOR}}"
+
+  startup_preflight:
+    requirements:
+      - id: REQ-CONFIG-010
+        text: "{{STARTUP_VALIDATION_REQUIREMENT}}"
+      - id: REQ-CONFIG-011
+        text: "{{PRE_OPERATION_VALIDATION_REQUIREMENT}}"
+      - id: REQ-CONFIG-012
+        text: "{{BLAST_RADIUS_WHEN_PREFLIGHT_FAILS}}"
+
+  primary_input:
+    type: "{{PRIMARY_INPUT_TYPE}}"
+    source: "{{PRIMARY_INPUT_SOURCE}}"
+
+    required_fields:
+      - name: "{{INPUT_FIELD_1}}"
+        type: "{{TYPE}}"
+        validation: "{{VALIDATION}}"
+      - name: "{{INPUT_FIELD_2}}"
+        type: "{{TYPE}}"
+        validation: "{{VALIDATION}}"
+
+    optional_fields:
+      - "{{OPTIONAL_INPUT_FIELD}}"
+
+    invalid_input_behavior:
+      missing_required: "{{BEHAVIOR}}"
+      invalid_value: "{{BEHAVIOR}}"
+      duplicate_request: "{{IDEMPOTENCY_OR_DUPLICATE_BEHAVIOR}}"
+      out_of_scope: "{{BEHAVIOR}}"
+      unsafe: "{{BEHAVIOR_BEFORE_PRIVILEGED_SIDE_EFFECT}}"
+
+# -----------------------------------------------------------------------------
+# 9. OPERATIONAL FLOW AND STATE MODEL
+# -----------------------------------------------------------------------------
+operational_flow_and_state_model:
+  # Add named flows when the system has materially different flows, e.g.
+  # startup/reconcile vs request execution.
+  flow_summary:
+    primary_flow:
+      - "{{FLOW_STEP_1}}"
+      - "{{FLOW_STEP_2}}"
+      - "{{FLOW_STEP_3}}"
+      - "{{FLOW_STEP_4}}"
+      - "{{FLOW_STEP_5}}"
+
+  # OPTIONAL: keep branches explicit. A linear happy-path-only diagram is incomplete.
+  flow_diagram:
+    mermaid: |-
+      flowchart TD
+        A["{{FLOW_STEP_1}}"] --> B["{{FLOW_STEP_2}}"]
+        B --> C["{{FLOW_STEP_3}}"]
+        C -->|success| D["{{SUCCESS_STEP}}"]
+        C -->|blocked| X["{{BLOCKED_STATE}}"]
+        C -->|recoverable failure| R["{{RECOVERY_STEP}}"]
+        R --> B
+
+  service_states:
+    stateful_object: "{{STATEFUL_OBJECT_NAME}}"
+    states:
+      - name: "{{STATE_1}}"
+        meaning: "{{STATE_MEANING}}"
+        entry_trigger: "{{ENTRY_TRIGGER}}"
+        exit_trigger: "{{EXIT_TRIGGER}}"
+
+      - name: "{{STATE_2}}"
+        meaning: "{{STATE_MEANING}}"
+        entry_trigger: "{{ENTRY_TRIGGER}}"
+        exit_trigger: "{{EXIT_TRIGGER}}"
+
+      - name: "{{FAILED_OR_BLOCKED_STATE}}"
+        meaning: "{{DISTINCT_FAILURE_MEANING}}"
+        entry_trigger: "{{FAILURE_TRIGGER}}"
+        exit_trigger: "{{RECOVERY_OR_TERMINAL_TRIGGER}}"
+
+  transition_rules:
+    - from: "{{STATE_A}}"
+      to: "{{STATE_B}}"
+      when: "{{TRANSITION_CONDITION}}"
+    - from: "{{STATE_B}}"
+      to: "{{FAILED_STATE}}"
+      when: "{{FAILURE_CONDITION}}"
+
+  transition_triggers:
+    - name: "{{TRIGGER_1}}"
+      behavior: "{{STATE_CHANGE_OR_SIDE_EFFECT}}"
+    - name: "{{TRIGGER_2}}"
+      behavior: "{{STATE_CHANGE_OR_SIDE_EFFECT}}"
+
+  idempotency_rule: >-
+    {{WHAT_MUST_HAPPEN_WHEN_THE_SAME_WORK_REQUEST_EVENT_OR_INPUT_IS_REPROCESSED}}
+
+  important_nuances:
+    - "{{COUNTERINTUITIVE_BEHAVIOR_THAT_A_REASONABLE_IMPLEMENTER_COULD_GET_WRONG}}"
+    - "{{SECOND_NUANCE_OR_WRITE_NONE}}"
+
+# -----------------------------------------------------------------------------
+# 10. CORE BEHAVIOR REQUIREMENTS
+# -----------------------------------------------------------------------------
+# Group requirements by concern. Use stable requirement IDs.
+core_behavior_requirements:
+  "{{BEHAVIOR_GROUP_1}}":
+    - id: "REQ-{{GROUP}}-001"
+      text: "{{NORMATIVE_REQUIREMENT}}"
+    - id: "REQ-{{GROUP}}-002"
+      text: "{{NORMATIVE_REQUIREMENT}}"
+
+  "{{BEHAVIOR_GROUP_2}}":
+    - id: "REQ-{{GROUP2}}-001"
+      text: "{{NORMATIVE_REQUIREMENT}}"
+
+  completion_rules:
+    may_claim_completion_only_when:
+      - "{{COMPLETION_RULE_1}}"
+      - "{{COMPLETION_RULE_2}}"
+      - "{{COMPLETION_RULE_3}}"
+
+    must_report_incomplete_blocked_or_failed_when:
+      - "{{INCOMPLETE_RULE_1}}"
+      - "{{INCOMPLETE_RULE_2}}"
+      - "{{INCOMPLETE_RULE_3}}"
+
+# -----------------------------------------------------------------------------
+# 11. EXECUTION / INTEGRATION CONTRACT
+# -----------------------------------------------------------------------------
+execution_integration_contract:
+  invocation:
+    method: "{{SDK|HTTP|CLI|SUBPROCESS|QUEUE|RPC|LIBRARY_CALL|OTHER}}"
+    required_parameters:
+      - "{{PARAMETER_1}}"
+      - "{{PARAMETER_2}}"
+    runtime_context: "{{WORKDIR_NAMESPACE_SESSION_OR_NOT_APPLICABLE}}"
+    authentication: "{{AUTH_REQUIREMENT_OR_NOT_APPLICABLE}}"
+    timeout_policy: "{{TIMEOUT_AND_CANCELLATION_RULE}}"
+
+  result:
+    type: "{{RESULT_TYPE}}"
+
+    success_fields:
+      - "{{SUCCESS_FIELD_1}}"
+      - "{{SUCCESS_FIELD_2}}"
+
+    failure_fields:
+      - "error.code"
+      - "error.message"
+      - "error.recoverable"
+      - "{{SYSTEM_SPECIFIC_FAILURE_FIELD}}"
+
+  external_side_effects:
+    may_change:
+      - "{{ALLOWED_SIDE_EFFECT_1}}"
+      - "{{ALLOWED_SIDE_EFFECT_2}}"
+
+    must_not_change:
+      - "{{FORBIDDEN_SIDE_EFFECT_1}}"
+      - "{{FORBIDDEN_SIDE_EFFECT_2}}"
+
+  # OPTIONAL: include if ordering/handoff/retries are easy to misimplement.
+  sequence_diagram:
+    mermaid: |-
+      sequenceDiagram
+        participant Caller as {{CALLER}}
+        participant System as {{SYSTEM_NAME}}
+        participant Integration as {{EXECUTOR_OR_DEPENDENCY}}
+        participant Evidence as {{EVIDENCE_SINK}}
+        Caller->>System: {{REQUEST}}
+        System->>System: validate/preflight
+        System->>Integration: {{INVOCATION}}
+        Integration-->>System: {{RESULT}}
+        System->>Evidence: preserve evidence
+        System-->>Caller: {{RESPONSE}}
+
+# -----------------------------------------------------------------------------
+# 12. EVIDENCE, PROOF, AND OBSERVABILITY
+# -----------------------------------------------------------------------------
+proof_and_observability:
+  required_evidence_artifacts:
+    - "{{EVIDENCE_ARTIFACT_1}}"
+    - "{{EVIDENCE_ARTIFACT_2}}"
+    - "{{EVIDENCE_ARTIFACT_3}}"
+
+  evidence_policy:
+    storage: "{{EVIDENCE_ROOT_OR_IMPLEMENTATION_DEFINED}}"
+    retention: "{{RETENTION_POLICY}}"
+    access: "{{ACCESS_POLICY}}"
+    correction_history: >-
+      Failed or contradictory evidence MUST NOT be overwritten merely because a
+      later run passes. Preserve provenance sufficient to reconstruct correction.
+
+  proof_interface:
+    # Prefer a few stable copy-pasteable commands over many vague checks.
+    preferred_commands:
+      - "{{PROOF_COMMAND_1}}"
+      - "{{PROOF_COMMAND_2}}"
+      - "{{PROOF_COMMAND_3}}"
+
+    pass_condition: >-
+      {{WHAT_EXIT_ZERO_AND_EVIDENCE_MUST_MEAN}}
+    fail_condition: >-
+      {{NONZERO_SKIPPED_REQUIRED_INTEGRATION_MISSING_EVIDENCE_OR_CONTRADICTION_RULE}}
+
+  required_log_context:
+    - "{{CORRELATION_ID}}"
+    - "{{RESOURCE_WORK_UNIT_OR_CAPABILITY}}"
+    - "{{STATE_OR_REASON_CODE}}"
+
+  required_metrics:
+    - name: "{{METRIC_1}}"
+      reason: "{{WHY_IT_IS_NEEDED_TO_PROVE_OR_DIAGNOSE}}"
+    - name: "{{METRIC_2}}"
+      reason: "{{WHY}}"
+
+  required_events:
+    - "{{EVENT_1}}"
+    - "{{EVENT_2}}"
+    - "{{EVENT_3}}"
+
+# -----------------------------------------------------------------------------
+# 13. REPEATABILITY AND VARIATION
+# -----------------------------------------------------------------------------
+repeatability_and_variation:
+  required_variations:
+    - id: VAR-001
+      case: "{{VARIATION_CASE_1}}"
+      expected: "{{EXPECTED_RESULT}}"
+    - id: VAR-002
+      case: "{{VARIATION_CASE_2}}"
+      expected: "{{EXPECTED_RESULT}}"
+    - id: VAR-003
+      case: "{{VARIATION_CASE_3}}"
+      expected: "{{EXPECTED_RESULT}}"
+
+  required_recovery_cases:
+    - id: RECOV-001
+      case: "{{RECOVERY_CASE_1}}"
+      expected: "{{EXPECTED_RECOVERY_OR_SAFE_FAILURE}}"
+    - id: RECOV-002
+      case: "{{RECOVERY_CASE_2}}"
+      expected: "{{EXPECTED_RECOVERY_OR_SAFE_FAILURE}}"
+
+  capability_claim_rule: >-
+    A capability claim remains unverified until every REQUIRED variation and
+    recovery case applicable to the target environment has passed.
+
+# -----------------------------------------------------------------------------
+# 14. FAILURE MODEL AND RECOVERY
+# -----------------------------------------------------------------------------
+failure_model_and_recovery:
+  failure_classes:
+    - name: "{{FAILURE_CLASS_1}}"
+      symptoms:
+        - "{{SYMPTOM_1}}"
+      required_behavior: >-
+        {{REQUIRED_BEHAVIOR}}
+
+    - name: "{{FAILURE_CLASS_2}}"
+      symptoms:
+        - "{{SYMPTOM}}"
+      required_behavior: >-
+        {{REQUIRED_BEHAVIOR}}
+
+  safe_failure_requirements:
+    - id: REQ-SAFE-001
+      text: "{{SAFE_FAILURE_REQUIREMENT_1}}"
+    - id: REQ-SAFE-002
+      text: "{{SAFE_FAILURE_REQUIREMENT_2}}"
+    - id: REQ-SAFE-003
+      text: "{{SAFE_FAILURE_REQUIREMENT_3}}"
+
+  unsafe_behaviors:
+    - "{{BEHAVIOR_THAT_MUST_NEVER_HAPPEN_1}}"
+    - "{{BEHAVIOR_THAT_MUST_NEVER_HAPPEN_2}}"
+
+  recoverable_failures:
+    - failure: "{{RECOVERABLE_FAILURE_1}}"
+      recovery: "{{BOUNDED_RECOVERY_BEHAVIOR}}"
+    - failure: "{{RECOVERABLE_FAILURE_2}}"
+      recovery: "{{RECOVERY_BEHAVIOR}}"
+
+  nonrecoverable_or_operator_required:
+    - failure: "{{NONRECOVERABLE_FAILURE_1}}"
+      behavior: "{{STOP_ESCALATE_OR_OPERATOR_ACTION}}"
+    - failure: "{{NONRECOVERABLE_FAILURE_2}}"
+      behavior: "{{BEHAVIOR}}"
+
+# -----------------------------------------------------------------------------
+# 15. SECURITY, SAFETY, AND TRUST BOUNDARIES
+# -----------------------------------------------------------------------------
+security_safety_trust_boundaries:
+  trusted_inputs:
+    - "{{TRUSTED_INPUT_1}}"
+
+  untrusted_inputs:
+    - "{{UNTRUSTED_INPUT_1}}"
+    - "{{UNTRUSTED_INPUT_2}}"
+
+  trusted_actors:
+    - "{{TRUSTED_ACTOR_OR_IDENTITY_BOUNDARY}}"
+
+  privileged_operations:
+    - "{{PRIVILEGED_OPERATION_1}}"
+    - "{{PRIVILEGED_OPERATION_2}}"
+
+  mandatory_requirements:
+    - id: REQ-SEC-001
+      text: "{{SAFETY_OR_TRUST_BOUNDARY_REQUIREMENT_1}}"
+    - id: REQ-SEC-002
+      text: "{{SAFETY_OR_TRUST_BOUNDARY_REQUIREMENT_2}}"
+    - id: REQ-SEC-003
+      text: "{{SECRET_OR_AUTHORIZATION_REQUIREMENT}}"
+
+  secret_handling:
+    source: "{{SECRET_SOURCE_OR_NOT_APPLICABLE}}"
+    must_not:
+      - "log secrets"
+      - "persist secrets in evidence artifacts"
+      - "emit secrets in error messages"
+      - "{{SYSTEM_SPECIFIC_SECRET_PROHIBITION}}"
+
+  authorization_requirements:
+    - "{{AUTHORIZATION_REQUIREMENT_1}}"
+    - "{{AUTHORIZATION_REQUIREMENT_2}}"
+
+  # OPTIONAL: delete if bullets are clearer.
+  trust_boundary_diagram:
+    mermaid: |-
+      flowchart LR
+        Trusted["{{TRUSTED_ACTOR_OR_INPUT}}"] --> System["{{SYSTEM_NAME}}"]
+        Untrusted["{{UNTRUSTED_INPUT}}"] --> Validate["Validation / normalization"]
+        Validate --> System
+        System --> Priv["{{PRIVILEGED_ADAPTER_OR_OPERATION}}"]
+        System --> Secrets["{{SECRET_SOURCE}}"]
+        Untrusted -. no direct access .-> Priv
+        Untrusted -. no direct access .-> Secrets
+
+# -----------------------------------------------------------------------------
+# 16. REFERENCE ALGORITHMS
+# -----------------------------------------------------------------------------
+# OPTIONAL. Include only where pseudocode materially removes ambiguity.
+reference_algorithms:
+  "{{ALGORITHM_1_NAME}}":
+    pseudocode: |-
+      function {{algorithm_1}}({{inputs}}):
+        {{STEP_1}}
+        {{STEP_2}}
+        {{STEP_3}}
+        return {{OUTPUT}}
+
+  # Delete this second algorithm if not needed.
+  "{{ALGORITHM_2_NAME}}":
+    pseudocode: |-
+      function {{algorithm_2}}({{inputs}}):
+        {{STEP_1}}
+        {{STEP_2}}
+        return {{OUTPUT}}
+
+# -----------------------------------------------------------------------------
+# 17. TEST AND VALIDATION MATRIX
+# -----------------------------------------------------------------------------
+validation_matrix:
+  core_conformance:
+    - area: "Outcome"
+      test: "{{OUTCOME_TEST}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE_ARTIFACT_OR_COMMAND}}"
+
+    - area: "Input validation"
+      test: "{{INVALID_INPUT_TEST}}"
+      expected: "{{EXPECTED_SAFE_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+    - area: "Config errors"
+      test: "{{CONFIG_ERROR_TEST}}"
+      expected: "{{TYPED_ERROR_WITH_CORRECT_BLAST_RADIUS}}"
+      evidence: "{{EVIDENCE}}"
+
+    - area: "Startup/preflight"
+      test: "{{PREFLIGHT_TEST}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+    - area: "State transitions"
+      test: "{{STATE_TRANSITION_TEST}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+    - area: "Failure handling"
+      test: "{{FAILURE_TEST}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+    - area: "Observability"
+      test: "{{OBSERVABILITY_TEST}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+    - area: "Security/safety"
+      test: "{{SECURITY_TEST}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+  variation_and_recovery:
+    - case: "{{VARIATION_OR_RECOVERY_CASE_1}}"
+      why: "{{WHY_THIS_VARIATION_MATTERS}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+    - case: "{{VARIATION_OR_RECOVERY_CASE_2}}"
+      why: "{{WHY}}"
+      expected: "{{EXPECTED_RESULT}}"
+      evidence: "{{EVIDENCE}}"
+
+  real_integration_condition: >-
+    {{WHEN_REAL_NON_MOCK_INTEGRATION_ON_THE_TARGET_ENVIRONMENT_IS_REQUIRED}}
+
+  real_integration_tests:
+    - "{{REAL_INTEGRATION_TEST_1}}"
+    - "{{REAL_INTEGRATION_TEST_2}}"
+
+  skipped_test_rule: >-
+    Skipped REQUIRED integration tests MUST be reported as skipped, not passed,
+    and MUST prevent final conformance when those tests are required.
+
+# -----------------------------------------------------------------------------
+# 18. IMPLEMENTATION DEFINITION OF DONE
+# -----------------------------------------------------------------------------
+implementation_definition_of_done:
+  - "{{PRIMARY_OUTPUT_EXISTS_AND_VERIFIED_OUTCOME_PASSES}}"
+  - "{{DOMAIN_MODEL_IS_CONCRETE_ENOUGH_TO_IMPLEMENT_WITHOUT_GUESSING}}"
+  - "{{CONFIG_PRECEDENCE_ERRORS_AND_PREFLIGHT_ARE_DEFINED_AND_PROVEN}}"
+  - "{{SUCCESS_FAILURE_AND_RECOVERY_PATHS_ARE_PROVEN}}"
+  - "{{REQUIRED_EVIDENCE_IS_STORED_AND_INSPECTABLE}}"
+  - "{{VARIATION_CASES_PASS}}"
+  - "{{RECOVERY_CASES_PASS}}"
+  - "{{SECURITY_TRUST_BOUNDARY_TESTS_PASS}}"
+  - "{{OPTIONAL_EXTENSIONS_ARE_EXPLICITLY_MARKED_IMPLEMENTED_PARTIAL_OR_ABSENT}}"
+  - "{{CLAIM_LEVELS_MATCH_ACTUAL_EVIDENCE}}"
+  - "A cold developer or agent can answer every quality-gate question in spec_frame from this file alone."
+
+# -----------------------------------------------------------------------------
+# ROADMAP / MIGRATION BOUNDARIES
+# -----------------------------------------------------------------------------
+# OPTIONAL but strongly recommended when the system deliberately preserves seams
+# for future adapters or capabilities. This prevents roadmap intent from becoming
+# an accidental current requirement.
+roadmap_boundaries:
+  "{{FUTURE_CAPABILITY_OR_ADAPTER_1}}":
+    level: roadmap
+    future_shape: "{{EXPECTED_FUTURE_BOUNDARY_OR_ADAPTER}}"
+    current_requirement: "{{ONLY_THE_SEAM_OR_CONSTRAINT_REQUIRED_NOW}}"
+
+  "{{FUTURE_CAPABILITY_OR_ADAPTER_2}}":
+    level: roadmap
+    future_shape: "{{FUTURE_SHAPE}}"
+    current_requirement: "{{CURRENT_REQUIREMENT}}"
+
+# -----------------------------------------------------------------------------
+# CONFORMANCE TRACEABILITY
+# -----------------------------------------------------------------------------
+# This section is the bridge from SPEC -> PLAN -> PREREG -> EVIDENCE -> CONFIRM.
+#
+# Use it to identify requirements where false closure is expensive enough to
+# justify independent/adversarial proof. Do not mark every requirement high-risk.
+conformance_traceability:
+  high_risk_requirement_groups:
+    - group: "{{HIGH_RISK_GROUP_1}}"
+      requirements:
+        - "REQ-{{GROUP}}-001"
+        - "REQ-{{GROUP}}-002"
+      confirmation: "{{independent|adversarial|fresh_target_reproduction|peer}}"
+
+    - group: "{{HIGH_RISK_GROUP_2}}"
+      requirements:
+        - "REQ-{{GROUP2}}-001"
+      confirmation: "{{MODE}}"
+
+  plan_projection_rule: >-
+    Every REQUIRED normative requirement MUST map to at least one implementation
+    plan task. Every settlement-critical task MUST declare the requirement IDs it
+    settles, its proof level, evidence location, and confirmation mode. A
+    requirement without a plan task or settled evidence remains open.
+
+# =============================================================================
+# TEMPLATE COMPLETION CHECKLIST
+# =============================================================================
+#
+# Before approving a concrete spec generated from this template, verify:
+#
+# REPRESENTATION
+# [ ] The spec describes what must be true, not an ordered implementation plan.
+# [ ] Stable abstractions are separated from transient implementation details.
+# [ ] The domain model is the smallest one that preserves required distinctions.
+# [ ] Authority/ownership is unambiguous where state or decisions are authoritative.
+#
+# EPISTEMICS
+# [ ] Evidence-backed, partially-proven, assumption, and roadmap claims are distinct.
+# [ ] Existing evidence is cited rather than re-derived from memory.
+# [ ] Target-environment assumptions remain assumptions until target evidence exists.
+#
+# OUTCOME
+# [ ] Output is distinct from verified outcome.
+# [ ] False-success conditions are explicit.
+# [ ] Consumer/handoff requirements are explicit.
+#
+# CONFIGURATION
+# [ ] Config authority and precedence are explicit.
+# [ ] Machine/provider/runtime facts are not hardcoded into stable logic unnecessarily.
+# [ ] Error classes include blast radius.
+# [ ] Startup/preflight and reload behavior are defined.
+#
+# STATE / EXECUTION
+# [ ] States are semantically distinct; terminal causes are not collapsed blindly.
+# [ ] Transition triggers are named.
+# [ ] Idempotency is defined.
+# [ ] Counterintuitive behaviors are written explicitly.
+#
+# FAILURE / SAFETY
+# [ ] Recovery is bounded.
+# [ ] Failure isolation is explicit.
+# [ ] Hidden fallback is forbidden unless explicitly desired and observable.
+# [ ] Trust boundaries and privileged actions are clear.
+# [ ] Secrets have a defined source and are excluded from logs/evidence.
+#
+# EVIDENCE
+# [ ] Required evidence artifacts are named.
+# [ ] Proof interfaces are copy-pasteable or clearly reviewable.
+# [ ] Required variation and recovery tests exist.
+# [ ] Skipped required real integrations cannot be mislabeled as passed.
+#
+# TRACEABILITY
+# [ ] Stable requirement IDs exist for every normative requirement.
+# [ ] High-risk requirements are identified selectively.
+# [ ] The spec can be mechanically projected into a plan using requirement IDs.
+#
+# COLD-AGENT TEST
+# [ ] A developer/agent with no prior conversation can implement/review this spec
+#     without guessing what success, failure, evidence, or scope means.
+# =============================================================================

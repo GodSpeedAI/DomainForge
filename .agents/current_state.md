@@ -1,4 +1,37 @@
-# Current State: RDF Instance and Policy Projection Implemented
+# Current State: Repository Documentation Architecture Completed
+
+## Verification contract and envelope follow-up (2026-09-24)
+
+- [x] Flow verification obligations use canonical declaration occurrence references, including distinct duplicate flows. Evidence: `domainforge-core/src/application/verification_contract.rs`; `verification_contract_flow_keys_match_snapshot_occurrences` passed.
+- [x] Capabilities advertise `verification-contract`, and an explicitly invalid `--registry` reports an error and exits 2. Evidence: `domainforge-core/src/cli/envelope.rs`; the focused envelope emit suite passed (18 tests).
+- [x] Section 6 points to the CLI and identity references for detailed fields. The identity reference reflects all eleven serialized `DomainModelIdentity` fields, including optional `semantic_pack_set_hash`.
+- [x] Validation: `mise exec rust@1.92.0 -- cargo test -p domainforge-core --features cli --test envelope_emit_tests` (18 passed), `mise exec rust@1.92.0 -- cargo fmt --all --check`, the focused documentation link assertions, and `git diff --check` passed.
+- [ ] Automated review and graft index rebuild: CodeRabbit reported that review is disabled for this task; `graft build` could not run because the CLI is absent.
+
+## Unified CEP / SXR Interface Remediation (2026-09-08)
+
+Branch: `chore/release-please-commit-fix`. Ported Slice 0B additive components without merging, preserving PR #122 fixes.
+
+- [x] Pre-port baseline golden snapshot captured. Evidence: `domainforge-core/tests/fixtures/envelope/golden/valid-basic.pre-port.stdout.json` byte-for-byte identical to unflagged `domainforge envelope` output.
+- [x] Verification contract ported. Evidence: `domainforge-core/src/application/verification_contract.rs` and registered in `application/mod.rs`.
+- [x] CEP envelope builders & F-03 omission-based failure synthesis implemented. Evidence: `domainforge-core/src/application/envelope.rs` emits `conformance_status: "conformant"`, `validation_status: "validated"`, omissions record for `representation_unavailable`, and `extensions.domainforge.model_validation_status: "invalid"` when D cannot be synthesized.
+- [x] F-04 Typed DomainModelIdentity implemented. Evidence: `domainforge-core/src/application/envelope.rs` provides `DomainModelIdentity::canonical_digest()` over eleven serialized fields.
+- [x] CLI flags & exit codes implemented. Evidence: `domainforge-core/src/cli/envelope.rs` supports `--emit` (`representation`, `cep`, `both`, `verification-contract`), `--capabilities`, `--pack`, `--registry`, `--default-namespace`, `--scope`, `--inline-threshold-bytes`, and `-o`.
+- [x] Test suite passed. Evidence: `cargo test -p domainforge-core --test envelope_emit_tests --features cli` (16 passed) and `cargo test -p domainforge-core --lib` (381 passed).
+
+## Repository Documentation Architecture (2026-09-02)
+
+Delivered a comprehensive, self-contained technical knowledge system for DomainForge adhering to Diátaxis, DeepWiki, and Google Code Wiki principles.
+
+- [x] Canonical high-level architecture documented. Evidence: `docs/architecture.md` (and root pointer `architecture.md`) with logical, runtime, dependency, and data transformation architectures, plus detailed Mermaid diagrams and prose analysis.
+- [x] Documentation map and source map delivered. Evidence: `docs/documentation-map.md` (Diátaxis classification, audience needs, prerequisite tracks) and `docs/source-map.md` (symbol-level source traceability).
+- [x] Layer 0 and Layer 1 orientation and mental model delivered. Evidence: `docs/index.md` (knowledge portal), `docs/orientation.md` (5-minute fast track), and `docs/mental-model.md` (deep conceptual abstractions and 3VL rationale).
+- [x] Layer 3 Subsystem Guides completed (9 subsystems). Evidence: `docs/subsystems/` covers `parser-grammar.md`, `graph-store.md`, `policy-engine.md`, `units-dimensions.md`, `semantic-packs.md`, `authority-engine.md`, `application-contracts.md`, `projections-engine.md`, and `language-bindings.md`.
+- [x] Layer 4 Execution Traces completed (5 workflows). Evidence: `docs/workflows/` covers `parse-and-validate.md`, `projection-generation.md`, `pack-lifecycle.md`, `application-resolution.md`, and `authority-evaluation.md`.
+- [x] Layer 5 Explanations completed (5 deep rationales). Evidence: `docs/explanations/` covers `canonical-semantic-core.md`, `indexmap-determinism.md`, `three-valued-logic-rationale.md`, `adr-013-application-contract.md`, and `operator-family-design.md`.
+- [x] Layer 6 Tutorials & Layer 7 How-Tos delivered. Evidence: `docs/tutorials/01-first-sea-model.md`, `02-multi-target-projection.md`, `03-building-signing-packs.md`; `docs/how-tos/add-projection-target.md`, `add-grammar-construct.md`, `configure-module-resolution.md`, `debug-policy-evaluations.md`.
+- [x] Layer 8 Reference & Troubleshooting delivered. Evidence: `docs/reference/` (`dsl-grammar-reference.md`, `cli-reference.md`, `error-code-reference.md`, `primitives-api-reference.md`, `configuration-reference.md`) and `docs/troubleshooting.md`.
+- [x] 100% relative markdown link verification passed. Evidence: automated PowerShell check traversed all markdown links in `docs/` and confirmed 0 missing targets.
 
 ## RDF instance/policy projection (2026-08-06)
 
@@ -155,3 +188,17 @@ contract settlement remains proposed in ADR-014, with plan finalization and
 implementation waiting on explicit ratification. Later milestone gates remain
 closed to self-approval: the repository maintainer must explicitly accept each
 reviewed milestone.
+
+## Commit workflow blocker resolved (2026-09-02)
+
+- [x] Made the required scoped commit format explicit. Evidence: `CONTRIBUTING.md` now states that scopes are mandatory, and `docs/governance.md` matches `commitlint.config.cjs` by documenting kebab-case scopes without claiming a static allowlist.
+- [x] Made hook failures actionable. Evidence: `scripts/run_commitlint.sh` now prints the required `<type>(<scope>): <subject>` format and an example after commitlint rejects a message.
+- [x] Validated the fix. Evidence: `sh -n scripts/run_commitlint.sh` passed; `docs: update guide` failed with the new hint; `docs(repo): update guide` passed; `git diff --cached --check` passed; 135 relative links in staged Markdown resolved.
+
+## Unified CEP / SXR Interface Remediation (2026-09-08)
+
+- [x] Ported Slice 0B additive envelope modules (`application/envelope.rs`, `application/verification_contract.rs`, fixtures, tests) onto maintained tip `chore/release-please-commit-fix`. Evidence: `domainforge-core/src/application/verification_contract.rs` created; `domainforge-core/tests/envelope_emit_tests.rs` (16 passing tests).
+- [x] Implemented `--emit <representation|cep|both>` CLI option and corresponding payload synthesis. Evidence: `domainforge-core/src/cli/envelope.rs`, `docs/reference/cli-reference.md`.
+- [x] Implemented omission-based failure synthesis (F-03). When model has validation errors, emitted CEP envelope omits statements rather than populating non-conformant/speculative ones. Evidence: `envelope_emit_tests::test_envelope_emit_cep_omits_statements_on_validation_failure`.
+- [x] Implemented typed `DomainModelIdentity::canonical_digest()` (F-04). Returns `Option<&str>` to eliminate unwrap risks on unverified identities. Evidence: `domainforge-core/src/application/verification_contract.rs`.
+- [x] Verification: `cargo test -p domainforge-core` passes with 381 library unit/integration tests and 16 envelope emit integration tests.
