@@ -1,5 +1,16 @@
 # Current State: Repository Documentation Architecture Completed
 
+## Unified CEP / SXR Interface Remediation (2026-09-08)
+
+Branch: `chore/release-please-commit-fix`. Ported Slice 0B additive components without merging, preserving PR #122 fixes.
+
+- [x] Pre-port baseline golden snapshot captured. Evidence: `domainforge-core/tests/fixtures/envelope/golden/valid-basic.pre-port.stdout.json` byte-for-byte identical to unflagged `domainforge envelope` output.
+- [x] Verification contract ported. Evidence: `domainforge-core/src/application/verification_contract.rs` and registered in `application/mod.rs`.
+- [x] CEP envelope builders & F-03 omission-based failure synthesis implemented. Evidence: `domainforge-core/src/application/envelope.rs` emits `conformance_status: "conformant"`, `validation_status: "validated"`, omissions record for `representation_unavailable`, and `extensions.domainforge.model_validation_status: "invalid"` when D cannot be synthesized.
+- [x] F-04 Typed DomainModelIdentity implemented. Evidence: `domainforge-core/src/application/envelope.rs` provides `DomainModelIdentity::canonical_digest()` over the canonical 10-tuple.
+- [x] CLI flags & exit codes implemented. Evidence: `domainforge-core/src/cli/envelope.rs` supports `--emit` (`representation`, `cep`, `both`), `--capabilities`, `--pack`, `--registry`, `--default-namespace`, `--scope`, `--inline-threshold-bytes`, and `-o`.
+- [x] Test suite passed. Evidence: `cargo test -p domainforge-core --test envelope_emit_tests --features cli` (16 passed) and `cargo test -p domainforge-core --lib` (381 passed).
+
 ## Repository Documentation Architecture (2026-09-02)
 
 Delivered a comprehensive, self-contained technical knowledge system for DomainForge adhering to Diátaxis, DeepWiki, and Google Code Wiki principles.
@@ -175,3 +186,11 @@ reviewed milestone.
 - [x] Made the required scoped commit format explicit. Evidence: `CONTRIBUTING.md` now states that scopes are mandatory, and `docs/governance.md` matches `commitlint.config.cjs` by documenting kebab-case scopes without claiming a static allowlist.
 - [x] Made hook failures actionable. Evidence: `scripts/run_commitlint.sh` now prints the required `<type>(<scope>): <subject>` format and an example after commitlint rejects a message.
 - [x] Validated the fix. Evidence: `sh -n scripts/run_commitlint.sh` passed; `docs: update guide` failed with the new hint; `docs(repo): update guide` passed; `git diff --cached --check` passed; 135 relative links in staged Markdown resolved.
+
+## Unified CEP / SXR Interface Remediation (2026-09-08)
+
+- [x] Ported Slice 0B additive envelope modules (`application/envelope.rs`, `application/verification_contract.rs`, fixtures, tests) onto maintained tip `chore/release-please-commit-fix`. Evidence: `domainforge-core/src/application/verification_contract.rs` created; `domainforge-core/tests/envelope_emit_tests.rs` (16 passing tests).
+- [x] Implemented `--emit <representation|cep|both>` CLI option and corresponding payload synthesis. Evidence: `domainforge-core/src/cli/envelope.rs`, `docs/reference/cli-reference.md`.
+- [x] Implemented omission-based failure synthesis (F-03). When model has validation errors, emitted CEP envelope omits statements rather than populating non-conformant/speculative ones. Evidence: `envelope_emit_tests::test_envelope_emit_cep_omits_statements_on_validation_failure`.
+- [x] Implemented typed `DomainModelIdentity::canonical_digest()` (F-04). Returns `Option<&str>` to eliminate unwrap risks on unverified identities. Evidence: `domainforge-core/src/application/verification_contract.rs`.
+- [x] Verification: `cargo test -p domainforge-core` passes with 381 library unit/integration tests and 16 envelope emit integration tests.

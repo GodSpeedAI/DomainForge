@@ -104,21 +104,40 @@ operation CreateOrder {
 
 ---
 
-## 6. Canonical Semantic Envelope
+## 6. Canonical Semantic Envelope & CEP Emission
 
-Run `domainforge envelope main.sea` to produce the canonical envelope document:
-- `schema_version`: Document schema version (e.g. `0.3.0`).
-- `source_set_hash`: SHA-256 hash over all canonicalized source text in the transitive closure.
-- `input_fingerprint`: Deterministic hash of configuration options.
-- `application_contract`: Complete serialized `ApplicationContract` JSON.
-- `semantic_closure`: Resolved semantic pack dependencies and concept bindings.
+`domainforge envelope` provides dual emission modes to support both internal compiler verification and external CEP-0008 integration:
+
+### 1. Canonical Semantic Document ($D$) — `--emit representation` (Default)
+Emits the pure, byte-level canonical semantic document ($D$) schema `domainforge-semantic-envelope/v1`:
+- `schema_version`: Document schema version (`domainforge-semantic-envelope/v1`).
+- `self_hash`: Tamper-evident SHA-256 digest over the entire canonical document excluding `self_hash`.
+- `semantic_closure_hash`: Digest over transitive symbol declarations, concept references, and import edges.
+- `inputs`: `source_set_hash`, `semantic_pack_set_hash`, `language_schema_version`, and `interpretation_version`.
+- `envelope`: Complete serialized application declarations, symbol tables, and operation contracts.
+
+### 2. CEP-0008 Canonical Full Profile — `--emit cep`
+Synthesizes a schema-valid CEP-0008 envelope carrying:
+- `boundary_record`: Explicit declaration of included sections and known omissions.
+- `representations`: Inlines the verified representation document $D$, or omits it when unavailable.
+- `omissions`: Explicit `OmissionRecord` (`omission_type: "representation_unavailable"`) whenever model validation fails (F-03).
+- `extensions.domainforge`: Preserves `model_validation_status` (`valid` or `invalid`), `invalid_declared_checkpoint_hash`, diagnostics, and `semantics_version`.
+- `conformance_status`: Emits `conformant` even when model declarations are invalid, provided the envelope itself conforms to the CEP wire contract.
+
+### 3. Typed Model Identity (`DomainModelIdentity`)
+Provides cryptographic identity over the canonical 10-tuple:
+- `identity_scheme_version` (`v2-full-preimage`), `producer`, `producer_version`, `language_schema_version`, `compiler_interpretation_version`, `canonicalization_version`, `source_set_hash`, `content_hash`, `semantic_closure_hash`, and optional `registry_content_hash`.
+- Computed via `DomainModelIdentity::canonical_digest()`.
 
 ---
 
 ## Source Trail
 - `domainforge-core/src/application/contract.rs` — Contract, Operation, Record, and Enum structs
 - `domainforge-core/src/application/resolve.rs` — Application contract resolution logic
-- `domainforge-core/src/application/envelope.rs` — CanonicalSemanticEnvelope implementation
+- `domainforge-core/src/application/envelope.rs` — CanonicalSemanticEnvelope, CEP builders, and DomainModelIdentity
+- `domainforge-core/src/application/verification_contract.rs` — Source-set verification and contract invariants
 - `domainforge-core/src/application/diagnostic.rs` — Diagnostic error definitions (`APP001`–`APP014`)
+- `domainforge-core/src/cli/envelope.rs` — CLI envelope runner with `--emit`, `--capabilities`, and `--pack`
 - `domainforge-core/tests/application_contract_tests.rs` — Contract resolution test suite
+- `domainforge-core/tests/envelope_emit_tests.rs` — Emission modes, golden fixtures, and failure synthesis tests
 - `docs/specs/ADR-013-sea-application-contract.md` — Formal architectural decision record

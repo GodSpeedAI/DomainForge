@@ -7,6 +7,7 @@ pub mod envelope;
 pub mod policy_context;
 pub mod resolve;
 pub(crate) mod validate;
+pub mod verification_contract;
 
 pub use canonical::{
     canonical_decimal, canonical_typed_value, document_self_hash, input_fingerprint,

@@ -1,0 +1,12 @@
+@namespace "sales"
+@version "1.0.0"
+
+record Order {
+    order_id: uuid
+    customer_ref: string
+}
+
+record Shipment {
+    shipment_id: uuid
+    order_ref: string
+}

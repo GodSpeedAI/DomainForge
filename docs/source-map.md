@@ -98,7 +98,8 @@ This document connects high-level concepts, capabilities, and invariants to thei
 |---|---|---|---|---|
 | **Application Contract** | `domainforge-core/src/application/contract.rs` | `ApplicationContract`, `OperationContract`, `RecordContract`, `EnumContract` | Formal specification of operations, input/output records, state, and errors. | `tests/application_contract_tests.rs` |
 | **Contract Resolver** | `domainforge-core/src/application/resolve.rs` | `resolve_application_contract()`, `resolve_application_graph()` | Resolves modular AST sources into unified application contracts. | `tests/application_contract_tests.rs` |
-| **Semantic Envelope** | `domainforge-core/src/application/envelope.rs` | `CanonicalSemanticEnvelope`, `resolve_semantic_envelope()` | Binds application contract, pack closure, and source hash into one artifact. | `tests/application_canonical_tests.rs` |
+| **Semantic Envelope** | `domainforge-core/src/application/envelope.rs` | `CanonicalSemanticEnvelope`, `build_cep_envelope()`, `DomainModelIdentity` | Binds application contract, pack closure, and source hash into canonical D or CEP-0008 envelope. | `tests/application_canonical_tests.rs`, `tests/envelope_emit_tests.rs` |
+| **Verification Contract** | `domainforge-core/src/application/verification_contract.rs` | `VerificationContract`, `build_verification_contract()` | Evaluates source-set verification assertions, hash stability, and contract invariants. | `tests/envelope_emit_tests.rs` |
 | **Diagnostics** | `domainforge-core/src/application/diagnostic.rs` | `ApplicationDiagnostic`, codes `APP001`–`APP014` | Precise diagnostics for operation and contract validation failures. | `tests/application_diagnostic_tests.rs` |
 
 ---
@@ -151,7 +152,7 @@ This document connects high-level concepts, capabilities, and invariants to thei
 | `domainforge pack` | `domainforge-core/src/cli/pack.rs` | `PackArgs`, `run()` | Subcommands: `build`, `validate`, `sign`, `diff`. |
 | `domainforge authority` | `domainforge-core/src/cli/authority.rs` | `AuthorityArgs`, `run()` | Evaluates authority policies against fact files. |
 | `domainforge contract` | `domainforge-core/src/cli/contract.rs` | `ContractArgs`, `run()` | Resolves and prints ADR-013 Application Contract JSON. |
-| `domainforge envelope` | `domainforge-core/src/cli/envelope.rs` | `EnvelopeArgs`, `run()` | Resolves and prints Canonical Semantic Envelope JSON. |
+| `domainforge envelope` | `domainforge-core/src/cli/envelope.rs` | `EnvelopeArgs`, `run()` | Resolves and prints Canonical Semantic Envelope (D), CEP-0008 full envelope, or capabilities JSON. |
 | `domainforge format` | `domainforge-core/src/cli/format.rs` | `FormatArgs`, `run()` | Canonical source formatting and idempotent formatting checks. |
 | `domainforge normalize` | `domainforge-core/src/cli/normalize.rs` | `NormalizeArgs`, `run()` | Normalizes policy expressions into simplified forms. |
 

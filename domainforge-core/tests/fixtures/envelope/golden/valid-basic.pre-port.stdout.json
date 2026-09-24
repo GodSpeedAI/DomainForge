@@ -1,0 +1,208 @@
+{
+  "schema_version": "domainforge-semantic-envelope/v1",
+  "producer": {
+    "name": "domainforge-core",
+    "version": "0.16.0"
+  },
+  "inputs": {
+    "source_set_hash": "sha256:199407284bab273208ccea52deb56197c582816a668ee726d7ab1ab3797d42b5",
+    "semantic_pack_set_hash": "sha256:6e5312099a8d89e1d271bd89d9fcb36b031069bd8dad72be397af6b331d85c40",
+    "language_schema_version": "domainforge-ast/v3",
+    "interpretation_version": "domainforge-interpretation/v1"
+  },
+  "self_hash": "sha256:1641b0d368b1f26eb6f3768a71d14b7f0cf697b4419204d65ed1911c515ef97e",
+  "semantic_closure_hash": "sha256:1a1b7053205bba72249ad04a199a216392cc803f850e171b8e3afcc945be786c",
+  "envelope": {
+    "language_schema_version": "domainforge-ast/v3",
+    "canonicalization_version": "domainforge-canonicalization/v1",
+    "compiler_interpretation_version": "domainforge-interpretation/v1",
+    "modules": [
+      {
+        "logical_id": "valid-basic.sea",
+        "semantic_content_hash": "sha256:8493cc0b18621b8721cb736c7f7e8d7a2376e2f095e15ff350c5f0bbb12b7e29",
+        "namespace": "auth"
+      }
+    ],
+    "import_graph": [],
+    "namespace_bindings": [
+      {
+        "namespace": "auth",
+        "logical_id": "valid-basic.sea"
+      }
+    ],
+    "semantic_packs": [],
+    "semantic_declarations": [
+      {
+        "id": {
+          "kind": "concept",
+          "data": {
+            "id": "5ad6a959-5924-5cf9-af04-7b502ea74784"
+          }
+        },
+        "logical_module_id": "valid-basic.sea",
+        "declaration": {
+          "kind": "entity",
+          "data": {
+            "name": "User",
+            "domain": "auth",
+            "annotations": {}
+          }
+        }
+      },
+      {
+        "id": {
+          "kind": "concept",
+          "data": {
+            "id": "72f70c63-6f3e-5061-8854-42e540bbac87"
+          }
+        },
+        "logical_module_id": "valid-basic.sea",
+        "declaration": {
+          "kind": "entity",
+          "data": {
+            "name": "Role",
+            "domain": "auth",
+            "annotations": {}
+          }
+        }
+      },
+      {
+        "id": {
+          "kind": "concept",
+          "data": {
+            "id": "a81c1fec-c10a-5541-bd81-98c64b10f402"
+          }
+        },
+        "logical_module_id": "valid-basic.sea",
+        "declaration": {
+          "kind": "resource",
+          "data": {
+            "name": "Token",
+            "unit": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "7a50d9d2-89e2-5607-bca5-34464284bea8"
+                  }
+                }
+              }
+            },
+            "domain": "auth",
+            "annotations": {}
+          }
+        }
+      },
+      {
+        "id": {
+          "kind": "occurrence",
+          "data": {
+            "kind": "flow",
+            "content_hash": "sha256:0054e494b25408165361fa7d0fb1e090a7aee22d7dce2c9f188bc87e24451543",
+            "duplicate_index": 0
+          }
+        },
+        "logical_module_id": "valid-basic.sea",
+        "declaration": {
+          "kind": "flow",
+          "data": {
+            "resource": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "a9034d4e-9276-56a8-8543-9ee845011958"
+                  }
+                }
+              }
+            },
+            "from_entity": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "5ad6a959-5924-5cf9-af04-7b502ea74784"
+                  }
+                }
+              }
+            },
+            "to_entity": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "72f70c63-6f3e-5061-8854-42e540bbac87"
+                  }
+                }
+              }
+            },
+            "quantity": "1",
+            "annotations": {}
+          }
+        }
+      },
+      {
+        "id": {
+          "kind": "occurrence",
+          "data": {
+            "kind": "flow",
+            "content_hash": "sha256:e2f61281af6ce70dd96268e342cb31a0832af79be550799152f986dd2fd1af66",
+            "duplicate_index": 0
+          }
+        },
+        "logical_module_id": "valid-basic.sea",
+        "declaration": {
+          "kind": "flow",
+          "data": {
+            "resource": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "a9034d4e-9276-56a8-8543-9ee845011958"
+                  }
+                }
+              }
+            },
+            "from_entity": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "5ad6a959-5924-5cf9-af04-7b502ea74784"
+                  }
+                }
+              }
+            },
+            "to_entity": {
+              "kind": "declaration",
+              "data": {
+                "id": {
+                  "kind": "concept",
+                  "data": {
+                    "id": "5ad6a959-5924-5cf9-af04-7b502ea74784"
+                  }
+                }
+              }
+            },
+            "quantity": "1",
+            "annotations": {}
+          }
+        }
+      }
+    ],
+    "resolved_references": [],
+    "application_contract": {
+      "enums": [],
+      "records": [],
+      "entities": [],
+      "operations": []
+    }
+  }
+}

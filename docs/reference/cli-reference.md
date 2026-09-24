@@ -107,13 +107,29 @@ domainforge contract [OPTIONS] <ENTRY>
 ---
 
 ### `envelope`
-Resolve and print the Canonical Semantic Envelope document JSON.
+Resolve and print the Canonical Semantic Envelope document JSON or CEP-0008 envelope.
 
 ```bash
 domainforge envelope [OPTIONS] <ENTRY>
+domainforge envelope --capabilities
 ```
 - `<ENTRY>`: Path to entry `.sea` file.
-- `--pack <PATH>`: Include referenced semantic pack JSON files.
+- `--emit <MODE>`: Emission mode (`representation` [default], `cep`, or `both`).
+  - `representation`: Prints the raw canonical semantic document ($D$) byte-for-byte.
+  - `cep`: Synthesizes a CEP-0008 conformant envelope with boundary, completeness, omission, and extension metadata.
+  - `both`: Emits a JSON bundle containing both the CEP envelope and the canonical representation.
+- `--capabilities`: Print machine-readable JSON adapter capabilities (`producer`, `version`, `supported_emit_modes`, `contracts`) and exit 0.
+- `--pack <PATH>`: Include referenced semantic pack JSON files (repeatable).
+- `--registry <PATH>`: Optional path to namespace registry directory or file.
+- `--default-namespace <NAME>`: Explicit default namespace override.
+- `--scope <JSON>`: JSON object with caller scope context (e.g. `repo_id`, `run_id`).
+- `--inline-threshold-bytes <BYTES>`: Max bytes for inlined representation before CAS carriage (default: 65,536).
+- `-o, --out <PATH>`: Write output to file instead of stdout.
+
+**Exit Codes:**
+- `0`: Valid model resolved and emitted successfully.
+- `1`: Model validation failed (syntax error, unresolvable import, or policy violation). In `--emit cep` or `--emit both` modes, a schema-valid CEP failure envelope is emitted with explicit omissions and diagnostics.
+- `2`: CLI usage or file I/O error (unreadable entry, malformed arguments).
 
 ---
 
