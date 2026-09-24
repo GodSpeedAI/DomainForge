@@ -286,7 +286,7 @@ mod application_contract_wasm_tests {
     fn cross_binding_golden_hashes() {
         use sha2::{Digest, Sha256};
         const CONTRACT_GOLDEN_SHA256: &str =
-            "sha256:a742f1b859382886ccdcd53a1720be19b9f055517b56489a6d14eae2ec752e7f";
+            "sha256:c8ebd330e20ac90dfd79e085f3ed0960095485397f8afaabfa53c1db7fdf13ee";
         let raw = Graph::resolve_application_contract_json(
             "flagship/query-read.sea".into(),
             flagship_sources_json(),
