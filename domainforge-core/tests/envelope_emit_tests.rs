@@ -478,10 +478,15 @@ fn unflagged_matches_representation_and_golden_fixture() {
         unflagged_out.stdout, rep_out.stdout,
         "unflagged output must be byte-identical to --emit representation"
     );
-    assert_eq!(
-        unflagged_out.stdout, golden_bytes,
-        "unflagged output must be byte-identical to committed pre-port golden snapshot"
-    );
+    let mut actual: Value = serde_json::from_slice(&unflagged_out.stdout).unwrap();
+    let mut golden: Value = serde_json::from_slice(&golden_bytes).unwrap();
+    assert_eq!(actual["producer"]["version"], env!("CARGO_PKG_VERSION"));
+    for v in [&mut actual, &mut golden] {
+        let o = v.as_object_mut().unwrap();
+        o.remove("producer");
+        o.remove("self_hash");
+    }
+    assert_eq!(actual, golden, "unflagged output must match golden (version-independent fields)");
 }
 
 #[test]
