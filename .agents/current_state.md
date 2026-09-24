@@ -1,5 +1,13 @@
 # Current State: Repository Documentation Architecture Completed
 
+## Verification contract and envelope follow-up (2026-09-24)
+
+- [x] Flow verification obligations use canonical declaration occurrence references, including distinct duplicate flows. Evidence: `domainforge-core/src/application/verification_contract.rs`; `verification_contract_flow_keys_match_snapshot_occurrences` passed.
+- [x] Capabilities advertise `verification-contract`, and an explicitly invalid `--registry` reports an error and exits 2. Evidence: `domainforge-core/src/cli/envelope.rs`; the focused envelope emit suite passed (18 tests).
+- [x] Section 6 points to the CLI and identity references for detailed fields. The identity reference reflects all eleven serialized `DomainModelIdentity` fields, including optional `semantic_pack_set_hash`.
+- [x] Validation: `mise exec rust@1.92.0 -- cargo test -p domainforge-core --features cli --test envelope_emit_tests` (18 passed), `mise exec rust@1.92.0 -- cargo fmt --all --check`, the focused documentation link assertions, and `git diff --check` passed.
+- [ ] Automated review and graft index rebuild: CodeRabbit reported that review is disabled for this task; `graft build` could not run because the CLI is absent.
+
 ## Unified CEP / SXR Interface Remediation (2026-09-08)
 
 Branch: `chore/release-please-commit-fix`. Ported Slice 0B additive components without merging, preserving PR #122 fixes.
@@ -7,8 +15,8 @@ Branch: `chore/release-please-commit-fix`. Ported Slice 0B additive components w
 - [x] Pre-port baseline golden snapshot captured. Evidence: `domainforge-core/tests/fixtures/envelope/golden/valid-basic.pre-port.stdout.json` byte-for-byte identical to unflagged `domainforge envelope` output.
 - [x] Verification contract ported. Evidence: `domainforge-core/src/application/verification_contract.rs` and registered in `application/mod.rs`.
 - [x] CEP envelope builders & F-03 omission-based failure synthesis implemented. Evidence: `domainforge-core/src/application/envelope.rs` emits `conformance_status: "conformant"`, `validation_status: "validated"`, omissions record for `representation_unavailable`, and `extensions.domainforge.model_validation_status: "invalid"` when D cannot be synthesized.
-- [x] F-04 Typed DomainModelIdentity implemented. Evidence: `domainforge-core/src/application/envelope.rs` provides `DomainModelIdentity::canonical_digest()` over the canonical 10-tuple.
-- [x] CLI flags & exit codes implemented. Evidence: `domainforge-core/src/cli/envelope.rs` supports `--emit` (`representation`, `cep`, `both`), `--capabilities`, `--pack`, `--registry`, `--default-namespace`, `--scope`, `--inline-threshold-bytes`, and `-o`.
+- [x] F-04 Typed DomainModelIdentity implemented. Evidence: `domainforge-core/src/application/envelope.rs` provides `DomainModelIdentity::canonical_digest()` over eleven serialized fields.
+- [x] CLI flags & exit codes implemented. Evidence: `domainforge-core/src/cli/envelope.rs` supports `--emit` (`representation`, `cep`, `both`, `verification-contract`), `--capabilities`, `--pack`, `--registry`, `--default-namespace`, `--scope`, `--inline-threshold-bytes`, and `-o`.
 - [x] Test suite passed. Evidence: `cargo test -p domainforge-core --test envelope_emit_tests --features cli` (16 passed) and `cargo test -p domainforge-core --lib` (381 passed).
 
 ## Repository Documentation Architecture (2026-09-02)

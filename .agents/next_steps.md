@@ -1,5 +1,7 @@
 # Next Steps
 
+Current handoff (2026-09-24): the verification contract and envelope patch passes the focused 18-test suite. When task review is enabled, run `coderabbit review --agent -t uncommitted` and address any still-valid findings. Rebuild the graft index when its CLI is available.
+
 ## 1. Maintain Documentation Synchronization upon ADR-014 Ratification
 
 When `docs/specs/ADR-014-application-review-and-approval-contract.md` is ratified and Milestone 1 implementation begins, update `docs/subsystems/application-contracts.md` and `docs/reference/cli-reference.md` to reflect the settled inspection, review, and semantic approval commands. Expected outcome: documentation remains 100% synchronized with the implementation without drift.

@@ -12,7 +12,10 @@
 //! kind, canonical Question content), so repeated projection is stable. The
 //! outer `envelope_id`/`created_at` vary per emission (I-DET).
 
-use crate::application::envelope::CanonicalSemanticEnvelopeDocument;
+use crate::application::envelope::{
+    declaration_entity_ref, CanonicalDeclarationId, CanonicalReferenceTarget,
+    CanonicalSemanticEnvelopeDocument, CanonicalSemanticPayload,
+};
 use crate::application::resolve::resolve_application_graph;
 use crate::graph::Graph;
 use crate::semantic_pack::canonical_json::{canonical_json, compute_sha256};
@@ -99,8 +102,8 @@ fn content_id(fields: &Value) -> String {
     digest.strip_prefix("sha256:").unwrap_or(&digest)[..24].to_string()
 }
 
-/// Build the CEP `work_request` envelope for a resolved model. The entry source
-/// map is resolved into a graph to enumerate flows/policies/entities (§14.0).
+/// Build the CEP `work_request` envelope for a resolved model. Flows come from
+/// canonical declarations; the resolved graph supplies policies and entities (§14.0).
 #[allow(clippy::too_many_arguments)]
 pub fn build_verification_contract(
     doc: &CanonicalSemanticEnvelopeDocument,
@@ -121,7 +124,7 @@ pub fn build_verification_contract(
             .join("; ")
     })?;
 
-    let obligations = project_obligations(&graph, &semantic_hash);
+    let obligations = project_obligations(doc, &graph, &semantic_hash);
 
     // CEP work_request envelope (validated by Gate 0A in the proof).
     let created_by = format!("domainforge {}", env!("CARGO_PKG_VERSION"));
@@ -253,26 +256,33 @@ pub fn build_verification_contract(
     Ok(Value::Object(envelope))
 }
 
-/// Enumerate obligations from the graph, sorted deterministically by
-/// decl_key so output is byte-stable across emissions.
-fn project_obligations(graph: &Graph, semantic_hash: &str) -> Vec<VerificationObligation> {
+/// Enumerate obligations from canonical declarations and the graph, sorted
+/// deterministically by decl_key so output is byte-stable across emissions.
+fn project_obligations(
+    doc: &CanonicalSemanticEnvelopeDocument,
+    graph: &Graph,
+    semantic_hash: &str,
+) -> Vec<VerificationObligation> {
     let mut obligations: Vec<VerificationObligation> = Vec::new();
 
-    for flow in graph.all_flows() {
-        // Flow ids in the graph are random UUIDs (§3.4.3) and would break
-        // I-DET; the stable decl_key is the content-derived occurrence ref
-        // (`occurrence:flow:<content_hash>:0`), matching the sxr DeclKey form.
-        let content = json!({
-            "resource": flow.resource_id().to_string(),
-            "from": flow.from_id().to_string(),
-            "to": flow.to_id().to_string(),
-            "quantity": flow.quantity().to_string(),
-        });
-        let content_hash = content_id(&content);
-        let decl_key = format!("occurrence:flow:{content_hash}:0");
-        let resource = flow.resource_id().to_string();
-        let from = flow.from_id().to_string();
-        let to = flow.to_id().to_string();
+    for decl in &doc.envelope.semantic_declarations {
+        let CanonicalSemanticPayload::Flow(flow) = &decl.declaration else {
+            continue;
+        };
+        let decl_key = declaration_entity_ref(&decl.id);
+        let reference = |target: &CanonicalReferenceTarget| match target {
+            CanonicalReferenceTarget::Declaration {
+                id: CanonicalDeclarationId::Concept { id },
+            } => id.to_string(),
+            CanonicalReferenceTarget::Declaration { id } => declaration_entity_ref(id),
+            CanonicalReferenceTarget::Namespace {
+                exact_name,
+                logical_module_id,
+            } => format!("{logical_module_id}:{exact_name}"),
+        };
+        let resource = reference(&flow.resource);
+        let from = reference(&flow.from_entity);
+        let to = reference(&flow.to_entity);
         let question_content = json!({
             "q": format!("does the declared flow {resource} from {from} to {to} hold at realization?"),
         });

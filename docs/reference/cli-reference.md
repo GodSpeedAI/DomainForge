@@ -114,17 +114,25 @@ domainforge envelope [OPTIONS] <ENTRY>
 domainforge envelope --capabilities
 ```
 - `<ENTRY>`: Path to entry `.sea` file.
-- `--emit <MODE>`: Emission mode (`representation` [default], `cep`, or `both`).
+- `--emit <MODE>`: Emission mode (`representation` [default], `cep`, `both`, or `verification-contract`).
   - `representation`: Prints the raw canonical semantic document ($D$) byte-for-byte.
   - `cep`: Synthesizes a CEP-0008 conformant envelope with boundary, completeness, omission, and extension metadata.
   - `both`: Emits a JSON bundle containing both the CEP envelope and the canonical representation.
+  - `verification-contract`: Emits a CEP `work_request` with declared verification obligations; requires a valid model.
 - `--capabilities`: Print machine-readable JSON adapter capabilities (`producer`, `version`, `supported_emit_modes`, `contracts`) and exit 0.
 - `--pack <PATH>`: Include referenced semantic pack JSON files (repeatable).
-- `--registry <PATH>`: Optional path to namespace registry directory or file.
+- `--registry <PATH>`: Optional path to a namespace registry file.
 - `--default-namespace <NAME>`: Explicit default namespace override.
 - `--scope <JSON>`: JSON object with caller scope context (e.g. `repo_id`, `run_id`).
 - `--inline-threshold-bytes <BYTES>`: Max bytes for inlined representation before CAS carriage (default: 65,536).
 - `-o, --out <PATH>`: Write output to file instead of stdout.
+
+**Emission fields:**
+
+- `representation` sets `schema_version` to `domainforge-semantic-envelope/v1`. Its `self_hash` hashes the canonical document without `self_hash`; `semantic_closure_hash` covers the resolved semantic closure. `inputs` records `source_set_hash`, `semantic_pack_set_hash`, `language_schema_version`, and `interpretation_version`. `envelope` carries the resolved declarations, references, and application contract.
+- `cep` carries a `boundary_record` naming included sections and known omissions. When $D$ exists, `representations` carries it inline or by content reference. When $D$ cannot be constructed, `omissions` records `omission_type: "representation_unavailable"`, `extensions.domainforge` carries `model_validation_status: "invalid"`, `invalid_declared_checkpoint_hash`, and diagnostics, and `conformance_status` is `conformant` for the CEP envelope itself.
+- `both` contains `representation` and `cep_envelope` members when $D$ exists.
+- `verification-contract` carries questions, evidence constraints, and obligations keyed to canonical declaration references.
 
 **Exit Codes:**
 - `0`: Valid model resolved and emitted successfully.

@@ -106,28 +106,18 @@ operation CreateOrder {
 
 ## 6. Canonical Semantic Envelope & CEP Emission
 
-`domainforge envelope` provides dual emission modes to support both internal compiler verification and external CEP-0008 integration:
+`domainforge envelope` emits a canonical model document or a CEP envelope for external verification.
 
 ### 1. Canonical Semantic Document ($D$) — `--emit representation` (Default)
-Emits the pure, byte-level canonical semantic document ($D$) schema `domainforge-semantic-envelope/v1`:
-- `schema_version`: Document schema version (`domainforge-semantic-envelope/v1`).
-- `self_hash`: Tamper-evident SHA-256 digest over the entire canonical document excluding `self_hash`.
-- `semantic_closure_hash`: Digest over transitive symbol declarations, concept references, and import edges.
-- `inputs`: `source_set_hash`, `semantic_pack_set_hash`, `language_schema_version`, and `interpretation_version`.
-- `envelope`: Complete serialized application declarations, symbol tables, and operation contracts.
+Emits the canonical semantic document ($D$), including resolved declarations and hashes for its inputs and semantic closure.
 
 ### 2. CEP-0008 Canonical Full Profile — `--emit cep`
-Synthesizes a schema-valid CEP-0008 envelope carrying:
-- `boundary_record`: Explicit declaration of included sections and known omissions.
-- `representations`: Inlines the verified representation document $D$, or omits it when unavailable.
-- `omissions`: Explicit `OmissionRecord` (`omission_type: "representation_unavailable"`) whenever model validation fails (F-03).
-- `extensions.domainforge`: Preserves `model_validation_status` (`valid` or `invalid`), `invalid_declared_checkpoint_hash`, diagnostics, and `semantics_version`.
-- `conformance_status`: Emits `conformant` even when model declarations are invalid, provided the envelope itself conforms to the CEP wire contract.
+Wraps $D$ in a CEP semantic snapshot with declared boundaries, provenance, and explicit omissions when $D$ cannot be constructed.
 
 ### 3. Typed Model Identity (`DomainModelIdentity`)
-Provides cryptographic identity over the canonical 10-tuple:
-- `identity_scheme_version` (`v2-full-preimage`), `producer`, `producer_version`, `language_schema_version`, `compiler_interpretation_version`, `canonicalization_version`, `source_set_hash`, `content_hash`, `semantic_closure_hash`, and optional `registry_content_hash`.
-- Computed via `DomainModelIdentity::canonical_digest()`.
+Provides a digest of the model identity fields used across interface boundaries.
+
+See the [envelope CLI reference](../reference/cli-reference.md#envelope) for emission modes and fields, and the [application contract reference](../reference/sea-application-contract.md#14-domain-model-identity) for the identity preimage.
 
 ---
 

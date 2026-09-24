@@ -85,7 +85,7 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
         let caps = json!({
             "producer": "domainforge-core",
             "version": env!("CARGO_PKG_VERSION"),
-            "supported_emit_modes": ["representation", "cep", "both", "verification_contract"],
+            "supported_emit_modes": ["representation", "cep", "both", "verification-contract"],
             "contracts": ["CEP-0008", "domainforge-semantic-envelope/v1"]
         });
         println!("{}", serde_json::to_string_pretty(&caps)?);
@@ -105,7 +105,13 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
         }
     };
     let registry = match &args.registry {
-        Some(path) => NamespaceRegistry::from_file(path).ok(),
+        Some(path) => match NamespaceRegistry::from_file(path) {
+            Ok(registry) => Some(registry),
+            Err(error) => {
+                eprintln!("error: failed to load registry {}: {error}", path.display());
+                exit(2);
+            }
+        },
         None => NamespaceRegistry::discover(entry).ok().flatten(),
     };
     let default_namespace = args.default_namespace.clone().or_else(|| {

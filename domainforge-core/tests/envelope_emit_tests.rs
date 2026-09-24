@@ -437,6 +437,65 @@ fn verification_contract_outer_varies_inner_stable() {
 }
 
 #[test]
+fn verification_contract_flow_keys_match_snapshot_occurrences() {
+    let dir = tempfile::tempdir().expect("temporary model directory");
+    let model = dir.path().join("duplicate-flows.sea");
+    let source = std::fs::read_to_string(fixture(VALID_MODELS[0])).expect("read model fixture");
+    std::fs::write(
+        &model,
+        format!("{source}Flow \"Token\" from \"User\" to \"Role\" quantity 1\n"),
+    )
+    .expect("write model with duplicate flow");
+
+    let snapshot = domainforge(&["envelope", "--emit", "cep", &model.to_string_lossy()]);
+    assert_eq!(snapshot.status.code(), Some(0));
+    let snapshot: Value = serde_json::from_slice(&snapshot.stdout).unwrap();
+    let expected: std::collections::HashSet<&str> = snapshot["representations"][0]
+        ["preserved_entities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|key| key.starts_with("occurrence:flow:"))
+        .collect();
+    assert_eq!(
+        expected.len(),
+        3,
+        "duplicate flows have distinct occurrence refs"
+    );
+    assert!(expected.iter().any(|key| key.ends_with(":1")));
+
+    let output = domainforge(&[
+        "envelope",
+        "--emit",
+        "verification-contract",
+        &model.to_string_lossy(),
+    ]);
+    assert_eq!(output.status.code(), Some(0));
+    let contract: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let obligations = contract["extensions"]["domainforge"]["obligations"]
+        .as_array()
+        .unwrap();
+    let actual: std::collections::HashSet<&str> = obligations
+        .iter()
+        .filter_map(|obligation| obligation["decl_key"].as_str())
+        .filter(|key| key.starts_with("occurrence:flow:"))
+        .collect();
+    assert_eq!(actual, expected);
+    let ids: std::collections::HashSet<&str> = obligations
+        .iter()
+        .filter(|obligation| {
+            obligation["decl_key"]
+                .as_str()
+                .unwrap()
+                .starts_with("occurrence:flow:")
+        })
+        .map(|obligation| obligation["obligation_id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids.len(), 3, "each flow has its own obligation");
+}
+
+#[test]
 fn verification_contract_requires_valid_model() {
     let output = domainforge(&[
         "envelope",
@@ -486,7 +545,10 @@ fn unflagged_matches_representation_and_golden_fixture() {
         o.remove("producer");
         o.remove("self_hash");
     }
-    assert_eq!(actual, golden, "unflagged output must match golden (version-independent fields)");
+    assert_eq!(
+        actual, golden,
+        "unflagged output must match golden (version-independent fields)"
+    );
 }
 
 #[test]
@@ -499,7 +561,33 @@ fn capabilities_flag_prints_valid_json() {
     assert!(modes.iter().any(|m| m == "representation"));
     assert!(modes.iter().any(|m| m == "cep"));
     assert!(modes.iter().any(|m| m == "both"));
-    assert!(modes.iter().any(|m| m == "verification_contract"));
+    assert!(modes.iter().any(|m| m == "verification-contract"));
+}
+
+#[test]
+fn explicit_invalid_registry_exits_two() {
+    let dir = tempfile::tempdir().expect("temporary registry directory");
+    let registry = dir.path().join(".sea-registry.toml");
+    let model = fixture(VALID_MODELS[0]);
+    for malformed in [false, true] {
+        if malformed {
+            std::fs::write(&registry, "not valid toml [").expect("write invalid registry");
+        }
+        let output = domainforge(&[
+            "envelope",
+            "--registry",
+            &registry.to_string_lossy(),
+            &model.to_string_lossy(),
+        ]);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("failed to load registry"), "{error}");
+        assert!(
+            error.contains(&registry.to_string_lossy().to_string()),
+            "{error}"
+        );
+    }
 }
 
 #[test]
