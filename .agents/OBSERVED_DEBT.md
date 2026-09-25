@@ -128,12 +128,11 @@ fixed and why.*
   `absorb` predates the fields (blame: untouched since c8f7300) and merges
   field-by-field, so the compiler never flagged the new fields; only the
   exhaustive-destructuring `extend_from_graph` was updated by DEBT-003.
-- **Status:** Fixed in working tree (uncommitted) on
-  `fix/debt-003-domainforge-accessors`: two `extend` lines in `absorb` plus
+- **Status:** [RESOLVED a5f0956] Fixed on `fix/debt-003-domainforge-accessors`:
+  two `extend` lines in `absorb` plus
   `test_resolve_path_keeps_declared_units_and_dimensions_in_source_order` in
   `dimension_unit_tests.rs`. Verified: new test passes, CLI
-  `parse --format json` now lists declared units/dimensions. Mark
-  `[RESOLVED <sha>]` at commit time.
+  `parse --format json` now lists declared units/dimensions.
 
 ## D9. `parse --format human` mislabels counts
 
@@ -147,11 +146,10 @@ fixed and why.*
 - **Smallest fix:** Print `graph.policy_count()` under `Policies:` (add the
   accessor if missing), add a `Patterns:` line, and either add
   `EntityInstances:` or document that `Instances:` is resource instances only.
-- **Status:** Fixed in working tree (uncommitted) on
-  `fix/debt-003-domainforge-accessors`: summary now prints `Resource instances:`,
-  `Entity instances:`, `Policies:` (= policy count), and `Patterns:`, plus
-  `test_parse_human_summary_counts` in `cli_tests.rs` (passes). Mark
-  `[RESOLVED <sha>]` at commit time.
+- **Status:** [RESOLVED a5f0956] Fixed on `fix/debt-003-domainforge-accessors`:
+  summary now prints `Resource instances:`, `Entity instances:`, `Policies:`
+  (= policy count), and `Patterns:`, plus `test_parse_human_summary_counts` in
+  `cli_tests.rs` (passes).
 
 ## D10. `fmt` rewrites mapping/projection contract keys into unparseable form
 
@@ -167,8 +165,7 @@ fixed and why.*
   a round-trip test: validate → fmt → validate on a mapping-bearing fixture.
   Until fixed, always re-validate after formatting (the `domainforge-sea`
   skill now says this).
-- **Status:** Fixed in working tree (uncommitted) on
-  `fix/debt-003-domainforge-accessors`: `formatter/printer.rs` writes mapping
-  and projection keys as identifiers (the `parser::printer` debug printer
-  already did), plus `test_fmt_mapping_projection_round_trip` in `cli_tests.rs`
-  (passes). Mark `[RESOLVED <sha>]` at commit time.
+- **Status:** [RESOLVED a5f0956] Fixed on `fix/debt-003-domainforge-accessors`:
+  `formatter/printer.rs` writes mapping and projection keys as identifiers (the
+  `parser::printer` debug printer already did), plus
+  `test_fmt_mapping_projection_round_trip` in `cli_tests.rs` (passes).
