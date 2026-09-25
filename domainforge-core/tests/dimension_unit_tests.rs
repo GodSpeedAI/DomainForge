@@ -80,6 +80,37 @@ fn test_dimension_from_str_is_case_insensitive() {
 }
 
 #[test]
+fn test_extend_rejects_conflicting_units_and_accepts_exact_duplicates() {
+    use domainforge_core::graph::Graph;
+    fn unit_graph(dimension: &str, factor: &str) -> Graph {
+        let mut graph = Graph::new();
+        graph.add_declared_unit(
+            "m".to_string(),
+            "accessors".to_string(),
+            dimension.to_string(),
+            factor.to_string(),
+            "m".to_string(),
+        );
+        graph
+    }
+
+    // Same id, different dimension: conflict.
+    let mut base = unit_graph("Length", "1");
+    let err = base
+        .extend(unit_graph("Mass", "1"))
+        .expect_err("conflicting unit must fail");
+    assert!(err.contains("Conflicting unit 'm'"), "got: {err}");
+    // Atomicity: the failed merge leaves the original untouched.
+    assert_eq!(base.all_declared_units().len(), 1);
+    assert_eq!(base.all_declared_units()[0].dimension, "Length");
+
+    // Exact duplicate: accepted.
+    base.extend(unit_graph("Length", "1"))
+        .expect("exact duplicate merges");
+    assert_eq!(base.all_declared_units().len(), 1);
+}
+
+#[test]
 fn test_resolve_path_keeps_declared_units_and_dimensions_in_source_order() {
     // The CLI resolve path (parse/validate/project) merges one converted graph
     // per namespace via Graph::absorb. Declared units/dimensions must survive
