@@ -87,15 +87,20 @@ Core commands:
 ```bash
 domainforge validate --format human model.sea
 domainforge validate --format json model.sea
-domainforge explain --format human model.sea
+domainforge validate --format json --show-source model.sea
 domainforge parse model.sea --format human
 domainforge parse model.sea --ast --format json
+domainforge parse model.sea --format json --out graph.json
 domainforge fmt --check model.sea
 domainforge fmt model.sea --out model.sea
-domainforge graph model.sea
-domainforge units model.sea
 domainforge normalize "true AND x" --json
 ```
+
+There is no `graph`, `units`, `explain`, or `eval` subcommand. Use `parse --format human` for
+counts (it distinguishes `Resource instances:` from `Entity instances:` and prints separate
+`Policies:` and `Patterns:` lines), `parse --format json` for the full graph, and
+`validate --format json --show-source` for diagnostics with source context. `test` is a stub
+that prints "Test runner not yet implemented".
 
 Projection and import:
 
@@ -106,10 +111,11 @@ domainforge project --format bpmn --created-at 2026-01-01T00:00:00Z model.sea bp
 domainforge project --format cmmn --created-at 2026-01-01T00:00:00Z model.sea cmmn_out/
 domainforge project --format lean --created-at 2026-01-01T00:00:00Z model.sea lean_out/
 domainforge project --format protobuf --include-services --package com.example model.sea api.proto
-domainforge import --format calm calm.json --out restored.sea
-domainforge import --format kg graph.ttl
 domainforge import --format sbvr vocabulary.xmi
+domainforge import --format kg graph.ttl
 domainforge validate-kg rdf_out/model.ttl
+domainforge contract model.sea
+domainforge envelope model.sea --out envelope.json
 ```
 
 Semantic pack commands:
@@ -132,10 +138,10 @@ Use `--format json` or `--format jsonl` when another tool will consume output. U
 Move from syntax to semantics:
 
 1. Run `domainforge validate --format json <file>.sea` and inspect the first parser or semantic error.
-2. Run `domainforge explain --format human <file>.sea` when suggestions matter.
+2. Re-run with `--show-source` for source context on validation failures.
 3. Run `domainforge parse --ast --format json <file>.sea` to see whether the parser accepted the structure you intended.
 4. Check declaration order, quoted names, namespace defaults, import registry, unit dimensions, ambiguous unqualified references, and aggregate comparisons.
-5. If CLI behavior is surprising in the DomainForge repository, inspect `domainforge-core/src/cli/mod.rs` and the relevant file under `domainforge-core/src/cli/commands/`.
+5. If CLI behavior is surprising in the DomainForge repository, inspect `domainforge-core/src/cli/mod.rs` and the relevant file under `domainforge-core/src/cli/`.
 
 Common fixes:
 
@@ -144,7 +150,7 @@ Common fixes:
 - Unexpected `as`: use `as:` for policy/metric bodies and `as "Unit"` only for casts.
 - Unit conversion failure: declare both units in the same dimension and verify base units.
 - Import failure: check `.sea-registry.toml`, exported symbols, aliases, and dependency cycles.
-- Formatter mismatch: run `domainforge fmt <file> --out <file>` and then re-run `domainforge fmt --check <file>`.
+- Formatter mismatch: run `domainforge fmt <file> --out <file>`, re-validate the result, then re-run `domainforge fmt --check <file>`. Mapping/projection contract keys are unquoted identifiers (`{ name: ... }`); if you ever see quoted keys in formatted output, re-validate — that form does not parse.
 
 ## Changing DomainForge Itself
 

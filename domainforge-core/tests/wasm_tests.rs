@@ -224,6 +224,76 @@ Flow "Materials" from "Warehouse" to "Factory" quantity 500
         let json_result = graph.to_json();
         assert!(json_result.is_ok());
     }
+
+    #[wasm_bindgen_test]
+    fn test_graph_exposes_parsed_declarations_in_source_order() {
+        let source = r#"
+@namespace "accessors"
+Dimension "Length"
+Unit "m" of "Length" factor 1 base "m"
+Entity "Warehouse"
+Pattern "WarehouseCode" matches "^[A-Z]+$"
+ConceptChange "warehouse_v2" @from_version v1.0.0 @to_version v2.0.0 @migration_policy mandatory @breaking_change true
+instance warehouse_1 of "Warehouse" { code: "WH" }
+Policy stock_positive per Constraint Obligation priority 3 as: 1 > 0
+Metric "stock_count" as: 1 @unit "items"
+Mapping "warehouse_calm" for calm { Entity "Warehouse" -> component { name: "warehouse" } }
+Projection "warehouse_kg" for kg { Entity "Warehouse" { label: "Warehouse" } }
+"#;
+
+        fn names(value: wasm_bindgen::JsValue) -> Vec<String> {
+            let json: serde_json::Value =
+                serde_wasm_bindgen::from_value(value).expect("accessor output is JSON");
+            json.as_array()
+                .expect("accessor output is an array")
+                .iter()
+                .map(|item| {
+                    item["name"]
+                        .as_str()
+                        .expect("declaration has a name")
+                        .to_string()
+                })
+                .collect()
+        }
+
+        let graph = Graph::parse(source.to_string()).unwrap();
+        assert_eq!(names(graph.all_policies().unwrap()), vec!["stock_positive"]);
+        assert_eq!(names(graph.all_metrics().unwrap()), vec!["stock_count"]);
+        assert_eq!(names(graph.all_mappings().unwrap()), vec!["warehouse_calm"]);
+        assert_eq!(
+            names(graph.all_projections().unwrap()),
+            vec!["warehouse_kg"]
+        );
+        assert_eq!(names(graph.all_dimensions().unwrap()), vec!["Length"]);
+        assert_eq!(names(graph.all_units().unwrap()), vec!["m"]);
+        assert_eq!(names(graph.all_patterns().unwrap()), vec!["WarehouseCode"]);
+        assert_eq!(
+            names(graph.all_concept_changes().unwrap()),
+            vec!["warehouse_v2"]
+        );
+        assert_eq!(
+            names(graph.all_entity_instances().unwrap()),
+            vec!["warehouse_1"]
+        );
+
+        // Two parses of the same source must give identical output.
+        let again = Graph::parse(source.to_string()).unwrap();
+        let snapshot = |graph: &Graph| -> String {
+            serde_json::json!({
+                "policies": names(graph.all_policies().unwrap()),
+                "metrics": names(graph.all_metrics().unwrap()),
+                "mappings": names(graph.all_mappings().unwrap()),
+                "projections": names(graph.all_projections().unwrap()),
+                "dimensions": names(graph.all_dimensions().unwrap()),
+                "units": names(graph.all_units().unwrap()),
+                "patterns": names(graph.all_patterns().unwrap()),
+                "concept_changes": names(graph.all_concept_changes().unwrap()),
+                "entity_instances": names(graph.all_entity_instances().unwrap()),
+            })
+            .to_string()
+        };
+        assert_eq!(snapshot(&graph), snapshot(&again));
+    }
 }
 
 #[cfg(feature = "wasm")]

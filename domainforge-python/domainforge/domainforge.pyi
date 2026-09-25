@@ -62,6 +62,8 @@ class Instance:
     def __init__(self, name: str, entity_type: str, namespace: Optional[str] = None) -> None: ...
     def set_field(self, key: str, value: Any) -> None: ...
     def get_field(self, key: str) -> Any: ...
+    @property
+    def fields_json(self) -> str: ...
     def __repr__(self) -> str: ...
 
 class Role:
@@ -106,6 +108,52 @@ class Projection:
 
     def __repr__(self) -> str: ...
 
+class Policy:
+    id: str
+    name: str
+    namespace: Optional[str]
+    expression: str
+    modality: str
+    kind: str
+    priority: int
+    rationale: Optional[str]
+    tags: List[str]
+
+class Metric:
+    id: str
+    name: str
+    namespace: Optional[str]
+    expression: str
+    unit: Optional[str]
+
+class Pattern:
+    id: str
+    name: str
+    namespace: Optional[str]
+    regex: str
+
+class ConceptChange:
+    id: str
+    name: str
+    namespace: Optional[str]
+    from_version: str
+    to_version: str
+    migration_policy: str
+    breaking_change: bool
+
+class SourceDimension:
+    id: str
+    name: str
+    namespace: Optional[str]
+
+class SourceUnit:
+    id: str
+    name: str
+    namespace: Optional[str]
+    dimension: str
+    base_factor: str
+    base_unit: str
+
 # =============================================================================
 # Graph
 # =============================================================================
@@ -147,6 +195,15 @@ class Graph:
     def all_instances(self) -> List[ResourceInstance]: ...
     def all_roles(self) -> List[Role]: ...
     def all_relations(self) -> List[Relation]: ...
+    def all_policies(self) -> List[Policy]: ...
+    def all_metrics(self) -> List[Metric]: ...
+    def all_mappings(self) -> List[Mapping]: ...
+    def all_projections(self) -> List[Projection]: ...
+    def all_dimensions(self) -> List[SourceDimension]: ...
+    def all_units(self) -> List[SourceUnit]: ...
+    def all_patterns(self) -> List[Pattern]: ...
+    def all_concept_changes(self) -> List[ConceptChange]: ...
+    def all_entity_instances(self) -> List[Instance]: ...
     def evaluate_policy(self, policy_json: str) -> EvaluationResult: ...
     def set_evaluation_mode(self, use_three_valued_logic: bool) -> None: ...
     def use_three_valued_logic(self) -> bool: ...

@@ -124,6 +124,12 @@ fn domainforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::primitives::Instance>()?;
     m.add_class::<python::primitives::Mapping>()?;
     m.add_class::<python::primitives::Projection>()?;
+    m.add_class::<python::primitives::Metric>()?;
+    m.add_class::<python::primitives::Policy>()?;
+    m.add_class::<python::primitives::SourceDimension>()?;
+    m.add_class::<python::primitives::SourceUnit>()?;
+    m.add_class::<python::primitives::Pattern>()?;
+    m.add_class::<python::primitives::ConceptChange>()?;
     m.add_class::<python::graph::Graph>()?;
     m.add_class::<python::primitives::Role>()?;
     m.add_class::<python::primitives::Relation>()?;

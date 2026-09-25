@@ -8,7 +8,10 @@ use pyo3::prelude::*;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::primitives::{Entity, Flow, Relation, Resource, ResourceInstance, Role};
+use super::primitives::{
+    ConceptChange, Entity, Flow, Instance, Mapping, Metric, Pattern, Policy, Projection, Relation,
+    Resource, ResourceInstance, Role, SourceDimension, SourceUnit,
+};
 
 #[pyclass(from_py_object)]
 #[derive(Clone)]
@@ -243,6 +246,78 @@ impl Graph {
             .all_relations()
             .into_iter()
             .map(|relation| Relation::from_rust(relation.clone()))
+            .collect()
+    }
+
+    fn all_policies(&self) -> Vec<Policy> {
+        self.inner
+            .all_policies()
+            .into_iter()
+            .map(|p| Policy::from_rust(p.clone()))
+            .collect()
+    }
+
+    fn all_metrics(&self) -> Vec<Metric> {
+        self.inner
+            .all_metrics()
+            .into_iter()
+            .map(|m| Metric::from_rust(m.clone()))
+            .collect()
+    }
+
+    fn all_mappings(&self) -> Vec<Mapping> {
+        self.inner
+            .all_mappings()
+            .into_iter()
+            .map(|m| Mapping::from_rust(m.clone()))
+            .collect()
+    }
+
+    fn all_projections(&self) -> Vec<Projection> {
+        self.inner
+            .all_projections()
+            .into_iter()
+            .map(|p| Projection::from_rust(p.clone()))
+            .collect()
+    }
+
+    fn all_dimensions(&self) -> Vec<SourceDimension> {
+        self.inner
+            .all_declared_dimensions()
+            .into_iter()
+            .map(|d| SourceDimension::from_rust(d.clone()))
+            .collect()
+    }
+
+    fn all_units(&self) -> Vec<SourceUnit> {
+        self.inner
+            .all_declared_units()
+            .into_iter()
+            .map(|u| SourceUnit::from_rust(u.clone()))
+            .collect()
+    }
+
+    fn all_patterns(&self) -> Vec<Pattern> {
+        self.inner
+            .all_patterns()
+            .into_iter()
+            .map(|p| Pattern::from_rust(p.clone()))
+            .collect()
+    }
+
+    fn all_concept_changes(&self) -> Vec<ConceptChange> {
+        self.inner
+            .all_concept_changes()
+            .into_iter()
+            .map(|c| ConceptChange::from_rust(c.clone()))
+            .collect()
+    }
+
+    fn all_entity_instances(&self) -> Vec<Instance> {
+        self.inner
+            .all_entity_instances()
+            .into_iter()
+            .map(|i| Instance::from_rust(i.clone()))
             .collect()
     }
 

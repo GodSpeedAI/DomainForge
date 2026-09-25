@@ -7,7 +7,10 @@ use napi_derive::napi;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::primitives::{Entity, Flow, Relation, Resource, ResourceInstance, Role};
+use super::primitives::{
+    ConceptChange, DeclaredDimension, DeclaredUnit, Entity, Flow, Instance, Mapping, Metric,
+    Pattern, Policy, Projection, Relation, Resource, ResourceInstance, Role,
+};
 
 #[napi]
 pub struct Graph {
@@ -296,6 +299,87 @@ impl Graph {
             .all_relations()
             .into_iter()
             .map(|relation| Relation::from_rust(relation.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_policies(&self) -> Vec<Policy> {
+        self.inner
+            .all_policies()
+            .into_iter()
+            .map(|p| Policy::from_rust(p.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_metrics(&self) -> Vec<Metric> {
+        self.inner
+            .all_metrics()
+            .into_iter()
+            .map(|m| Metric::from_rust(m.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_mappings(&self) -> Vec<Mapping> {
+        self.inner
+            .all_mappings()
+            .into_iter()
+            .map(|m| Mapping::from_rust(m.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_projections(&self) -> Vec<Projection> {
+        self.inner
+            .all_projections()
+            .into_iter()
+            .map(|p| Projection::from_rust(p.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_dimensions(&self) -> Vec<DeclaredDimension> {
+        self.inner
+            .all_declared_dimensions()
+            .into_iter()
+            .map(|d| DeclaredDimension::from_rust(d.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_units(&self) -> Vec<DeclaredUnit> {
+        self.inner
+            .all_declared_units()
+            .into_iter()
+            .map(|u| DeclaredUnit::from_rust(u.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_patterns(&self) -> Vec<Pattern> {
+        self.inner
+            .all_patterns()
+            .into_iter()
+            .map(|p| Pattern::from_rust(p.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_concept_changes(&self) -> Vec<ConceptChange> {
+        self.inner
+            .all_concept_changes()
+            .into_iter()
+            .map(|c| ConceptChange::from_rust(c.clone()))
+            .collect()
+    }
+
+    #[napi]
+    pub fn all_entity_instances(&self) -> Vec<Instance> {
+        self.inner
+            .all_entity_instances()
+            .into_iter()
+            .map(|i| Instance::from_rust(i.clone()))
             .collect()
     }
 

@@ -125,3 +125,31 @@ def test_graph_all_methods():
     
     all_flows = graph.all_flows()
     assert len(all_flows) == 1
+
+
+def test_graph_exposes_parsed_declarations_in_source_order():
+    source = '''
+    @namespace "accessors"
+    Dimension "Length"
+    Unit "m" of "Length" factor 1 base "m"
+    Entity "Warehouse"
+    Pattern "WarehouseCode" matches "^[A-Z]+$"
+    ConceptChange "warehouse_v2" @from_version v1.0.0 @to_version v2.0.0 @migration_policy mandatory @breaking_change true
+    instance warehouse_1 of "Warehouse" { code: "WH" }
+    Policy stock_positive per Constraint Obligation priority 3 as: 1 > 0
+    Metric "stock_count" as: 1 @unit "items"
+    Mapping "warehouse_calm" for calm { Entity "Warehouse" -> component { name: "warehouse" } }
+    Projection "warehouse_kg" for kg { Entity "Warehouse" { label: "Warehouse" } }
+    '''
+    graph = domainforge.Graph.parse(source)
+
+    assert [policy.name for policy in graph.all_policies()] == ["stock_positive"]
+    assert graph.all_policies()[0].expression == "(1.0 > 0.0)"
+    assert graph.all_metrics()[0].unit == "items"
+    assert graph.all_mappings()[0].target_format == "CALM"
+    assert graph.all_projections()[0].target_format == "KG"
+    assert graph.all_dimensions()[0].name == "Length"
+    assert graph.all_units()[0].base_factor == "1"
+    assert graph.all_patterns()[0].regex == "^[A-Z]+$"
+    assert graph.all_concept_changes()[0].namespace == "accessors"
+    assert graph.all_entity_instances()[0].fields_json == '{"code":"WH"}'

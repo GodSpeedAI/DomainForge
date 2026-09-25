@@ -104,8 +104,10 @@ pub fn run(args: ParseArgs) -> Result<()> {
                  Flows: {}\n\
                  Roles: {}\n\
                  Relations: {}\n\
-                 Instances: {}\n\
-                 Policies: {}",
+                 Resource instances: {}\n\
+                 Entity instances: {}\n\
+                 Policies: {}\n\
+                 Patterns: {}",
                 args.input.display(),
                 graph.entity_count(),
                 graph.resource_count(),
@@ -113,6 +115,8 @@ pub fn run(args: ParseArgs) -> Result<()> {
                 graph.role_count(),
                 graph.relation_count(),
                 graph.instance_count(),
+                graph.entity_instance_count(),
+                graph.policy_count(),
                 graph.pattern_count()
             )
         }

@@ -256,6 +256,15 @@ export declare class Graph {
   allInstances(): Array<ResourceInstance>
   allRoles(): Array<Role>
   allRelations(): Array<Relation>
+  allPolicies(): Array<Policy>
+  allMetrics(): Array<Metric>
+  allMappings(): Array<Mapping>
+  allProjections(): Array<Projection>
+  allDimensions(): Array<DeclaredDimension>
+  allUnits(): Array<DeclaredUnit>
+  allPatterns(): Array<Pattern>
+  allConceptChanges(): Array<ConceptChange>
+  allEntityInstances(): Array<Instance>
   static parse(source: string): Graph
   exportCalm(): string
   static importCalm(calmJson: string): Graph
@@ -504,23 +513,71 @@ export declare class Instance {
   get namespace(): string | null
   setField(key: string, valueJson: string): void
   getField(key: string): string | null
+  get fieldsJson(): string
   toString(): string
 }
 export declare class Metric {
+  get id(): string
   get name(): string
   get namespace(): string | null
+  get expression(): string
   get threshold(): number | null
   get target(): number | null
   get unit(): string | null
   get severity(): string | null
 }
 export declare class Mapping {
+  get id(): string
   get name(): string
+  get namespace(): string | null
   get targetFormat(): string
+  get rulesJson(): string
 }
 export declare class Projection {
+  get id(): string
   get name(): string
+  get namespace(): string | null
   get targetFormat(): string
+  get overridesJson(): string
+}
+export declare class Policy {
+  get id(): string
+  get name(): string
+  get namespace(): string | null
+  get expression(): string
+  get modality(): string
+  get kind(): string
+  get priority(): number
+  get rationale(): string | null
+  get tags(): Array<string>
+}
+export declare class DeclaredDimension {
+  get id(): string
+  get name(): string
+  get namespace(): string | null
+}
+export declare class DeclaredUnit {
+  get id(): string
+  get name(): string
+  get namespace(): string | null
+  get dimension(): string
+  get baseFactor(): string
+  get baseUnit(): string
+}
+export declare class Pattern {
+  get id(): string
+  get name(): string
+  get namespace(): string | null
+  get regex(): string
+}
+export declare class ConceptChange {
+  get id(): string
+  get name(): string
+  get namespace(): string | null
+  get fromVersion(): string
+  get toVersion(): string
+  get migrationPolicy(): string
+  get breakingChange(): boolean
 }
 export declare class Role {
   constructor(name: string, namespace?: string | undefined | null)

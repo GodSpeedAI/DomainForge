@@ -197,7 +197,9 @@ Semantics:
 
 ### Instances
 
-Instances attach data to an entity type.
+Instances attach data to an entity type. There are two flavors: `instance x of "EntityType"`
+creates an *entity instance*; `Instance x of "ResourceType"` creates a *resource instance*.
+(The keyword is case-insensitive; what matters is whether the target is an entity or a resource.)
 
 ```sea
 Entity "Vendor"
@@ -212,10 +214,13 @@ Instance vendor_123 of "Vendor" {
 
 Semantics:
 
-- The entity type must exist in the same namespace.
+- The entity type must exist in the same namespace as the instance. An instance in the file
+  `@namespace` cannot reference an entity declared `in some_other_domain` — validation fails
+  with `Entity 'X' not found in namespace '...'`.
 - Instance names are identifiers.
 - Field names must be unique within the instance.
 - Instance fields can store strings, numbers, booleans, variables as strings, quantity literals, and time literals. Complex expressions are rejected when the AST converts the instance to graph data.
+- Note: `parse --format human` reports `Resource instances:` and `Entity instances:` on separate lines; entity instances are also listed in `parse --format json` under `entity_instances`.
 
 ## Declare Units
 
@@ -430,6 +435,11 @@ Supported primitive types in these contracts:
 - `Policy`
 - `Instance`
 
+Rules:
+
+- Contract keys are unquoted identifiers (`{ name: "warehouse" }`), not JSON-style quoted
+  keys. Re-validating after `domainforge fmt` remains good practice.
+
 ## Use Imports Correctly
 
 Use the current import grammar:
@@ -482,6 +492,7 @@ A file can parse but still fail graph construction or validation. Common semanti
 - **Syntax error near a concept name**: Quote the concept name, for example `Entity "Customer"`.
 - **Unexpected token near `as`**: Use `as:` only for `Policy` and `Metric` bodies. Use `as "Unit"` only as an expression cast.
 - **Unknown entity or resource**: Add the missing declaration or fix the namespace/reference name.
+- **Entity 'X' not found in namespace '...'**: the instance's entity type lives in a different namespace. Declare the entity without `in <domain>` (so it joins the file `@namespace`) or move the instance to match.
 - **Ambiguous reference**: Move the referenced declaration into the default namespace for the file or rename one declaration.
 - **Unit conversion failed**: Define both units in the same dimension and verify their base units.
 - **Metric duration failed**: Use seconds, minutes, hours, or days, or their short forms.
@@ -489,6 +500,8 @@ A file can parse but still fail graph construction or validation. Common semanti
 
 ## Links
 
-- Tutorial: [First SEA Model](../tutorials/first-sea-model.md)
-- How-tos: [Parse SEA Files](parse-sea-files.md), [Define Policies](define-policies.md), [Create Custom Units](create-custom-units.md), [Use Modules and Imports](use-modules-imports.md)
-- Reference: [Grammar Spec](../reference/grammar-spec.md), [CLI Commands](../reference/cli-commands.md), [Primitives API](../reference/primitives-api.md), [Policy Evaluation Logic](../explanations/policy-evaluation-logic.md)
+Repo-root-relative paths (they resolve inside the DomainForge repository):
+
+- Tutorial: `docs/tutorials/first-sea-model.md`
+- How-tos: `docs/how-tos/parse-sea-files.md`, `docs/how-tos/define-policies.md`, `docs/how-tos/create-custom-units.md`, `docs/how-tos/use-modules-imports.md`
+- Reference: `docs/reference/grammar-spec.md`, `docs/reference/cli-commands.md`, `docs/reference/primitives-api.md`, `docs/explanations/policy-evaluation-logic.md`

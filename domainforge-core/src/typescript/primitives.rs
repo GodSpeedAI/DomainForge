@@ -3,6 +3,11 @@ use crate::primitives::{
     ProjectionContract as RustProjection, RelationType as RustRelation, Resource as RustResource,
     ResourceInstance as RustResourceInstance, Role as RustRole,
 };
+use crate::{
+    graph::{DeclaredDimension as GraphDeclaredDimension, DeclaredUnit as GraphDeclaredUnit},
+    policy::Policy as RustPolicy,
+};
+use crate::{patterns::Pattern as RustPattern, primitives::ConceptChange as RustConceptChange};
 
 use crate::units::unit_from_string;
 use napi::bindgen_prelude::*;
@@ -452,6 +457,12 @@ impl Instance {
         }
     }
 
+    #[napi(getter)]
+    pub fn fields_json(&self) -> Result<String> {
+        serde_json::to_string(self.inner.fields())
+            .map_err(|e| Error::from_reason(format!("Failed to serialize fields: {e}")))
+    }
+
     #[napi]
     pub fn to_string(&self) -> String {
         format!(
@@ -486,6 +497,10 @@ pub struct Metric {
 #[napi]
 impl Metric {
     #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[napi(getter)]
     pub fn name(&self) -> String {
         self.inner.name.clone()
     }
@@ -497,6 +512,11 @@ impl Metric {
         } else {
             Some(self.inner.namespace.clone())
         }
+    }
+
+    #[napi(getter)]
+    pub fn expression(&self) -> String {
+        self.inner.expression.to_string()
     }
 
     #[napi(getter)]
@@ -542,13 +562,27 @@ pub struct Mapping {
 #[napi]
 impl Mapping {
     #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[napi(getter)]
     pub fn name(&self) -> String {
         self.inner.name().to_string()
     }
 
     #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+
+    #[napi(getter)]
     pub fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())
+    }
+
+    #[napi(getter)]
+    pub fn rules_json(&self) -> Result<String> {
+        serde_json::to_string(self.inner.rules()).map_err(|e| Error::from_reason(e.to_string()))
     }
 }
 
@@ -574,13 +608,209 @@ pub struct Projection {
 #[napi]
 impl Projection {
     #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[napi(getter)]
     pub fn name(&self) -> String {
         self.inner.name().to_string()
     }
 
     #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+
+    #[napi(getter)]
     pub fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())
+    }
+
+    #[napi(getter)]
+    pub fn overrides_json(&self) -> Result<String> {
+        serde_json::to_string(self.inner.overrides()).map_err(|e| Error::from_reason(e.to_string()))
+    }
+}
+
+#[napi]
+pub struct Policy {
+    inner: RustPolicy,
+}
+
+#[napi]
+impl Policy {
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace != "default").then(|| self.inner.namespace.clone())
+    }
+    #[napi(getter)]
+    pub fn expression(&self) -> String {
+        self.inner.expression().to_string()
+    }
+    #[napi(getter)]
+    pub fn modality(&self) -> String {
+        format!("{:?}", self.inner.modality)
+    }
+    #[napi(getter)]
+    pub fn kind(&self) -> String {
+        format!("{:?}", self.inner.kind)
+    }
+    #[napi(getter)]
+    pub fn priority(&self) -> i32 {
+        self.inner.priority
+    }
+    #[napi(getter)]
+    pub fn rationale(&self) -> Option<String> {
+        self.inner.rationale.clone()
+    }
+    #[napi(getter)]
+    pub fn tags(&self) -> Vec<String> {
+        self.inner.tags.clone()
+    }
+}
+impl Policy {
+    pub fn from_rust(inner: RustPolicy) -> Self {
+        Self { inner }
+    }
+}
+
+#[napi]
+pub struct DeclaredDimension {
+    inner: GraphDeclaredDimension,
+}
+#[napi]
+impl DeclaredDimension {
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace != "default").then(|| self.inner.namespace.clone())
+    }
+}
+impl DeclaredDimension {
+    pub fn from_rust(inner: GraphDeclaredDimension) -> Self {
+        Self { inner }
+    }
+}
+
+#[napi]
+pub struct DeclaredUnit {
+    inner: GraphDeclaredUnit,
+}
+#[napi]
+impl DeclaredUnit {
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace != "default").then(|| self.inner.namespace.clone())
+    }
+    #[napi(getter)]
+    pub fn dimension(&self) -> String {
+        self.inner.dimension.clone()
+    }
+    #[napi(getter)]
+    pub fn base_factor(&self) -> String {
+        self.inner.base_factor.clone()
+    }
+    #[napi(getter)]
+    pub fn base_unit(&self) -> String {
+        self.inner.base_unit.clone()
+    }
+}
+impl DeclaredUnit {
+    pub fn from_rust(inner: GraphDeclaredUnit) -> Self {
+        Self { inner }
+    }
+}
+
+#[napi]
+pub struct Pattern {
+    inner: RustPattern,
+}
+#[napi]
+impl Pattern {
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+    #[napi(getter)]
+    pub fn regex(&self) -> String {
+        self.inner.regex().to_string()
+    }
+}
+impl Pattern {
+    pub fn from_rust(inner: RustPattern) -> Self {
+        Self { inner }
+    }
+}
+
+#[napi]
+pub struct ConceptChange {
+    inner: RustConceptChange,
+}
+#[napi]
+impl ConceptChange {
+    #[napi(getter)]
+    pub fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[napi(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+    #[napi(getter)]
+    pub fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+    #[napi(getter)]
+    pub fn from_version(&self) -> String {
+        self.inner.from_version().to_string()
+    }
+    #[napi(getter)]
+    pub fn to_version(&self) -> String {
+        self.inner.to_version().to_string()
+    }
+    #[napi(getter)]
+    pub fn migration_policy(&self) -> String {
+        self.inner.migration_policy().to_string()
+    }
+    #[napi(getter)]
+    pub fn breaking_change(&self) -> bool {
+        self.inner.is_breaking_change()
+    }
+}
+impl ConceptChange {
+    pub fn from_rust(inner: RustConceptChange) -> Self {
+        Self { inner }
     }
 }
 

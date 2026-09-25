@@ -123,6 +123,42 @@ describe('Graph', () => {
     expect(graph.flowCount()).toBe(1);
   });
 
+  it('exposes every parsed governance declaration in source order', () => {
+    const source = `
+      @namespace "accessors"
+      Dimension "Length"
+      Unit "m" of "Length" factor 1 base "m"
+      Entity "Warehouse"
+      Policy stock_positive per Constraint Obligation priority 3 as: 1 > 0
+      Metric "stock_count" as: 1 @unit "items"
+      Mapping "warehouse_calm" for calm { Entity "Warehouse" -> component { name: "warehouse" } }
+      Projection "warehouse_kg" for kg { Entity "Warehouse" { label: "Warehouse" } }
+    `;
+
+    const first = Graph.parse(source);
+    const second = Graph.parse(source);
+
+    expect(first.allPolicies().map(policy => policy.name)).toEqual(['stock_positive']);
+    expect(first.allPolicies()[0].namespace).toBe('accessors');
+    expect(first.allPolicies()[0].expression).toBe('(1.0 > 0.0)');
+    expect(first.allPolicies()[0].modality).toBe('Obligation');
+    expect(first.allPolicies()[0].kind).toBe('Constraint');
+    expect(first.allMetrics()[0].name).toBe('stock_count');
+    expect(first.allMetrics()[0].namespace).toBe('accessors');
+    expect(first.allMetrics()[0].expression).toBe('1.0');
+    expect(first.allMetrics()[0].unit).toBe('items');
+    expect(first.allMappings()[0].targetFormat).toBe('CALM');
+    expect(first.allProjections()[0].targetFormat).toBe('KG');
+    expect(first.allDimensions()[0].name).toBe('Length');
+    expect(first.allDimensions()[0].namespace).toBe('accessors');
+    expect(first.allUnits()[0].name).toBe('m');
+    expect(first.allUnits()[0].namespace).toBe('accessors');
+    expect(first.allUnits()[0].dimension).toBe('Length');
+    expect(first.allUnits()[0].baseFactor).toBe('1');
+    expect(first.allUnits()[0].baseUnit).toBe('m');
+    expect(first.allUnits().map(unit => unit.id)).toEqual(second.allUnits().map(unit => unit.id));
+  });
+
   it('parses complex DSL with namespaces', () => {
     const source = `
       Entity "Main Warehouse" in logistics

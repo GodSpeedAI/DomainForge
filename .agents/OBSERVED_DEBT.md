@@ -104,3 +104,71 @@ with the commit that did it).
 *Add new items below as noticed during ongoing work. Mark `[RESOLVED <sha>]`
 when a commit closes one. Do not delete resolved entries — they record what was
 fixed and why.*
+
+## D8. `Graph::absorb` drops `declared_dimensions`/`declared_units`
+
+- **Where:** `domainforge-core/src/graph/mod.rs:194` (`absorb` merges every
+  collection except the two declared unit-registry slices). The CLI path
+  (`parse`, `validate`, `project` via `build_graph_from_set` in
+  `domainforge-core/src/application/resolve.rs`) absorbs one converted graph per
+  namespace, so CLI-produced graphs always carry empty `declared_units` and
+  `declared_dimensions`. Binding `Graph::parse` (`parse_to_graph`) is unaffected.
+- **Impact:** `domainforge parse --format json` omits declared units/dimensions
+  that the bindings return; any CLI consumer reading unit declarations from
+  graph JSON silently gets none. Found 2026-09-25 while verifying the
+  `domainforge-sea` skill: a fixture with `Unit "m" of "Length"` validates clean
+  and `Graph.parse` returns it, but CLI graph JSON shows `"declared_units": {}`.
+- **Smallest fix:** Add `self.declared_dimensions.extend(other.declared_dimensions);`
+  and `self.declared_units.extend(other.declared_units);` to `absorb`, plus a
+  Rust test parsing a unit-bearing fixture through `build_graph_from_set`
+  (or CLI `parse --format json`) asserting non-empty `declared_units`.
+  Left unfixed: the operator is mid-release on `fix/debt-003-domainforge-accessors`
+  and the fix, though two lines, would widen that diff.
+- **Why absorb excluded them (found 2026-09-25):** no deliberate decision.
+  `absorb` predates the fields (blame: untouched since c8f7300) and merges
+  field-by-field, so the compiler never flagged the new fields; only the
+  exhaustive-destructuring `extend_from_graph` was updated by DEBT-003.
+- **Status:** Fixed in working tree (uncommitted) on
+  `fix/debt-003-domainforge-accessors`: two `extend` lines in `absorb` plus
+  `test_resolve_path_keeps_declared_units_and_dimensions_in_source_order` in
+  `dimension_unit_tests.rs`. Verified: new test passes, CLI
+  `parse --format json` now lists declared units/dimensions. Mark
+  `[RESOLVED <sha>]` at commit time.
+
+## D9. `parse --format human` mislabels counts
+
+- **Where:** `domainforge-core/src/cli/parse.rs` human branch prints
+  `Policies: {}` with `graph.pattern_count()` and `Instances: {}` with
+  `graph.instance_count()` (resource instances only; entity instances from
+  `instance x of "Entity"` are excluded).
+- **Impact:** A model with 1 policy + 1 pattern prints `Policies: 1` for the
+  wrong reason; a model with only entity instances prints `Instances: 0`.
+  Misleads agents and humans reading CLI output.
+- **Smallest fix:** Print `graph.policy_count()` under `Policies:` (add the
+  accessor if missing), add a `Patterns:` line, and either add
+  `EntityInstances:` or document that `Instances:` is resource instances only.
+- **Status:** Fixed in working tree (uncommitted) on
+  `fix/debt-003-domainforge-accessors`: summary now prints `Resource instances:`,
+  `Entity instances:`, `Policies:` (= policy count), and `Patterns:`, plus
+  `test_parse_human_summary_counts` in `cli_tests.rs` (passes). Mark
+  `[RESOLVED <sha>]` at commit time.
+
+## D10. `fmt` rewrites mapping/projection contract keys into unparseable form
+
+- **Where:** `domainforge fmt` emits quoted keys in mapping/projection bodies
+  (`Entity "Warehouse" -> component { "name": "warehouse" }`), but the grammar
+  expects unquoted identifiers there — the formatted file fails to parse
+  (`Syntax error ... expected identifier`). Verified 2026-09-25: a fixture that
+  validates clean (`0 violations`) breaks after `fmt --out`.
+- **Impact:** `fmt` is not round-trip safe on files with Mapping/Projection
+  contracts; running it in CI or by habit corrupts valid files.
+- **Smallest fix:** Make the formatter emit unquoted identifier keys in mapping
+  rule / projection override position (grammar-side fix in the fmt module), plus
+  a round-trip test: validate → fmt → validate on a mapping-bearing fixture.
+  Until fixed, always re-validate after formatting (the `domainforge-sea`
+  skill now says this).
+- **Status:** Fixed in working tree (uncommitted) on
+  `fix/debt-003-domainforge-accessors`: `formatter/printer.rs` writes mapping
+  and projection keys as identifiers (the `parser::printer` debug printer
+  already did), plus `test_fmt_mapping_projection_round_trip` in `cli_tests.rs`
+  (passes). Mark `[RESOLVED <sha>]` at commit time.

@@ -685,7 +685,9 @@ impl Formatter {
                         if !first {
                             self.write(", ");
                         }
-                        self.write_string_literal(k);
+                        // Grammar `mapping_field` takes an identifier key, not
+                        // a string literal; quoting it breaks re-parsing.
+                        self.write(k);
                         self.write(": ");
                         self.write(&v.to_string());
                         first = false;
@@ -721,7 +723,9 @@ impl Formatter {
                         if !first {
                             self.write(", ");
                         }
-                        self.write_string_literal(k);
+                        // Grammar `projection_field` takes an identifier key,
+                        // not a string literal; quoting it breaks re-parsing.
+                        self.write(k);
                         self.write(": ");
                         self.write(&v.to_string());
                         first = false;
