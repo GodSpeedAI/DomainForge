@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This is intentionally graph-owned rather than read from `UnitRegistry`:
 /// the registry also contains ambient builtins and uses an unordered map.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeclaredDimension {
     pub id: ConceptId,
     pub name: String,
@@ -22,7 +22,7 @@ pub struct DeclaredDimension {
 }
 
 /// A unit declared by the parsed SEA source.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeclaredUnit {
     pub id: ConceptId,
     pub name: String,
@@ -1001,8 +1001,39 @@ impl Graph {
             self.add_projection(projection)?;
         }
 
-        self.declared_dimensions.extend(declared_dimensions);
-        self.declared_units.extend(declared_units);
+        for (id, dimension) in declared_dimensions {
+            match self.declared_dimensions.get(&id) {
+                Some(existing) if existing != &dimension => {
+                    return Err(format!(
+                        "Conflicting dimension '{}' already declared (existing namespace='{}'; new namespace='{}')",
+                        dimension.name, existing.namespace, dimension.namespace
+                    ));
+                }
+                _ => {
+                    self.declared_dimensions.insert(id, dimension);
+                }
+            }
+        }
+
+        for (id, unit) in declared_units {
+            match self.declared_units.get(&id) {
+                Some(existing) if existing != &unit => {
+                    return Err(format!(
+                        "Conflicting unit '{}' already declared (existing: dimension={}, base_factor={}, base_unit={}; new: dimension={}, base_factor={}, base_unit={})",
+                        unit.name,
+                        existing.dimension,
+                        existing.base_factor,
+                        existing.base_unit,
+                        unit.dimension,
+                        unit.base_factor,
+                        unit.base_unit
+                    ));
+                }
+                _ => {
+                    self.declared_units.insert(id, unit);
+                }
+            }
+        }
 
         Ok(())
     }
