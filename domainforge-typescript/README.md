@@ -18,6 +18,12 @@ TypeScript/Node.js bindings for the **SEA DSL** (Semantic Enterprise Architectur
 - ⚡ **Native Performance** — Rust-powered core via N-API
 - 📦 **Full TypeScript Support** — Complete type definitions included
 
+Parsed graphs also expose declaration-ordered read access to policies, metrics,
+mappings, projections, patterns, concept changes, entity instances, and source
+declared dimensions and units. `DeclaredUnit.baseFactor` is an exact decimal
+string; mapping and projection rule details are available through `rulesJson`
+and `overridesJson`.
+
 ## Installation
 
 ```bash

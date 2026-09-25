@@ -78,3 +78,66 @@ fn test_dimension_from_str_is_case_insensitive() {
     let c = Dimension::from_str("MyDim").unwrap();
     assert_eq!(c, Dimension::Custom("mydim".to_string()));
 }
+
+#[test]
+fn test_extend_rejects_conflicting_units_and_accepts_exact_duplicates() {
+    use domainforge_core::graph::Graph;
+    fn unit_graph(dimension: &str, factor: &str) -> Graph {
+        let mut graph = Graph::new();
+        graph.add_declared_unit(
+            "m".to_string(),
+            "accessors".to_string(),
+            dimension.to_string(),
+            factor.to_string(),
+            "m".to_string(),
+        );
+        graph
+    }
+
+    // Same id, different dimension: conflict.
+    let mut base = unit_graph("Length", "1");
+    let err = base
+        .extend(unit_graph("Mass", "1"))
+        .expect_err("conflicting unit must fail");
+    assert!(err.contains("Conflicting unit 'm'"), "got: {err}");
+    // Atomicity: the failed merge leaves the original untouched.
+    assert_eq!(base.all_declared_units().len(), 1);
+    assert_eq!(base.all_declared_units()[0].dimension, "Length");
+
+    // Exact duplicate: accepted.
+    base.extend(unit_graph("Length", "1"))
+        .expect("exact duplicate merges");
+    assert_eq!(base.all_declared_units().len(), 1);
+}
+
+#[test]
+fn test_resolve_path_keeps_declared_units_and_dimensions_in_source_order() {
+    // The CLI resolve path (parse/validate/project) merges one converted graph
+    // per namespace via Graph::absorb. Declared units/dimensions must survive
+    // that merge exactly like every other collection.
+    use domainforge_core::application::resolve_application_graph;
+    use serde_json::json;
+    let sources = json!({
+        "main.sea": "@namespace \"accessors\"\nDimension \"Length\"\nUnit \"m\" of \"Length\" factor 1 base \"m\"\nUnit \"km\" of \"Length\" factor 1000 base \"m\"\nEntity \"Warehouse\"\n",
+    })
+    .to_string();
+    let graph = resolve_application_graph("main.sea", &sources).expect("resolves");
+    let dims: Vec<String> = graph
+        .all_declared_dimensions()
+        .iter()
+        .map(|d| d.name.clone())
+        .collect();
+    assert_eq!(dims, vec!["Length".to_string()]);
+    let units: Vec<(String, String)> = graph
+        .all_declared_units()
+        .iter()
+        .map(|u| (u.name.clone(), u.base_factor.clone()))
+        .collect();
+    assert_eq!(
+        units,
+        vec![
+            ("m".to_string(), "1".to_string()),
+            ("km".to_string(), "1000".to_string())
+        ]
+    );
+}

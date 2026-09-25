@@ -6,6 +6,11 @@ use crate::primitives::{
     ResourceInstance as RustResourceInstance, Role as RustRole,
 };
 use crate::units::unit_from_string;
+use crate::{
+    graph::{DeclaredDimension, DeclaredUnit},
+    policy::Policy as RustPolicy,
+};
+use crate::{patterns::Pattern as RustPattern, primitives::ConceptChange as RustConceptChange};
 use pyo3::exceptions::{PyKeyError, PyValueError};
 use pyo3::prelude::*;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
@@ -451,6 +456,12 @@ impl Instance {
         }
     }
 
+    #[getter]
+    fn fields_json(&self) -> PyResult<String> {
+        serde_json::to_string(self.inner.fields())
+            .map_err(|e| PyValueError::new_err(format!("Failed to serialize fields: {e}")))
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "Instance(id='{}', name='{}', entity_type='{}', namespace={:?})",
@@ -481,6 +492,10 @@ pub struct Metric {
 #[pymethods]
 impl Metric {
     #[getter]
+    fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[getter]
     fn name(&self) -> String {
         self.inner.name.clone()
     }
@@ -492,6 +507,11 @@ impl Metric {
         } else {
             Some(self.inner.namespace.clone())
         }
+    }
+
+    #[getter]
+    fn expression(&self) -> String {
+        self.inner.expression.to_string()
     }
 
     #[getter]
@@ -548,13 +568,27 @@ pub struct Mapping {
 #[pymethods]
 impl Mapping {
     #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[getter]
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
 
     #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+
+    #[getter]
     fn target_format(&self) -> String {
         format!("{}", self.inner.target_format())
+    }
+
+    #[getter]
+    fn rules_json(&self) -> PyResult<String> {
+        serde_json::to_string(self.inner.rules()).map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     fn __repr__(&self) -> String {
@@ -582,11 +616,92 @@ pub struct Projection {
     inner: RustProjection,
 }
 
+#[pyclass(from_py_object)]
+#[derive(Clone)]
+pub struct Pattern {
+    inner: RustPattern,
+}
 #[pymethods]
-impl Projection {
+impl Pattern {
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
     #[getter]
     fn name(&self) -> String {
         self.inner.name().to_string()
+    }
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+    #[getter]
+    fn regex(&self) -> String {
+        self.inner.regex().to_string()
+    }
+}
+impl Pattern {
+    pub fn from_rust(inner: RustPattern) -> Self {
+        Self { inner }
+    }
+}
+
+#[pyclass(from_py_object)]
+#[derive(Clone)]
+pub struct ConceptChange {
+    inner: RustConceptChange,
+}
+#[pymethods]
+impl ConceptChange {
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
+    }
+    #[getter]
+    fn from_version(&self) -> String {
+        self.inner.from_version().to_string()
+    }
+    #[getter]
+    fn to_version(&self) -> String {
+        self.inner.to_version().to_string()
+    }
+    #[getter]
+    fn migration_policy(&self) -> String {
+        self.inner.migration_policy().to_string()
+    }
+    #[getter]
+    fn breaking_change(&self) -> bool {
+        self.inner.is_breaking_change()
+    }
+}
+impl ConceptChange {
+    pub fn from_rust(inner: RustConceptChange) -> Self {
+        Self { inner }
+    }
+}
+
+#[pymethods]
+impl Projection {
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id().to_string()
+    }
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace() != "default").then(|| self.inner.namespace().to_string())
     }
 
     #[getter]
@@ -600,6 +715,126 @@ impl Projection {
             self.inner.name(),
             self.inner.target_format()
         )
+    }
+
+    #[getter]
+    fn overrides_json(&self) -> PyResult<String> {
+        serde_json::to_string(self.inner.overrides())
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+}
+
+#[pyclass(from_py_object)]
+#[derive(Clone)]
+pub struct Policy {
+    inner: RustPolicy,
+}
+#[pymethods]
+impl Policy {
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace != "default").then(|| self.inner.namespace.clone())
+    }
+    #[getter]
+    fn expression(&self) -> String {
+        self.inner.expression().to_string()
+    }
+    #[getter]
+    fn modality(&self) -> String {
+        format!("{:?}", self.inner.modality)
+    }
+    #[getter]
+    fn kind(&self) -> String {
+        format!("{:?}", self.inner.kind)
+    }
+    #[getter]
+    fn priority(&self) -> i32 {
+        self.inner.priority
+    }
+    #[getter]
+    fn rationale(&self) -> Option<String> {
+        self.inner.rationale.clone()
+    }
+    #[getter]
+    fn tags(&self) -> Vec<String> {
+        self.inner.tags.clone()
+    }
+}
+impl Policy {
+    pub fn from_rust(inner: RustPolicy) -> Self {
+        Self { inner }
+    }
+}
+
+#[pyclass(from_py_object)]
+#[derive(Clone)]
+pub struct SourceDimension {
+    inner: DeclaredDimension,
+}
+#[pymethods]
+impl SourceDimension {
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace != "default").then(|| self.inner.namespace.clone())
+    }
+}
+impl SourceDimension {
+    pub fn from_rust(inner: DeclaredDimension) -> Self {
+        Self { inner }
+    }
+}
+
+#[pyclass(from_py_object)]
+#[derive(Clone)]
+pub struct SourceUnit {
+    inner: DeclaredUnit,
+}
+#[pymethods]
+impl SourceUnit {
+    #[getter]
+    fn id(&self) -> String {
+        self.inner.id.to_string()
+    }
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+    #[getter]
+    fn namespace(&self) -> Option<String> {
+        (self.inner.namespace != "default").then(|| self.inner.namespace.clone())
+    }
+    #[getter]
+    fn dimension(&self) -> String {
+        self.inner.dimension.clone()
+    }
+    #[getter]
+    fn base_factor(&self) -> String {
+        self.inner.base_factor.clone()
+    }
+    #[getter]
+    fn base_unit(&self) -> String {
+        self.inner.base_unit.clone()
+    }
+}
+impl SourceUnit {
+    pub fn from_rust(inner: DeclaredUnit) -> Self {
+        Self { inner }
     }
 }
 

@@ -16,6 +16,12 @@ Python bindings for the **SEA DSL** (Semantic Enterprise Architecture) domain-sp
 - 🌐 **CALM Integration** — Export/import FINOS CALM architecture-as-code format
 - ⚡ **Native Performance** — Rust-powered core via PyO3
 
+Parsed graphs expose declaration-ordered read access to policies, metrics,
+mappings, projections, patterns, concept changes, entity instances, and source
+declared dimensions and units. `SourceUnit.base_factor` is an exact decimal
+string; mapping and projection rule details are available through `rules_json`
+and `overrides_json`.
+
 ## Installation
 
 ```bash

@@ -1,4 +1,15 @@
-# Current State: Repository Documentation Architecture Completed
+# Current State: DEBT-003 Binding Accessors + domainforge-sea Skill (2026-09-25)
+
+Branch: `fix/debt-003-domainforge-accessors` (merging to `main`).
+
+- [x] New read accessors on `Graph` in TypeScript, Python, and WASM bindings for policies, metrics, mappings, projections, patterns, concept changes, entity instances, declared units, and declared dimensions (`DeclaredUnit`/`DeclaredDimension` wrappers; mapping rules, projection overrides, and base factor as strings). Evidence: `domainforge-core/src/{typescript,python,wasm}/graph.rs` + `primitives.rs`; `typescript-tests/graph.test.ts` 12/12; `tests/test_graph.py` new test; new `wasm_tests::test_graph_exposes_parsed_declarations_in_source_order` (22/22 wasm).
+- [x] Deterministic declaration order preserved (IndexMap; no HashMap iteration). Evidence: double-parse snapshot equality asserted in TS, Python, and WASM tests.
+- [x] `External` confirmed absent from the language (no grammar/AST/Graph mention), so no accessor exists to add.
+- [x] Fixed three adjacent defects found during skill verification, each with a regression test: D8 `Graph::absorb` now merges declared units/dimensions (`dimension_unit_tests`); D9 human parse summary labels (`cli_tests::test_parse_human_summary_counts`); D10 formatter contract-key quoting (`cli_tests::test_fmt_mapping_projection_round_trip`).
+- [x] `domainforge-sea` skill re-verified against 0.17.0 CLI source plus live binary runs and updated (nonexistent `graph`/`units`/`explain`/`eval` removed; `import` corrected to sbvr|kg; `contract`/`envelope`/`test`-stub documented; all 29 project formats).
+- [x] Full gates on the final tree. Evidence: `just all-tests` exit 0 (Rust 123 suites / 1230 passed / 0 failed; TS 198/198; Python 100%), `just wasm-test` 22/22, `cargo clippy -p domainforge-core --all-targets --features cli -- -D warnings` clean, `cargo fmt --all --check` clean, `git diff --check` clean.
+
+## Repository Documentation Architecture Completed
 
 ## Verification contract and envelope follow-up (2026-09-24)
 

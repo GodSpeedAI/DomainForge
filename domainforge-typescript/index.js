@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { FinalDecision, PolicyModality, SourceClass, ClaimLevel, evaluateAuthority, formatSource, checkFormat, Graph, AggregateFunction, BinaryOp, UnaryOp, Quantifier, Severity, Expression, NormalizedExpression, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Role, Relation, NamespaceBinding, NamespaceRegistry, SemanticTruth, DiagnosticSeverity, ValidationMode, ApprovalState, SignatureState, ConceptStatus, ConceptKind, AliasStatus, SemanticValidationStatus, semanticPackBuild, semanticPackValidate, semanticPackValidateGraph, semanticPackSign, semanticPackVerify, semanticPackDiff, semanticPackHash, semanticNormalizeKey, semanticResolveConcept, Dimension, Unit } = nativeBinding
+const { FinalDecision, PolicyModality, SourceClass, ClaimLevel, evaluateAuthority, formatSource, checkFormat, Graph, AggregateFunction, BinaryOp, UnaryOp, Quantifier, Severity, Expression, NormalizedExpression, Entity, Resource, Flow, ResourceInstance, Instance, Metric, Mapping, Projection, Policy, DeclaredDimension, DeclaredUnit, Pattern, ConceptChange, Role, Relation, NamespaceBinding, NamespaceRegistry, SemanticTruth, DiagnosticSeverity, ValidationMode, ApprovalState, SignatureState, ConceptStatus, ConceptKind, AliasStatus, SemanticValidationStatus, semanticPackBuild, semanticPackValidate, semanticPackValidateGraph, semanticPackSign, semanticPackVerify, semanticPackDiff, semanticPackHash, semanticNormalizeKey, semanticResolveConcept, Dimension, Unit } = nativeBinding
 
 module.exports.FinalDecision = FinalDecision
 module.exports.PolicyModality = PolicyModality
@@ -335,6 +335,11 @@ module.exports.Instance = Instance
 module.exports.Metric = Metric
 module.exports.Mapping = Mapping
 module.exports.Projection = Projection
+module.exports.Policy = Policy
+module.exports.DeclaredDimension = DeclaredDimension
+module.exports.DeclaredUnit = DeclaredUnit
+module.exports.Pattern = Pattern
+module.exports.ConceptChange = ConceptChange
 module.exports.Role = Role
 module.exports.Relation = Relation
 module.exports.NamespaceBinding = NamespaceBinding

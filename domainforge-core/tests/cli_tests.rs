@@ -62,6 +62,79 @@ fn test_format_check() {
         .stdout(predicate::str::contains("Entity \"Test\" in domain"));
 }
 
+/// The human parse summary must label every count honestly: `Policies:` is the
+/// policy count (not patterns), `Patterns:` is separate, and resource vs
+/// entity instances are distinguished.
+#[test]
+fn test_parse_human_summary_counts() {
+    let model_dir = tempdir().unwrap();
+    let model_path = model_dir.path().join("model.sea");
+    std::fs::write(
+        &model_path,
+        "@namespace \"summary\"\n\
+         Entity \"Warehouse\"\n\
+         instance warehouse_1 of \"Warehouse\" { code: \"WH\" }\n\
+         Pattern \"Code\" matches \"^[A-Z]+$\"\n\
+         Policy stock_positive per Constraint Obligation priority 3 as: 1 > 0\n",
+    )
+    .unwrap();
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("domainforge"));
+    cmd.arg("parse")
+        .arg(&model_path)
+        .arg("--format")
+        .arg("human")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Entities: 1"))
+        .stdout(predicate::str::contains("Resource instances: 0"))
+        .stdout(predicate::str::contains("Entity instances: 1"))
+        .stdout(predicate::str::contains("Policies: 1"))
+        .stdout(predicate::str::contains("Patterns: 1"));
+}
+
+/// `fmt` must be round-trip safe on Mapping/Projection contracts: contract keys
+/// are grammar identifiers, so quoting them breaks re-parsing (OBSERVED_DEBT D10).
+#[test]
+fn test_fmt_mapping_projection_round_trip() {
+    let model_dir = tempdir().unwrap();
+    let model_path = model_dir.path().join("model.sea");
+    std::fs::write(
+        &model_path,
+        "@namespace \"contracts\"\n\
+         Entity \"Warehouse\"\n\
+         Mapping \"warehouse_calm\" for calm { Entity \"Warehouse\" -> component { name: \"warehouse\" } }\n\
+         Projection \"warehouse_kg\" for kg { Entity \"Warehouse\" { label: \"Warehouse\" } }\n",
+    )
+    .unwrap();
+    let formatted_path = model_dir.path().join("formatted.sea");
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("domainforge"));
+    cmd.arg("fmt")
+        .arg(&model_path)
+        .arg("--out")
+        .arg(&formatted_path)
+        .assert()
+        .success();
+
+    let formatted = std::fs::read_to_string(&formatted_path).unwrap();
+    assert!(
+        formatted.contains("name: \"warehouse\""),
+        "mapping keys stay unquoted:\n{formatted}"
+    );
+    assert!(
+        !formatted.contains("\"name\": \"warehouse\""),
+        "mapping keys are not JSON-quoted:\n{formatted}"
+    );
+
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("domainforge"));
+    cmd.arg("validate")
+        .arg(&formatted_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Validation succeeded"));
+}
+
 /// A valid Cell model must project via the CLI without going through the
 /// generic Graph builder (Cell declarations are single-consumer and not part
 /// of the Graph vocabulary — see ADR-012). This guards the early

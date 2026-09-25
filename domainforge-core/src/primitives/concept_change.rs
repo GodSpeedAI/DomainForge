@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct ConceptChange {
     id: ConceptId,
     name: String,
+    namespace: String,
     from_version: String,
     to_version: String,
     migration_policy: String,
@@ -20,14 +21,32 @@ impl ConceptChange {
         breaking_change: bool,
     ) -> Self {
         let name = name.into();
-        // Concept changes are usually global or tied to a namespace, but here we assume default namespace for simplicity
-        // or we could add namespace support. For now, let's assume global or default.
-        let namespace = "default";
-        let id = ConceptId::from_concept(namespace, &name);
+        Self::new_with_namespace(
+            name,
+            "default",
+            from_version,
+            to_version,
+            migration_policy,
+            breaking_change,
+        )
+    }
+
+    pub fn new_with_namespace(
+        name: impl Into<String>,
+        namespace: impl Into<String>,
+        from_version: impl Into<String>,
+        to_version: impl Into<String>,
+        migration_policy: impl Into<String>,
+        breaking_change: bool,
+    ) -> Self {
+        let name = name.into();
+        let namespace = namespace.into();
+        let id = ConceptId::from_concept(&namespace, &name);
 
         Self {
             id,
             name,
+            namespace,
             from_version: from_version.into(),
             to_version: to_version.into(),
             migration_policy: migration_policy.into(),
@@ -41,6 +60,10 @@ impl ConceptChange {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.namespace
     }
 
     pub fn from_version(&self) -> &str {

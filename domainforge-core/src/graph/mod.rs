@@ -10,6 +10,28 @@ use crate::ConceptId;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+/// A dimension declared by the parsed SEA source.
+///
+/// This is intentionally graph-owned rather than read from `UnitRegistry`:
+/// the registry also contains ambient builtins and uses an unordered map.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredDimension {
+    pub id: ConceptId,
+    pub name: String,
+    pub namespace: String,
+}
+
+/// A unit declared by the parsed SEA source.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredUnit {
+    pub id: ConceptId,
+    pub name: String,
+    pub namespace: String,
+    pub dimension: String,
+    pub base_factor: String,
+    pub base_unit: String,
+}
+
 mod entity_validation;
 pub mod to_ast;
 
@@ -51,6 +73,12 @@ pub struct Graph {
     mappings: IndexMap<ConceptId, MappingContract>,
     #[serde(default)]
     projections: IndexMap<ConceptId, ProjectionContract>,
+    /// Source declarations, kept separately from the global unit registry so
+    /// bindings can expose only this graph's declarations in source order.
+    #[serde(default)]
+    declared_dimensions: IndexMap<ConceptId, DeclaredDimension>,
+    #[serde(default)]
+    declared_units: IndexMap<ConceptId, DeclaredUnit>,
     #[serde(default)]
     entity_roles: IndexMap<ConceptId, Vec<ConceptId>>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
@@ -90,6 +118,50 @@ impl Graph {
             && self.metrics.is_empty()
             && self.mappings.is_empty()
             && self.projections.is_empty()
+            && self.declared_dimensions.is_empty()
+            && self.declared_units.is_empty()
+    }
+
+    pub fn add_declared_dimension(&mut self, name: String, namespace: String) {
+        let id = ConceptId::from_concept(&namespace, &name);
+        self.declared_dimensions.insert(
+            id.clone(),
+            DeclaredDimension {
+                id,
+                name,
+                namespace,
+            },
+        );
+    }
+
+    pub fn add_declared_unit(
+        &mut self,
+        name: String,
+        namespace: String,
+        dimension: String,
+        base_factor: String,
+        base_unit: String,
+    ) {
+        let id = ConceptId::from_concept(&namespace, &name);
+        self.declared_units.insert(
+            id.clone(),
+            DeclaredUnit {
+                id,
+                name,
+                namespace,
+                dimension,
+                base_factor,
+                base_unit,
+            },
+        );
+    }
+
+    pub fn all_declared_dimensions(&self) -> Vec<&DeclaredDimension> {
+        self.declared_dimensions.values().collect()
+    }
+
+    pub fn all_declared_units(&self) -> Vec<&DeclaredUnit> {
+        self.declared_units.values().collect()
     }
 
     /// Set the evaluation mode for policy evaluation.
@@ -133,6 +205,8 @@ impl Graph {
         self.metrics.extend(other.metrics);
         self.mappings.extend(other.mappings);
         self.projections.extend(other.projections);
+        self.declared_dimensions.extend(other.declared_dimensions);
+        self.declared_units.extend(other.declared_units);
         self.entity_roles.extend(other.entity_roles);
         self.entity_contracts.extend(other.entity_contracts);
         self.enum_contracts.extend(other.enum_contracts);
@@ -851,6 +925,8 @@ impl Graph {
             metrics,
             mappings,
             projections,
+            declared_dimensions,
+            declared_units,
             entity_roles,
             entity_contracts,
             enum_contracts,
@@ -923,6 +999,40 @@ impl Graph {
 
         for projection in projections.into_values() {
             self.add_projection(projection)?;
+        }
+
+        for (id, dimension) in declared_dimensions {
+            match self.declared_dimensions.get(&id) {
+                Some(existing) if existing != &dimension => {
+                    return Err(format!(
+                        "Conflicting dimension '{}' already declared (existing namespace='{}'; new namespace='{}')",
+                        dimension.name, existing.namespace, dimension.namespace
+                    ));
+                }
+                _ => {
+                    self.declared_dimensions.insert(id, dimension);
+                }
+            }
+        }
+
+        for (id, unit) in declared_units {
+            match self.declared_units.get(&id) {
+                Some(existing) if existing != &unit => {
+                    return Err(format!(
+                        "Conflicting unit '{}' already declared (existing: dimension={}, base_factor={}, base_unit={}; new: dimension={}, base_factor={}, base_unit={})",
+                        unit.name,
+                        existing.dimension,
+                        existing.base_factor,
+                        existing.base_unit,
+                        unit.dimension,
+                        unit.base_factor,
+                        unit.base_unit
+                    ));
+                }
+                _ => {
+                    self.declared_units.insert(id, unit);
+                }
+            }
         }
 
         Ok(())

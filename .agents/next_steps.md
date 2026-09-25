@@ -1,6 +1,6 @@
 # Next Steps
 
-Current handoff (2026-09-24): the verification contract and envelope patch passes the focused 18-test suite. When task review is enabled, run `coderabbit review --agent -t uncommitted` and address any still-valid findings. Rebuild the graft index when its CLI is available.
+Current handoff (2026-09-25): `fix/debt-003-domainforge-accessors` merged to `main` and pushed; release-please opens the release PR from the `feat` commit (expect a minor bump from 0.17.0). Watch for the release PR titled `chore: release ...`, merge it to publish `@godspeedai/domainforge` plus the Python/Rust artifacts, then report the new version number for the Cognate pin bump. D8–D10 debt entries carry their fix evidence; fill `[RESOLVED <sha>]` with the merge commit at that point.
 
 ## 1. Maintain Documentation Synchronization upon ADR-014 Ratification
 

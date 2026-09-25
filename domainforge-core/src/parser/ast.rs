@@ -3276,6 +3276,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                 AstNode::Dimension { name } => {
                     let dim = Dimension::parse(name);
                     registry.register_dimension(dim);
+                    graph.add_declared_dimension(name.clone(), default_namespace.clone());
                 }
                 AstNode::UnitDeclaration {
                     symbol,
@@ -3289,6 +3290,13 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
                         symbol.clone(),
                         dim,
                         *factor,
+                        base_unit.clone(),
+                    );
+                    graph.add_declared_unit(
+                        symbol.clone(),
+                        default_namespace.clone(),
+                        dimension.clone(),
+                        factor.to_string(),
                         base_unit.clone(),
                     );
                     match registry.get_unit(symbol) {
@@ -3355,8 +3363,9 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
             breaking_change,
         } = node
         {
-            let change = ConceptChange::new(
+            let change = ConceptChange::new_with_namespace(
                 name.clone(),
+                default_namespace.clone(),
                 from_version.clone(),
                 to_version.clone(),
                 migration_policy.clone(),

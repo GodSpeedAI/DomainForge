@@ -346,6 +346,60 @@ impl Graph {
             .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
     }
 
+    #[wasm_bindgen(js_name = allPolicies)]
+    pub fn all_policies(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_policies())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allMetrics)]
+    pub fn all_metrics(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_metrics())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allMappings)]
+    pub fn all_mappings(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_mappings())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allProjections)]
+    pub fn all_projections(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_projections())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allDimensions)]
+    pub fn all_dimensions(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_declared_dimensions())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allUnits)]
+    pub fn all_units(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_declared_units())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allPatterns)]
+    pub fn all_patterns(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_patterns())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allConceptChanges)]
+    pub fn all_concept_changes(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_concept_changes())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
+    #[wasm_bindgen(js_name = allEntityInstances)]
+    pub fn all_entity_instances(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.inner.all_entity_instances())
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    }
+
     #[wasm_bindgen(js_name = flowsFrom)]
     pub fn flows_from(&self, entity_id: String) -> Result<JsValue, JsValue> {
         let uuid = Uuid::from_str(&entity_id)

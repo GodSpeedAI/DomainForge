@@ -1,6 +1,7 @@
 # SEA-DSL (DomainForge Semantic Enterprise Architecture DSL) agent cheatsheet
 # Purpose: portable, implementation-aligned reference for agents writing .sea files
-# Accuracy baseline: checked against domainforge-core/grammar/sea.pest and current CLI source on 2026-07-07
+# Accuracy baseline: checked against domainforge-core/grammar/sea.pest and current CLI source on 2026-07-07;
+# re-verified against CLI source plus the 0.17.0 debug binary (validate/parse/fmt live runs) on 2026-09-25.
 
 ---
 meta:
@@ -147,7 +148,7 @@ declarations:
       - "`via: flow` currently takes a string literal, commonly the resource name used by a flow."
 
   Instance:
-    purpose: "Concrete instance of an entity type with field values."
+    purpose: "Concrete instance of an entity type (entity instance) or resource type (resource instance) with field values."
     syntax: |
       Instance vendor_123 of "Vendor" {
           name: "Acme Corp",
@@ -158,6 +159,8 @@ declarations:
     notes:
       - "Instance name is an identifier, not a quoted string."
       - "Fields are identifier: expression pairs."
+      - "The referenced entity/resource type must live in the same namespace as the instance."
+      - "CLI `parse --format human` reports resource and entity instances on separate lines; entity instances appear in graph JSON under `entity_instances`."
 
   Dimension:
     purpose: "Measurement dimension for units."
@@ -227,6 +230,7 @@ declarations:
       }
     target_formats: ["calm", "kg", "sbvr", "protobuf", "proto"]
     primitive_types: ["Entity", "Resource", "Flow", "Policy", "Instance"]
+    note: "Contract keys are unquoted identifiers; fmt preserves them."
 
   Projection:
     purpose: "Override projected fields for a target."
@@ -311,6 +315,7 @@ semantic_rules:
 ---
 cli:
   binary: "domainforge"
+  nonexistent_commands: "There is no graph, units, explain, or eval subcommand. Use parse --format human/json, validate --format json --show-source, normalize, authority, or the language bindings instead. `test` is a stub that prints 'Test runner not yet implemented'."
   global_options:
     - "--verbose"
     - "--quiet"
@@ -325,22 +330,24 @@ cli:
     parse:
       usage: "domainforge parse <input.sea> [--format human|json] [--out <path>] [--ast|--ast-v3]"
       behavior:
-        graph_json: "default JSON output is semantic Graph JSON"
+        graph_json: "default JSON output is semantic Graph JSON, including declared_units/declared_dimensions"
         ast_json: "--ast or --ast-v3 outputs AST JSON"
+        human_summary: "separate Resource instances, Entity instances, Policies, and Patterns lines"
     validate:
-      usage: "domainforge validate [--format json|human|lsp] [--no-color] [--show-source] <file-or-directory>"
-      note: "Directory validation requires a discoverable .sea-registry.toml."
+      usage: "domainforge validate [--format json|human|lsp] [--no-color] [--show-source] [--application] [--allow-unknown] [--registry <file>] <file-or-directory>"
+      note: "Directory validation requires a discoverable .sea-registry.toml. --application adds APP001-APP015 Application Contract diagnostics (file targets only)."
     format:
       usage: "domainforge format <file.sea> [--out <path>] [--indent-width <n>] [--use-tabs] [--check] [--sort-imports <bool>]"
       alias: "domainforge fmt"
+      note: "fmt output re-parses, including mapping/projection contracts; re-validating afterwards remains good practice."
     import:
       usage: "domainforge import --format sbvr|kg <file>"
       note: "Current CLI prints import graph stats. It does not provide --out in the current source."
     project:
       usage: "domainforge project --format <format> [options] <input.sea> <output>"
-      formats:
-        single_file_or_path: ["calm", "kg", "protobuf", "proto"]
-        directory_outputs: ["ai-llm", "ai-graph-ml", "cep-eval", "ai-learning", "lean", "rdf", "bpmn", "cmmn", "archimate"]
+      formats: "29 formats at 0.17.0 — run `domainforge project --help`. Single-file: calm, kg (legacy, prefer rdf), protobuf, proto. Directory: ai-llm, ai-graph-ml, cep-eval, ai-learning, lean, rdf, bpmn, cmmn, archimate, otel-semconv, baml, dspy, zenml, cloudevents, asyncapi, devbox, cell, dagger, cedar, gauge, alloy, tla, domain-python, domain-typescript, domain-rust."
+      formats_single_file_or_path: ["calm", "kg", "protobuf", "proto"]
+      formats_directory_output: ["ai-llm", "ai-graph-ml", "cep-eval", "ai-learning", "lean", "rdf", "bpmn", "cmmn", "archimate", "otel-semconv", "baml", "dspy", "zenml", "cloudevents", "asyncapi", "devbox", "cell", "dagger", "cedar", "gauge", "alloy", "tla", "domain-python", "domain-typescript", "domain-rust"]
       common_options:
         - "--namespace <namespace>"
         - "--created-at <RFC3339>"
@@ -370,6 +377,14 @@ cli:
       usage: "domainforge registry resolve [--fail-on-ambiguity] <file>"
     authority:
       usage: "domainforge authority <config.json> <request.json> [--facts <facts.json>] [--json]"
+    contract:
+      usage: "domainforge contract <model.sea>"
+      note: "Resolves and prints the Application Contract document (domainforge-application-contract/v1); the only subcommand that reaches resolve_application_contract."
+    envelope:
+      usage: "domainforge envelope [ENTRY] [--emit representation|cep|both|verification-contract] [--pack <id>=<hash>] [--registry <file>] [--default-namespace <ns>] [--scope <json>] [--inline-threshold-bytes <n>] [-o <file>] [--capabilities]"
+    test_stub:
+      usage: "domainforge test <pattern>"
+      note: "Unimplemented stub; prints 'Test runner not yet implemented'. Use just all-tests."
     pack:
       subcommands: ["build", "validate", "inspect", "diff", "sign", "verify"]
 
@@ -480,5 +495,5 @@ verification:
       - "Rust core"
       - "Python bindings and tests"
       - "TypeScript bindings and tests"
-      - "WASM bindings when public"
+      - "WASM bindings and tests"
     broad_proof: "just all-tests"
