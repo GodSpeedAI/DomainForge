@@ -36,7 +36,7 @@ There is no GitHub Environment named `prod` in the release path. CI on `main` is
 
 ## npm authentication
 
-npm publication uses Trusted Publishing (OIDC), not a long-lived npm write token. The workflow requests `id-token: write` and uses npm 11.5.1 or newer.
+npm publication uses Trusted Publishing (OIDC), not a long-lived npm write token. The workflow requests `id-token: write` and uses npm 11.15.0 or newer.
 
 Because `release-npm.yml` is invoked through `workflow_call`, npm validates the calling workflow. Configure each npm package's Trusted Publisher as:
 
@@ -48,6 +48,15 @@ Because `release-npm.yml` is invoked through `workflow_call`, npm validates the 
 - Allowed action: direct `npm publish`
 
 Configure this for both `@godspeedai/domainforge` and `@godspeedai/domainforge-wasm`. A package must exist on npm before its Trusted Publisher can be configured, so a never-published package needs one initial authenticated publish.
+
+For an existing package, the CLI equivalent is:
+
+```bash
+npm install -g npm@^11.15.0
+npm trust github @godspeedai/domainforge --file deploy.yml --repo GodSpeedAI/DomainForge --allow-publish
+```
+
+After `@godspeedai/domainforge-wasm` has been published once, configure it the same way by replacing the package name in that command.
 
 ## Release sequence
 
