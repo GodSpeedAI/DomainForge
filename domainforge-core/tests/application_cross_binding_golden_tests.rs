@@ -61,6 +61,8 @@ fn hex_lower(bytes: &[u8]) -> String {
     s
 }
 
+/// Verify the flagship contract stamps the running crate version and its full
+/// serialized bytes match the golden shared across bindings.
 #[test]
 fn rust_contract_bytes_match_the_cross_binding_golden() {
     let raw = resolve_application_contract("flagship/query-read.sea", &flagship_sources_json())
@@ -75,6 +77,8 @@ fn rust_contract_bytes_match_the_cross_binding_golden() {
     );
 }
 
+/// Verify the flagship semantic envelope stamps the running crate version and
+/// its full serialized bytes match the cross-binding golden.
 #[test]
 fn rust_envelope_bytes_match_the_cross_binding_golden() {
     let raw = resolve_semantic_envelope("flagship/query-read.sea", &flagship_sources_json())
