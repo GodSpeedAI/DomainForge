@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1](https://github.com/GodSpeedAI/DomainForge/compare/v0.18.0...v0.18.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* **release:** unify releases and automate npm publishing ([#128](https://github.com/GodSpeedAI/DomainForge/issues/128)) ([f87c0b7](https://github.com/GodSpeedAI/DomainForge/commit/f87c0b773bee4022ae4f2b0ca3a468c95604edb7))
+
 ## [0.11.0] - 2026-06-09
 
 ### Added
