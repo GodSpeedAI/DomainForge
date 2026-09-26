@@ -8,10 +8,10 @@ golden. The same constants appear in:
 - TS:     typescript-tests/cross-binding-parity.test.ts
 - WASM:   domainforge-core/tests/wasm_tests.rs (cross_binding_golden_hashes)
 
-The producer.version stamp is normalized out before hashing so release
-version bumps do not drift the goldens; the stamp itself is asserted against
-the installed package version. If serialization intentionally changes,
-regenerate all four in lockstep.
+The producer.version stamp is asserted against the installed package
+version; the golden pins the full bytes at the current release version and
+must be regenerated with every version bump (see the release notes). If
+serialization intentionally changes, regenerate all four in lockstep.
 """
 
 import hashlib
@@ -25,7 +25,7 @@ import domainforge
 
 
 CONTRACT_GOLDEN_SHA256 = (
-    "sha256:38299bd2d0b062d45088f60ceef7018e4f89a1abe839be8edbdd1c961cd303e5"
+    "sha256:78fa1c173ca7da383c5082b6bc2a442faf6280e24c2a6796bc99a34aa8a369cb"
 )
 
 
@@ -43,6 +43,7 @@ def _flagship_sources_map() -> dict:
 
 
 def test_cross_binding_contract_bytes_match_rust_golden():
+    """Verify the contract's package version stamp and full-byte parity with Rust."""
     sources = json.dumps(_flagship_sources_map(), separators=(",", ":"))
     raw = domainforge.Graph.resolve_application_contract_json(
         "flagship/query-read.sea", sources
@@ -52,8 +53,7 @@ def test_cross_binding_contract_bytes_match_rust_golden():
     assert doc["producer"]["version"] == pkg_version, (
         "producer.version must stamp the running package version"
     )
-    normalized = raw.replace(pkg_version, "0.0.0")
-    digest = "sha256:" + hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    digest = "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
     assert digest == CONTRACT_GOLDEN_SHA256, (
         "Python binding bytes drifted from the Rust golden; if intentional, "
         "regenerate CONTRACT_GOLDEN_SHA256 in the Rust, Python, TS, and WASM "
