@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.18.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.17.0...domainforge-core-v0.18.0) (2026-09-26)
+
+
+### Features
+
+* **bindings:** expose all declared kinds in Python, TypeScript, and WASM bindings ([#125](https://github.com/GodSpeedAI/DomainForge/issues/125)) ([da890e9](https://github.com/GodSpeedAI/DomainForge/commit/da890e9be29b0da0ebd9d31a9469b46843bc8d22))
+
+
+### Bug Fixes
+
+* **kg:** upgrade oxigraph 0.3 to 0.4 and harden Turtle import ([#127](https://github.com/GodSpeedAI/DomainForge/issues/127)) ([4a01f68](https://github.com/GodSpeedAI/DomainForge/commit/4a01f6800105d70be001b60dea85386bdf4ad4d0))
+
 ## [0.17.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-core-v0.16.0...domainforge-core-v0.17.0) (2026-09-24)
 
 

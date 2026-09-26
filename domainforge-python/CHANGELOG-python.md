@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-v0.17.0...domainforge-v0.18.0) (2026-09-26)
+
+
+### Features
+
+* **bindings:** expose all declared kinds in Python, TypeScript, and WASM bindings ([#125](https://github.com/GodSpeedAI/DomainForge/issues/125)) ([da890e9](https://github.com/GodSpeedAI/DomainForge/commit/da890e9be29b0da0ebd9d31a9469b46843bc8d22))
+
 ## [0.17.0](https://github.com/GodSpeedAI/DomainForge/compare/domainforge-v0.16.0...domainforge-v0.17.0) (2026-09-24)
 
 
