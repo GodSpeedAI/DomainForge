@@ -1,16 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "include-component-in-tag": true,
-  "tag-separator": "-",
-  "component-no-space": true,
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "include-v-in-release-name": true,
+  "bootstrap-sha": "dfa8e4505b0ce5a05314cf4cbea7dec167a5160a",
   "pull-request-title-pattern": "chore: release ${component} ${version}",
-  "plugins": [
-    {
-      "type": "linked-versions",
-      "groupName": "domainforge",
-      "components": ["domainforge-core", "domainforge", "domainforge-typescript"]
-    }
-  ],
   "changelog-sections": [
     { "type": "feat", "section": "Features" },
     { "type": "fix", "section": "Bug Fixes" },
@@ -25,25 +20,29 @@
     { "type": "ci", "section": "Continuous Integration", "hidden": true }
   ],
   "packages": {
-    "domainforge-core": {
-      "release-type": "rust",
-      "package-name": "domainforge-core",
-      "component": "domainforge-core",
-      "changelog-path": "CHANGELOG.md"
-    },
-    "domainforge-python": {
-      "release-type": "python",
-      "package-name": "domainforge",
+    ".": {
+      "release-type": "simple",
+      "package-name": "DomainForge",
       "component": "domainforge",
-      "changelog-path": "CHANGELOG-python.md",
-      "extra-files": ["pyproject.toml"]
-    },
-    "domainforge-typescript": {
-      "release-type": "node",
-      "package-name": "domainforge",
-      "component": "domainforge-typescript",
-      "changelog-path": "CHANGELOG-typescript.md",
-      "extra-files": ["package.json"]
+      "version-file": "version.txt",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "domainforge-core/Cargo.toml",
+          "jsonpath": "$.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "domainforge-python/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "json",
+          "path": "domainforge-typescript/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   }
 }

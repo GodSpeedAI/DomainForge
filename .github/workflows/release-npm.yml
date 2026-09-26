@@ -4,6 +4,8 @@ on:
   workflow_call:
   workflow_dispatch:
 
+# npm Trusted Publishing exchanges GitHub's OIDC identity for a short-lived
+# publish credential. No npm write token is stored in GitHub.
 permissions:
   contents: read
   id-token: write
@@ -15,17 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Decrypt secrets
-        id: secrets
-        uses: ./.github/actions/decrypt-secrets
-        with:
-          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
-
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Install OIDC-capable npm
+        run: npm install -g npm@^11.5.1
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -62,18 +62,13 @@ jobs:
         run: |
           if npm view "@godspeedai/domainforge@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
             echo "Already published, skipping"
-            echo "SKIP_PUBLISH=1" >> $GITHUB_ENV
+            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
           fi
 
-      - name: Publish to npm
+      - name: Publish to npm with OIDC
         if: env.SKIP_PUBLISH != '1'
         working-directory: domainforge-typescript
-        # Trusted publishing via OIDC: no NODE_AUTH_TOKEN. npm CLI auto-detects
-        # the OIDC environment and exchanges the GitHub id-token for a short-lived
-        # publish credential. Requires npm >= 11.5.1 (Node 24 bundles older npm).
-        run: |
-          npm install -g npm@^11.5.1
-          npm publish --access public --ignore-scripts
+        run: npm publish --access public --ignore-scripts
 
   publish-wasm:
     name: Publish WASM package to npm
@@ -81,17 +76,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Decrypt secrets
-        id: secrets
-        uses: ./.github/actions/decrypt-secrets
-        with:
-          sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
-
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Install OIDC-capable npm
+        run: npm install -g npm@^11.5.1
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -125,17 +118,14 @@ jobs:
           echo "WASM smoke test passed"
 
       - name: Check if WASM already published
+        working-directory: domainforge-core/pkg
         run: |
-          cd domainforge-core/pkg
           if npm view "@godspeedai/domainforge-wasm@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
             echo "Already published, skipping"
-            echo "SKIP_PUBLISH=1" >> $GITHUB_ENV
+            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
           fi
 
-      - name: Publish WASM to npm
+      - name: Publish WASM to npm with OIDC
         if: env.SKIP_PUBLISH != '1'
-        run: |
-          cd domainforge-core/pkg
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || steps.secrets.outputs.npm-token }}
+        working-directory: domainforge-core/pkg
+        run: npm publish --access public
