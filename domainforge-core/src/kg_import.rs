@@ -76,20 +76,25 @@ pub fn import_kg_rdfxml(xml: &str) -> Result<Graph, ImportError> {
     {
         let store = Store::new()
             .map_err(|e| ImportError::Other(format!("Failed to create oxigraph store: {}", e)))?;
-        let fmt = oxigraph::io::GraphFormat::RdfXml;
 
         // Load the RDF/XML into the default graph
         store
-            .load_graph(xml.as_bytes(), fmt, GraphNameRef::DefaultGraph, None)
+            .load_from_reader(
+                oxigraph::io::RdfParser::from_format(oxigraph::io::RdfFormat::RdfXml),
+                xml.as_bytes(),
+            )
             .map_err(|e| {
                 ImportError::Other(format!("Failed to parse RDF/XML with oxigraph: {}", e))
             })?;
 
         // Serialize the parsed RDF/XML into Turtle so we can reuse KnowledgeGraph::from_turtle
         let mut writer = Vec::new();
-        let turtle_fmt = oxigraph::io::GraphFormat::Turtle;
         store
-            .dump_graph(&mut writer, turtle_fmt, GraphNameRef::DefaultGraph)
+            .dump_graph_to_writer(
+                GraphNameRef::DefaultGraph,
+                oxigraph::io::RdfFormat::Turtle,
+                &mut writer,
+            )
             .map_err(|e| {
                 ImportError::Other(format!("Failed to serialize RDF/XML to Turtle: {}", e))
             })?;

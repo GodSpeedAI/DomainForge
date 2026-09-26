@@ -351,19 +351,28 @@ mod application_contract_wasm_tests {
     /// Cross-binding byte parity (M0 gate finding 2): WASM must hash to the
     /// same golden as Rust, Python, and TypeScript. See
     /// `application_cross_binding_golden_tests.rs` for the canonical
-    /// constants.
+    /// constants. The producer.version stamp is normalized out before hashing
+    /// so release version bumps do not drift the goldens; the stamp itself is
+    /// asserted against the running crate version.
     #[wasm_bindgen_test]
     fn cross_binding_golden_hashes() {
         use sha2::{Digest, Sha256};
         const CONTRACT_GOLDEN_SHA256: &str =
-            "sha256:c8ebd330e20ac90dfd79e085f3ed0960095485397f8afaabfa53c1db7fdf13ee";
+            "sha256:38299bd2d0b062d45088f60ceef7018e4f89a1abe839be8edbdd1c961cd303e5";
         let raw = Graph::resolve_application_contract_json(
             "flagship/query-read.sea".into(),
             flagship_sources_json(),
         )
         .unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).expect("canonical document parses");
+        assert_eq!(
+            doc["producer"]["version"].as_str(),
+            Some(env!("CARGO_PKG_VERSION")),
+            "producer.version must stamp the running crate version"
+        );
+        let normalized = raw.replace(env!("CARGO_PKG_VERSION"), "0.0.0");
         let mut hasher = Sha256::new();
-        hasher.update(raw.as_bytes());
+        hasher.update(normalized.as_bytes());
         let digest = hasher.finalize();
         let hex: String = {
             let mut s = String::with_capacity(digest.len() * 2);

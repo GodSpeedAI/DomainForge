@@ -36,13 +36,13 @@ pub struct Triple {
     pub object: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ShaclShape {
     pub target_class: String,
     pub properties: Vec<ShaclProperty>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ShaclProperty {
     pub path: String,
     pub datatype: Option<String>,
@@ -70,6 +70,191 @@ const URI_ENCODE_SET: &AsciiSet = &CONTROLS
     .add(b',')
     .add(b'@')
     .add(b';');
+
+/// Split a Turtle line into `(core, terminator)` segments on top-level `;`
+/// boundaries. A `;` only separates statements outside `"..."` literals,
+/// `[...]` collections, and `<...>` IRIs. The terminator is a trailing `.`, `;`,
+/// or `,` (if any); the final segment keeps the line terminator.
+fn split_turtle_segments(line: &str) -> Vec<(String, Option<char>)> {
+    let mut segments = Vec::new();
+    let mut current = String::new();
+    let mut in_literal = false;
+    let mut in_iri = false;
+    let mut escape = false;
+    let mut bracket_depth: usize = 0;
+    for c in line.chars() {
+        if in_literal {
+            current.push(c);
+            if escape {
+                escape = false;
+            } else if c == '\\' {
+                escape = true;
+            } else if c == '"' {
+                in_literal = false;
+            }
+            continue;
+        }
+        if in_iri {
+            current.push(c);
+            if c == '>' {
+                in_iri = false;
+            }
+            continue;
+        }
+        match c {
+            '"' => {
+                in_literal = true;
+                current.push(c);
+            }
+            '<' => {
+                in_iri = true;
+                current.push(c);
+            }
+            '[' => {
+                bracket_depth += 1;
+                current.push(c);
+            }
+            ']' => {
+                bracket_depth = bracket_depth.saturating_sub(1);
+                current.push(c);
+            }
+            ';' if bracket_depth == 0 => {
+                segments.push((current.trim_end().to_string(), Some(';')));
+                current = String::new();
+            }
+            _ => current.push(c),
+        }
+    }
+    let trimmed = current.trim_end().to_string();
+    let terminator = trimmed
+        .chars()
+        .rev()
+        .find(|c| !c.is_whitespace())
+        .filter(|c| *c == '.' || *c == ';' || *c == ',');
+    let core = match terminator {
+        Some(t) => {
+            let stripped = trimmed.trim_end();
+            stripped[..stripped.len() - t.len_utf8()]
+                .trim_end()
+                .to_string()
+        }
+        None => trimmed,
+    };
+    if !core.is_empty() || terminator.is_some() {
+        segments.push((core, terminator));
+    }
+    segments
+}
+
+/// Split already-tokenized object positions on top-level commas (`,` tokens
+/// or comma-suffixed tokens), respecting quoted literals and `<...>` IRIs
+/// that may contain commas.
+fn split_top_level_commas(tokens: &[String]) -> Vec<String> {
+    let joined = tokens.join(" ");
+    let mut objects = Vec::new();
+    let mut current = String::new();
+    let mut in_literal = false;
+    let mut in_iri = false;
+    let mut escape = false;
+    for c in joined.chars() {
+        if in_literal {
+            current.push(c);
+            if escape {
+                escape = false;
+            } else if c == '\\' {
+                escape = true;
+            } else if c == '"' {
+                in_literal = false;
+            }
+            continue;
+        }
+        if in_iri {
+            current.push(c);
+            if c == '>' {
+                in_iri = false;
+            }
+            continue;
+        }
+        match c {
+            '"' => {
+                in_literal = true;
+                current.push(c);
+            }
+            '<' => {
+                in_iri = true;
+                current.push(c);
+            }
+            ',' => {
+                let obj = current.trim().to_string();
+                if !obj.is_empty() {
+                    objects.push(obj);
+                }
+                current = String::new();
+            }
+            _ => current.push(c),
+        }
+    }
+    let obj = current.trim().to_string();
+    if !obj.is_empty() {
+        objects.push(obj);
+    }
+    objects
+}
+
+/// Push one triple with the same normalization as the legacy line parser,
+/// additionally treating the `a` shorthand as `rdf:type`.
+fn push_expanded_triple(kg: &mut KnowledgeGraph, subject: &str, predicate: &str, object: &str) {
+    let norm_p = if predicate == "a" {
+        "rdf:type".to_string()
+    } else {
+        KnowledgeGraph::shorten_token(predicate)
+    };
+    kg.triples.push(Triple {
+        subject: KnowledgeGraph::shorten_token(subject),
+        predicate: norm_p,
+        object: KnowledgeGraph::shorten_token(object),
+    });
+}
+
+/// Parse one SHACL property from `(predicate, object)` attribute pairs using
+/// the same value semantics as the legacy `[...]` block parser: raw trimmed
+/// values, `u32` parsing for counts (quoted values stay `None`), verbatim
+/// strings for `minExclusive`.
+fn parse_shape_property_attrs(attrs: &[(String, String)]) -> Option<ShaclProperty> {
+    let mut path = String::new();
+    let mut datatype: Option<String> = None;
+    let mut min_count: Option<u32> = None;
+    let mut max_count: Option<u32> = None;
+    let mut min_exclusive: Option<String> = None;
+    for (pred, obj) in attrs {
+        match pred.as_str() {
+            "sh:path" => path = obj.trim().to_string(),
+            "sh:datatype" => datatype = Some(obj.trim().to_string()),
+            "sh:minCount" => {
+                if let Ok(n) = obj.trim().parse::<u32>() {
+                    min_count = Some(n);
+                }
+            }
+            "sh:maxCount" => {
+                if let Ok(n) = obj.trim().parse::<u32>() {
+                    max_count = Some(n);
+                }
+            }
+            "sh:minExclusive" => min_exclusive = Some(obj.trim().to_string()),
+            _ => {}
+        }
+    }
+    if path.is_empty() {
+        return None;
+    }
+    Some(ShaclProperty {
+        path,
+        datatype,
+        min_count,
+        max_count,
+        min_exclusive,
+    })
+}
 
 fn tokenize_triple_line(line: &str) -> Vec<String> {
     let mut tokens = Vec::new();
@@ -663,35 +848,70 @@ impl KnowledgeGraph {
     }
 
     /// Parse a simple Turtle snippet into a KnowledgeGraph. This is a best-effort parser
-    /// expecting the exact triple format generated by `to_turtle()` in this crate.
+    /// accepting one triple per line as well as the standard `;` predicate-list
+    /// and `,` object-list continuations emitted by modern serializers.
     #[allow(clippy::while_let_on_iterator)]
     pub fn from_turtle(turtle: &str) -> Result<Self, KgError> {
         let mut kg = Self::new();
+        // Carried context for `;` / `,` continuations: the terminator of the
+        // previous segment plus the in-progress subject and predicate.
+        let mut carry_subject: Option<String> = None;
+        let mut carry_predicate: Option<String> = None;
+        let mut prev_terminator: Option<char> = None;
         for line in turtle.lines() {
             let trimmed = line.trim();
             if trimmed.is_empty() || trimmed.starts_with('@') || trimmed.starts_with('#') {
                 continue;
             }
-            let triple_line = if let Some(stripped) = trimmed.strip_suffix('.') {
-                stripped.trim_end()
-            } else {
-                trimmed
-            };
-            let tokens = tokenize_triple_line(triple_line);
-            if tokens.len() != 3 {
-                continue;
+            for (core, terminator) in split_turtle_segments(trimmed) {
+                let tokens = tokenize_triple_line(&core);
+                match prev_terminator {
+                    // Object continuation: `, <object>` reuses subject+predicate.
+                    Some(',') => {
+                        if tokens.len() == 1 {
+                            if let (Some(s), Some(p)) =
+                                (carry_subject.clone(), carry_predicate.clone())
+                            {
+                                push_expanded_triple(&mut kg, &s, &p, &tokens[0]);
+                            }
+                        } else {
+                            carry_subject = None;
+                            carry_predicate = None;
+                        }
+                    }
+                    // Predicate continuation: `<predicate> <object>` reuses the subject.
+                    Some(';') => {
+                        if tokens.len() >= 2 {
+                            if let Some(s) = carry_subject.clone() {
+                                let p = tokens[0].clone();
+                                for obj in split_top_level_commas(&tokens[1..]) {
+                                    push_expanded_triple(&mut kg, &s, &p, &obj);
+                                }
+                                carry_predicate = Some(p);
+                            }
+                        } else {
+                            carry_subject = None;
+                            carry_predicate = None;
+                        }
+                    }
+                    // New statement: `<subject> <predicate> <object>`.
+                    _ => {
+                        if tokens.len() >= 3 {
+                            let s = tokens[0].clone();
+                            let p = tokens[1].clone();
+                            for obj in split_top_level_commas(&tokens[2..]) {
+                                push_expanded_triple(&mut kg, &s, &p, &obj);
+                            }
+                            carry_subject = Some(s);
+                            carry_predicate = Some(p);
+                        } else {
+                            carry_subject = None;
+                            carry_predicate = None;
+                        }
+                    }
+                }
+                prev_terminator = terminator;
             }
-            let subject = &tokens[0];
-            let predicate = &tokens[1];
-            let object = &tokens[2];
-            let norm_s = Self::shorten_token(subject);
-            let norm_p = Self::shorten_token(predicate);
-            let norm_o = Self::shorten_token(object);
-            kg.triples.push(Triple {
-                subject: norm_s,
-                predicate: norm_p,
-                object: norm_o,
-            });
         }
         // parse shapes: look for NodeShape blocks (start with 'sea:SomethingShape a sh:NodeShape')
         // We scan lines to find blocks terminating with '.' and containing 'sh:property' entries
@@ -798,6 +1018,54 @@ impl KnowledgeGraph {
                 }
 
                 if !shape.properties.is_empty() {
+                    kg.shapes.push(shape);
+                }
+            }
+        }
+        // Resolve shapes whose properties are blank-node references
+        // (`sh:property _:id` with separate `_:id ... .` stanzas), as emitted
+        // by modern serializers. The text scanner above only understands
+        // inline `[ ... ]` property blocks.
+        let mut bnode_attrs: std::collections::HashMap<String, Vec<(String, String)>> =
+            std::collections::HashMap::new();
+        for t in &kg.triples {
+            if t.subject.starts_with("_:") {
+                bnode_attrs
+                    .entry(t.subject.clone())
+                    .or_default()
+                    .push((t.predicate.clone(), t.object.clone()));
+            }
+        }
+        for t in &kg.triples {
+            if t.predicate == "rdf:type" && t.object == "sh:NodeShape" {
+                let target_class = match kg
+                    .triples
+                    .iter()
+                    .find(|x| x.subject == t.subject && x.predicate == "sh:targetClass")
+                {
+                    Some(target) => target.object.clone(),
+                    None => continue,
+                };
+                let mut shape = ShaclShape {
+                    target_class,
+                    properties: Vec::new(),
+                };
+                for prop_ref in kg
+                    .triples
+                    .iter()
+                    .filter(|x| x.subject == t.subject && x.predicate == "sh:property")
+                {
+                    if let Some(attrs) = bnode_attrs.get(&prop_ref.object) {
+                        if let Some(property) = parse_shape_property_attrs(attrs) {
+                            shape.properties.push(property);
+                        }
+                    }
+                }
+                if !shape.properties.is_empty()
+                    && !kg.shapes.iter().any(|s| {
+                        s.target_class == shape.target_class && s.properties == shape.properties
+                    })
+                {
                     kg.shapes.push(shape);
                 }
             }
@@ -1077,16 +1345,20 @@ impl KnowledgeGraph {
                         }
                     }
 
-                    // minExclusive check (e.g. > 0) — interpreted for decimal numbers
+                    // minExclusive check (e.g. > 0) — interpreted for decimal numbers.
+                    // The stored threshold may carry Turtle quoting/datatype
+                    // (`"0"^^xsd:decimal`) depending on the serializer, so
+                    // compare on the lexical form.
                     if let Some(min_ex) = &prop.min_exclusive {
                         if prop.datatype.as_deref() == Some("xsd:decimal") {
                             let threshold =
-                                rust_decimal::Decimal::from_str(min_ex).map_err(|e| {
-                                    KgError::SerializationError(format!(
-                                        "Invalid minExclusive threshold '{}': {}",
-                                        min_ex, e
-                                    ))
-                                })?;
+                                rust_decimal::Decimal::from_str(&extract_literal_value(min_ex))
+                                    .map_err(|e| {
+                                        KgError::SerializationError(format!(
+                                            "Invalid minExclusive threshold '{}': {}",
+                                            min_ex, e
+                                        ))
+                                    })?;
                             for tr in self
                                 .triples
                                 .iter()
@@ -1628,6 +1900,38 @@ mod tests {
     use super::*;
     use crate::primitives::{Entity, Flow, Resource};
     use rust_decimal::Decimal;
+
+    #[test]
+    fn test_from_turtle_preserves_semicolons_in_iris() {
+        let turtle = r#"<https://example.test/s> <https://example.test/p;v=1> <https://example.test/o;v=2> ; sea:label "a;b" ."#;
+        let kg = KnowledgeGraph::from_turtle(turtle).unwrap();
+
+        assert_eq!(kg.triples.len(), 2);
+        assert_eq!(kg.triples[0].predicate, "<https://example.test/p;v=1>");
+        assert_eq!(kg.triples[0].object, "<https://example.test/o;v=2>");
+        assert_eq!(kg.triples[1].predicate, "sea:label");
+        assert_eq!(kg.triples[1].object, "\"a;b\"");
+    }
+
+    #[test]
+    fn test_from_turtle_preserves_commas_in_iri_objects() {
+        let turtle = r#"<https://example.test/s> sea:link <https://example.test/a,b>, <https://example.test/c,d>, "e,f" ."#;
+        let kg = KnowledgeGraph::from_turtle(turtle).unwrap();
+
+        let objects: Vec<&str> = kg
+            .triples
+            .iter()
+            .map(|triple| triple.object.as_str())
+            .collect();
+        assert_eq!(
+            objects,
+            [
+                "<https://example.test/a,b>",
+                "<https://example.test/c,d>",
+                "\"e,f\"",
+            ]
+        );
+    }
 
     #[test]
     fn test_export_to_rdf_turtle() {
