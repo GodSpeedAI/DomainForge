@@ -1,5 +1,7 @@
 # Next Steps
 
+The 2026-09-26 Turtle IRI delimiter fix has no remaining code or test steps. If this task later enables CodeRabbit review or provides graft, review the current diff and rebuild the index; then continue the repository priorities below.
+
 Current handoff (2026-09-25): `fix/debt-003-domainforge-accessors` merged to `main` and pushed; release-please opens the release PR from the `feat` commit (expect a minor bump from 0.17.0). Watch for the release PR titled `chore: release ...`, merge it to publish `@godspeedai/domainforge` plus the Python/Rust artifacts, then report the new version number for the Cognate pin bump. D8–D10 debt entries carry their fix evidence; fill `[RESOLVED <sha>]` with the merge commit at that point.
 
 ## 1. Maintain Documentation Synchronization upon ADR-014 Ratification
