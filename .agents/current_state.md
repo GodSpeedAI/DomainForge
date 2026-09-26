@@ -1,5 +1,10 @@
 # Current State: DEBT-003 Binding Accessors + domainforge-sea Skill (2026-09-25)
 
+## Turtle IRI delimiter parsing (2026-09-26)
+
+- [x] `domainforge-core/src/kg.rs` keeps semicolons and commas inside `<...>` IRIs when parsing Turtle predicate and object lists. Both new regressions failed before the fix and passed afterward; the final `cargo test -p domainforge-core --lib` run passed 383 tests with 1 ignored, `cargo test -p domainforge-core --features cli --test cli_import_tests` passed 2 tests, and Clippy, rustfmt, and `git diff --check` passed under Rust 1.92.0.
+- [ ] CodeRabbit review and graft index rebuild: review is disabled for this task; graft CLI is unavailable in this sandbox.
+
 Branch: `fix/debt-003-domainforge-accessors` (merging to `main`).
 
 - [x] New read accessors on `Graph` in TypeScript, Python, and WASM bindings for policies, metrics, mappings, projections, patterns, concept changes, entity instances, declared units, and declared dimensions (`DeclaredUnit`/`DeclaredDimension` wrappers; mapping rules, projection overrides, and base factor as strings). Evidence: `domainforge-core/src/{typescript,python,wasm}/graph.rs` + `primitives.rs`; `typescript-tests/graph.test.ts` 12/12; `tests/test_graph.py` new test; new `wasm_tests::test_graph_exposes_parsed_declarations_in_source_order` (22/22 wasm).

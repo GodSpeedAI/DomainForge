@@ -72,13 +72,14 @@ const URI_ENCODE_SET: &AsciiSet = &CONTROLS
     .add(b';');
 
 /// Split a Turtle line into `(core, terminator)` segments on top-level `;`
-/// boundaries. A `;` only separates statements outside `"..."` literals and
-/// `[...]` collections. The terminator is the trailing `.`, `;`, or `,`
-/// outside literals (if any); the final segment keeps the line terminator.
+/// boundaries. A `;` only separates statements outside `"..."` literals,
+/// `[...]` collections, and `<...>` IRIs. The terminator is a trailing `.`, `;`,
+/// or `,` (if any); the final segment keeps the line terminator.
 fn split_turtle_segments(line: &str) -> Vec<(String, Option<char>)> {
     let mut segments = Vec::new();
     let mut current = String::new();
     let mut in_literal = false;
+    let mut in_iri = false;
     let mut escape = false;
     let mut bracket_depth: usize = 0;
     for c in line.chars() {
@@ -93,9 +94,20 @@ fn split_turtle_segments(line: &str) -> Vec<(String, Option<char>)> {
             }
             continue;
         }
+        if in_iri {
+            current.push(c);
+            if c == '>' {
+                in_iri = false;
+            }
+            continue;
+        }
         match c {
             '"' => {
                 in_literal = true;
+                current.push(c);
+            }
+            '<' => {
+                in_iri = true;
                 current.push(c);
             }
             '[' => {
@@ -135,13 +147,14 @@ fn split_turtle_segments(line: &str) -> Vec<(String, Option<char>)> {
 }
 
 /// Split already-tokenized object positions on top-level commas (`,` tokens
-/// or comma-suffixed tokens), respecting quoted literals that may contain
-/// commas.
+/// or comma-suffixed tokens), respecting quoted literals and `<...>` IRIs
+/// that may contain commas.
 fn split_top_level_commas(tokens: &[String]) -> Vec<String> {
     let joined = tokens.join(" ");
     let mut objects = Vec::new();
     let mut current = String::new();
     let mut in_literal = false;
+    let mut in_iri = false;
     let mut escape = false;
     for c in joined.chars() {
         if in_literal {
@@ -155,9 +168,20 @@ fn split_top_level_commas(tokens: &[String]) -> Vec<String> {
             }
             continue;
         }
+        if in_iri {
+            current.push(c);
+            if c == '>' {
+                in_iri = false;
+            }
+            continue;
+        }
         match c {
             '"' => {
                 in_literal = true;
+                current.push(c);
+            }
+            '<' => {
+                in_iri = true;
                 current.push(c);
             }
             ',' => {
@@ -1876,6 +1900,38 @@ mod tests {
     use super::*;
     use crate::primitives::{Entity, Flow, Resource};
     use rust_decimal::Decimal;
+
+    #[test]
+    fn test_from_turtle_preserves_semicolons_in_iris() {
+        let turtle = r#"<https://example.test/s> <https://example.test/p;v=1> <https://example.test/o;v=2> ; sea:label "a;b" ."#;
+        let kg = KnowledgeGraph::from_turtle(turtle).unwrap();
+
+        assert_eq!(kg.triples.len(), 2);
+        assert_eq!(kg.triples[0].predicate, "<https://example.test/p;v=1>");
+        assert_eq!(kg.triples[0].object, "<https://example.test/o;v=2>");
+        assert_eq!(kg.triples[1].predicate, "sea:label");
+        assert_eq!(kg.triples[1].object, "\"a;b\"");
+    }
+
+    #[test]
+    fn test_from_turtle_preserves_commas_in_iri_objects() {
+        let turtle = r#"<https://example.test/s> sea:link <https://example.test/a,b>, <https://example.test/c,d>, "e,f" ."#;
+        let kg = KnowledgeGraph::from_turtle(turtle).unwrap();
+
+        let objects: Vec<&str> = kg
+            .triples
+            .iter()
+            .map(|triple| triple.object.as_str())
+            .collect();
+        assert_eq!(
+            objects,
+            [
+                "<https://example.test/a,b>",
+                "<https://example.test/c,d>",
+                "\"e,f\"",
+            ]
+        );
+    }
 
     #[test]
     fn test_export_to_rdf_turtle() {
