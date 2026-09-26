@@ -23,7 +23,9 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Validate semantic version
+      - uses: actions/checkout@v6
+
+      - name: Validate semantic version and manifest parity
         id: version
         shell: bash
         run: |
@@ -33,6 +35,21 @@ jobs:
             echo "::error::Invalid release tag '$tag' (expected vX.Y.Z or vX.Y.Z-prerelease)" >&2
             exit 1
           fi
+
+          rust_version=$(sed -n '/^\[package\]/,/^\[/ s/^version = "\([^"]*\)"/\1/p' domainforge-core/Cargo.toml | head -1)
+          python_version=$(sed -n '/^\[project\]/,/^\[/ s/^version = "\([^"]*\)"/\1/p' domainforge-python/pyproject.toml | head -1)
+          npm_version=$(node -p "require('./domainforge-typescript/package.json').version")
+          canonical_version=$(tr -d '[:space:]' < version.txt)
+
+          for pair in             "version.txt:$canonical_version"             "domainforge-core/Cargo.toml:$rust_version"             "domainforge-python/pyproject.toml:$python_version"             "domainforge-typescript/package.json:$npm_version"; do
+            file="${pair%%:*}"
+            actual="${pair#*:}"
+            if [[ "$actual" != "$version" ]]; then
+              echo "::error::$file version '$actual' does not match release tag '$tag'" >&2
+              exit 1
+            fi
+          done
+
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Publishing DomainForge $version"
 
