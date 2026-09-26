@@ -169,3 +169,28 @@ fixed and why.*
   `formatter/printer.rs` writes mapping and projection keys as identifiers (the
   `parser::printer` debug printer already did), plus
   `test_fmt_mapping_projection_round_trip` in `cli_tests.rs` (passes).
+
+## D11. CodeQL `rust/access-invalid-pointer` fires on napi-derive macro glue; not fixable in-repo
+
+- **Where:** Every `#[napi] pub struct` wrapper in `domainforge-core/src/typescript/`
+  (and the same idiom wherever napi classes are declared). PR #125 added 5
+  instances; ~17 identical ones were already open on `main`.
+- **Evidence (2026-09-25):** `grep unsafe` over our wrapper code returns
+  nothing — zero unsafe blocks, zero raw pointers. The flagged dereferences
+  are entirely inside napi-derive macro-generated N-API glue, verified in the
+  vendored backend sources: `napi-derive-backend 1.0.75`
+  (`src/codegen/struct.rs`: `from_napi_ref`/`from_napi_mut_ref`, `env.raw()`
+  derefs, `construct` glue) and `napi-derive-backend 5.1.2` (napi 3.5:
+  identical shape including `Box::leak(unsafe { Box::from_raw(this_ptr) })`
+  in getter glue). Upgrading napi 2.x→3.x therefore cannot silence the
+  query, and hand-rolling the glue would be less safe than the macro's.
+- **Impact:** Every PR touching a napi wrapper trips the (non-required)
+  CodeQL gate with unactionable findings. Dismissal via API returns 404 for
+  automation credentials (needs `security_events: write`), so only a
+  maintainer can clear them in the Security tab.
+- **Next move (maintainer call, not silent):** either dismiss the 22 open
+  alerts as false positives with this evidence attached, or migrate CodeQL
+  from default to advanced setup with a scoped exclusion for the
+  `rust/access-invalid-pointer` query over the binding crates. Upstream
+  options: napi restructuring its codegen, or CodeQL refining the query for
+  macro-generated FFI glue — both outside this repo.
