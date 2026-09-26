@@ -97,8 +97,7 @@ fn normalize_producer_version(bytes: &str) -> String {
 /// Assert the canonical documents stamp the running crate version, proving
 /// the stamp mechanism the goldens normalize away.
 fn assert_producer_version(bytes: &str) {
-    let doc: serde_json::Value =
-        serde_json::from_str(bytes).expect("canonical document parses");
+    let doc: serde_json::Value = serde_json::from_str(bytes).expect("canonical document parses");
     assert_eq!(
         doc["producer"]["version"].as_str(),
         Some(env!("CARGO_PKG_VERSION")),

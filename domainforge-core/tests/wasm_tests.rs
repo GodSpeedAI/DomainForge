@@ -364,8 +364,7 @@ mod application_contract_wasm_tests {
             flagship_sources_json(),
         )
         .unwrap();
-        let doc: serde_json::Value =
-            serde_json::from_str(&raw).expect("canonical document parses");
+        let doc: serde_json::Value = serde_json::from_str(&raw).expect("canonical document parses");
         assert_eq!(
             doc["producer"]["version"].as_str(),
             Some(env!("CARGO_PKG_VERSION")),
