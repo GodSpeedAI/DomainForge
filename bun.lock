@@ -12,7 +12,7 @@
     },
     "domainforge-typescript": {
       "name": "@godspeedai/domainforge",
-      "version": "0.15.0",
+      "version": "0.18.1",
       "devDependencies": {
         "@napi-rs/cli": "^2.18.0",
         "@types/bun": "^1.1.15",
