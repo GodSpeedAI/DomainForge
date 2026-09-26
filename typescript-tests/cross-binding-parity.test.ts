@@ -12,10 +12,13 @@ import { Graph } from '../index';
  *   - Python: tests/test_parser.py::test_cross_binding_contract_bytes_match_rust_golden
  *   - WASM:   domainforge-core/tests/wasm_tests.rs (cross_binding_golden_hashes)
  *
- * If serialization intentionally changes, regenerate all four in lockstep.
+ * The producer.version stamp is normalized out before hashing so release
+ * version bumps do not drift the goldens; the stamp itself is asserted
+ * against this package's version. If serialization intentionally changes,
+ * regenerate all four in lockstep.
  */
 const CONTRACT_GOLDEN_SHA256 =
-    'sha256:c8ebd330e20ac90dfd79e085f3ed0960095485397f8afaabfa53c1db7fdf13ee';
+    'sha256:38299bd2d0b062d45088f60ceef7018e4f89a1abe839be8edbdd1c961cd303e5';
 
 describe('cross-binding byte parity (ADR-013 M0 gate finding 2)', () => {
     const fixtureRoot = join(__dirname, '..', 'fixtures', 'application_generation', 'flagship');
@@ -26,7 +29,12 @@ describe('cross-binding byte parity (ADR-013 M0 gate finding 2)', () => {
 
     it('typescript contract bytes match the rust golden hash', () => {
         const raw = Graph.resolveApplicationContractJson('flagship/query-read.sea', sourcesJson);
-        const digest = 'sha256:' + createHash('sha256').update(raw, 'utf8').digest('hex');
+        const pkgVersion = JSON.parse(
+            readFileSync(join(__dirname, '..', 'domainforge-typescript', 'package.json'), 'utf8'),
+        ).version as string;
+        expect(JSON.parse(raw).producer.version).toBe(pkgVersion);
+        const normalized = raw.split(pkgVersion).join('0.0.0');
+        const digest = 'sha256:' + createHash('sha256').update(normalized, 'utf8').digest('hex');
         expect(digest).toBe(CONTRACT_GOLDEN_SHA256);
     });
 });
