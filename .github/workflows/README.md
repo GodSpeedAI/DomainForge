@@ -1,165 +1,81 @@
-# GitHub Workflows Documentation
+# GitHub Workflows
 
-This directory contains the CI/CD workflows for the DomainForge project.
+DomainForge uses one repository version across Rust, Python, TypeScript/native Node bindings, and WASM.
 
-## Workflows Overview
+## Release model
 
-| Workflow                   | Trigger                          | Purpose                                   |
-| -------------------------- | -------------------------------- | ----------------------------------------- |
-| `ci.yml`                   | Push to main/release/**, PRs     | Continuous Integration                    |
-| `release.yml`              | Tag `v*.*.*`                     | Build artifacts, create release, dispatch publishes |
-| `release-npm.yml`          | `workflow_call` from release.yml | Publish napi + WASM to npm                |
-| `release-pypi.yml`         | `workflow_call` from release.yml | Publish Python wheels to PyPI             |
-| `release-crates.yml`       | `workflow_call` from release.yml | Publish to crates.io                      |
-| `prepare-release.yml`      | Manual trigger                   | Automate version bump and release PR      |
-| `dependabot-automerge.yml` | Dependabot PRs                   | Auto-merge safe dependency updates        |
-| `dependency-review.yml`    | PRs                              | Review dependency changes for security    |
+`release-please.yml` watches `main` and maintains a single Release Please PR. The canonical version is `version.txt`; Release Please synchronizes that version into:
 
-## Workflow Details
+- `domainforge-core/Cargo.toml`
+- `domainforge-python/pyproject.toml`
+- `domainforge-typescript/package.json`
 
-### `ci.yml` - Continuous Integration
+Merging the Release Please PR creates exactly one tag and one GitHub Release:
 
-Main CI pipeline that runs on pushes to `main` and `release/**` branches, as well as pull requests targeting `main`.
-
-**Jobs:**
-
-- **lint**: Runs `rustfmt` and `clippy` on all Rust code
-- **test-rust**: Runs Rust tests on Linux, macOS, and Windows
-- **test-python**: Runs Python tests on Python 3.11 and 3.12
-- **test-typescript**: Runs TypeScript/Vitest tests
-- **test-integration**: Minimal integration checks including registry ambiguity validation
-- **test-wasm**: Builds and validates WASM bundle size
-- **security**: Runs `cargo audit` for security vulnerabilities
-
-### `release.yml` - Release Builds
-
-Triggered on version tags (`v*.*.*`). Builds release artifacts for all platforms.
-
-**Supported Targets:**
-
-| Target                      | OS Runner      | Notes                      |
-| --------------------------- | -------------- | -------------------------- |
-| `x86_64-unknown-linux-gnu`  | ubuntu-latest  | Standard Linux             |
-| `x86_64-apple-darwin`       | macos-15-intel | Intel Mac                  |
-| `x86_64-pc-windows-msvc`    | windows-2025-vs2026 | Windows                    |
-| `aarch64-apple-darwin`      | macos-15       | Apple Silicon              |
-| `aarch64-unknown-linux-gnu` | ubuntu-latest  | ARM Linux (cross-compiled) |
-
-**Jobs:**
-
-- **build-release**: Builds CLI binaries for all targets
-- **build-python-wheels**: Builds Python wheels for all targets
-- **build-wasm-release**: Builds optimized WASM bundle
-- **create-release**: Creates GitHub release with all artifacts
-- **publish-pypi**: Calls `release-pypi.yml` to publish wheels to PyPI
-- **publish-npm**: Calls `release-npm.yml` to publish napi + WASM to npm
-- **publish-crates**: Calls `release-crates.yml` to publish `domainforge-core` to crates.io
-
-### `prepare-release.yml` - Release Automation
-
-Manually triggered workflow to automate version bumping and release PR creation.
-
-**Inputs:**
-
-- `version_bump`: Choose `patch`, `minor`, or `major`
-- `prerelease`: Optional suffix like `alpha`, `beta`, or `rc1`
-
-**What it does:**
-
-1. Calculates new version based on bump type
-2. Updates `domainforge-core/Cargo.toml` with new version
-3. Prepares CHANGELOG.md entry
-4. Creates a release PR with checklist
-
-### Publishing Workflows
-
-| Workflow             | Registry  | Notes                                            |
-| -------------------- | --------- | ------------------------------------------------ |
-| `release-npm.yml`    | npm       | Publishes both napi bindings AND WASM package    |
-| `release-pypi.yml`   | PyPI      | Publishes wheels for all platforms including ARM |
-| `release-crates.yml` | crates.io | Publishes `domainforge-core` crate                       |
-
-## Bundle Size Thresholds
-
-| Artifact     | Limit | Notes                                    |
-| ------------ | ----- | ---------------------------------------- |
-| WASM bundle  | 2.75MB | Harmonized across ci.yml and release.yml |
-| CLI binary   | 50MB  | Per-platform binary                      |
-| CLI artifact | 70MB  | Packaged archive (tar.gz/zip)            |
-
-## Local Testing to Match CI
-
-```bash
-# Run all tests
-just all-tests
-
-# Or individually
-just rust-test
-just python-test
-just ts-test
-
-# WASM build and size check
-cd domainforge-core
-wasm-pack build --target web --features wasm
-SIZE=$(python3 -c "import os; print(os.path.getsize('pkg/domainforge_core_bg.wasm'))")
-echo "WASM bundle size: $SIZE bytes (threshold: 2883584)"
-[ "$SIZE" -lt 2883584 ] && echo "PASS" || echo "FAIL"
-
-# Lint checks
-cargo fmt --all --check
-cargo clippy --all-targets --all-features -- -D warnings
+```
+vX.Y.Z
 ```
 
-## Release Process
+The release title is normalized to the tag itself, so the repository sidebar shows the semantic version rather than a language/component name.
 
-### Automated (Recommended)
+The migration baseline is v0.18.0. Older component-prefixed releases remain as historical records, but future releases use the unified tag.
 
-1. Go to Actions → "Prepare Release" → Run workflow
-2. Select version bump type (patch/minor/major)
-3. Review and merge the created PR
-4. Create and push tag: `git tag v<version> && git push --tags`
-5. `release.yml` runs automatically on the tag: it builds artifacts, creates the GitHub Release, and then calls the three publish workflows (`release-pypi.yml`, `release-npm.yml`, `release-crates.yml`) via `workflow_call`.
+## Publishing
 
-> **Note:** Publishing is dispatched by `release.yml` via `workflow_call`, not by the `release: published` event. This is intentional: events produced by the default `GITHUB_TOKEN` do not trigger downstream workflows, so relying on `release: published` would silently skip publishing when the release is created automatically. Calling the publish workflows directly from `release.yml` is deterministic and requires no extra tokens.
+A `vX.Y.Z` tag triggers `deploy.yml`. After validating the tag, the workflow dispatches all registry publishers from the same source commit:
 
-### Manual
+| Workflow | Distribution |
+| --- | --- |
+| `release-crates.yml` | `domainforge-core` on crates.io |
+| `release-pypi.yml` | `domainforge` on PyPI |
+| `release-npm.yml` | `@godspeedai/domainforge` and `@godspeedai/domainforge-wasm` on npm |
 
-1. Bump version in `domainforge-core/Cargo.toml`
-2. Update `CHANGELOG.md`
-3. Commit and push
-4. Create and push tag: `git tag v<version> && git push --tags`
-5. `release.yml` builds, creates the release, and dispatches publishes automatically
+The publishers are idempotent where the registry supports checking/skipping an already-published version.
 
-## Cache Management
+There is no GitHub Environment named `prod` in the release path. CI on `main` is the merge gate; the version tag is the publication signal.
 
-All workflows use GitHub Actions cache (v5) with a `CACHE_VERSION` environment variable. To bust all caches:
+## npm authentication
 
-1. Increment `CACHE_VERSION` in the workflow file
-2. This is useful when dependencies are corrupted or need a fresh start
+npm publication uses Trusted Publishing (OIDC), not a long-lived npm write token. The workflow requests `id-token: write` and uses npm 11.15.0 or newer.
 
-## Secrets Required
+Because `release-npm.yml` is invoked through `workflow_call`, npm validates the calling workflow. Configure each npm package's Trusted Publisher as:
 
-| Secret           | Used By               | Purpose                       |
-| ---------------- | --------------------- | ----------------------------- |
-| `SOPS_AGE_KEY`   | All publish workflows | Decrypt encrypted secrets     |
-| `PYPI_API_TOKEN` | release-pypi.yml      | PyPI publishing (fallback)    |
-| `GITHUB_TOKEN`   | All workflows         | GitHub API access (automatic) |
+- Provider: GitHub Actions
+- Organization/user: `GodSpeedAI`
+- Repository: `DomainForge`
+- Workflow filename: `deploy.yml`
+- Environment: leave blank
+- Allowed action: direct `npm publish`
 
-## Troubleshooting
+Configure this for both `@godspeedai/domainforge` and `@godspeedai/domainforge-wasm`. A package must exist on npm before its Trusted Publisher can be configured, so a never-published package needs one initial authenticated publish.
 
-### ARM Linux Cross-Compilation
+For an existing package, the CLI equivalent is:
 
-ARM Linux targets use either `cross` (for CLI) or `zig` (for Python wheels) for cross-compilation. If builds fail:
+```bash
+npm install -g npm@^11.15.0
+npm trust github @godspeedai/domainforge --file deploy.yml --repo GodSpeedAI/DomainForge --allow-publish
+```
 
-1. Check that the target toolchain is installed
-2. Verify cross/zig are working correctly
-3. ARM Linux builds cannot be verified locally on x86 runners
+After `@godspeedai/domainforge-wasm` has been published once, configure it the same way by replacing the package name in that command.
 
-### Publish Failures
+## Release sequence
 
-All publish workflows have `continue-on-error: true` or `--skip-existing` to handle:
+1. Merge normal conventional commits to `main`.
+2. Release Please opens or updates the release PR and chooses the SemVer bump.
+3. Review and merge that release PR.
+4. Release Please creates `vX.Y.Z` and the GitHub Release.
+5. `deploy.yml` publishes that same version to crates.io, PyPI, and npm.
 
-- Package already published (re-runs)
-- Network issues (will fail but won't block other jobs)
+Do not manually create component-prefixed tags. The former manual `prepare-release.yml` path has been removed to keep one version authority and one release path.
 
-To check if a publish actually succeeded, verify the package on the respective registry.
+## Required credentials
+
+| Credential | Purpose |
+| --- | --- |
+| `CREATE_PR_TOKEN` | Allows Release Please-created tags to trigger `deploy.yml` |
+| `SOPS_AGE_KEY` | Decrypts the existing crates.io/PyPI publication credentials |
+| npm Trusted Publisher | Short-lived OIDC authentication for npm; no npm write token stored in GitHub |
+
+## CI
+
+`ci.yml` remains the merge gate for the repository. For local validation, run `just all-tests` plus the language-specific build/test commands relevant to the change.

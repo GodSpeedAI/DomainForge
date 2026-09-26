@@ -1,7 +1,7 @@
 name: Release Please
 
-# Triggered on every push to main (the integration branch).
-# release-please scans conventional commits and opens/updates release PRs.
+# Conventional commits are collected into one repository-level release.
+# Merging the Release Please PR creates one vX.Y.Z tag and one GitHub Release.
 on:
   push:
     branches: [main]
@@ -19,11 +19,19 @@ jobs:
     name: Release Please
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071
+      - id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071
         with:
-          # PAT (not GITHUB_TOKEN) so that tags created on release-PR merge
-          # propagate `push: tags` events to deploy.yml. GITHUB_TOKEN-created
-          # refs do not trigger downstream workflows.
+          # Use the PAT so a tag created by Release Please emits the downstream
+          # push event consumed by deploy.yml. Refs created with GITHUB_TOKEN do
+          # not trigger another workflow.
           token: ${{ secrets.CREATE_PR_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Normalize GitHub Release title to tag
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        run: gh release edit "$TAG_NAME" --title "$TAG_NAME"

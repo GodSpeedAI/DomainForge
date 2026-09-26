@@ -1,21 +1,13 @@
 name: Deploy
 
-# Triggered by component-prefixed tags produced by release-please:
-#   domainforge-core-vX.Y.Z   (Rust crate)      -> release-crates.yml
-#   domainforge-vX.Y.Z     (Python package)  -> release-pypi.yml
-#   domainforge-typescript-vX.Y.Z (TypeScript @godspeedai/domainforge) -> release-npm.yml
-#
-# This workflow is a router: it parses the tag, then dispatches to the
-# already-tested, reusable publish workflow that owns the build + publish
-# logic for that component. There is intentionally no separate `prod`
-# GitHub environment gate — this is a solo-maintainer repository where
-# CI on `main` is the merge gate and a tag push is the release signal.
+# A DomainForge release is one repository version. Release Please creates a
+# single vX.Y.Z tag, and that tag publishes every supported distribution.
+# There is intentionally no GitHub Environment gate such as "prod": CI on
+# main is the merge gate and the version tag is the release signal.
 on:
   push:
     tags:
-      - 'domainforge-core-v*'
-      - 'domainforge-v*'
-      - 'domainforge-typescript-v*'
+      - 'v*'
 
 permissions:
   contents: read
@@ -25,42 +17,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  identify:
-    name: Identify Component
+  validate:
+    name: Validate release tag
     runs-on: ubuntu-latest
     outputs:
-      component: ${{ steps.parse.outputs.component }}
-      version: ${{ steps.parse.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Parse tag into component and version
-        id: parse
+      - uses: actions/checkout@v6
+
+      - name: Validate semantic version and manifest parity
+        id: version
         shell: bash
         run: |
-          # GITHUB_REF_NAME on a tag push = the tag name, e.g. "domainforge-core-v0.12.0"
-          # component = everything before the last "-v"
-          # version   = everything after the last "-v"
           tag="${GITHUB_REF_NAME}"
-          component="${tag%-v*}"
-          version="${tag##*-v}"
-          echo "Parsed tag: $tag"
-          echo "  component: $component"
-          echo "  version:   $version"
-          # Validate version matches semver pattern
+          version="${tag#v}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
-            echo "::error::Invalid version format '$version' (expected semver X.Y.Z or X.Y.Z-prerelease)" >&2
+            echo "::error::Invalid release tag '$tag' (expected vX.Y.Z or vX.Y.Z-prerelease)" >&2
             exit 1
           fi
-          case "$component" in
-            domainforge-core|domainforge|domainforge-typescript) ;;
-            *) echo "::error::Unknown component '$component' (expected domainforge-core|domainforge|domainforge-typescript)" >&2; exit 1 ;;
-          esac
-          echo "component=$component" >> "$GITHUB_OUTPUT"
+
+          rust_version=$(sed -n '/^\[package\]/,/^\[/ s/^version = "\([^"]*\)"/\1/p' domainforge-core/Cargo.toml | head -1)
+          python_version=$(sed -n '/^\[project\]/,/^\[/ s/^version = "\([^"]*\)"/\1/p' domainforge-python/pyproject.toml | head -1)
+          npm_version=$(node -p "require('./domainforge-typescript/package.json').version")
+          canonical_version=$(tr -d '[:space:]' < version.txt)
+
+          for pair in             "version.txt:$canonical_version"             "domainforge-core/Cargo.toml:$rust_version"             "domainforge-python/pyproject.toml:$python_version"             "domainforge-typescript/package.json:$npm_version"; do
+            file="${pair%%:*}"
+            actual="${pair#*:}"
+            if [[ "$actual" != "$version" ]]; then
+              echo "::error::$file version '$actual' does not match release tag '$tag'" >&2
+              exit 1
+            fi
+          done
+
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing DomainForge $version"
 
   deploy-crates:
     name: Publish domainforge-core to crates.io
-    if: needs.identify.outputs.component == 'domainforge-core'
-    needs: identify
+    needs: validate
     uses: ./.github/workflows/release-crates.yml
     secrets: inherit
     permissions:
@@ -69,8 +64,7 @@ jobs:
 
   deploy-pypi:
     name: Publish domainforge wheels to PyPI
-    if: needs.identify.outputs.component == 'domainforge'
-    needs: identify
+    needs: validate
     uses: ./.github/workflows/release-pypi.yml
     secrets: inherit
     permissions:
@@ -78,9 +72,8 @@ jobs:
       packages: write
 
   deploy-npm:
-    name: Publish @godspeedai/domainforge to npm
-    if: needs.identify.outputs.component == 'domainforge-typescript'
-    needs: identify
+    name: Publish npm packages
+    needs: validate
     uses: ./.github/workflows/release-npm.yml
     secrets: inherit
     permissions:
