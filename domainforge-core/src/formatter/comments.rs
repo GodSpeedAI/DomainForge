@@ -23,22 +23,92 @@ pub struct Comment {
 pub fn extract_comments(source: &str) -> BTreeMap<usize, Vec<Comment>> {
     let mut comments: BTreeMap<usize, Vec<Comment>> = BTreeMap::new();
 
-    for (line_idx, line) in source.lines().enumerate() {
-        let line_num = line_idx + 1;
-        let trimmed = line.trim();
+    // A `//` inside a string literal (e.g. `"https://example.com"`) is not a
+    // comment start, so this scans char-by-char tracking whether we are
+    // inside a `"…"` string (with `\"` escapes) or a `"""…"""` multiline
+    // string (per `grammar/sea.pest`'s `string_literal`/`multiline_string`),
+    // rather than treating any `//` found on a line as a comment.
+    #[derive(PartialEq)]
+    enum State {
+        Normal,
+        InString,
+        InMultilineString,
+    }
 
-        // Check for line comment
-        if let Some(comment_start) = trimmed.find("//") {
-            let before_comment = &line[..line.find("//").unwrap_or(0)];
-            let is_trailing = !before_comment.trim().is_empty();
+    let chars: Vec<char> = source.chars().collect();
+    let len = chars.len();
+    let mut i = 0usize;
+    let mut line_num = 1usize;
+    let mut line_start = 0usize;
+    let mut state = State::Normal;
 
-            let comment_text = trimmed[comment_start + 2..].trim();
+    let is_triple_quote = |chars: &[char], at: usize| -> bool {
+        at + 2 < len && chars[at] == '"' && chars[at + 1] == '"' && chars[at + 2] == '"'
+    };
 
-            comments.entry(line_num).or_default().push(Comment {
-                text: comment_text.to_string(),
-                line: line_num,
-                is_trailing,
-            });
+    while i < len {
+        let c = chars[i];
+        match state {
+            State::Normal => match c {
+                '"' if is_triple_quote(&chars, i) => {
+                    state = State::InMultilineString;
+                    i += 3;
+                }
+                '"' => {
+                    state = State::InString;
+                    i += 1;
+                }
+                '/' if i + 1 < len && chars[i + 1] == '/' => {
+                    let comment_start = i;
+                    let mut j = i + 2;
+                    while j < len && chars[j] != '\n' {
+                        j += 1;
+                    }
+                    let text: String = chars[i + 2..j].iter().collect::<String>();
+                    let before: String = chars[line_start..comment_start].iter().collect();
+                    let is_trailing = !before.trim().is_empty();
+
+                    comments.entry(line_num).or_default().push(Comment {
+                        text: text.trim().to_string(),
+                        line: line_num,
+                        is_trailing,
+                    });
+                    i = j;
+                }
+                '\n' => {
+                    line_num += 1;
+                    i += 1;
+                    line_start = i;
+                }
+                _ => i += 1,
+            },
+            State::InString => match c {
+                '\\' if i + 1 < len => i += 2,
+                '"' => {
+                    state = State::Normal;
+                    i += 1;
+                }
+                '\n' => {
+                    // Not valid per grammar (string literals don't span
+                    // lines), but stay conservative rather than panic.
+                    line_num += 1;
+                    i += 1;
+                    line_start = i;
+                }
+                _ => i += 1,
+            },
+            State::InMultilineString => {
+                if is_triple_quote(&chars, i) {
+                    state = State::Normal;
+                    i += 3;
+                } else if c == '\n' {
+                    line_num += 1;
+                    i += 1;
+                    line_start = i;
+                } else {
+                    i += 1;
+                }
+            }
         }
     }
 
