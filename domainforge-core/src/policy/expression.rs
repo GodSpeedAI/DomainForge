@@ -269,7 +269,12 @@ impl fmt::Display for Expression {
                 key,
                 condition,
             } => {
-                write!(f, "group_by({} in {}", variable, collection)?;
+                write!(
+                    f,
+                    "group_by({} in {}",
+                    variable,
+                    format_collection(collection)
+                )?;
                 if let Some(flt) = filter {
                     write!(f, " WHERE {}", flt)?;
                 }
@@ -293,11 +298,26 @@ impl fmt::Display for Expression {
                 collection,
                 condition,
             } => {
+                // Grammar: `quantifier identifier "in" collection ":" "(" expression ")"`
+                // — there is no wrapping "(" ")" around the whole quantified
+                // expression itself (unlike an aggregation call), and the
+                // quantifier keyword is the lowercase SEA spelling, not
+                // `Quantifier`'s Debug-style Display. `Binary` already prints
+                // its own surrounding parens, so only add them here when the
+                // condition would not otherwise have them, to avoid an
+                // unparseable double-paren `((...))`.
                 write!(
                     f,
-                    "{}({} in {}: {})",
-                    quantifier, variable, collection, condition
-                )
+                    "{} {} in {}: ",
+                    quantifier_keyword(quantifier),
+                    variable,
+                    format_collection(collection)
+                )?;
+                if matches!(condition.as_ref(), Expression::Binary { .. }) {
+                    write!(f, "{}", condition)
+                } else {
+                    write!(f, "({})", condition)
+                }
             }
             Expression::MemberAccess { object, member } => {
                 write!(f, "{}.{}", object, member)
@@ -308,7 +328,7 @@ impl fmt::Display for Expression {
                 field,
                 filter,
             } => {
-                write!(f, "{}({}", function, collection)?;
+                write!(f, "{}({}", function, format_collection(collection))?;
                 if let Some(fld) = field {
                     write!(f, ".{}", fld)?;
                 }
@@ -326,7 +346,13 @@ impl fmt::Display for Expression {
                 projection,
                 target_unit,
             } => {
-                write!(f, "{}({} in {}", function, variable, collection)?;
+                write!(
+                    f,
+                    "{}({} in {}",
+                    function,
+                    variable,
+                    format_collection(collection)
+                )?;
                 if let Some(w) = window {
                     write!(f, " OVER LAST {} \"{}\"", w.duration, w.unit)?;
                 }
@@ -392,6 +418,35 @@ impl fmt::Display for Quantifier {
             Quantifier::ExistsUnique => write!(f, "ExistsUnique"),
         }
     }
+}
+
+/// The SEA source keyword for a quantifier, as accepted by the
+/// case-insensitive `quantifier` grammar rule. Distinct from
+/// `Quantifier`'s own `Display` (`ForAll`/`Exists`/`ExistsUnique`), which is
+/// a debug-style spelling used elsewhere, not SEA syntax.
+fn quantifier_keyword(q: &Quantifier) -> &'static str {
+    match q {
+        Quantifier::ForAll => "forall",
+        Quantifier::Exists => "exists",
+        Quantifier::ExistsUnique => "exists_unique",
+    }
+}
+
+/// Formats a collection expression as SEA source.
+///
+/// `parse_collection` encodes `entity_instances of "EntityType"` as the
+/// plain variable name `entity_instances:EntityType` (see its doc comment),
+/// so every quantifier/aggregation/group_by site that prints a collection
+/// must decode that back into the `entity_instances of "EntityType"` syntax
+/// the grammar actually accepts, rather than printing the internal
+/// `entity_instances:EntityType` encoding verbatim.
+fn format_collection(collection: &Expression) -> String {
+    if let Expression::Variable(name) = collection {
+        if let Some(entity_type) = name.strip_prefix("entity_instances:") {
+            return format!("entity_instances of \"{}\"", entity_type);
+        }
+    }
+    collection.to_string()
 }
 
 impl fmt::Display for AggregateFunction {

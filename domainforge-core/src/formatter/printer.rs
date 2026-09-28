@@ -137,12 +137,88 @@ impl Formatter {
         // Format file header
         self.format_file_metadata(&ast.metadata);
 
+        // Every comment in the source must appear exactly once in the
+        // output. Comments already emitted as file-header comments are
+        // excluded from the sweep below; every other comment is flushed
+        // (as an own-line `// text` comment) immediately before the first
+        // declaration whose line comes after it. A comment that trails a
+        // declaration's own line (i.e., `c.is_trailing && c.line == decl.line`)
+        // is appended as a trailing comment on that declaration's FIRST output
+        // line, so it stays on the same logical declaration.
+        let mut emitted_lines: std::collections::BTreeSet<usize> =
+            header_comments.iter().map(|c| c.line).collect();
+        let all_comments: Vec<crate::formatter::comments::Comment> = self
+            .commented_source
+            .as_ref()
+            .map(|cs| cs.comments.values().flatten().cloned().collect())
+            .unwrap_or_default();
+
+        let mut need_separator =
+            !ast.metadata.imports.is_empty() || ast.metadata.namespace.is_some();
+
         // Format declarations
-        for (i, decl) in ast.declarations.iter().enumerate() {
-            if i > 0 || !ast.metadata.imports.is_empty() || ast.metadata.namespace.is_some() {
+        for decl in ast.declarations.iter() {
+            let pending: Vec<_> = all_comments
+                .iter()
+                .filter(|c| c.line < decl.line && !emitted_lines.contains(&c.line))
+                .collect();
+
+            if !pending.is_empty() {
+                if need_separator {
+                    self.newline();
+                }
+                for comment in &pending {
+                    self.write("// ");
+                    self.write(&comment.text);
+                    self.newline();
+                    emitted_lines.insert(comment.line);
+                }
+            } else if need_separator {
                 self.newline();
             }
+
+            let start = self.output.len();
             self.format_declaration(&decl.node);
+
+            // Attach trailing comments on the same line as the declaration.
+            // Collect them first to avoid borrow conflicts when mutating self.output.
+            let trailing: Vec<_> = all_comments
+                .iter()
+                .filter(|c| {
+                    c.is_trailing && c.line == decl.line && !emitted_lines.contains(&c.line)
+                })
+                .collect();
+
+            for comment in trailing {
+                // Find the end of the first output line (the declaration's line).
+                let eol = self.output[start..]
+                    .find('\n')
+                    .map(|p| start + p)
+                    .unwrap_or(self.output.len());
+                self.output
+                    .insert_str(eol, &format!("  // {}", comment.text));
+                emitted_lines.insert(comment.line);
+            }
+
+            need_separator = true;
+        }
+
+        // Any comments left over (after the last declaration, or in a file
+        // with no declarations at all) are flushed at the end.
+        let remaining: Vec<_> = all_comments
+            .iter()
+            .filter(|c| !emitted_lines.contains(&c.line))
+            .collect();
+        if !remaining.is_empty() {
+            if need_separator {
+                self.newline();
+            }
+            for comment in remaining {
+                self.write("// ");
+                self.write(&comment.text);
+                self.newline();
+                emitted_lines.insert(comment.line);
+            }
         }
 
         // Ensure trailing newline
@@ -1434,5 +1510,240 @@ Entity "Foo"
         // Comments should not be preserved when disabled
         assert!(!result.contains("// Comment"));
         assert!(result.contains("Entity \"Foo\""));
+    }
+
+    // --- Quantifier round-trip (defect: quantifiers became unparseable) ---
+
+    fn quantifier_source(keyword: &str) -> String {
+        format!(
+            r#"Entity "A"
+Entity "B"
+Resource "R" units
+Flow "R" from "A" to "B" quantity 1
+
+Policy p as:
+    {keyword} f in flows: (f.quantity > 0)
+"#
+        )
+    }
+
+    #[test]
+    fn test_format_quantifier_forall_round_trip() {
+        let input = quantifier_source("forall");
+        let once = format(&input, FormatConfig::default()).unwrap();
+        assert!(
+            parse_source(&once).is_ok(),
+            "formatted forall output must reparse: {once}"
+        );
+        let twice = format(&once, FormatConfig::default()).unwrap();
+        assert_eq!(once, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_quantifier_exists_round_trip() {
+        let input = quantifier_source("exists");
+        let once = format(&input, FormatConfig::default()).unwrap();
+        assert!(
+            parse_source(&once).is_ok(),
+            "formatted exists output must reparse: {once}"
+        );
+        let twice = format(&once, FormatConfig::default()).unwrap();
+        assert_eq!(once, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_quantifier_exists_unique_round_trip() {
+        let input = quantifier_source("exists_unique");
+        let once = format(&input, FormatConfig::default()).unwrap();
+        assert!(
+            parse_source(&once).is_ok(),
+            "formatted exists_unique output must reparse: {once}"
+        );
+        let twice = format(&once, FormatConfig::default()).unwrap();
+        assert_eq!(once, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_quantifier_non_binary_condition_round_trip() {
+        // The condition is a bare boolean literal, not a `Binary` expression,
+        // so the Display impl must add its own parens rather than relying on
+        // `Binary`'s self-parenthesizing.
+        let input = r#"Entity "A"
+Entity "B"
+Resource "R" units
+Flow "R" from "A" to "B" quantity 1
+
+Policy p as:
+    forall f in flows: (true)
+"#;
+        let once = format(input, FormatConfig::default()).unwrap();
+        assert!(
+            !once.contains("(("),
+            "must not double-parenthesize a non-Binary condition: {once}"
+        );
+        assert!(
+            parse_source(&once).is_ok(),
+            "formatted output must reparse: {once}"
+        );
+        let twice = format(&once, FormatConfig::default()).unwrap();
+        assert_eq!(once, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_quantifier_entity_instances_of_round_trip() {
+        let input = r#"Entity "A"
+
+Instance a1 of "A" {
+    x: 5
+}
+
+Policy p as:
+    forall e in entity_instances of "A": (e.x > 0)
+"#;
+        let once = format(input, FormatConfig::default()).unwrap();
+        assert!(
+            once.contains("entity_instances of \"A\""),
+            "must decode entity_instances:A back to SEA syntax: {once}"
+        );
+        assert!(
+            parse_source(&once).is_ok(),
+            "formatted output must reparse: {once}"
+        );
+        let twice = format(&once, FormatConfig::default()).unwrap();
+        assert_eq!(once, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    // --- Comment preservation (defect: fmt dropped non-header comments) ---
+
+    fn count_comment_lines(s: &str) -> usize {
+        s.lines()
+            .filter(|l| l.trim_start().starts_with("//"))
+            .count()
+    }
+
+    #[test]
+    fn test_format_comments_between_declarations() {
+        let input = r#"Entity "A"
+// comment between declarations
+Entity "B"
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(result.contains("// comment between declarations"));
+        assert!(parse_source(&result).is_ok(), "must reparse: {result}");
+        let twice = format(&result, FormatConfig::default()).unwrap();
+        assert_eq!(result, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_comments_after_namespace_before_first_decl() {
+        let input = r#"@namespace "test"
+// comment after namespace, before first declaration
+Entity "A"
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(result.contains("// comment after namespace, before first declaration"));
+        assert!(parse_source(&result).is_ok(), "must reparse: {result}");
+        let twice = format(&result, FormatConfig::default()).unwrap();
+        assert_eq!(result, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_comments_trailing_on_declaration() {
+        let input = r#"Entity "A" // trailing comment
+Entity "B"
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(result.contains("// trailing comment"));
+
+        // Verify that the comment stays on the declaration's line, not hoisted before the next one.
+        let lines: Vec<&str> = result.lines().collect();
+        let entity_a_line = lines
+            .iter()
+            .find(|l| l.contains("Entity \"A\""))
+            .expect("Entity A line not found");
+        assert!(
+            entity_a_line.contains("// trailing comment"),
+            "trailing comment should be on Entity A's line: {entity_a_line}"
+        );
+
+        assert!(parse_source(&result).is_ok(), "must reparse: {result}");
+        let twice = format(&result, FormatConfig::default()).unwrap();
+        assert_eq!(result, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_comments_at_end_of_file() {
+        let input = r#"Entity "A"
+Entity "B"
+// trailing end-of-file comment
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(result.contains("// trailing end-of-file comment"));
+        assert!(parse_source(&result).is_ok(), "must reparse: {result}");
+        let twice = format(&result, FormatConfig::default()).unwrap();
+        assert_eq!(result, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_comments_string_literal_not_treated_as_comment() {
+        let input = r#"Entity "A"
+Entity "B"
+Resource "R" units
+Flow "R" from "A" to "B" quantity 1
+
+Policy p as:
+    f.resource CONTAINS "see https://example.com for details"
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        assert!(
+            result.contains("https://example.com"),
+            "string literal content must survive: {result}"
+        );
+        // The `//` is inside a string literal and must not have produced an
+        // own-line `//` comment.
+        assert_eq!(
+            count_comment_lines(input),
+            0,
+            "test fixture has no real comments"
+        );
+        assert_eq!(
+            count_comment_lines(&result),
+            0,
+            "must not manufacture a comment from a string literal: {result}"
+        );
+        assert!(parse_source(&result).is_ok(), "must reparse: {result}");
+        let twice = format(&result, FormatConfig::default()).unwrap();
+        assert_eq!(result, twice, "fmt(fmt(x)) must equal fmt(x)");
+    }
+
+    #[test]
+    fn test_format_comments_all_preserved_exactly_once() {
+        // Every one of the five comments below must appear exactly once in
+        // the output, none dropped and none duplicated.
+        let input = r#"// header comment
+@namespace "test"
+// after namespace, before first decl
+Entity "A" // trailing on entity
+// between declarations
+Entity "B"
+// end of file comment
+"#;
+        let result = format(input, FormatConfig::default()).unwrap();
+        for text in [
+            "// header comment",
+            "// after namespace, before first decl",
+            "// trailing on entity",
+            "// between declarations",
+            "// end of file comment",
+        ] {
+            assert_eq!(
+                result.matches(text).count(),
+                1,
+                "expected exactly one occurrence of {text:?} in: {result}"
+            );
+        }
+        assert!(parse_source(&result).is_ok(), "must reparse: {result}");
+        let twice = format(&result, FormatConfig::default()).unwrap();
+        assert_eq!(result, twice, "fmt(fmt(x)) must equal fmt(x)");
     }
 }
