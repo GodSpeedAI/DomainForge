@@ -1514,6 +1514,7 @@ Entity "Foo"
 
     // --- Quantifier round-trip (defect: quantifiers became unparseable) ---
 
+    /// Builds a SEA fixture with the given quantifier keyword over a declared flow.
     fn quantifier_source(keyword: &str) -> String {
         format!(
             r#"Entity "A"
@@ -1615,6 +1616,7 @@ Policy p as:
 
     // --- Comment preservation (defect: fmt dropped non-header comments) ---
 
+    /// Counts lines whose first non-whitespace characters are `//`, excluding trailing comments.
     fn count_comment_lines(s: &str) -> usize {
         s.lines()
             .filter(|l| l.trim_start().starts_with("//"))
