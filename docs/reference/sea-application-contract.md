@@ -937,3 +937,21 @@ Fixture line numbers count from line 1 of each fenced fixture in §11.
 - optional `semantic_pack_set_hash` and `registry_content_hash` (serialized as `null` when absent).
 
 The digest binds the model to its producer, compiler interpretation, canonicalization rules, source set, semantic content, packs, and registry when supplied.
+
+### 14.1 `world_ref`
+
+A `world_ref` is the ergonomic immutable reference to exactly one resolved semantic-world revision. It is defined here once, in `domainforge-core/src/application/world.rs`; other repositories consume it through the Rust crate or the Python, TypeScript and WASM bindings and must not re-implement the grammar.
+
+```text
+world_ref   = "world:" name "@" digest
+world_alias = "world:" name
+digest      = "sha256:" 64 lowercase hex   ; exactly DomainModelIdentity::canonical_digest()
+name        = [a-z][a-z0-9]*([._-][a-z0-9]+)*   ; at most 64 characters
+```
+
+- The digest is `canonical_digest()` and nothing else; there is no second hash. `DomainModelIdentity::from_document` maps a resolved document to the identity (`content_hash` is the document `self_hash`).
+- A `world_alias` is a mutable selector. It must be resolved to a known `world_ref` (`WorldCatalog::pin`) before consequential execution. Retargeting an alias appends to its history and never changes an existing `world_ref`.
+- A `world_label` (for example `GodSpeed Corporate World`) is presentation metadata, never identity.
+- Because the identity binds the exact source set, the producer release and the interpretation versions, a comment-only edit or a DomainForge upgrade mints a new `world_ref`. `semantic_closure_hash` is unchanged in both cases and is the field that proves two revisions mean the same thing.
+- A registered digest has exactly one canonical name within a catalog; unknown, malformed or mismatching references fail closed.
+- Golden vectors: `domainforge-core/tests/fixtures/world_ref/golden-vectors.json`, generated and checked by the stdlib-only `world_ref_reference.py` and verified by the Rust, Python, TypeScript and WASM suites.

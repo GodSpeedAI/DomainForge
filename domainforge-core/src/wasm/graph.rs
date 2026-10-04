@@ -60,6 +60,47 @@ impl Graph {
             })
     }
 
+    /// Resolve a source map and return its DomainModelIdentity as canonical JSON.
+    #[wasm_bindgen(js_name = domainModelIdentityJson)]
+    pub fn domain_model_identity_json(
+        entry_logical_path: String,
+        sources_json: String,
+        registry_content_hash: Option<String>,
+    ) -> Result<String, JsValue> {
+        crate::application::world::domain_model_identity_json(
+            &entry_logical_path,
+            &sources_json,
+            registry_content_hash.as_deref(),
+        )
+        .map_err(|diags| {
+            JsValue::from_str(&serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()))
+        })
+    }
+
+    /// Mint the canonical `world:<name>@sha256:<digest>` from identity JSON.
+    #[wasm_bindgen(js_name = worldRefFromIdentityJson)]
+    pub fn world_ref_from_identity_json(
+        name: String,
+        identity_json: String,
+    ) -> Result<String, JsValue> {
+        crate::application::world::world_ref_from_identity_json(&name, &identity_json)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Verify identity JSON against the digest pinned by a world_ref.
+    #[wasm_bindgen(js_name = verifyWorldRef)]
+    pub fn verify_world_ref(world_ref: String, identity_json: String) -> Result<(), JsValue> {
+        crate::application::world::verify_world_ref_json(&world_ref, &identity_json)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Parse a world_ref and return its canonical text; invalid input throws.
+    #[wasm_bindgen(js_name = parseWorldRef)]
+    pub fn parse_world_ref(text: String) -> Result<String, JsValue> {
+        crate::application::world::canonical_world_ref(&text)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     #[wasm_bindgen(js_name = isEmpty)]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()

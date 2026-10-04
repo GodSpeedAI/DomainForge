@@ -219,6 +219,14 @@ export declare class Graph {
    * document JSON (ADR-013 Milestone 0).
    */
   static resolveApplicationContractJson(entryLogicalPath: string, sourcesJson: string): string
+  /** Resolve a source map and return its DomainModelIdentity as canonical JSON. */
+  static domainModelIdentityJson(entryLogicalPath: string, sourcesJson: string, registryContentHash?: string | undefined | null): string
+  /** Mint the canonical `world:<name>@sha256:<digest>` from identity JSON. */
+  static worldRefFromIdentityJson(name: string, identityJson: string): string
+  /** Verify identity JSON against the digest pinned by a world_ref. */
+  static verifyWorldRef(worldRef: string, identityJson: string): void
+  /** Parse a world_ref and return its canonical text; invalid input throws. */
+  static parseWorldRef(text: string): string
   addEntity(entity: Entity): void
   addResource(resource: Resource): void
   addFlow(flow: Flow): void
