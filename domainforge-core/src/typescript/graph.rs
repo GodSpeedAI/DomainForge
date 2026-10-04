@@ -56,6 +56,44 @@ impl Graph {
             })
     }
 
+    /// Resolve a source map and return its DomainModelIdentity as canonical JSON.
+    #[napi]
+    pub fn domain_model_identity_json(
+        entry_logical_path: String,
+        sources_json: String,
+        registry_content_hash: Option<String>,
+    ) -> Result<String> {
+        crate::application::world::domain_model_identity_json(
+            &entry_logical_path,
+            &sources_json,
+            registry_content_hash.as_deref(),
+        )
+        .map_err(|diags| {
+            Error::from_reason(serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()))
+        })
+    }
+
+    /// Mint the canonical `world:<name>@sha256:<digest>` from identity JSON.
+    #[napi]
+    pub fn world_ref_from_identity_json(name: String, identity_json: String) -> Result<String> {
+        crate::application::world::world_ref_from_identity_json(&name, &identity_json)
+            .map_err(|e| Error::from_reason(e.to_string()))
+    }
+
+    /// Verify identity JSON against the digest pinned by a world_ref.
+    #[napi]
+    pub fn verify_world_ref(world_ref: String, identity_json: String) -> Result<()> {
+        crate::application::world::verify_world_ref_json(&world_ref, &identity_json)
+            .map_err(|e| Error::from_reason(e.to_string()))
+    }
+
+    /// Parse a world_ref and return its canonical text; invalid input throws.
+    #[napi]
+    pub fn parse_world_ref(text: String) -> Result<String> {
+        crate::application::world::canonical_world_ref(&text)
+            .map_err(|e| Error::from_reason(e.to_string()))
+    }
+
     #[napi]
     pub fn add_entity(&mut self, entity: &Entity) -> Result<()> {
         self.inner

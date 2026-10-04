@@ -386,4 +386,24 @@ mod application_contract_wasm_tests {
             "WASM binding bytes drifted from the Rust golden"
         );
     }
+
+    #[wasm_bindgen_test]
+    fn test_world_ref_binding_round_trip_and_tamper_detection() {
+        let sources = serde_json::json!({
+            "main.sea": "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n"
+        })
+        .to_string();
+        let identity = Graph::domain_model_identity_json("main.sea".to_string(), sources, None)
+            .expect("identity resolves");
+        let world = Graph::world_ref_from_identity_json("t".to_string(), identity.clone())
+            .expect("world_ref mints");
+        assert!(world.starts_with("world:t@sha256:"));
+        assert_eq!(Graph::parse_world_ref(world.clone()).unwrap(), world);
+        Graph::verify_world_ref(world.clone(), identity.clone()).expect("verifies");
+
+        let mut forged: serde_json::Value = serde_json::from_str(&identity).unwrap();
+        forged["semantic_closure_hash"] = serde_json::json!(format!("sha256:{}", "0".repeat(64)));
+        assert!(Graph::verify_world_ref(world, forged.to_string()).is_err());
+        assert!(Graph::parse_world_ref("world:corp".to_string()).is_err());
+    }
 }

@@ -1,5 +1,10 @@
 # Next Steps
 
+## world_ref follow-up (2026-10-04)
+
+1. Review and merge `feat/world-ref`, then let release-please cut the next release (expected 0.19.0). Expected outcome: `world_ref` is published in `domainforge-core` (crates.io) and `@godspeedai/domainforge` (npm).
+2. Bump every consumer (sea-forge, Cognate, RealityTrace and their pinned constants) to that release together. Expected outcome: no version skew, as in Stage 1 of the cross-repo migration.
+
 The 2026-09-26 Turtle IRI delimiter fix has no remaining code or test steps. If this task later enables CodeRabbit review or provides graft, review the current diff and rebuild the index; then continue the repository priorities below.
 
 Current handoff (2026-09-25): `fix/debt-003-domainforge-accessors` merged to `main` and pushed; release-please opens the release PR from the `feat` commit (expect a minor bump from 0.17.0). Watch for the release PR titled `chore: release ...`, merge it to publish `@godspeedai/domainforge` plus the Python/Rust artifacts, then report the new version number for the Cognate pin bump. D8–D10 debt entries carry their fix evidence; fill `[RESOLVED <sha>]` with the merge commit at that point.

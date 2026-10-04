@@ -1,0 +1,149 @@
+{
+  "format": "world:<name>@sha256:<64 lowercase hex>",
+  "identity_scheme_version": "v2-full-preimage",
+  "valid": [
+    {
+      "case": "minimal",
+      "name": "godspeed-corporate",
+      "identity": {
+        "identity_scheme_version": "v2-full-preimage",
+        "producer": "domainforge-core",
+        "producer_version": "0.18.2",
+        "language_schema_version": "domainforge-ast/v3",
+        "compiler_interpretation_version": "domainforge-interpretation/v1",
+        "canonicalization_version": "domainforge-canonicalization/v1",
+        "source_set_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "semantic_closure_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "semantic_pack_set_hash": null,
+        "registry_content_hash": null
+      },
+      "canonical_digest": "sha256:da23a66e20d574b52ad554b09b65ee39e6c8d2fdd7b1ac525d898b9e7bfe6440",
+      "world_ref": "world:godspeed-corporate@sha256:da23a66e20d574b52ad554b09b65ee39e6c8d2fdd7b1ac525d898b9e7bfe6440"
+    },
+    {
+      "case": "with-packs-and-registry",
+      "name": "godspeed-corporate",
+      "identity": {
+        "identity_scheme_version": "v2-full-preimage",
+        "producer": "domainforge-core",
+        "producer_version": "0.18.2",
+        "language_schema_version": "domainforge-ast/v3",
+        "compiler_interpretation_version": "domainforge-interpretation/v1",
+        "canonicalization_version": "domainforge-canonicalization/v1",
+        "source_set_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "semantic_closure_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "semantic_pack_set_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "registry_content_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "canonical_digest": "sha256:475d2a967864fda8389c403e79d884b70b0642296ef46db1c386700d996dfdaf",
+      "world_ref": "world:godspeed-corporate@sha256:475d2a967864fda8389c403e79d884b70b0642296ef46db1c386700d996dfdaf"
+    },
+    {
+      "case": "semantic-change",
+      "name": "godspeed-corporate",
+      "identity": {
+        "identity_scheme_version": "v2-full-preimage",
+        "producer": "domainforge-core",
+        "producer_version": "0.18.2",
+        "language_schema_version": "domainforge-ast/v3",
+        "compiler_interpretation_version": "domainforge-interpretation/v1",
+        "canonicalization_version": "domainforge-canonicalization/v1",
+        "source_set_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "semantic_closure_hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "semantic_pack_set_hash": null,
+        "registry_content_hash": null
+      },
+      "canonical_digest": "sha256:69be94a72f03a2848e1e7b23edde4d280185dae8438ad1079f8fb9a2cb8577a4",
+      "world_ref": "world:godspeed-corporate@sha256:69be94a72f03a2848e1e7b23edde4d280185dae8438ad1079f8fb9a2cb8577a4"
+    },
+    {
+      "case": "source-change-same-closure",
+      "name": "godspeed-corporate",
+      "identity": {
+        "identity_scheme_version": "v2-full-preimage",
+        "producer": "domainforge-core",
+        "producer_version": "0.18.2",
+        "language_schema_version": "domainforge-ast/v3",
+        "compiler_interpretation_version": "domainforge-interpretation/v1",
+        "canonicalization_version": "domainforge-canonicalization/v1",
+        "source_set_hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "semantic_closure_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "semantic_pack_set_hash": null,
+        "registry_content_hash": null
+      },
+      "canonical_digest": "sha256:0e4744f197655ddcea21dc01167177f4c4007ab4810786467ac0a3ccd175fcd8",
+      "world_ref": "world:godspeed-corporate@sha256:0e4744f197655ddcea21dc01167177f4c4007ab4810786467ac0a3ccd175fcd8"
+    },
+    {
+      "case": "compiler-upgrade-same-closure",
+      "name": "godspeed-corporate",
+      "identity": {
+        "identity_scheme_version": "v2-full-preimage",
+        "producer": "domainforge-core",
+        "producer_version": "0.19.0",
+        "language_schema_version": "domainforge-ast/v3",
+        "compiler_interpretation_version": "domainforge-interpretation/v1",
+        "canonicalization_version": "domainforge-canonicalization/v1",
+        "source_set_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "semantic_closure_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "semantic_pack_set_hash": null,
+        "registry_content_hash": null
+      },
+      "canonical_digest": "sha256:a6b03f5334ad5abb8890ef996ec0987882fa96153f65c58a7e3225d9cba5711c",
+      "world_ref": "world:godspeed-corporate@sha256:a6b03f5334ad5abb8890ef996ec0987882fa96153f65c58a7e3225d9cba5711c"
+    },
+    {
+      "case": "dotted-name",
+      "name": "acme.supply_chain-v2",
+      "identity": {
+        "identity_scheme_version": "v2-full-preimage",
+        "producer": "domainforge-core",
+        "producer_version": "0.18.2",
+        "language_schema_version": "domainforge-ast/v3",
+        "compiler_interpretation_version": "domainforge-interpretation/v1",
+        "canonicalization_version": "domainforge-canonicalization/v1",
+        "source_set_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "semantic_closure_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "semantic_pack_set_hash": null,
+        "registry_content_hash": null
+      },
+      "canonical_digest": "sha256:da23a66e20d574b52ad554b09b65ee39e6c8d2fdd7b1ac525d898b9e7bfe6440",
+      "world_ref": "world:acme.supply_chain-v2@sha256:da23a66e20d574b52ad554b09b65ee39e6c8d2fdd7b1ac525d898b9e7bfe6440"
+    }
+  ],
+  "valid_aliases": [
+    "world:corporate",
+    "world:godspeed-corporate",
+    "world:a1.b_c-d"
+  ],
+  "invalid_refs": [
+    "",
+    "world:",
+    "world:corp",
+    "corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:Corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:corp@sha1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:corp@sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "world:corp@sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+    " world:corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ",
+    "world:corp@@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:-corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:corp--x@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "world:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "invalid_aliases": [
+    "",
+    "world:",
+    "corporate",
+    "world:Corporate",
+    "world:corp@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ]
+}
