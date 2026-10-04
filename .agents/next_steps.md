@@ -1,5 +1,7 @@
 # Next Steps
 
+The fallible CEP world mint fix is complete: the regression and envelope suites pass (27 tests, serial run), with fmt and CLI Clippy clean. Continue the release follow-up below.
+
 ## world_ref follow-up (2026-10-04)
 
 1. `feat/world-ref` is merged (#132, 86aaf6f). Do not cut a release from it alone; wait for #133 (expected release 0.19.0). Expected outcome: `world_ref` is published in `domainforge-core` (crates.io) and `@godspeedai/domainforge` (npm).

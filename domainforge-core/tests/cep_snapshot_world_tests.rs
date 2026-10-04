@@ -5,9 +5,11 @@
 
 #![cfg(feature = "cli")]
 
-use domainforge_core::application::envelope::DomainModelIdentity;
+use domainforge_core::application::envelope::{
+    build_cep_envelope, CepEnvelopeParams, CepWorldParams, DomainModelIdentity,
+};
 use domainforge_core::application::resolve_semantic_envelope;
-use domainforge_core::application::world::WorldRef;
+use domainforge_core::application::world::{WorldLabel, WorldRef};
 use serde_json::{json, Value};
 use std::io::Write;
 use std::path::PathBuf;
@@ -107,6 +109,63 @@ fn valid_world_is_pinned_with_identity_integrity_and_profile() {
         env["extensions"].get("domainforge").is_none(),
         "valid world carries no failure flag"
     );
+}
+
+#[test]
+fn registry_hash_validation_controls_world_pinning() {
+    let source = std::fs::read_to_string(fixture(BASIC)).unwrap();
+    let sources = json!({ "m.sea": source }).to_string();
+    let doc = resolve_semantic_envelope("m.sea", &sources).unwrap();
+    let name = "test".parse().unwrap();
+    let alias = "world:current".parse().unwrap();
+    let label = WorldLabel::new("Test World").unwrap();
+
+    for (registry_content_hash, should_pin) in [
+        (Some("invalid"), false),
+        (
+            Some("sha256:1111111111111111111111111111111111111111111111111111111111111111"),
+            true,
+        ),
+        (None, true),
+    ] {
+        let env = build_cep_envelope(&CepEnvelopeParams {
+            doc: Some(&doc),
+            model_valid: true,
+            source_set_hash: &doc.inputs.source_set_hash,
+            invalid_declared_checkpoint_hash: None,
+            diagnostics: &[],
+            scope: json!({ "model_ref": "m.sea" }),
+            entry_logical_path: "m.sea",
+            inline_threshold_bytes: 65_536,
+            envelope_id: "test-id",
+            created_at: "2026-10-04T00:00:00Z",
+            registry_content_hash,
+            resolved_namespaces: &[],
+            world: Some(CepWorldParams {
+                name: &name,
+                alias: Some(&alias),
+                label: Some(&label),
+            }),
+        });
+
+        for field in ["world_ref", "world_alias", "world_label"] {
+            assert_eq!(env["scope"].get(field).is_some(), should_pin, "{field}");
+        }
+        assert_eq!(env.get("integrity").is_some(), should_pin);
+        assert_eq!(
+            env["extensions"].get("domainforge.identity").is_some(),
+            should_pin
+        );
+        if should_pin {
+            let identity = DomainModelIdentity::from_document(&doc, registry_content_hash);
+            let world_ref = WorldRef::from_identity(name.clone(), &identity).unwrap();
+            assert_eq!(env["scope"]["world_ref"], world_ref.to_string());
+            assert_eq!(
+                env["extensions"]["domainforge.identity"]["domain_model_identity"],
+                json!(identity)
+            );
+        }
+    }
 }
 
 #[test]

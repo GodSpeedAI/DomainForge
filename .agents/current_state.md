@@ -1,3 +1,7 @@
+# Current State: fallible CEP world mint (2026-10-04)
+
+- [x] `build_cep_envelope` leaves a failed `WorldRef` mint unpinned; successful minting preserves the existing tuple. `registry_hash_validation_controls_world_pinning` reproduced the caller-supplied invalid registry hash panic before the fix and covers invalid, valid, and absent hashes after it. Evidence: `cargo test -p domainforge-core --features cli --test cep_snapshot_world_tests --test envelope_emit_tests -- --test-threads=1` passed 27 tests; CLI Clippy with `-D warnings` and workspace fmt passed under Rust 1.92.0. Two envelope tests failed in the initial concurrent run and passed serially on both original and fixed code. Graft rebuild unavailable (CLI missing).
+
 # Current State: CEP snapshot world binding (2026-10-04, branch feat/cep-snapshot-world-ref, off feat/world-ref)
 
 - [x] `domainforge envelope --emit cep|both --world-name <name> [--world-alias world:<n>] [--world-label <text>]` binds the snapshot to its world: `scope.world_ref`, `integrity`, `extensions["domainforge.identity"]`, `extensions["cep.profile"]` (godspeed.semantic_snapshot 1.0.0). An invalid model is flagged (`extensions.domainforge.model_validation_status`) and never pinned. Opt-in; emission without `--world-name` is unchanged. Evidence: `domainforge-core/tests/cep_snapshot_world_tests.rs` (8, written red first), `envelope_emit_tests` unchanged and green, `cargo test -p domainforge-core --features cli` 1275 passed / 0 failed, clippy `-D warnings` and fmt clean.

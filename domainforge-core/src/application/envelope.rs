@@ -1359,9 +1359,9 @@ pub fn build_cep_envelope(p: &CepEnvelopeParams<'_>) -> serde_json::Value {
     let pinned = match (p.world, p.doc) {
         (Some(world), Some(doc)) if p.model_valid => {
             let identity = DomainModelIdentity::from_document(doc, p.registry_content_hash);
-            let world_ref = super::world::WorldRef::from_identity(world.name.clone(), &identity)
-                .expect("an identity built from a resolved document is well-formed");
-            Some((world, identity, world_ref))
+            super::world::WorldRef::from_identity(world.name.clone(), &identity)
+                .ok()
+                .map(|world_ref| (world, identity, world_ref))
         }
         _ => None,
     };
