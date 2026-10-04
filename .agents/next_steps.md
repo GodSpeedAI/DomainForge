@@ -2,8 +2,8 @@
 
 ## world_ref follow-up (2026-10-04)
 
-1. Review and merge `feat/world-ref`, then let release-please cut the next release (expected 0.19.0). Expected outcome: `world_ref` is published in `domainforge-core` (crates.io) and `@godspeedai/domainforge` (npm).
-2. Land `feat/cep-snapshot-world-ref` (stacked on #132), then release once. Expected outcome: one release carries `world_ref` and the world-bound snapshot.
+1. `feat/world-ref` is merged (#132, 86aaf6f). Do not cut a release from it alone; wait for #133 (expected release 0.19.0). Expected outcome: `world_ref` is published in `domainforge-core` (crates.io) and `@godspeedai/domainforge` (npm).
+2. Merge #133 (world-bound `semantic_snapshot`), then let release-please cut one release carrying both. Expected outcome: `world_ref` and the world-bound snapshot are published together.
 3. Bump every consumer (sea-forge, Cognate, RealityTrace and their pinned constants) to that release together. Expected outcome: no version skew, as in Stage 1 of the cross-repo migration.
 
 The 2026-09-26 Turtle IRI delimiter fix has no remaining code or test steps. If this task later enables CodeRabbit review or provides graft, review the current diff and rebuild the index; then continue the repository priorities below.
