@@ -1,4 +1,10 @@
-# Current State: `world_ref` (2026-10-04, branch feat/world-ref)
+# Current State: CEP snapshot world binding (2026-10-04, branch feat/cep-snapshot-world-ref, off feat/world-ref)
+
+- [x] `domainforge envelope --emit cep|both --world-name <name> [--world-alias world:<n>] [--world-label <text>]` binds the snapshot to its world: `scope.world_ref`, `integrity`, `extensions["domainforge.identity"]`, `extensions["cep.profile"]` (godspeed.semantic_snapshot 1.0.0). An invalid model is flagged (`extensions.domainforge.model_validation_status`) and never pinned. Opt-in; emission without `--world-name` is unchanged. Evidence: `domainforge-core/tests/cep_snapshot_world_tests.rs` (8, written red first), `envelope_emit_tests` unchanged and green, `cargo test -p domainforge-core --features cli` 1275 passed / 0 failed, clippy `-D warnings` and fmt clean.
+- [x] Conformance against the CEP profile (cep repo `GodSpeedAI/canonical-evaluation-protocol`, branch `profiles/godspeed-v1`): real emissions from this build pass the Python, standard-jsonschema, Rust and Ajv validators (gated by `CEP_TEST_DOMAINFORGE_BIN`).
+- API note: `CepEnvelopeParams` gained a `world: Option<CepWorldParams>` field (struct literals need `world: None`); `CepWorldParams`, `CEP_PROFILE_SEMANTIC_SNAPSHOT`, `CEP_PROFILE_VERSION` are new public items.
+- [ ] Not released. Depends on `feat/world-ref` (PR #132) landing first.
+
 
 - [x] Added `world_ref` / `world_alias` / `world_label` and `WorldCatalog` in `domainforge-core/src/application/world.rs`; `DomainModelIdentity::from_document` and `validate`; JSON entry points shared by bindings. The digest is exactly `DomainModelIdentity::canonical_digest()` (no second hash). Evidence: `domainforge-core/tests/world_ref_tests.rs` (16), `world_ref_golden_tests.rs` (3); red before implementation (did not compile), green after.
 - [x] Cross-language golden vectors: `domainforge-core/tests/fixtures/world_ref/golden-vectors.json` generated and self-checked by the independent stdlib-only `world_ref_reference.py`; reproduced by Rust, Python (`tests/test_world_ref.py`, 24), TypeScript (`typescript-tests/world_ref.test.ts`, 23) and WASM (`wasm_tests.rs`).

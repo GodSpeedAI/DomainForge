@@ -124,12 +124,15 @@ domainforge envelope --capabilities
 - `--registry <PATH>`: Optional path to a namespace registry file.
 - `--default-namespace <NAME>`: Explicit default namespace override.
 - `--scope <JSON>`: JSON object with caller scope context (e.g. `repo_id`, `run_id`).
+- `--world-name <NAME>`: Bind the `cep` snapshot to a named semantic world (GodSpeed `semantic_snapshot` profile). Opt-in: without it the emission is unchanged. The immutable `world_ref` is derived from the model's `DomainModelIdentity` (see `sea-application-contract.md` §14.1) and is never supplied. Invalid names exit 2.
+- `--world-alias <world:NAME>` / `--world-label <TEXT>`: Optional, require `--world-name`. The alias is a mutable selector and the label is presentation only; neither is identity. A `world_ref` is rejected as an alias. Both are attached only to a pinned (valid) world.
 - `--inline-threshold-bytes <BYTES>`: Max bytes for inlined representation before CAS carriage (default: 65,536).
 - `-o, --out <PATH>`: Write output to file instead of stdout.
 
 **Emission fields:**
 
 - `representation` sets `schema_version` to `domainforge-semantic-envelope/v1`. Its `self_hash` hashes the canonical document without `self_hash`; `semantic_closure_hash` covers the resolved semantic closure. `inputs` records `source_set_hash`, `semantic_pack_set_hash`, `language_schema_version`, and `interpretation_version`. `envelope` carries the resolved declarations, references, and application contract.
+- `cep` with `--world-name` pins the world it describes. For a valid model: `scope.world_ref` (plus `world_alias` and `world_label` when given), `integrity` (`content_hash`, `semantic_hash` = `semantic_closure_hash`), `extensions["domainforge.identity"]` carrying the 11-field `domain_model_identity` whose canonical digest is the `world_ref` digest, and `extensions["cep.profile"]` declaring `godspeed.semantic_snapshot` v1.0.0 (profile defined in the CEP repository, `spec/profiles/GODSPEED-PROFILES-v1.md`). For an invalid model the profile is declared, `extensions.domainforge.model_validation_status` is `invalid`, and no `world_ref` is carried, so an invalid world cannot masquerade as a valid one.
 - `cep` carries a `boundary_record` naming included sections and known omissions. When $D$ exists, `representations` carries it inline or by content reference. When $D$ cannot be constructed, `omissions` records `omission_type: "representation_unavailable"`, `extensions.domainforge` carries `model_validation_status: "invalid"`, `invalid_declared_checkpoint_hash`, and diagnostics, and `conformance_status` is `conformant` for the CEP envelope itself.
 - `both` contains `representation` and `cep_envelope` members when $D$ exists.
 - `verification-contract` carries questions, evidence constraints, and obligations keyed to canonical declaration references.

@@ -2,9 +2,10 @@ use crate::application::canonical::{semantic_pack_set_hash, source_set_hash};
 use crate::application::diagnostic::ApplicationDiagnostic;
 use crate::application::envelope::{
     build_cep_envelope, invalid_declared_checkpoint_hash, resolve_semantic_envelope_with_packs,
-    CepEnvelopeParams,
+    CepEnvelopeParams, CepWorldParams,
 };
 use crate::application::resolve::resolve_application_graph;
+use crate::application::world::{WorldAlias, WorldLabel, WorldName};
 use crate::module::resolver::source_map_from_filesystem;
 use crate::registry::NamespaceRegistry;
 use crate::semantic_pack::canonical_json::{canonical_json, compute_sha256};
@@ -42,6 +43,19 @@ pub struct EnvelopeArgs {
     /// CEP scope object (JSON). Replaces the default derived scope.
     #[arg(long)]
     pub scope: Option<String>,
+
+    /// Bind the snapshot to a named semantic world (GodSpeed `semantic_snapshot`
+    /// profile). The immutable `world_ref` is derived from the model identity.
+    #[arg(long = "world-name")]
+    pub world_name: Option<String>,
+
+    /// Mutable selector for the world, `world:<name>` (informational only)
+    #[arg(long = "world-alias", requires = "world_name")]
+    pub world_alias: Option<String>,
+
+    /// Human-readable world label (presentation only, never identity)
+    #[arg(long = "world-label", requires = "world_name")]
+    pub world_label: Option<String>,
 
     /// Inline representations up to this many bytes; larger ones use content_ref
     #[arg(long, default_value_t = 65_536)]
@@ -120,6 +134,7 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
             .and_then(|reg| reg.namespace_for(entry).map(str::to_string))
     });
     let registry_content_hash = registry_content_hash(registry.as_ref());
+    let world = parse_world_flags(&args);
     let user_scope = match args.scope.as_deref() {
         None => None,
         Some(text) => match serde_json::from_str::<Value>(text) {
@@ -159,6 +174,7 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
                     envelope_id: &envelope_id,
                     created_at: &created_at,
                     inline_threshold_bytes,
+                    world: world.as_ref(),
                 },
             );
         }
@@ -212,6 +228,7 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
                 created_at: &created_at,
                 registry_content_hash: registry_content_hash.as_deref(),
                 resolved_namespaces: &resolved_namespaces,
+                world: world.as_ref().map(WorldFlags::params),
             });
             let representation = serde_json::to_string_pretty(&doc)
                 .context("failed to serialize canonical envelope document")?;
@@ -271,6 +288,7 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
                     envelope_id: &envelope_id,
                     created_at: &created_at,
                     inline_threshold_bytes,
+                    world: world.as_ref(),
                 },
             );
         }
@@ -326,6 +344,42 @@ fn emit(args: &EnvelopeArgs, payload: &EmitPayload) -> Result<()> {
     Ok(())
 }
 
+/// Validated `--world-*` flags. Invalid input exits 2 before any emission.
+struct WorldFlags {
+    name: WorldName,
+    alias: Option<WorldAlias>,
+    label: Option<WorldLabel>,
+}
+
+impl WorldFlags {
+    fn params(&self) -> CepWorldParams<'_> {
+        CepWorldParams {
+            name: &self.name,
+            alias: self.alias.as_ref(),
+            label: self.label.as_ref(),
+        }
+    }
+}
+
+fn parse_world_flags(args: &EnvelopeArgs) -> Option<WorldFlags> {
+    let name = args.world_name.as_deref()?;
+    let fail = |what: &str, error: &dyn std::fmt::Display| -> ! {
+        eprintln!("error: {what}: {error}");
+        exit(2);
+    };
+    Some(WorldFlags {
+        name: name.parse().unwrap_or_else(|e| fail("--world-name", &e)),
+        alias: args
+            .world_alias
+            .as_deref()
+            .map(|a| a.parse().unwrap_or_else(|e| fail("--world-alias", &e))),
+        label: args
+            .world_label
+            .as_deref()
+            .map(|l| WorldLabel::new(l).unwrap_or_else(|e| fail("--world-label", &e))),
+    })
+}
+
 /// Identity and diagnostic context for a failed-model emission (§14.4).
 struct FailureContext<'a> {
     entry_logical_path: &'a str,
@@ -336,6 +390,7 @@ struct FailureContext<'a> {
     envelope_id: &'a str,
     created_at: &'a str,
     inline_threshold_bytes: u64,
+    world: Option<&'a WorldFlags>,
 }
 
 fn emit_failed(args: &EnvelopeArgs, context: FailureContext<'_>) -> ! {
@@ -375,6 +430,7 @@ fn emit_failed(args: &EnvelopeArgs, context: FailureContext<'_>) -> ! {
         created_at: context.created_at,
         registry_content_hash: context.registry_content_hash,
         resolved_namespaces: &[],
+        world: context.world.map(WorldFlags::params),
     });
     if let Err(error) = emit(args, &EmitPayload::Envelope(envelope)) {
         eprintln!("error: failed to emit envelope: {error}");
