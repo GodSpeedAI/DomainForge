@@ -349,6 +349,7 @@ fn build_cep_envelope_is_pure_and_deterministic() {
             created_at,
             registry_content_hash: None,
             resolved_namespaces: &[],
+            world: None,
         }
     }
     let first = build_cep_envelope(&params("id-1", "2026-08-07T00:00:00Z", &diagnostics));

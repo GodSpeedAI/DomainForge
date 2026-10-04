@@ -1,3 +1,14 @@
+# Current State: fallible CEP world mint (2026-10-04)
+
+- [x] `build_cep_envelope` leaves a failed `WorldRef` mint unpinned; successful minting preserves the existing tuple. `registry_hash_validation_controls_world_pinning` reproduced the caller-supplied invalid registry hash panic before the fix and covers invalid, valid, and absent hashes after it. Evidence: `cargo test -p domainforge-core --features cli --test cep_snapshot_world_tests --test envelope_emit_tests -- --test-threads=1` passed 27 tests; CLI Clippy with `-D warnings` and workspace fmt passed under Rust 1.92.0. Two envelope tests failed in the initial concurrent run and passed serially on both original and fixed code. Graft rebuild unavailable (CLI missing).
+
+# Current State: CEP snapshot world binding (2026-10-04, branch feat/cep-snapshot-world-ref, off feat/world-ref)
+
+- [x] `domainforge envelope --emit cep|both --world-name <name> [--world-alias world:<n>] [--world-label <text>]` binds the snapshot to its world: `scope.world_ref`, `integrity`, `extensions["domainforge.identity"]`, `extensions["cep.profile"]` (godspeed.semantic_snapshot 1.0.0). An invalid model is flagged (`extensions.domainforge.model_validation_status`) and never pinned. Opt-in; emission without `--world-name` is unchanged. Evidence: `domainforge-core/tests/cep_snapshot_world_tests.rs` (8, written red first), `envelope_emit_tests` unchanged and green, `cargo test -p domainforge-core --features cli` 1275 passed / 0 failed, clippy `-D warnings` and fmt clean.
+- [x] Conformance against the CEP profile (cep repo `GodSpeedAI/canonical-evaluation-protocol`, branch `profiles/godspeed-v1`): real emissions from this build pass the Python, standard-jsonschema, Rust and Ajv validators (gated by `CEP_TEST_DOMAINFORGE_BIN`).
+- API note: `CepEnvelopeParams` gained a `world: Option<CepWorldParams>` field (struct literals need `world: None`); `CepWorldParams`, `CEP_PROFILE_SEMANTIC_SNAPSHOT`, `CEP_PROFILE_VERSION` are new public items.
+- [ ] Not released. `world_ref` landed in #132 (86aaf6f); this builds on it. Release (expected 0.19.0) follows this PR.
+
 # Current State: `world_ref` (2026-10-04, branch feat/world-ref)
 
 - [x] Added `world_ref` / `world_alias` / `world_label` and `WorldCatalog` in `domainforge-core/src/application/world.rs`; `DomainModelIdentity::from_document` and `validate`; JSON entry points shared by bindings. The digest is exactly `DomainModelIdentity::canonical_digest()` (no second hash). Evidence: `domainforge-core/tests/world_ref_tests.rs` (16), `world_ref_golden_tests.rs` (3); red before implementation (did not compile), green after.

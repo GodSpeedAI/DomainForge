@@ -1302,7 +1302,23 @@ pub struct CepEnvelopeParams<'a> {
     pub created_at: &'a str,
     pub registry_content_hash: Option<&'a str>,
     pub resolved_namespaces: &'a [(String, String)],
+    /// Opt-in world binding (GodSpeed `semantic_snapshot` profile). `None`
+    /// leaves the emission exactly as before.
+    pub world: Option<CepWorldParams<'a>>,
 }
+
+/// Names for the semantic world a snapshot describes. The `world_ref` itself
+/// is derived from the model's DomainModelIdentity; it is never supplied.
+#[derive(Debug, Clone, Copy)]
+pub struct CepWorldParams<'a> {
+    pub name: &'a super::world::WorldName,
+    pub alias: Option<&'a super::world::WorldAlias>,
+    pub label: Option<&'a super::world::WorldLabel>,
+}
+
+/// Profile declared at `extensions["cep.profile"]` (CEP-0008 §18.2).
+pub const CEP_PROFILE_SEMANTIC_SNAPSHOT: &str = "godspeed.semantic_snapshot";
+pub const CEP_PROFILE_VERSION: &str = "1.0.0";
 
 /// Build the CEP-0008 canonical full-profile `semantic_snapshot` envelope for
 /// one DomainForge emission (spec §5.2/§5.4/§10.7a/§14.4). Pure and
@@ -1338,7 +1354,34 @@ pub fn build_cep_envelope(p: &CepEnvelopeParams<'_>) -> serde_json::Value {
     );
     envelope.insert("created_at".to_string(), serde_json::json!(p.created_at));
     envelope.insert("created_by".to_string(), serde_json::json!(created_by));
-    envelope.insert("scope".to_string(), p.scope.clone());
+    // A world is pinned only when the model is valid and a canonical D exists; an
+    // invalid world must not masquerade as one (it is flagged below instead).
+    let pinned = match (p.world, p.doc) {
+        (Some(world), Some(doc)) if p.model_valid => {
+            let identity = DomainModelIdentity::from_document(doc, p.registry_content_hash);
+            super::world::WorldRef::from_identity(world.name.clone(), &identity)
+                .ok()
+                .map(|world_ref| (world, identity, world_ref))
+        }
+        _ => None,
+    };
+    let mut scope = p.scope.clone();
+    if let (Some((world, _, world_ref)), Some(object)) = (&pinned, scope.as_object_mut()) {
+        object.insert(
+            "world_ref".to_string(),
+            serde_json::json!(world_ref.to_string()),
+        );
+        if let Some(alias) = world.alias {
+            object.insert(
+                "world_alias".to_string(),
+                serde_json::json!(alias.to_string()),
+            );
+        }
+        if let Some(label) = world.label {
+            object.insert("world_label".to_string(), serde_json::json!(label.as_str()));
+        }
+    }
+    envelope.insert("scope".to_string(), scope);
     envelope.insert(
         "boundary_record".to_string(),
         serde_json::json!({
@@ -1402,6 +1445,7 @@ pub fn build_cep_envelope(p: &CepEnvelopeParams<'_>) -> serde_json::Value {
         }]),
     );
 
+    let mut extensions = serde_json::Map::new();
     match p.doc {
         Some(doc) => {
             envelope.insert(
@@ -1414,13 +1458,27 @@ pub fn build_cep_envelope(p: &CepEnvelopeParams<'_>) -> serde_json::Value {
                 serde_json::json!([representation]),
             );
             if !p.model_valid {
-                envelope.insert(
-                    "extensions".to_string(),
+                extensions.insert(
+                    "domainforge".to_string(),
                     serde_json::json!({
-                        "domainforge": {
-                            "model_validation_status": "invalid",
-                            "diagnostics": p.diagnostics,
-                        }
+                        "model_validation_status": "invalid",
+                        "diagnostics": p.diagnostics,
+                    }),
+                );
+            }
+            if let Some((_, identity, _)) = &pinned {
+                envelope.insert(
+                    "integrity".to_string(),
+                    serde_json::json!({
+                        "content_hash": identity.content_hash,
+                        "semantic_hash": identity.semantic_closure_hash,
+                    }),
+                );
+                extensions.insert(
+                    "domainforge.identity".to_string(),
+                    serde_json::json!({
+                        "domain_model_identity": identity,
+                        "semantic_closure_hash": identity.semantic_closure_hash,
                     }),
                 );
             }
@@ -1454,17 +1512,30 @@ pub fn build_cep_envelope(p: &CepEnvelopeParams<'_>) -> serde_json::Value {
                     "affected_entities": [p.entry_logical_path],
                 }]),
             );
-            envelope.insert(
-                "extensions".to_string(),
+            extensions.insert(
+                "domainforge".to_string(),
                 serde_json::json!({
-                    "domainforge": {
-                        "model_validation_status": "invalid",
-                        "invalid_declared_checkpoint_hash": p.invalid_declared_checkpoint_hash,
-                        "diagnostics": p.diagnostics,
-                    }
+                    "model_validation_status": "invalid",
+                    "invalid_declared_checkpoint_hash": p.invalid_declared_checkpoint_hash,
+                    "diagnostics": p.diagnostics,
                 }),
             );
         }
+    }
+    if p.world.is_some() {
+        extensions.insert(
+            "cep.profile".to_string(),
+            serde_json::json!({
+                "profile_id": CEP_PROFILE_SEMANTIC_SNAPSHOT,
+                "profile_version": CEP_PROFILE_VERSION,
+            }),
+        );
+    }
+    if !extensions.is_empty() {
+        envelope.insert(
+            "extensions".to_string(),
+            serde_json::Value::Object(extensions),
+        );
     }
 
     serde_json::Value::Object(envelope)
