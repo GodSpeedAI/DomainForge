@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.18.2...v0.19.0) (2026-10-04)
+
+
+### Features
+
+* **application:** add world_ref, world_alias and world_label ([#132](https://github.com/GodSpeedAI/DomainForge/issues/132)) ([86aaf6f](https://github.com/GodSpeedAI/DomainForge/commit/86aaf6fe2ed9d1db6872bd51cb10bc6ea07f5b50))
+* **envelope:** bind CEP semantic_snapshot to its world ([#133](https://github.com/GodSpeedAI/DomainForge/issues/133)) ([497a199](https://github.com/GodSpeedAI/DomainForge/commit/497a19923c3db489c4a34d0c972de81cd647bd1a))
+
 ## [0.18.2](https://github.com/GodSpeedAI/DomainForge/compare/v0.18.1...v0.18.2) (2026-09-28)
 
 
