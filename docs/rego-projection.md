@@ -168,7 +168,14 @@ The tests also require that the inputs reach every per-policy result
   recorded debt in `.agents/OBSERVED_DEBT.md`. The Rego library reproduces the
   current evaluator behaviour exactly, including its NULL handling. It is not
   Kleene logic as described in `docs/`.
-- **`regorus` is not evaluated**: OPA 1.21.1 is the reference evaluator. Any
-  other Rego engine has not been checked against these outputs.
+- **`regorus` is not compatible**: `regorus` 0.12.0 (default features off; its
+  default feature set conflicts with this crate's pinned `uuid`) loads the
+  generated modules and data but fails at evaluation on every well-formed
+  input (0 of 605 corpus inputs matched; OPA 1.21.1 evaluated all 605). The
+  errors were ``var `v1` used before definition below`` on a nested
+  comprehension in `policies.rego` and `statements not scheduled in query` on
+  the `input_errors` rule in `decision.rego`. The generated Rego was not
+  changed to accommodate it. OPA 1.21.1 is the only supported evaluator;
+  consumers that need embedded evaluation must run the `opa` binary.
 - **Unsupported constructs are refused**: a model that uses one of the
   constructs listed above does not project. There is no partial output.

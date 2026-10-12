@@ -2,7 +2,7 @@
 
 ## Rego and OpenShell projection follow-up (2026-10-12)
 
-1. Evaluate `regorus` compatibility against the emitted Rego bundle and the differential fixtures. Expected outcome: a recorded pass/fail per engine, with OPA 1.21.1 kept as the reference evaluator.
+1. `regorus` 0.12.0 was evaluated on 2026-10-12 and cannot evaluate the emitted bundle (0/605 corpus inputs; nested-comprehension and statement-scheduling errors). Re-evaluate on a later `regorus` release before considering embedded evaluation; OPA 1.21.1 stays the reference evaluator.
 2. Verify an OpenShell provider mapping for credential-bound flows. Expected outcome: credential-bound flows can project, or the refusal is kept with the verified reason recorded.
 3. Decide whether the evaluator's NULL handling becomes consistent (debt D12 in `OBSERVED_DEBT.md`). Expected outcome: one documented three-valued semantics, with `lib.rego` and the differential tests updated in the same change.
 
