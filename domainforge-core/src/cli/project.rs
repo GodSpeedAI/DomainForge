@@ -154,6 +154,8 @@ pub enum ProjectFormat {
     /// Authority operator: Cedar schema + policies — each Flow becomes an Action with principal=from, resource=resource (directory output)
     #[value(name = "cedar")]
     Cedar,
+    #[value(name = "rego")]
+    Rego,
     /// Verification operator: Gauge spec — one scenario per Flow with Given/When/Then steps (directory output)
     #[value(name = "gauge")]
     Gauge,
@@ -288,6 +290,9 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         }
         ProjectFormat::Cedar => {
             run_cedar(&args, &graph)?;
+        }
+        ProjectFormat::Rego => {
+            run_rego(&args, &graph, &source)?;
         }
         ProjectFormat::Gauge => {
             run_gauge(&args, &graph)?;
@@ -789,6 +794,44 @@ fn run_cedar(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("cedar projection failed: {e}"))?;
     println!(
         "Projected Cedar schema + policies to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_rego(args: &ProjectArgs, graph: &crate::graph::Graph, source: &str) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format rego (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the rego projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::rego::emit(
+        graph,
+        source,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("rego projection failed: {e}"))?;
+    println!(
+        "Projected Rego bundle, contracts and fixtures to {} ({} files)",
         args.output.display(),
         files.len()
     );

@@ -224,6 +224,12 @@ impl Graph {
         self.operation_bound_policy_names.extend(ids);
     }
 
+    /// Whether `id` is bound to an operation's `access policy_governed by`
+    /// clause (and so is skipped by `validate()`).
+    pub fn is_operation_bound_policy(&self, id: &ConceptId) -> bool {
+        self.operation_bound_policy_names.contains(id)
+    }
+
     pub fn add_entity(&mut self, entity: Entity) -> Result<(), String> {
         let id = entity.id().clone();
         if self.entities.contains_key(&id) {

@@ -23,6 +23,7 @@ pub mod otel;
 pub mod protobuf;
 pub mod rdf;
 pub mod registry;
+pub mod rego;
 pub mod sink;
 pub mod tla;
 pub mod zenml;
