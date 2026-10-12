@@ -19,6 +19,7 @@ pub mod flows;
 pub mod gauge;
 pub mod ids;
 pub mod lean;
+pub mod openshell;
 pub mod otel;
 pub mod protobuf;
 pub mod rdf;

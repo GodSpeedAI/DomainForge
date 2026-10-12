@@ -156,6 +156,8 @@ pub enum ProjectFormat {
     Cedar,
     #[value(name = "rego")]
     Rego,
+    #[value(name = "openshell")]
+    OpenShell,
     /// Verification operator: Gauge spec — one scenario per Flow with Given/When/Then steps (directory output)
     #[value(name = "gauge")]
     Gauge,
@@ -204,6 +206,10 @@ pub fn run(args: ProjectArgs) -> Result<()> {
     // exactly once and the Cell declarations are not silently dropped.
     if args.format == ProjectFormat::Cell {
         return run_cell(&args);
+    }
+    // The OpenShell projection is a second view of the same Cell IR.
+    if args.format == ProjectFormat::OpenShell {
+        return run_openshell(&args);
     }
 
     let source = read_to_string(&args.input)
@@ -285,6 +291,7 @@ pub fn run(args: ProjectArgs) -> Result<()> {
         // Cell is dispatched before graph construction at the top of `run`;
         // reaching here is a logic error.
         ProjectFormat::Cell => unreachable!("Cell dispatched early in run()"),
+        ProjectFormat::OpenShell => unreachable!("OpenShell dispatched early in run()"),
         ProjectFormat::Dagger => {
             run_dagger(&args, &graph)?;
         }
@@ -719,6 +726,65 @@ fn run_cell(args: &ProjectArgs) -> Result<()> {
     .map_err(|e| anyhow::anyhow!("cell projection failed: {e}"))?;
     println!(
         "Projected Cell environment to {} ({} files)",
+        args.output.display(),
+        files.len()
+    );
+    Ok(())
+}
+
+fn run_openshell(args: &ProjectArgs) -> Result<()> {
+    if args.recipe.is_some() {
+        return Err(anyhow::anyhow!(
+            "--recipe is not used by --format openshell (the projection is model-driven)"
+        ));
+    }
+    validate_created_at(args)?;
+
+    let source = read_to_string(&args.input)
+        .with_context(|| format!("Failed to read input file {}", args.input.display()))?;
+    let ast = crate::parser::parse(&source)
+        .map_err(|e| anyhow::anyhow!("Parse failed for {}: {}", args.input.display(), e))?;
+
+    let overrides_source = args
+        .overrides
+        .as_ref()
+        .map(|path| {
+            read_to_string(path)
+                .with_context(|| format!("Failed to read overrides file {}", path.display()))
+        })
+        .transpose()?;
+    let overrides = overrides_source
+        .as_deref()
+        .map(crate::projection::cell::overrides::parse)
+        .transpose()
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    if !args.output.exists() {
+        std::fs::create_dir_all(&args.output).with_context(|| {
+            format!(
+                "Failed to create output directory {}",
+                args.output.display()
+            )
+        })?;
+    } else if !args.output.is_dir() {
+        return Err(anyhow::anyhow!(
+            "Output path must be a directory for the openshell projection"
+        ));
+    }
+
+    let mut sink = crate::projection::sink::ArtifactSink::Dir(&args.output);
+    let files = crate::projection::openshell::emit(
+        &ast,
+        &source,
+        &args.input.display().to_string(),
+        args.created_at.clone(),
+        overrides.as_ref(),
+        overrides_source.as_deref(),
+        &mut sink,
+    )
+    .map_err(|e| anyhow::anyhow!("openshell projection failed: {e}"))?;
+    println!(
+        "Projected OpenShell policy and sandbox parameters to {} ({} files)",
         args.output.display(),
         files.len()
     );
