@@ -1,3 +1,12 @@
+# Current State: Rego and OpenShell projection targets (2026-10-12, branch feat/rego-projection)
+
+- [x] Two projection targets on `feat/rego-projection`, not merged and not released: `--format rego` (OPA/Rego bundle with a `domainforge.rego.decision/v1` contract, differential-tested against real OPA 1.21.1) and `--format openshell` (OpenShell v0.1.3 `policy.yaml` plus sandbox contracts, boundary-checked by `openshell-prover` 0.1.3). Source: `domainforge-core/src/projection/{rego,openshell}/`; tests: `rego_projection_tests.rs` (9), `openshell_projection_tests.rs` (10).
+- [x] Gate scripts `scripts/verify/projection-targets/rego.sh` and `openshell.sh` (both require their tool on PATH, no skip); contracts `contracts/rego.yaml` and `contracts/openshell.yaml`; both appended to `all.sh`; `just rego-verify` and `just openshell-verify`.
+- [x] CI: jobs `verify-rego` and `verify-openshell` added; `verify-projection-targets` and `prove` install OPA 1.21.1 and openshell-prover 0.1.3 because both run `all.sh`.
+- [x] Docs: `docs/rego-projection.md`, `docs/openshell-projection.md`; rows in `docs/projection-target-implementation-status.md` and `docs/projection-families.md`; `PROOFS.md` rows `CLAIM-PROJ-REGO` and `CLAIM-PROJ-OPENSHELL` (both `partial`).
+- [ ] Not run: no cargo, no gate execution, no `opa`/prover run against generated output. The gates are unverified until run on a machine with a free build budget.
+- [ ] Recorded debt D12 (evaluator NULL handling is not consistently Kleene); the Rego library reproduces current behaviour.
+
 # Current State: fallible CEP world mint (2026-10-04)
 
 - [x] `build_cep_envelope` leaves a failed `WorldRef` mint unpinned; successful minting preserves the existing tuple. `registry_hash_validation_controls_world_pinning` reproduced the caller-supplied invalid registry hash panic before the fix and covers invalid, valid, and absent hashes after it. Evidence: `cargo test -p domainforge-core --features cli --test cep_snapshot_world_tests --test envelope_emit_tests -- --test-threads=1` passed 27 tests; CLI Clippy with `-D warnings` and workspace fmt passed under Rust 1.92.0. Two envelope tests failed in the initial concurrent run and passed serially on both original and fixed code. Graft rebuild unavailable (CLI missing).

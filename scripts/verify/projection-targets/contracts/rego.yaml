@@ -1,0 +1,10 @@
+projection_contract:
+  target: rego
+  status: partial
+  preserves: [per_policy_three_valued_result, supported_policy_subset, decision_contract_v1]
+  intentionally_collapses: [aggregate_decision_outcome_is_adapter, policy_metadata_structural, numeric_precision_beyond_f64]
+  prohibited_losses: [policy_result_three_valued, unsupported_constructs_refused]
+  deterministic_output_required: true
+  target_validator:
+    command: "Two-run diff -r + opa check --strict / fmt --fail / test / build --bundle (OPA 1.21.1) + differential tests against real OPA via scripts/verify/projection-targets/rego.sh. regorus compatibility not evaluated."
+    native: true

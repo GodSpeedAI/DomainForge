@@ -195,6 +195,14 @@ prove-evidence:
 cell-verify:
     bash scripts/verify/cell.sh
 
+# Rego projection: byte-determinism + OPA 1.21.1 toolchain + differential tests.
+rego-verify:
+    bash scripts/verify/projection-targets/rego.sh
+
+# OpenShell projection: byte-determinism + openshell-prover 0.1.3 containment + tests.
+openshell-verify:
+    bash scripts/verify/projection-targets/openshell.sh
+
 # ============================================================================
 # CI-specific recipes (used by GitHub Actions)
 # ============================================================================

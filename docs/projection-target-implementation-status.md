@@ -23,6 +23,8 @@ check that substitutes for them:
 | Devbox | JSONC structural check (JSONC allows `//` comments) | Devbox parses hujson/JSONC — the `//` header is correct here. |
 | Gauge | Structural check (H1, M2: angle-bracket sanitization) | `gauge validate` deferred (needs the Gauge CLI). |
 | Alloy | Structural check (M3: scope scales with flow count) | Alloy CLI parse deferred (needs the Alloy CLI). |
+| Rego | OPA 1.21.1: `opa check --strict`, `opa fmt --fail`, `opa test`, `opa build --bundle`, plus differential tests against real OPA | Runs in `scripts/verify/projection-targets/rego.sh`; OPA must be on PATH (no skip). The differential tests compare the full decision document with DomainForge's own evaluator on generated inputs. |
+| OpenShell | openshell-prover 0.1.3: `check --boundary` reports `within_boundary` | Runs in `scripts/verify/projection-targets/openshell.sh`; openshell-prover must be on PATH (no skip). Checks policy containment only; no live sandbox is started. |
 
 | Target | CLI `--format` | Gate script | Status |
 |---|---|---|---|
@@ -39,6 +41,8 @@ check that substitutes for them:
 | Domain Python | `domain-python` | `scripts/verify/projection-targets/domain-python.sh` | Implemented (`compileall` + `mypy --strict` + `unittest`) |
 | Domain TypeScript | `domain-typescript` | `scripts/verify/projection-targets/domain-typescript.sh` | Implemented (`tsc --noEmit` strict) |
 | Domain Rust | `domain-rust` | `scripts/verify/projection-targets/domain-rust.sh` | Implemented (`cargo check` + `cargo test`, zero-dep) |
+| Rego | `rego` | `scripts/verify/projection-targets/rego.sh` | Implemented (evaluator-differential with OPA) — see [Rego projection](rego-projection.md) |
+| OpenShell | `openshell` | `scripts/verify/projection-targets/openshell.sh` | Implemented (structural + prover boundary check; no live sandbox) — see [OpenShell projection](openshell-projection.md) |
 
 ### Code targets — flow-annotation plumbing
 

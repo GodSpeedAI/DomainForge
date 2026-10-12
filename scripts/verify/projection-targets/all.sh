@@ -29,5 +29,7 @@ cargo run -q -p domainforge-core --features cli -- validate "$FIXTURE"
   bash scripts/verify/projection-targets/domain-python.sh
   bash scripts/verify/projection-targets/domain-typescript.sh
   bash scripts/verify/projection-targets/domain-rust.sh
+  bash scripts/verify/projection-targets/rego.sh
+  bash scripts/verify/projection-targets/openshell.sh
 
 echo "==> all projection-target gates OK"

@@ -1,5 +1,11 @@
 # Next Steps
 
+## Rego and OpenShell projection follow-up (2026-10-12)
+
+1. Evaluate `regorus` compatibility against the emitted Rego bundle and the differential fixtures. Expected outcome: a recorded pass/fail per engine, with OPA 1.21.1 kept as the reference evaluator.
+2. Verify an OpenShell provider mapping for credential-bound flows. Expected outcome: credential-bound flows can project, or the refusal is kept with the verified reason recorded.
+3. Decide whether the evaluator's NULL handling becomes consistent (debt D12 in `OBSERVED_DEBT.md`). Expected outcome: one documented three-valued semantics, with `lib.rego` and the differential tests updated in the same change.
+
 The fallible CEP world mint fix is complete: the regression and envelope suites pass (27 tests, serial run), with fmt and CLI Clippy clean. Continue the release follow-up below.
 
 ## world_ref follow-up (2026-10-04)

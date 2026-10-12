@@ -1,0 +1,10 @@
+projection_contract:
+  target: openshell
+  status: partial
+  preserves: [filesystem_mounts_under_sandbox, network_flow_per_rule, exact_binary_paths, enforced_landlock]
+  intentionally_collapses: [runtime_isolation_not_established, credential_values_never_emitted, obligations_listed_not_discharged]
+  prohibited_losses: [network_default_deny, network_flow_identity, landlock_hard_requirement]
+  deterministic_output_required: true
+  target_validator:
+    command: "Two-run diff -r (with and without --overrides) + openshell-prover 0.1.3 check result within_boundary via scripts/verify/projection-targets/openshell.sh; openshell_projection_tests run with --include-ignored. No live sandbox is started."
+    native: true

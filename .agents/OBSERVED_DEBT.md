@@ -194,3 +194,30 @@ fixed and why.*
   `rust/access-invalid-pointer` query over the binding crates. Upstream
   options: napi restructuring its codegen, or CodeQL refining the query for
   macro-generated FFI glue — both outside this repo.
+
+---
+
+## D12. Evaluator is not consistently Kleene; NULL handling differs between reduced and unreduced trees
+
+- **Where:** `domainforge-core/src/policy/quantifier.rs` (`Expression::expand`,
+  `reduce_binary_expression` at `:870`) folds a source-level `and`/`or` whose
+  operands both reduced to literals with a NULL-absorbing rule (`false and NULL`
+  is NULL, `true or NULL` is NULL). Unreduced trees (every `not`, every non-empty
+  `forall`/`exists`) are evaluated with Kleene logic in `domainforge-core/src/policy/core.rs`
+  (`false and NULL` is false). `exists_unique` and filtered `count` only count
+  conditions that reduced to a literal `true`, so a condition containing `not` is
+  never counted.
+- **Impact:** The same logical policy can yield different three-valued results
+  depending on whether its subtree reduced. The documented semantics (`docs/`) describe
+  three-valued logic, which this does not match. The Rego projection
+  (`domainforge-core/src/projection/rego/rego/lib.rego`) reproduces the current
+  behaviour exactly, so the differential proof (`rego_projection_tests.rs`, `scripts/verify/projection-targets/rego.sh`)
+  pins it. Any evaluator change must update `rego/lib.rego` and the differential
+  tests together, or the Rego projection will diverge.
+- **Smallest fix:** Decide the intended semantics (Kleene everywhere, or NULL-absorbing
+  everywhere), make `reduce_binary_expression` and `core.rs` agree, count
+  `exists_unique`/`count` conditions consistently, then update `lib.rego` and the
+  differential tests in the same change. Not fixed here; the Rego projection is
+  deliberately aligned with current behaviour.
+- **Status:** Open. Observed on `feat/rego-projection` (2026-10-12); the Rego
+  projection is not merged.
