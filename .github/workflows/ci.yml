@@ -87,6 +87,7 @@ jobs:
         uses: dtolnay/rust-toolchain@1.99.0
         with:
           targets: ${{ matrix.target }}
+          components: rustfmt, clippy
 
       - name: Install just
         uses: extractions/setup-just@v4
@@ -152,6 +153,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Install just
         uses: extractions/setup-just@v4
@@ -193,6 +196,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Install just
         uses: extractions/setup-just@v4
@@ -230,6 +235,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Install Node
         uses: actions/setup-node@v6
@@ -298,6 +305,7 @@ jobs:
         uses: dtolnay/rust-toolchain@1.99.0
         with:
           targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - name: Install just
         uses: extractions/setup-just@v4
@@ -336,6 +344,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Install cargo-audit
         # Run cargo-audit directly instead of the deprecated rustsec/audit-check
@@ -358,6 +368,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -412,6 +424,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -455,6 +469,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -482,6 +498,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -525,6 +543,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -568,6 +588,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -611,6 +633,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -684,6 +708,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -738,6 +764,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -814,6 +842,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo build
         uses: actions/cache@v5
@@ -905,6 +935,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Install just
         uses: extractions/setup-just@v4
@@ -962,6 +994,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
 
       - name: Install just
         uses: extractions/setup-just@v4

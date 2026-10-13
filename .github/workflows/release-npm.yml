@@ -36,6 +36,7 @@ jobs:
         uses: dtolnay/rust-toolchain@1.99.0
         with:
           toolchain: 1.99.0
+          components: rustfmt, clippy
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -91,6 +92,7 @@ jobs:
         with:
           toolchain: 1.99.0
           targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
