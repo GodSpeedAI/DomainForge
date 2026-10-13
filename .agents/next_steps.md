@@ -23,3 +23,4 @@ When `docs/specs/ADR-014-application-review-and-approval-contract.md` is ratifie
 ## 3. Decide whether policies should lower into SHACL
 
 Policies currently project as individuals carrying their normalized expression; they are not translated into SHACL constraints, because a partial translation would silently change what a policy means. Expected outcome: either an explicit decision to keep policies stated-only, or a specification of the exact expression subset SHACL can carry faithfully plus the rejection behavior for the rest.
+- Rust toolchain: recheck `rustup check` at each stable release and follow "Updating the Rust toolchain" in CONTRIBUTING.md; devbox could not be verified locally (Nix cache timeout), so confirm `devbox run -- rustc --version` prints 1.99.0.

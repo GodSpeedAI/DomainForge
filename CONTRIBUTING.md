@@ -49,9 +49,8 @@ This project follows a standard code of conduct. Please be respectful and constr
 ### Environment Setup
 
 ```bash
-# Install Rust toolchain
-rustup default stable
-rustup component add rustfmt clippy
+# Install Rust toolchain (version pinned in rust-toolchain.toml; rustup installs it on first use)
+rustup show
 
 # Install just (task runner)
 cargo install just
@@ -62,6 +61,24 @@ pip install maturin pytest
 # Install Node.js/Bun dependencies
 bun install  # or: npm install
 ```
+
+### Updating the Rust Toolchain
+
+- **Single source of truth:** `channel` in `rust-toolchain.toml`. Local `rustup`
+  proxies, `devbox` (no `RUSTUP_TOOLCHAIN` override), and lefthook all follow it.
+- **Also change the CI pin:** every Rust job in `.github/workflows/` uses
+  `dtolnay/rust-toolchain@<version>` (GitHub Actions cannot read `rust-toolchain.toml`).
+  Update the `@<version>` ref and any `toolchain:` input in `ci.yml` and the
+  `release-*.yml` workflows to match.
+- **Docs:** update the "Rust 1.xx+" prerequisite lines in `README.md` and `README_WASM.md` if the minimum changes.
+- **Steps:**
+  1. `rustup check` to see the latest stable release.
+  2. Edit `rust-toolchain.toml` and the CI pins above.
+  3. `rustup show` and `just toolchain-check` (prints and verifies rustc, cargo, clippy).
+  4. `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo fmt --all --check`, `just rust-test`.
+- **MSRV is separate:** `rust-version` in `domainforge-core/Cargo.toml` is the
+  minimum supported Rust version for consumers. It is deliberately lower than the
+  development toolchain and must not be bumped as part of a routine toolchain update.
 
 ## Building the Project
 

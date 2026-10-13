@@ -21,9 +21,9 @@ jobs:
           sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.99.0
         with:
-          toolchain: stable
+          toolchain: 1.99.0
 
       - name: Publish domainforge-core to crates.io
         run: |
