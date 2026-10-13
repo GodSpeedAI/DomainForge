@@ -44,3 +44,24 @@ describe('application contract binding (ADR-013 Milestone 0)', () => {
         expect(() => Graph.resolveApplicationContractJson('a.sea', '[]')).toThrowError(/APP/);
     });
 });
+
+
+describe('canonical source-map graph binding', () => {
+    const sources = {
+        'organization.sea': '@namespace "organization"\nimport { Purchase } from "./finance.sea"\nimport { Ship } from "./operations.sea"\nentity "Case" { key id: uuid\n purchase: ref<Purchase>\n shipment: ref<Ship>\n}\n',
+        'finance.sea': '@namespace "finance"\nexport entity "Purchase" { key id: uuid }\n',
+        'operations.sea': '@namespace "operations"\nexport entity "Ship" { key id: uuid }\n',
+    };
+    it('projects imported entities without collapsing their namespaces', () => {
+        const graph = Graph.parseSourceMap('organization.sea', JSON.stringify(sources));
+        const ids = graph.allEntities().map((entity) => `${entity.namespace}::${entity.name}`).sort();
+        expect(ids).toEqual(['finance::Purchase', 'operations::Ship', 'organization::Case']);
+        const again = Graph.parseSourceMap('organization.sea', JSON.stringify(sources));
+        expect(again.allEntities().map((entity) => entity.id).sort()).toEqual(graph.allEntities().map((entity) => entity.id).sort());
+    });
+    it('rejects missing imports rather than quietly projecting an incomplete graph', () => {
+        const { ['finance.sea']: omitted, ...missing } = sources;
+        void omitted;
+        expect(() => Graph.parseSourceMap('organization.sea', JSON.stringify(missing))).toThrow();
+    });
+});
