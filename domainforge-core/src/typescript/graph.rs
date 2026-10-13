@@ -421,6 +421,17 @@ impl Graph {
             .collect()
     }
 
+    /// Resolve a complete, import-aware source map with DomainForge's canonical resolver.
+    /// Unlike parse(source), this preserves namespace identities and imports across modules.
+    #[napi(factory)]
+    pub fn parse_source_map(entry_logical_path: String, sources_json: String) -> Result<Self> {
+        let graph = crate::application::resolve_application_graph(&entry_logical_path, &sources_json)
+            .map_err(|diags| {
+                Error::from_reason(serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()))
+            })?;
+        Ok(Self { inner: graph })
+    }
+
     #[napi(factory)]
     pub fn parse(source: String) -> Result<Self> {
         let graph = parser::parse_to_graph(&source)
