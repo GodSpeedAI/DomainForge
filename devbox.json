@@ -10,7 +10,6 @@
     "elan@latest"
   ],
   "env": {
-    "RUSTUP_TOOLCHAIN": "1.92.0",
     "VENV_DIR":         ".devbox/virtenv/python/.venv"
   },
   "shell": {

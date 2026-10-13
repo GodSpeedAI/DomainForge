@@ -26,6 +26,20 @@ build-rust-tests:
     @echo "Build Rust tests without running them (to prepare debug binaries)"
     {{cargo}} test -p domainforge-core --features cli --no-run
 
+# Fail if the active rustc/cargo/clippy differ from rust-toolchain.toml
+toolchain-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    expected=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+    minor=$(echo "$expected" | cut -d. -f2)
+    rustc --version
+    {{cargo}} --version
+    {{cargo}} clippy --version
+    rustc --version | grep -q "^rustc $expected " || { echo "FAIL: rustc is not $expected"; exit 1; }
+    {{cargo}} --version | grep -q "^cargo 1\.$minor\." || { echo "FAIL: cargo is not 1.$minor.x"; exit 1; }
+    {{cargo}} clippy --version | grep -q "^clippy 0\.1\.$minor " || { echo "FAIL: clippy is not 0.1.$minor"; exit 1; }
+    echo "toolchain OK: $expected"
+
 python-test:
     @echo "Running Python tests..."
     # Prefer the virtualenv python if it exists to avoid system site-packages and PEP 668 restrictions
