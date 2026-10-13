@@ -25,7 +25,7 @@ import domainforge
 
 
 CONTRACT_GOLDEN_SHA256 = (
-    "sha256:6333b39500f32dfc5a008debec69a0c9f67464fb90ef64b450149a09ba379f90"
+    "sha256:c52a84327609295ea4c88542f6090ba9560ab9dbf33d99d80bb894c54eb7e4da"
 )
 
 

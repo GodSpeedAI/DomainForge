@@ -26,13 +26,13 @@ use sha2::{Digest, Sha256};
 /// so they must be regenerated with every version bump — see the release
 /// notes. The stamp itself is asserted separately below.
 pub const CONTRACT_GOLDEN_SHA256: &str =
-    "sha256:6333b39500f32dfc5a008debec69a0c9f67464fb90ef64b450149a09ba379f90";
+    "sha256:c52a84327609295ea4c88542f6090ba9560ab9dbf33d99d80bb894c54eb7e4da";
 
 /// Fixed golden hash of `serde_json::to_string(&envelope_doc)` for the
 /// flagship `query-read` closure at the current release version (same
 /// regeneration rule as above).
 pub const ENVELOPE_GOLDEN_SHA256: &str =
-    "sha256:9b2b352fbb87cdcb1fbaca1ae8c0aeb22e92571ef21dbb0acbf1c20c8d041d53";
+    "sha256:4bbf944fb3e34fdc6cb04ba13118e83b2e11df896236b68631205a3edc055ed2";
 
 pub fn flagship_sources_json() -> String {
     serde_json::json!({
