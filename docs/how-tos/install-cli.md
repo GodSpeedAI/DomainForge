@@ -4,7 +4,7 @@ Goal: Install and verify the DomainForge SEA CLI on Linux, macOS, and Windows.
 
 ## Prerequisites
 
-- Rust toolchain 1.77+ installed via `rustup` (recommended target triples: `x86_64-unknown-linux-gnu`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`).
+- Rust toolchain 1.89+ installed via `rustup` (recommended target triples: `x86_64-unknown-linux-gnu`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`).
 - Build essentials for your OS (gcc/clang + make on Linux, Xcode CLTs on macOS, Build Tools for Visual Studio on Windows).
 - Optional: `just` for running test recipes.
 

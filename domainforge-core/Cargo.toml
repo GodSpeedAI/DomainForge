@@ -1,9 +1,9 @@
 [package]
 name = "domainforge-core"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["DomainForge Contributors"]
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.89"
 description = "Rust core library implementing the SEA DSL primitives and validation engine."
 license = "Apache-2.0"
 homepage = "https://github.com/GodSpeedAI/DomainForge"
@@ -13,9 +13,7 @@ repository = "https://github.com/GodSpeedAI/DomainForge"
 uuid = { version = "=1.19.0", features = ["v4", "v5", "v7", "serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# ponytail: serde_yaml 0.9 is archived/unmaintained; migrate to serde_yml or
-# serde-yaml-ng at leisure. Used by asyncapi + cmmn projections for YAML I/O.
-serde_yaml = "0.9"
+serde-saphyr = { version = "1.3", default-features = false, features = ["serialize"] }
 thiserror = "1.0"
 icu_decimal = { version = "1.5", optional = true }
 icu_locid = { version = "1.5", optional = true }
@@ -60,6 +58,7 @@ getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] 
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
+serde-saphyr = { version = "1.3", default-features = false, features = ["serialize", "deserialize"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 proptest = { version = "1.0", features = ["std", "bit-set"] }
 jsonschema = { version = "0.18" }

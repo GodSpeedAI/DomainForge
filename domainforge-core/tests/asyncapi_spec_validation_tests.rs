@@ -48,7 +48,7 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
     let files =
         project_asyncapi_in_memory(&graph, "test.sea", Some(FIXED_TS.into())).expect("projects");
     let doc_yaml = &files["asyncapi.yaml"];
-    let doc: serde_json::Value = serde_yaml::from_str(doc_yaml).expect("yaml parses");
+    let doc: serde_json::Value = serde_saphyr::from_str(doc_yaml).expect("yaml parses");
     validate_against_schema(&doc);
 }
 
@@ -68,7 +68,7 @@ fn projection_cell_fixture_validates_against_asyncapi_spec() {
     )
     .expect("projects");
     let doc_yaml = &files["asyncapi.yaml"];
-    let doc: serde_json::Value = serde_yaml::from_str(doc_yaml).expect("yaml parses");
+    let doc: serde_json::Value = serde_saphyr::from_str(doc_yaml).expect("yaml parses");
     // Fixture has 2 flows -> 2 channels, 4 operations, 2 messages, 2 schemas.
     assert_eq!(doc["channels"].as_object().unwrap().len(), 2);
     assert_eq!(doc["operations"].as_object().unwrap().len(), 4);
@@ -81,6 +81,6 @@ fn empty_model_still_validates() {
     let files =
         project_asyncapi_in_memory(&graph, "empty.sea", Some(FIXED_TS.into())).expect("projects");
     let doc: serde_json::Value =
-        serde_yaml::from_str(&files["asyncapi.yaml"]).expect("yaml parses");
+        serde_saphyr::from_str(&files["asyncapi.yaml"]).expect("yaml parses");
     validate_against_schema(&doc);
 }

@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/domainforge-core/badge.svg)](https://docs.rs/domainforge-core)
 [![License](https://img.shields.io/crates/l/domainforge-core.svg)](https://github.com/GodSpeedAI/DomainForge/blob/main/LICENSE)
 [![CI](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GodSpeedAI/DomainForge/actions/workflows/ci.yml)
-[![MSRV](https://img.shields.io/badge/MSRV-1.77-blue.svg)](https://blog.rust-lang.org/2024/03/21/Rust-1.77.0.html)
+[![MSRV](https://img.shields.io/badge/MSRV-1.89-blue.svg)](https://blog.rust-lang.org/2025/08/07/Rust-1.89.0.html)
 
 Rust core library implementing the **SEA DSL** (Semantic Enterprise Architecture) primitives and validation engine. Part of the [DomainForge](https://github.com/GodSpeedAI/DomainForge) ecosystem.
 
@@ -174,7 +174,9 @@ cargo doc -p domainforge-core --no-deps --open
 
 ## Minimum Supported Rust Version
 
-This crate requires **Rust 1.77.0** or later.
+This crate requires **Rust 1.89.0** or later. The MSRV is checked in CI (`MSRV (1.89)` job in `.github/workflows/ci.yml`).
+
+**Compatibility note:** The MSRV was raised from 1.77.0 to 1.89.0 when YAML serialization moved from the unmaintained `serde_yaml` to `serde-saphyr`, which requires Rust 1.89. AsyncAPI YAML output now quotes some strings differently (for example `asyncapi: "3.0.0"` and `$ref` values use double quotes); the parsed document is unchanged.
 
 ## Related Crates
 

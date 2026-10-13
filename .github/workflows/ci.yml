@@ -133,6 +133,37 @@ jobs:
       - name: Check CLI binary size
         run: just ci-check-binary-size "${{ env.CLI_BIN }}" "${{ env.CLI_MAX_BYTES }}"
 
+  msrv:
+    name: MSRV (1.89)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # rust-toolchain.toml pins 1.92.0 and would override the installed toolchain;
+      # RUSTUP_TOOLCHAIN takes precedence over it, so this job builds on 1.89.
+      RUSTUP_TOOLCHAIN: "1.89.0"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.89 toolchain
+        uses: dtolnay/rust-toolchain@1.89.0
+
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_VERSION }}-msrv-cargo-
+
+      - name: Check domainforge-core on MSRV (default features)
+        run: cargo check -p domainforge-core --locked
+
+      - name: Check domainforge-core on MSRV (cli feature)
+        run: cargo check -p domainforge-core --locked --features cli
+
   test-python:
     name: Test Python (${{ matrix.python-version }})
     needs: lint

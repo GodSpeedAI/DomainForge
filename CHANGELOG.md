@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.19.0...v0.20.0) (2026-10-13)
+
+
+### Features
+
+* **core:** replace serde_yaml with serde-saphyr and raise MSRV to 1.89 ([#136](https://github.com/GodSpeedAI/DomainForge/issues/136)) ([6d219f8](https://github.com/GodSpeedAI/DomainForge/commit/6d219f813b7f0ed0a5ed7a383e9e9d043bc4c034))
+
 ## [0.19.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.18.2...v0.19.0) (2026-10-04)
 
 
