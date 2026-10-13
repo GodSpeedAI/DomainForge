@@ -27,6 +27,7 @@ pub mod registry;
 pub mod rego;
 pub mod sink;
 pub mod tla;
+pub(crate) mod yaml;
 pub mod zenml;
 
 pub use contracts::{find_mapping_rule, find_projection_override};

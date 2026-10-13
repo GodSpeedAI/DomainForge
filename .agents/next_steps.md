@@ -6,6 +6,12 @@
 2. Verify an OpenShell provider mapping for credential-bound flows. Expected outcome: credential-bound flows can project, or the refusal is kept with the verified reason recorded.
 3. Decide whether the evaluator's NULL handling becomes consistent (debt D12 in `OBSERVED_DEBT.md`). Expected outcome: one documented three-valued semantics, with `lib.rego` and the differential tests updated in the same change.
 
+## serde-saphyr migration follow-up (2026-10-12)
+
+1. Decide the clippy gate: fix the two pre-existing `unnecessary_map_or` lints (or allow them), then rerun `cargo clippy -p domainforge-core --all-targets --features cli -- -D warnings`. Expected outcome: exit 0.
+2. Commit with a conventional message. `feat(core): ...` with a `Compatibility:` body note (MSRV 1.89, AsyncAPI quoting) and NO `BREAKING CHANGE` footer; release-please with default pre-1.0 settings turns `feat` into 0.19.0 -> 0.20.0, but a breaking footer would turn it into 1.0.0. Expected outcome: minor bump. The owner must confirm the bump.
+3. Owner decision on pinned bytes: no repo golden or hash covers AsyncAPI output, and `ASYNCAPI_VERSION` is the spec version, not a projection format version, so no bump was made. Confirm that. Run `just prove` to refresh the untracked evidence pack.
+
 The fallible CEP world mint fix is complete: the regression and envelope suites pass (27 tests, serial run), with fmt and CLI Clippy clean. Continue the release follow-up below.
 
 ## world_ref follow-up (2026-10-04)

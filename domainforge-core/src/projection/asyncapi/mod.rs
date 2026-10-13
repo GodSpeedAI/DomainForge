@@ -30,6 +30,7 @@ use crate::graph::Graph;
 use crate::projection::flows::{collect_flows, model_namespace};
 use crate::projection::ids::{slug, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
+use crate::projection::yaml::to_yaml;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
@@ -48,9 +49,8 @@ pub fn emit(
 ) -> Result<Vec<String>, String> {
     let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
     let spec = build_spec(graph, model_ref, &created_at)?;
-    let yaml = serde_yaml::to_string(&spec)
-        .map_err(|e| format!("failed to serialize AsyncAPI document: {e}"))?;
-    // YAML has no leading-comment affordance in serde_yaml; prepend a header.
+    let yaml = to_yaml(&spec).map_err(|e| format!("failed to serialize AsyncAPI document: {e}"))?;
+    // The YAML serializer emits no document comment; prepend the header as text.
     let body = format!(
         "# AsyncAPI {ASYNCAPI_VERSION} document projected by DomainForge from {model_ref} at {created_at}.\n\
          # Concept mapping: Entity -> producer/consumer, Flow -> channel+event, Resource -> payload schema.\n{yaml}"
@@ -251,7 +251,7 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
 
     fn doc(files: &BTreeMap<String, String>) -> Value {
         let body = &files[OUTPUT_FILE];
-        serde_yaml::from_str(body).expect("output parses as YAML")
+        serde_saphyr::from_str::<Value>(body).expect("output parses as YAML")
     }
 
     #[test]
@@ -314,5 +314,76 @@ Flow "PurchaseOrder" from "Buyer" to "Supplier" quantity 1
         assert!(d["channels"].as_object().unwrap().is_empty());
         assert!(d["operations"].as_object().unwrap().is_empty());
         assert_eq!(d["asyncapi"], "3.0.0");
+    }
+
+    #[test]
+    fn emitted_yaml_is_deterministic() {
+        let files_a = project(SOURCE);
+        let files_b = project(SOURCE);
+        assert_eq!(files_a, files_b);
+        let doc = json!({ "a": { "z": [1, "two"], "b": "x" } });
+        assert_eq!(to_yaml(&doc).unwrap(), to_yaml(&doc).unwrap());
+    }
+
+    #[test]
+    fn emitted_yaml_preserves_ambiguous_strings() {
+        let long = "lorem ipsum dolor sit amet ".repeat(12);
+        let mut values: Vec<String> = [
+            "yes",
+            "no",
+            "on",
+            "off",
+            "y",
+            "n",
+            "true",
+            "false",
+            "null",
+            "~",
+            "1.0",
+            "1e3",
+            "0x10",
+            "0o17",
+            "010",
+            "1_000",
+            ".inf",
+            ".nan",
+            "2026-01-01",
+            "2026-01-01T00:00:00Z",
+            "12:30",
+            "",
+            " leading",
+            "trailing ",
+            "- dash",
+            ": colon",
+            "#hash",
+            "@at",
+            "!bang",
+            "&anchor",
+            "*alias",
+            "%pct",
+            "|pipe",
+            ">gt",
+            "'",
+            "\"",
+            "{",
+            "[",
+            "a: b",
+            "a #b",
+            "tab\there",
+            "ctl\u{1}x",
+            "caf\u{e9} \u{1F600}",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        values.push("line one\nline two".to_string());
+        values.push(long);
+        let doc = json!({ "values": values });
+        let yaml = to_yaml(&doc).expect("serializes");
+        let parsed: Value = serde_saphyr::from_str(&yaml).expect("parses back");
+        assert_eq!(
+            parsed, doc,
+            "every value must round-trip as the same string"
+        );
     }
 }

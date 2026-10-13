@@ -60,7 +60,7 @@ fn projection_is_deterministic() {
 #[test]
 fn repair_agent_policy_is_default_deny_and_enforcing() {
     let files = repair_agent();
-    let policy: Value = serde_yaml::from_str(&files[POLICY_FILE]).unwrap();
+    let policy: Value = serde_saphyr::from_str(&files[POLICY_FILE]).unwrap();
 
     assert_eq!(policy["version"], json!(1));
     assert_eq!(
@@ -100,6 +100,75 @@ fn repair_agent_policy_is_default_deny_and_enforcing() {
         .map(|b| b["path"].as_str().unwrap())
         .collect();
     assert!(binaries.contains(&"/usr/bin/uv") && binaries.contains(&"/usr/local/bin/python"));
+}
+
+/// YAML 1.1 readers (PyYAML, Go yaml.v2, older OpenShell tooling) type these
+/// plain words as booleans or null. The emitter must quote them when they are
+/// strings in the source model.
+const YAML_1_1_SPECIAL_WORDS: [&str; 10] = [
+    "y", "yes", "n", "no", "on", "off", "true", "false", "null", "~",
+];
+
+#[test]
+fn policy_yaml_strings_survive_yaml_1_1_readers() {
+    let text = &repair_agent()[POLICY_FILE];
+    let policy: Value = serde_saphyr::from_str(text).expect("policy.yaml parses as YAML");
+
+    // `version` is an integer in OpenShell's schema; every other scalar below is a string.
+    assert_eq!(policy["version"], json!(1));
+    assert!(policy["version"].is_u64(), "version must be an integer");
+    assert!(policy["process"]["run_as_user"].is_string());
+    assert!(policy["landlock"]["compatibility"].is_string());
+    let rule = &policy["network_policies"]["cell_resolve_python_packages"];
+    let endpoint = &rule["endpoints"][0];
+    assert!(endpoint["host"].is_string());
+    assert!(endpoint["protocol"].is_string());
+    assert!(endpoint["access"].is_string());
+    assert!(endpoint["enforcement"].is_string());
+    assert_eq!(endpoint["port"], json!(443), "port stays an integer");
+    for path in policy["filesystem_policy"]["read_write"]
+        .as_array()
+        .expect("read_write is a list")
+    {
+        assert!(path.is_string(), "{path} must be a string");
+    }
+    for binary in rule["binaries"].as_array().expect("binaries is a list") {
+        assert!(binary["path"].is_string(), "{binary} path must be a string");
+    }
+
+    // Text-level check: a plain (unquoted) key or value that a YAML 1.1 reader would
+    // type as bool or null must be a real boolean in the model. `true`/`false` are
+    // allowed only under a key whose parsed value is a boolean; any other special
+    // word (`yes`, `on`, `null`, ...) must be quoted.
+    for line in text.lines().filter(|l| !l.starts_with('#')) {
+        let line = line.trim_start().trim_start_matches("- ");
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = value.trim();
+        let is_special =
+            |s: &str| YAML_1_1_SPECIAL_WORDS.contains(&s.to_ascii_lowercase().as_str());
+        assert!(!is_special(key), "unquoted YAML 1.1 word as key: `{line}`");
+        if !value.is_empty() && !value.starts_with(['"', '\'']) && is_special(value) {
+            let intended_bool = matches!(value, "true" | "false") && bool_under_key(&policy, key);
+            assert!(
+                intended_bool,
+                "unquoted YAML 1.1 word where a string was intended: `{line}`"
+            );
+        }
+    }
+}
+
+/// True if some object in `value` has `key` mapped to a JSON boolean.
+fn bool_under_key(value: &Value, key: &str) -> bool {
+    match value {
+        Value::Object(map) => map
+            .iter()
+            .any(|(k, v)| (k == key && v.is_boolean()) || bool_under_key(v, key)),
+        Value::Array(items) => items.iter().any(|v| bool_under_key(v, key)),
+        _ => false,
+    }
 }
 
 #[test]

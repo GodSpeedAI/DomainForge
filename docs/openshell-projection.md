@@ -37,7 +37,11 @@ out/openshell/
 ```
 
 - `policy.yaml`: the OpenShell policy. It is also the boundary against which
-  the gateway's effective policy is checked.
+  the gateway's effective policy is checked. It is serialized with
+  `serde-saphyr` through the shared `projection::yaml::to_yaml` helper (the same
+  options as the AsyncAPI projection: block scalars disabled, YAML 1.1-safe
+  quoting). Its bytes, and therefore `policy_digest`, change only if that
+  serializer or the policy structure changes.
 - `sandbox.json` (schema `domainforge.openshell.sandbox/v1`): `vm_shape`
   (`vcpus`, `mem_mib`, `overlay_disk_mib`), `container_limits`,
   `exec_timeout_seconds`, `workspaces`, `dependency_sets`, `evidence_probes`,

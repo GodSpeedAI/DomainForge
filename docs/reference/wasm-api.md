@@ -8,7 +8,7 @@ Phase 9 implements WASM bindings using `wasm-bindgen`, providing a lightweight (
 
 ## Prerequisites
 
-1. **Rust toolchain** (1.77+)
+1. **Rust toolchain** (1.89+)
 2. **wasm-pack**:
    ```bash
    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh

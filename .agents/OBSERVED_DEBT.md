@@ -221,3 +221,10 @@ fixed and why.*
   deliberately aligned with current behaviour.
 - **Status:** Open. Observed on `feat/rego-projection` (2026-10-12); the Rego
   projection is not merged.
+
+## D-serde-saphyr. [2026-10-12] Pre-existing gate failures seen during the serde-saphyr migration
+- **Where:** `policy/quantifier.rs:326`, `projection/dagger/mod.rs:191` (`clippy::unnecessary_map_or`, new in Rust 1.92 clippy); `cargo deny check advisories` (roxmltree quadratic duplicate-attribute and namespace allocation advisories; yanked `spin` via `lol_alloc`).
+- **Evidence:** `cargo clippy -p domainforge-core --all-targets --features cli -- -D warnings` exit 101 on untouched files; the same run with `-A clippy::unnecessary_map_or` is clean. `cargo deny check advisories` exit 1; no serde-saphyr or yaml advisory.
+- **Impact:** the pre-commit clippy hook (`lefthook.yml`) and the `--all-features` CI lint job fail on main-line code, not on this change.
+- **Next move:** fix the two lints in a separate change, and bump roxmltree and spin.
+- **Also:** `Cargo.lock` header moved from version 3 to version 4 when cargo resolved the new crate. The CLI-binary test expects `<repo>/target/debug/domainforge`, so it fails when `CARGO_TARGET_DIR` is shared; a symlink was used locally.

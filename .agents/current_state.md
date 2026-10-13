@@ -4,8 +4,21 @@
 - [x] Gate scripts `scripts/verify/projection-targets/rego.sh` and `openshell.sh` (both require their tool on PATH, no skip); contracts `contracts/rego.yaml` and `contracts/openshell.yaml`; both appended to `all.sh`; `just rego-verify` and `just openshell-verify`.
 - [x] CI: jobs `verify-rego` and `verify-openshell` added; `verify-projection-targets` and `prove` install OPA 1.21.1 and openshell-prover 0.1.3 because both run `all.sh`.
 - [x] Docs: `docs/rego-projection.md`, `docs/openshell-projection.md`; rows in `docs/projection-target-implementation-status.md` and `docs/projection-families.md`; `PROOFS.md` rows `CLAIM-PROJ-REGO` and `CLAIM-PROJ-OPENSHELL` (both `partial`).
-- [ ] Not run: no cargo, no gate execution, no `opa`/prover run against generated output. The gates are unverified until run on a machine with a free build budget.
+- [x] Run 2026-10-13 after merging `origin/main` (6d219f8, serde-saphyr/MSRV 1.89): `openshell_projection_tests` 11 passed incl. 2 prover-backed; `scripts/verify/projection-targets/openshell.sh` passes; `rego_projection_tests` 9 passed with OPA 1.21.1; `cargo test -p domainforge-core --features cli` 1293 passed, 0 failed; clippy `--all-targets --all-features -D warnings` clean; fmt clean; MSRV 1.89 `check --locked --features cli` passes. `serde_yaml` and `unsafe-libyaml` are gone from this branch.
+- [x] OpenShell `policy.yaml` now serializes through `projection::yaml::to_yaml` (serde-saphyr). For the repair-agent fixture the bytes are unchanged, so `policy_digest` `sha256:f32151bf...` is unchanged. New test `policy_yaml_strings_survive_yaml_1_1_readers`.
 - [ ] Recorded debt D12 (evaluator NULL handling is not consistently Kleene); the Rego library reproduces current behaviour.
+
+## Previous state: serde_yaml -> serde-saphyr (2026-10-12, branch fix/replace-serde-yaml)
+
+- [x] Dependency: `serde_yaml` removed from `domainforge-core`; `serde-saphyr = 1.3` (`serialize` only) in `[dependencies]`, `deserialize` added in `[dev-dependencies]`. `cargo tree -p domainforge-core -e normal,features -i serde-saphyr` shows only `serialize`. Normal build gains `serde-saphyr` v1.3.0 and `nohash-hasher` v0.2.0. `cargo tree -i unsafe-libyaml --workspace` and `cargo tree -i serde_yaml --workspace`: no match.
+- [x] MSRV raised 1.77 -> 1.89 (owner-approved). Updated: `domainforge-core/Cargo.toml`, `domainforge-core/README.md` (badge, section, compatibility note), `docs/how-tos/install-cli.md`, `docs/how-tos/parse-sea-files.md`, `docs/reference/wasm-api.md`, `.agents/plans/execution-plane.md`. No sibling crate declares `rust-version`.
+- [x] CI: `.github/workflows/ci.yml` job `msrv` ("MSRV (1.89)") runs `cargo check -p domainforge-core --locked` and `... --features cli` on `dtolnay/rust-toolchain@1.89.0` with `RUSTUP_TOOLCHAIN=1.89.0` (rust-toolchain.toml pins 1.92.0). Local: `cargo +1.89.0 check -j 2 -p domainforge-core --locked` passes, default and `--features cli`, separate target dir `domainforge-msrv-target`.
+- [x] Emitter: `projection/asyncapi/mod.rs` `to_yaml` = `serde_saphyr::to_string_with_options` with default options except `prefer_block_scalars = false`. Tests parse with `serde_saphyr::from_str`.
+- [x] Byte comparison (5 AsyncAPI fixtures): not byte-identical. All 47 changed lines are quoting only (`asyncapi: "3.0.0"`, `version: "1.0.0"`, `$ref` single -> double quotes). Key order, indentation, blank lines, width and trailing newline are unchanged. Parsed values are equal under serde_yaml (before vs after) and serde-saphyr (after), per document.
+- [x] Adversarial quoting (`emitted_yaml_preserves_ambiguous_strings`, 45 values incl. 300-char and multi-line): round-trips under serde-saphyr; serde_yaml 0.9 parses the same emitted document with all values strings and equal to serde-saphyr. `emitted_yaml_is_deterministic` added.
+- [x] Gates: `cargo test -j 2 -p domainforge-core --features cli --no-fail-fast`: 1278 passed, 0 failed, 7 ignored (pre-existing). `cargo fmt --all -- --check` clean. `scripts/verify/projection-targets/asyncapi.sh` passes (3 schema tests).
+- [ ] `cargo clippy --all-targets --features cli -- -D warnings` fails on 2 pre-existing `clippy::unnecessary_map_or` lints in untouched files (`policy/quantifier.rs:326`, `projection/dagger/mod.rs:191`). With that lint allowed, clippy is clean. See OBSERVED_DEBT.
+- [ ] Not released. Commit type/footer decides the bump (see next_steps).
 
 # Current State: fallible CEP world mint (2026-10-04)
 

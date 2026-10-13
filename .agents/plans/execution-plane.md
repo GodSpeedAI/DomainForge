@@ -35,7 +35,7 @@ Everything in this section EXISTS today. Reuse it; do not reinvent it.
 | Docs layout | per-projection docs are flat `docs/<name>-projections.md`; how-tos in `docs/how-tos/`; ADRs in `docs/specs/ADR-*.md`; registry docs `docs/projection-families.md`, `docs/projection-target-implementation-status.md`. There is **no** `docs/adr/`, `docs/how-to/`, or `docs/reference/projections/` |
 | Fixture collision | `fixtures/projection_cell/` **already exists** and belongs to the event/authority projection suite. Do not touch it. This feature uses `fixtures/cell_env/` |
 | Deps available | `toml = "0.8"` (parse), `sha2 = "=0.10"`, `xxhash-rust`, `serde`, `chrono` — all already in `domainforge-core/Cargo.toml`. No new dependencies are needed |
-| Toolchain | Rust 1.92.0 (`rust-toolchain.toml`), MSRV 1.77, CLI binary gated by `cli` feature |
+| Toolchain | Rust 1.92.0 (`rust-toolchain.toml`), MSRV 1.89, CLI binary gated by `cli` feature |
 
 ## Binding decisions (resolve conflicts found during grounding)
 

@@ -4,7 +4,7 @@ Goal: Parse `.sea` models using the CLI and programmatic bindings while catching
 
 ## Prerequisites
 
-- Rust toolchain 1.77+ and the SEA CLI installed.
+- Rust toolchain 1.89+ and the SEA CLI installed.
 
   - For developers building from this repo: `cargo install --path domainforge-core --features cli` (produces the `sea` binary).
   - For users installing from crates.io or binaries: use the published `sea` or release artifact; confirm with `domainforge --version`.
