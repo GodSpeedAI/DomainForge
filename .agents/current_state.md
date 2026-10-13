@@ -12,6 +12,7 @@
 
 # Current State: fallible CEP world mint (2026-10-04)
 
+- [x] Development and CI toolchain pinned to Rust 1.99.0 (`rust-toolchain.toml` is the source of truth; Devbox `RUSTUP_TOOLCHAIN` override removed; CI and release workflows pin 1.99.0; `just toolchain-check`). Validation on 1.99.0: fmt clean, clippy `--all-targets --all-features -D warnings` clean, `cargo test -p domainforge-core --features cli` 1276 passed. MSRV (`rust-version`) unchanged here.
 - [x] `build_cep_envelope` leaves a failed `WorldRef` mint unpinned; successful minting preserves the existing tuple. `registry_hash_validation_controls_world_pinning` reproduced the caller-supplied invalid registry hash panic before the fix and covers invalid, valid, and absent hashes after it. Evidence: `cargo test -p domainforge-core --features cli --test cep_snapshot_world_tests --test envelope_emit_tests -- --test-threads=1` passed 27 tests; CLI Clippy with `-D warnings` and workspace fmt passed under Rust 1.92.0. Two envelope tests failed in the initial concurrent run and passed serially on both original and fixed code. Graft rebuild unavailable (CLI missing).
 
 # Current State: CEP snapshot world binding (2026-10-04, branch feat/cep-snapshot-world-ref, off feat/world-ref)
