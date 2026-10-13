@@ -188,7 +188,7 @@ fn pascal_case(s: &str) -> String {
         return "_".to_string();
     }
     // ponytail: leading digit is illegal as a Python identifier start; prefix `_`.
-    if out.chars().next().map_or(true, |c| c.is_ascii_digit()) {
+    if out.chars().next().is_none_or(|c| c.is_ascii_digit()) {
         out.insert(0, '_');
     }
     out
