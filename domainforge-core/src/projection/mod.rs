@@ -19,12 +19,15 @@ pub mod flows;
 pub mod gauge;
 pub mod ids;
 pub mod lean;
+pub mod openshell;
 pub mod otel;
 pub mod protobuf;
 pub mod rdf;
 pub mod registry;
+pub mod rego;
 pub mod sink;
 pub mod tla;
+pub(crate) mod yaml;
 pub mod zenml;
 
 pub use contracts::{find_mapping_rule, find_projection_override};

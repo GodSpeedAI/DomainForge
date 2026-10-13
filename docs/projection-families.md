@@ -59,6 +59,8 @@ for gate/toolchain details.
 | Verification | Gauge spec | `--format gauge` | One scenario per Flow |
 | Verification | Alloy model | `--format alloy` | Sigs + facts per Flow |
 | Verification | TLA+ spec | `--format tla` | State-machine; SANY+TLC verified |
+| Authority | OPA/Rego bundle | `--format rego` | Narrow policy subset lowered from the resolved graph; differential-tested against OPA 1.21.1 (see `docs/rego-projection.md`) |
+| Activation | OpenShell policy | `--format openshell` | OpenShell v0.1.3 `policy.yaml` + sandbox contracts; boundary-checked by `openshell-prover` 0.1.3 (see `docs/openshell-projection.md`) |
 
 ### Cedar authority scope
 

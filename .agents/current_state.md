@@ -1,4 +1,14 @@
-# Current State: serde_yaml -> serde-saphyr (2026-10-12, branch fix/replace-serde-yaml)
+# Current State: Rego and OpenShell projection targets (2026-10-12, branch feat/rego-projection)
+
+- [x] Two projection targets on `feat/rego-projection`, not merged and not released: `--format rego` (OPA/Rego bundle with a `domainforge.rego.decision/v1` contract, differential-tested against real OPA 1.21.1) and `--format openshell` (OpenShell v0.1.3 `policy.yaml` plus sandbox contracts, boundary-checked by `openshell-prover` 0.1.3). Source: `domainforge-core/src/projection/{rego,openshell}/`; tests: `rego_projection_tests.rs` (9), `openshell_projection_tests.rs` (10).
+- [x] Gate scripts `scripts/verify/projection-targets/rego.sh` and `openshell.sh` (both require their tool on PATH, no skip); contracts `contracts/rego.yaml` and `contracts/openshell.yaml`; both appended to `all.sh`; `just rego-verify` and `just openshell-verify`.
+- [x] CI: jobs `verify-rego` and `verify-openshell` added; `verify-projection-targets` and `prove` install OPA 1.21.1 and openshell-prover 0.1.3 because both run `all.sh`.
+- [x] Docs: `docs/rego-projection.md`, `docs/openshell-projection.md`; rows in `docs/projection-target-implementation-status.md` and `docs/projection-families.md`; `PROOFS.md` rows `CLAIM-PROJ-REGO` and `CLAIM-PROJ-OPENSHELL` (both `partial`).
+- [x] Run 2026-10-13 after merging `origin/main` (6d219f8, serde-saphyr/MSRV 1.89): `openshell_projection_tests` 11 passed incl. 2 prover-backed; `scripts/verify/projection-targets/openshell.sh` passes; `rego_projection_tests` 9 passed with OPA 1.21.1; `cargo test -p domainforge-core --features cli` 1293 passed, 0 failed; clippy `--all-targets --all-features -D warnings` clean; fmt clean; MSRV 1.89 `check --locked --features cli` passes. `serde_yaml` and `unsafe-libyaml` are gone from this branch.
+- [x] OpenShell `policy.yaml` now serializes through `projection::yaml::to_yaml` (serde-saphyr). For the repair-agent fixture the bytes are unchanged, so `policy_digest` `sha256:f32151bf...` is unchanged. New test `policy_yaml_strings_survive_yaml_1_1_readers`.
+- [ ] Recorded debt D12 (evaluator NULL handling is not consistently Kleene); the Rego library reproduces current behaviour.
+
+## Previous state: serde_yaml -> serde-saphyr (2026-10-12, branch fix/replace-serde-yaml)
 
 - [x] Dependency: `serde_yaml` removed from `domainforge-core`; `serde-saphyr = 1.3` (`serialize` only) in `[dependencies]`, `deserialize` added in `[dev-dependencies]`. `cargo tree -p domainforge-core -e normal,features -i serde-saphyr` shows only `serialize`. Normal build gains `serde-saphyr` v1.3.0 and `nohash-hasher` v0.2.0. `cargo tree -i unsafe-libyaml --workspace` and `cargo tree -i serde_yaml --workspace`: no match.
 - [x] MSRV raised 1.77 -> 1.89 (owner-approved). Updated: `domainforge-core/Cargo.toml`, `domainforge-core/README.md` (badge, section, compatibility note), `docs/how-tos/install-cli.md`, `docs/how-tos/parse-sea-files.md`, `docs/reference/wasm-api.md`, `.agents/plans/execution-plane.md`. No sibling crate declares `rust-version`.

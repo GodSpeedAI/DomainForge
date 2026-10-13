@@ -30,8 +30,8 @@ use crate::graph::Graph;
 use crate::projection::flows::{collect_flows, model_namespace};
 use crate::projection::ids::{slug, NameRegistrar};
 use crate::projection::sink::ArtifactSink;
+use crate::projection::yaml::to_yaml;
 use serde_json::{json, Map, Value};
-use serde_saphyr::SerializerOptions;
 use std::collections::BTreeMap;
 
 /// The single emitted artifact's relative path.
@@ -57,21 +57,6 @@ pub fn emit(
     );
     sink.write(OUTPUT_FILE, &body)?;
     Ok(vec![OUTPUT_FILE.to_string()])
-}
-
-/// Serializer options for projected YAML. Block scalars (`|`/`>`) are disabled
-/// so every string stays a single scalar with no folding; the default YAML 1.1
-/// quoting rules quote values that any YAML 1.1/1.2 reader could type as a
-/// bool, number, null, or timestamp. Anchors are never generated.
-fn yaml_options() -> SerializerOptions {
-    let mut options = SerializerOptions::default();
-    options.prefer_block_scalars = false;
-    options
-}
-
-/// Serialize `value` to YAML using the projection's serializer options.
-fn to_yaml<T: serde::Serialize>(value: &T) -> Result<String, serde_saphyr::ser::Error> {
-    serde_saphyr::to_string_with_options(value, yaml_options())
 }
 
 /// Binding surface: string in, path→content map out, no filesystem.
