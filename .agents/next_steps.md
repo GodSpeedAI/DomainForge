@@ -36,3 +36,9 @@ When `docs/specs/ADR-014-application-review-and-approval-contract.md` is ratifie
 
 Policies currently project as individuals carrying their normalized expression; they are not translated into SHACL constraints, because a partial translation would silently change what a policy means. Expected outcome: either an explicit decision to keep policies stated-only, or a specification of the exact expression subset SHACL can carry faithfully plus the rejection behavior for the rest.
 - Rust toolchain: recheck `rustup check` at each stable release and follow "Updating the Rust toolchain" in CONTRIBUTING.md; devbox could not be verified locally (Nix cache timeout), so confirm `devbox run -- rustc --version` prints 1.99.0.
+
+## Devin onboarding (external settlement, 2026-10-13)
+
+1. After .devin/ merges to main, index/regenerate the public DomainForge repository in Devin at Low/free DeepWiki effort; check page coverage of the 30 declared topics. Expected outcome: actual sourced wiki pages and diagrams, not just configuration presence.
+2. Devin Settings > Environment > Blueprints: sync the Git-backed .devin/blueprint.yaml and build an environment snapshot; inspect logs. Expected outcome: successful Rust/Bun/Python dependency installation with no paid providers, secrets or heavyweight external proof engines.
+3. Run a focused Rust proof and branch CI as appropriate; preserve existing production/release gates. Expected outcome: separate verified proof for the specific change, without overclaiming full binding or OPA/OpenShell settlement.
