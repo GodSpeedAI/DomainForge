@@ -425,10 +425,13 @@ impl Graph {
     /// Unlike parse(source), this preserves namespace identities and imports across modules.
     #[napi(factory)]
     pub fn parse_source_map(entry_logical_path: String, sources_json: String) -> Result<Self> {
-        let graph = crate::application::resolve_application_graph(&entry_logical_path, &sources_json)
-            .map_err(|diags| {
-                Error::from_reason(serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()))
-            })?;
+        let graph =
+            crate::application::resolve_application_graph(&entry_logical_path, &sources_json)
+                .map_err(|diags| {
+                    Error::from_reason(
+                        serde_json::to_string(&diags).unwrap_or_else(|e| e.to_string()),
+                    )
+                })?;
         Ok(Self { inner: graph })
     }
 
