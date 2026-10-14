@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.1](https://github.com/GodSpeedAI/DomainForge/compare/v0.21.0...v0.21.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **ci:** give the release title step a repository and lint for it ([#142](https://github.com/GodSpeedAI/DomainForge/issues/142)) ([20eef98](https://github.com/GodSpeedAI/DomainForge/commit/20eef9843eed670aa9ec4265923d6e967f2b8669))
+* **ci:** scope the artifact gate to workflows with create-release and run it in CI ([#144](https://github.com/GodSpeedAI/DomainForge/issues/144)) ([a8ab75f](https://github.com/GodSpeedAI/DomainForge/commit/a8ab75fe85bf91d880192852a41a547aff3c028d))
+
 ## [0.21.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.20.0...v0.21.0) (2026-10-14)
 
 
