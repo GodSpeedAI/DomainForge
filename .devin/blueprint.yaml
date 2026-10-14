@@ -1,0 +1,96 @@
+# DomainForge / Devin (public free-tier onboarding)
+# Keep semantic source/verification authority in AGENTS.md, Rust, specs and PROOFS.md.
+# No live deployment, paid services or external proof engines are required in the snapshot.
+initialize:
+  - name: Install native Rust and Python build prerequisites
+    run: |
+      if command -v apt-get >/dev/null 2>&1; then
+        if command -v sudo >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential pkg-config libssl-dev python3-venv ca-certificates curl
+        elif [ "$(id -u)" -eq 0 ]; then
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential pkg-config libssl-dev python3-venv ca-certificates curl
+        fi
+      fi
+  - name: Install pinned Rust 1.99.0 with formatting and linting
+    run: |
+      if ! command -v rustup >/dev/null 2>&1; then
+        curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.99.0
+      fi
+      export PATH="$HOME/.cargo/bin:$PATH"
+      rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+      rustup default 1.99.0
+      echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$ENVRC"
+  - name: Install Python 3.12 for PyO3 bindings
+    uses: github.com/actions/setup-python@v5
+    with:
+      python-version: "3.12"
+  - name: Install Node 24 for native addon build compatibility
+    uses: github.com/actions/setup-node@v4
+    with:
+      node-version: "24"
+  - name: Install Bun for primary TypeScript workflow
+    uses: github.com/oven-sh/setup-bun@v2
+    with:
+      bun-version: latest
+  - name: Install just command runner
+    uses: github.com/extractions/setup-just@v4
+maintenance:
+  - name: Fetch locked Cargo dependencies
+    run: |
+      export PATH="$HOME/.cargo/bin:$PATH"
+      cargo fetch --locked
+  - name: Install Bun dependencies without changing lockfile
+    run: bun install --frozen-lockfile
+  - name: Prepare Python test and maturin dependencies
+    run: |
+      python3 -m venv .venv
+      .venv/bin/python -m pip install --disable-pip-version-check -r requirements.txt -r requirements-dev.txt pytest maturin
+knowledge:
+  - name: orientation
+    contents: |
+      Read AGENTS.md, domainforge-core/AGENTS.md for core changes, and
+      .agents/AGENTS.md, current_state.md and next_steps.md for live handoffs.
+      The .sea DSL, Rust graph and governing specs determine meaning.
+      Projections and DeepWiki do not supersede that authority.
+      Grammar changes require a synced sea.pest/AST/ADR/fixtures change.
+  - name: build
+    contents: |
+      just toolchain-check
+      cargo build --locked -p domainforge-core --features cli
+      cargo run -p domainforge-core --features cli --bin domainforge -- --help
+      Python bindings require a maturin develop build into the local venv;
+      TypeScript bindings require cd domainforge-typescript && bun run build.
+      Do not hand-edit .node, wheels, pkg/ or dist/ outputs.
+  - name: lint
+    contents: |
+      cargo fmt --all --check
+      cargo clippy --workspace --all-targets --all-features -- -D warnings
+      bash scripts/check-sea-language-change.sh if SEA source syntax changes.
+  - name: test
+    contents: |
+      just rust-test       # canonical Rust CLI-enabled core
+      just python-test     # after Python PyO3/maturin binding is built
+      just ts-test         # after native napi-rs addon is built
+      just all-tests       # combined language gate
+      just enterprise-verify  # broad audited release gate; not lightweight
+  - name: projections
+    contents: |
+      just cell-verify
+      just rego-verify      # requires OPA 1.21.1 installed separately
+      just openshell-verify # requires openshell-prover 0.1.3 separately
+      Do not equate emitted policies with runtime enforcement or settled
+      isolation; check PROOFS.md and native ecosystem tool evidence.
+  - name: proof
+    contents: |
+      just prove creates evidence/latest/proof.json and proof.md.
+      PROOFS.md distinguishes proven, partial, planned and blocked claims.
+      Inspect the generated evidence, actual test output and cited artifacts.
+      Never weaken failing gates, bypass grammar ADRs or commit secrets.
+      Missing toolchain, unrun tests and failed checks are not PASS.
+  - name: security
+    contents: |
+      Do not decrypt SOPS secrets, install production credentials, sign
+      authority packs, invoke real deployments, or trigger release workflows
+      during Devin snapshot setup. Preserve ArtifactSink and policy gates.

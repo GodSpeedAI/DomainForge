@@ -1,0 +1,203 @@
+{
+  "repo_notes": [
+    {
+      "content": "DomainForge is the canonical Rust semantic compiler and projection engine for the .sea Semantic Executable Abstraction DSL, not simply a code generator. Trace .sea → Pest grammar/AST → module resolution/semantic graph → validation/governance → operator-family projection → emitted artifacts and independent validation. The source model is canonical; projections do not become alternative sources of domain truth. Prioritize domainforge-core/ and execution evidence over marketing copy.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Instruction scope is essential: root AGENTS.md governs all; domainforge-core/AGENTS.md governs Rust/compiler/bindings; .agents/AGENTS.md governs state, evidence and handoffs. Read .agents/current_state.md and next_steps.md as current but possibly branch-specific observations. Source code and tests outrank stale historical notes. Do not duplicate root agents instructions in wiki.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Grammar and schema evolution is gated. domainforge-core/grammar/sea.pest, parser AST/conversion, semantic graph and all affected projections/bindings must move together. The project checks for an ADR for SEA language changes via scripts/check-sea-language-change.sh. Preserve existing namespace rules, content-addressed ConceptId, IndexMap order, rust_decimal quantities, units and three-valued policy evaluation. Link the correct ADR/PRD/SDS to each topic.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Projections use the operator family pattern (ADR-011), typed target IRs, deterministic IDs and ArtifactSink containment. A generated schema or policy is not runtime execution, enforcement or externally validated settlement. Distinguish exact projection family, supported subset, refusals, fidelity-report class, native ecosystem tool checks and remaining obligations. Generated pkg/, dist/, native .node and wheel artifacts are build outputs, not sources to hand-edit.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "The .sea application contract and canonical semantic envelope model operational boundaries, typed records/enums/operations, authority fact resolution, policy decisions, source hashes, identity and approval semantics. Do not infer that generating application contracts starts an HTTP server or grants real authority. Governance, payment and evidence gates must be described separately from generated representations.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "DomainForge includes Rego/OPA and OpenShell projections in the current main source (domainforge-core/src/projection/rego and openshell). Rego emits a constrained decision bundle and is differential-tested against OPA 1.21.1; it does not execute OPA or enforce policy. OpenShell projects the shared Cell IR to policy.yaml and sandbox/mapping/lock contracts for OpenShell v0.1.3; it does not start a sandbox or prove runtime isolation. Unsupported semantics are rejected; both PROOFS.md claims are partial. Do not extrapolate to every Rego/OpenShell feature.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Cell projection is governed infrastructure intent, not a container runtime: CellIr under projection/cell, environment declarations, resources/network, mount mappings, profiles, typed refusals, receipts/locks and evidence obligations. Compare cell vs devbox/mise vs openshell projectors and emphasize shared IR, trust boundaries, deterministic outputs and executor settlement requirements.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Rust core is authoritative. Python binds via PyO3/maturin (domainforge-python and core/src/python), TypeScript via napi-rs and Bun (domainforge-typescript and core/src/typescript), WASM via wasm-bindgen (core/src/wasm). Public primitive changes require cross-binding tests; default WASM intentionally excludes CLI-only projection families because of bundle size. Never claim Rust-only green proves foreign language parity.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Use justfile as the primary command contract: just rust-test, python-test, ts-test, all-tests, enterprise-verify, prove, cell-verify, rego-verify and openshell-verify. PROOFS.md records proven/partial/planned/blocked claims with exact scripts and independent validators. The live CI is a large multijob matrix including Rust/Linux/macOS/Windows, MSRV, Python, TypeScript, WASM, security and projection toolchains; a documentation-only PR should still await required checks rather than assume success.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Toolchain details: rust-toolchain.toml pins 1.99.0; domainforge-core Cargo.toml states MSRV 1.89; CI tests both. Bun is preferred for TypeScript despite Node 24 setup in CI; Python distribution requires Python >=3.11 and maturin. Root devbox.json and justfile are available but making Nix/Devbox or full native ecosystem proof tools mandatory for Devin snapshots is unnecessary and expensive. Never install secrets/signing keys or run deployment during a basic snapshot.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Provenance and freshness matter: .agents/current_state.md can contain historical branch-specific claims (e.g. 'not merged' while files already exist on main); check main branch paths and commits before reporting current status. Don't treat previous console outputs, docs, or checked boxes as freshly executed tests. DeepWiki is a navigational representation, not a new source of implementation truth.",
+      "author": "DomainForge maintainers"
+    },
+    {
+      "content": "Related repos domainforge-lsp and domainforge-vsc-extension are independent repositories and not part of this repo's Rust workspace. Describe in-repo CLI/FFI surfaces and external editor integration boundaries without pretending their separate code is present here. The .sea registry and semantic packs model namespace/closure/fingerprints; use code and tests for exact behavior.",
+      "author": "DomainForge maintainers"
+    }
+  ],
+  "pages": [
+    {
+      "title": "Architecture, Source of Truth and Evidence",
+      "purpose": "Orient users to the SEA compiler's goal and the canonical pipeline. Explain root/scoped AGENTS contracts, ADR precedence, source-vs-projection distinction, state/evidence ledgers and code-backed validation anchors."
+    },
+    {
+      "title": "SEA Grammar and Language Semantics",
+      "purpose": "Document domainforge-core/grammar/sea.pest, grammar directives, Entity/Resource/Flow/Policy/Metric, declared units, projections, operations and syntax evolution via ADR and parser tests.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Parser, AST, Diagnostics and Formatting",
+      "purpose": "Trace Rust Pest parsing, AST conversion, lint/diagnostics, AST JSON and stable formatter behavior. Call out grammar-change gate and any incomplete roundtrip claims in PROOFS.md.",
+      "parent": "SEA Grammar and Language Semantics"
+    },
+    {
+      "title": "Module Resolution, Namespaces and Registries",
+      "purpose": "Explain src/module and namespace registry, imports, ambiguity resolution, source selection, deterministic ConceptId and graph closure used by downstream compilation.",
+      "parent": "SEA Grammar and Language Semantics"
+    },
+    {
+      "title": "Semantic Graph and Domain Primitives",
+      "purpose": "Map src/graph, src/primitives and graph integrity rules: Entity/Resource/Role/Relation/Instance/Flow/Metric; use tested data and identity contracts instead of docs-only examples.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Quantities, Units and Numeric Semantics",
+      "purpose": "Describe unit declarations, dimensional compatibility, rust_decimal precise quantities, conversions, invariants and propagation into projected artifacts.",
+      "parent": "Semantic Graph and Domain Primitives"
+    },
+    {
+      "title": "Policy Logic and Three-Valued Evaluation",
+      "purpose": "Trace src/policy expressions, quantifiers, modality, priority, Kleene true/false/unknown decisions and unsupported operations. Ground semantics in policy tests and distinguish model validation from runtime authorization.",
+      "parent": "Semantic Graph and Domain Primitives"
+    },
+    {
+      "title": "Semantic Packs, Fingerprints and Drift",
+      "purpose": "Trace source graph closure, semantic_pack build/diff/verify, meaning fingerprints, deterministic IDs, namespace registry and typed drift classification. Explain what comparison proves, not a final capability outcome.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Application Contract and Semantic Envelope",
+      "purpose": "Explain src/application typed entity state, records, enums, operations, idempotency, concurrency, validation, review/approval and canonical semantic envelopes. Anchor to ADR-013/014 and relevant tests.",
+      "parent": "Semantic Packs, Fingerprints and Drift"
+    },
+    {
+      "title": "Authority Engine and Governed Decisions",
+      "purpose": "Trace authority pack/compiler, fact resolver, missing fact handling, precedence, Permit/Deny/Indeterminate, policy traces and signing. State that enforcement is performed by external executors, not by generating a decision.",
+      "parent": "Application Contract and Semantic Envelope"
+    },
+    {
+      "title": "Operator Family Architecture and ArtifactSink",
+      "purpose": "Explain ADR-011, src/projection/engine/ids/sink/registry, target IR lowering, deterministic emission and containment; distinguish renderer and independent target validator.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Projection Catalog, Fidelity and Compatibility",
+      "purpose": "Create a compact index of each source-backed projection target and the actual CLI names, implementation status, fidelity and toolchain gates. Anchor to src/projection and docs/projection-target-implementation-status.md; don't infer universal semantic preservation.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Domain Code and API Contract Projections",
+      "purpose": "Cover domain-python, domain-typescript, domain-rust code generators, shared domain IR, protobuf and other service/application contract generation. Explain what is emitted vs executable/runtime-validated.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Event and Integration Projections",
+      "purpose": "Trace AsyncAPI, CloudEvents, Protobuf, related output schemas and canonical semantic envelope fields; explain schema validation and source model mapping with fixtures and native gates.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Knowledge Graph, RDF and CALM",
+      "purpose": "Explain RDF/OWL serializations, knowledge graph stores/import, CALM/SBVR mapping, lossless vs partial roundtrips, identity and limits. Match actual graph code and prove ledger rather than assume full graph closure.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Process, Case and Enterprise Architecture",
+      "purpose": "Trace BPMN, CMMN and ArchiMate IR/XML emitters; identify which flow/case/architecture semantics are representable, fidelity classes and external validators.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Telemetry and Observability Projections",
+      "purpose": "Document OTel/observability projections and YAML emission, event-to-telemetry mapping, scope, schemas and proof scripts; do not claim a collector/exporter is running without evidence.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Rego and OPA Policy Projection",
+      "purpose": "Trace src/projection/rego, limited SEA policy lowering, bundle layout, domainforge.rego.decision/v1, unknown/error semantics, typed REGO001 refusal, policy-vs-decision fidelity and real OPA 1.21.1 differential tests. Generated Rego is not enforcement.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Formal and Alternative Authority Projections",
+      "purpose": "Explain supported Cedar, Alloy, TLA+, Lean and other formal target emitters, native-checker gates, expressible subsets and verified/partial boundaries; avoid conflating satisfiable models with proven real operations.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "Cell Environment IR and Resource Contract",
+      "purpose": "Trace src/projection/cell/ IR, declared tools/runtimes, CPU/memory/storage/network/mounts, profiles, sandbox requirements, typed errors, overrides, hashes, locks and downstream evidence. Ground to ADR-012 and fixtures.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "OpenShell and Governed Sandbox Projection",
+      "purpose": "Trace src/projection/openshell as a CellIr view that emits policy.yaml, sandbox.json, mapping-report and lock. Detail OSH refusals, verified v0.1.3 prover checks and unfulfilled runtime isolation/credential obligations.",
+      "parent": "Cell Environment IR and Resource Contract"
+    },
+    {
+      "title": "Devbox, Mise and Execution Toolchain Views",
+      "purpose": "Compare cell/devbox/mise/dagger projection families and execution-policy boundaries. Explain which outputs are declarations, how they are validated, and what an executor still has to settle.",
+      "parent": "Cell Environment IR and Resource Contract"
+    },
+    {
+      "title": "AI, Learning and Data Pipeline Projections",
+      "purpose": "Document BAML, DSPy, ZenML, ai_learning/graph_ml/llm/cep_eval, training/validation recipes, provenance and faithful mapping boundaries, grounded in source files and respective fixtures.",
+      "parent": "Operator Family Architecture and ArtifactSink"
+    },
+    {
+      "title": "CLI Commands and Developer Workflows",
+      "purpose": "Document src/cli and domainforge binary command families: parse/validate/format/project/import/pack/authority/envelope/registry/test and app commands, with exact justfile and CLI reference anchors.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Python PyO3 and Maturin Bindings",
+      "purpose": "Map canonical core Rust types through src/python and domainforge-python packaging, Python test suites, build prerequisites, and API parity requirements. Never duplicate policy/semantic logic in bindings.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "TypeScript napi-rs and Bun Bindings",
+      "purpose": "Map core/src/typescript, domainforge-typescript build using napi-rs, Bun/Vitest tests, native addon locations, type declarations, and cross-binding parity. Keep Node/npm fallback separate from preferred Bun.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "WebAssembly Bindings and Bundle Constraints",
+      "purpose": "Trace core/src/wasm, wasm-bindgen ABI, wasm-pack features, optional wasm-projections and byte-size checks. Explain intentionally excluded default CLI projection families and wasm test limitations.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Conformance Fixtures, Golden Tests and Proof Ledger",
+      "purpose": "Map domainforge-core/tests, fixtures, scripts/prove, scripts/verify, PROOFS.md, evidence/latest generation, negative tests, provenance and independent validators. Separate proven/partial/planned/blocked claims and test commands.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "CI, Release, Security and Compatibility",
+      "purpose": "Document Rust 1.99 pinned vs MSRV 1.89, multiplatform CI matrix, Python/TS/WASM/test gates, security/audit, size gates, release-please and publishing workflows. Do not trigger release/deploy or edit generated artifacts as fixes.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    },
+    {
+      "title": "Documentation Navigation and Ecosystem Interfaces",
+      "purpose": "Map docs/specs, reference, how-tos, examples, language bindings and generated-artifacts policy; distinguish separate domainforge-lsp/vsc-extension repos, SEA-Forge integrations and present-in-this-repo implementation.",
+      "parent": "Architecture, Source of Truth and Evidence"
+    }
+  ]
+}

@@ -262,3 +262,10 @@ reviewed milestone.
 - [x] Implemented omission-based failure synthesis (F-03). When model has validation errors, emitted CEP envelope omits statements rather than populating non-conformant/speculative ones. Evidence: `envelope_emit_tests::test_envelope_emit_cep_omits_statements_on_validation_failure`.
 - [x] Implemented typed `DomainModelIdentity::canonical_digest()` (F-04). Returns `Option<&str>` to eliminate unwrap risks on unverified identities. Evidence: `domainforge-core/src/application/verification_contract.rs`.
 - [x] Verification: `cargo test -p domainforge-core` passes with 381 library unit/integration tests and 16 envelope emit integration tests.
+
+## Devin free-tier repository onboarding (2026-10-13)
+
+- [x] Authored .devin/wiki.json with 30 explicit pages and 12 source-guided repo notes; all page titles/parents/length limits statically validated. This is a navigation plan, not generated documentation or new product capability.
+- [x] Authored .devin/blueprint.yaml for Rust 1.99.0, Python 3.12, Node 24, Bun and just; the maintenance phase fetches locked Cargo, Bun and Python dependencies. Existing AGENTS.md, specs, Rust core, CI and proof definitions remain untouched.
+- [ ] Devin-side generation of the Low/free DeepWiki and Git-backed environment snapshot has not been observed. Running the local Dockerless build and complete CI matrix is outside this documentation-only change.
+- Evidence: GitHub PR for chore/devin-free-onboarding and the committed .devin/ files; only static validation and GitHub CI (when completed) can be claimed, not live Devin execution.
