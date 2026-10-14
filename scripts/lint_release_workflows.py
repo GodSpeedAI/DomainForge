@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Lint release workflows for security best practices."""
+import re
 import sys
 from pathlib import Path
 
@@ -8,6 +9,11 @@ try:
 except ImportError:
     print("PyYAML is required: pip install pyyaml")
     sys.exit(1)
+
+
+GH_CALL = re.compile(r"(^|[\s;&|(`$])gh\s", re.MULTILINE)
+GH_REPO_FLAG = re.compile(r"\s(--repo|-R)[\s=]")
+NPM_INSTALL = re.compile(r"npm install(?!\s+-g\s+npm@)")
 
 
 def lint_workflow(path):
@@ -21,8 +27,13 @@ def lint_workflow(path):
     if wf is None:
         return []
 
+    workflow_env = wf.get("env") or {}
     for job_name, job in wf.get("jobs", {}).items():
         steps = job.get("steps", [])
+        has_checkout = any(
+            str(s.get("uses", "")).startswith("actions/checkout@") for s in steps
+        )
+        job_env = job.get("env") or {}
         for i, step in enumerate(steps):
             run = step.get("run", "")
             name = step.get("name", step.get("uses", "unnamed"))
@@ -45,7 +56,19 @@ def lint_workflow(path):
                             f"curl download without checksum verification"
                         )
 
-            if isinstance(run, str) and "npm install" in run:
+            # Without a checkout there is no .git for gh to infer the repository
+            # from, so it fails with "not a git repository" (v0.20.0, v0.21.0).
+            if isinstance(run, str) and GH_CALL.search(run) and not has_checkout:
+                step_env = step.get("env") or {}
+                has_repo = any("GH_REPO" in e for e in (workflow_env, job_env, step_env))
+                if not has_repo and not GH_REPO_FLAG.search(run):
+                    errors.append(
+                        f"{path.name}:{job_name}/step[{i}]: "
+                        f"gh call in job without checkout needs GH_REPO or --repo"
+                    )
+
+            # A global npm self-upgrade installs no project dependencies.
+            if isinstance(run, str) and NPM_INSTALL.search(run):
                 if "--frozen" not in run and "npm ci" not in run:
                     if "release" in path.name:
                         errors.append(
