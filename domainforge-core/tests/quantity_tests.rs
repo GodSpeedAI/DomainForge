@@ -3,7 +3,7 @@ use domainforge_core::primitives::quantity::QuantityFormatter;
 use domainforge_core::primitives::Quantity;
 use domainforge_core::units::Dimension;
 #[cfg(feature = "formatting")]
-use icu_locid::locale;
+use icu_locale_core::locale;
 
 #[cfg(feature = "formatting")]
 #[test]

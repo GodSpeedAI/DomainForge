@@ -31,7 +31,7 @@ pub fn compute_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
     let result = hasher.finalize();
-    format!("sha256:{:x}", result)
+    format!("sha256:{}", hex::encode(result))
 }
 
 /// Compute sha256 of canonical JSON string.
