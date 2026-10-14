@@ -10,7 +10,7 @@ use std::fmt;
 #[cfg(feature = "shacl")]
 use oxigraph::model::{GraphNameRef, Term};
 #[cfg(feature = "shacl")]
-use oxigraph::sparql::QueryResults;
+use oxigraph::sparql::{QueryResults, SparqlEvaluator};
 #[cfg(feature = "shacl")]
 use oxigraph::store::Store;
 
@@ -139,7 +139,13 @@ fn augment_shapes_from_store(store: &Store, kg: &mut KnowledgeGraph) -> Result<(
         }
     "#;
 
-    match store.query(q) {
+    let results = SparqlEvaluator::new()
+        .parse_query(q)
+        .map_err(|e| ImportError::Other(format!("Failed to parse SHACL SPARQL query: {}", e)))?
+        .on_store(store)
+        .execute();
+
+    match results {
         Ok(QueryResults::Solutions(solutions)) => {
             use std::collections::HashMap;
 

@@ -94,7 +94,7 @@ impl std::fmt::Display for RegoProjectionError {
 impl std::error::Error for RegoProjectionError {}
 
 fn sha256(content: &str) -> String {
-    format!("sha256:{:x}", Sha256::digest(content.as_bytes()))
+    format!("sha256:{}", hex::encode(Sha256::digest(content.as_bytes())))
 }
 
 fn pretty(value: &Value) -> String {

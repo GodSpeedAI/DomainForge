@@ -347,7 +347,7 @@ fn compute_graph_hash(graph: &Graph) -> String {
     let mut hasher = Sha256::new();
     hasher.update(json.as_bytes());
     let result = hasher.finalize();
-    format!("sha256:{:x}", result)
+    format!("sha256:{}", hex::encode(result))
 }
 
 /// `Flow`/`ResourceInstance` ids are minted with `Uuid::new_v4()` (legitimate:
@@ -398,7 +398,7 @@ fn content_hash_keys(contents: &[String]) -> Vec<String> {
         .map(|content| {
             let mut hasher = Sha256::new();
             hasher.update(content.as_bytes());
-            let base = format!("{:x}", hasher.finalize());
+            let base = hex::encode(hasher.finalize());
             let count = seen.entry(base.clone()).or_insert(0);
             let key = if *count == 0 {
                 base

@@ -232,7 +232,7 @@ fn deterministic_flow_id(resource_id: &str, from_id: &str, to_id: &str) -> Strin
     hasher.update(to_id.as_bytes());
 
     let digest = hasher.finalize();
-    format!("flow-{:x}", digest)
+    format!("flow-{}", hex::encode(digest))
 }
 
 fn parse_node_type(s: &str) -> Option<NodeType> {

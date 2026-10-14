@@ -673,7 +673,7 @@ fn logical_dir(logical_id: &str) -> &str {
 // ponytail: consumed by application resolution in Task 7.
 #[allow(dead_code)]
 fn source_hash(source: &str) -> String {
-    format!("sha256:{:x}", Sha256::digest(source.as_bytes()))
+    format!("sha256:{}", hex::encode(Sha256::digest(source.as_bytes())))
 }
 
 // ponytail: consumed by application resolution in Task 7.
