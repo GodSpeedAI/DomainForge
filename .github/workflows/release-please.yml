@@ -31,7 +31,9 @@ jobs:
 
       - name: Normalize GitHub Release title to tag
         if: ${{ steps.release.outputs.release_created == 'true' }}
+        # This job has no checkout, so gh cannot infer the repository from .git.
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
         run: gh release edit "$TAG_NAME" --title "$TAG_NAME"

@@ -65,6 +65,12 @@ jobs:
       - name: Check SEA grammar-change gate
         run: bash scripts/check-sea-language-change.sh
 
+      - name: Lint release workflows
+        run: |
+          python3 -m pip install --quiet pyyaml==6.0.2
+          python3 scripts/lint_release_workflows.py
+          python3 scripts/lint_release_security.py
+
   test-rust:
     name: Test Rust (${{ matrix.os }})
     needs: lint
