@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.20.0...v0.21.0) (2026-10-14)
+
+
+### Features
+
+* **projection:** add OPA/Rego and OpenShell projection targets ([#135](https://github.com/GodSpeedAI/DomainForge/issues/135)) ([2299d90](https://github.com/GodSpeedAI/DomainForge/commit/2299d906bc674b1a3aaeaf47461c691c65760f26))
+
 ## [0.20.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.19.0...v0.20.0) (2026-10-13)
 
 
