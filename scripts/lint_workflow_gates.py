@@ -2,7 +2,8 @@
 """Check that release workflow gates are correct.
 
 Verifies:
-- Every upload-artifact job is referenced in create-release needs
+- Every upload-artifact job is referenced in create-release needs,
+  in workflows that define a create-release job
 - Dependabot automerge does not treat empty check results as success
 """
 import sys
@@ -24,7 +25,11 @@ def check_artifact_gates(path):
         return []
 
     jobs = wf.get("jobs", {})
-    create_release = jobs.get("create-release", {})
+    # Release Please now creates GitHub Releases; the gate applies only to a
+    # workflow that still defines its own create-release job.
+    if "create-release" not in jobs:
+        return []
+    create_release = jobs["create-release"]
     needs = create_release.get("needs", [])
     if isinstance(needs, str):
         needs = [needs]

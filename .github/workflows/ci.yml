@@ -70,6 +70,7 @@ jobs:
           python3 -m pip install --quiet pyyaml==6.0.2
           python3 scripts/lint_release_workflows.py
           python3 scripts/lint_release_security.py
+          python3 scripts/lint_workflow_gates.py
 
   test-rust:
     name: Test Rust (${{ matrix.os }})
