@@ -273,6 +273,8 @@ export declare class Graph {
   allPatterns(): Array<Pattern>
   allConceptChanges(): Array<ConceptChange>
   allEntityInstances(): Array<Instance>
+  /** Resolve imports across an in-memory, canonical SEA source map. */
+  static parseSourceMap(entryLogicalPath: string, sourcesJson: string): Graph
   static parse(source: string): Graph
   exportCalm(): string
   static importCalm(calmJson: string): Graph
