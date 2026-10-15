@@ -214,6 +214,26 @@ jobs:
       - name: Run Python tests
         run: just ci-test-python
 
+  build-wheel-aarch64:
+    name: Build wheel (aarch64 Linux)
+    needs: lint
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Build-only twin of release-pypi.yml's aarch64 step, so a broken
+      # cross-build shows up here instead of during a release.
+      - name: Build wheel (manylinux cross container)
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          working-directory: domainforge-python
+          target: aarch64-unknown-linux-gnu
+          manylinux: "2_28"
+          maturin-version: 1.10.1
+          rust-toolchain: 1.99.0
+          args: --release --features python --out dist -i python3.12
+
   test-typescript:
     name: Test TypeScript
     needs: lint
