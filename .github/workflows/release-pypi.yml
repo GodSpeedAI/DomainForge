@@ -57,19 +57,19 @@ jobs:
           - { os: macos-15-intel, target: x86_64-apple-darwin, python-version: "3.11" }
           - { os: windows-2025-vs2026, target: x86_64-pc-windows-msvc, python-version: "3.11" }
           - { os: macos-15, target: aarch64-apple-darwin, python-version: "3.11" }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, python-version: "3.11", use_zig: true }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, python-version: "3.11", manylinux: "2_28" }
           # Python 3.12
           - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python-version: "3.12" }
           - { os: macos-15-intel, target: x86_64-apple-darwin, python-version: "3.12" }
           - { os: windows-2025-vs2026, target: x86_64-pc-windows-msvc, python-version: "3.12" }
           - { os: macos-15, target: aarch64-apple-darwin, python-version: "3.12" }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, python-version: "3.12", use_zig: true }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, python-version: "3.12", manylinux: "2_28" }
           # Python 3.13
           - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python-version: "3.13" }
           - { os: macos-15-intel, target: x86_64-apple-darwin, python-version: "3.13" }
           - { os: windows-2025-vs2026, target: x86_64-pc-windows-msvc, python-version: "3.13" }
           - { os: macos-15, target: aarch64-apple-darwin, python-version: "3.13" }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, python-version: "3.13", use_zig: true }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, python-version: "3.13", manylinux: "2_28" }
     steps:
       - uses: actions/checkout@v6
 
@@ -97,22 +97,8 @@ jobs:
       - name: Install maturin
         run: pip install maturin==1.10.1
 
-      - name: Install Zig (for ARM Linux cross-compile)
-        if: matrix.use_zig == true
-        shell: bash
-        run: |
-          ZIG_VERSION="0.11.0"
-          ZIG_SHA256="2d00e789fec4f71790a6e7bf83ff91d564943c5ee843c5fd966efc474b423047"
-          ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
-          curl -sSLo "$RUNNER_TEMP/zig.tar.xz" "$ZIG_URL"
-          echo "${ZIG_SHA256}  $RUNNER_TEMP/zig.tar.xz" | sha256sum -c -
-          mkdir -p "$RUNNER_TEMP/zig"
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP/zig" --strip-components=1
-          echo "$RUNNER_TEMP/zig" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/zig/zig" version
-
       - name: Build and publish wheels (native)
-        if: matrix.use_zig != true
+        if: matrix.manylinux == 
         shell: bash
         working-directory: domainforge-python
         run: |
@@ -123,16 +109,24 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}
 
-      - name: Build and publish wheels (cross-compile with Zig)
-        if: matrix.use_zig == true
+      # aarch64 Linux is cross-compiled in maturin's manylinux cross container
+      # (gcc toolchain). Zig 0.11 rejected the --fix-cortex-a53-843419 linker
+      # arg that Rust passes for aarch64, which broke the 0.21.0 and 0.21.1 wheels.
+      - name: Build wheels (manylinux cross container)
+        if: matrix.manylinux != ''
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          working-directory: domainforge-python
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          maturin-version: 1.10.1
+          rust-toolchain: 1.99.0
+          args: --release --features python --out dist -i python${{ matrix.python-version }}
+
+      - name: Publish wheels (manylinux cross container)
+        if: matrix.manylinux != ''
         shell: bash
         working-directory: domainforge-python
-        run: |
-          python -m maturin publish \
-            --features python \
-            --target ${{ matrix.target }} \
-            --skip-existing \
-            --zig \
-            -i python${{ matrix.python-version }}
+        run: python -m maturin upload --skip-existing dist/*.whl
         env:
           MATURIN_PYPI_TOKEN: ${{ steps.secrets.outputs.pypi-api-token || secrets.PYPI_API_TOKEN }}
