@@ -176,6 +176,7 @@ impl From<RustQuantifier> for Quantifier {
 
 /// Severity level for policy violations
 #[napi]
+#[derive(Clone, Copy)]
 pub enum Severity {
     Error,
     Warning,
