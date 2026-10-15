@@ -3,7 +3,7 @@ tone_instructions: "Focus only on critical issues; Generate concise, actionable,
 reviews:
   profile: assertive
   commit_status: true
-  fail_commit_status: true
+  fail_commit_status: false
   auto_review:
     enabled: true
     drafts: false
@@ -19,7 +19,22 @@ reviews:
     # Python tooling
     ruff:
       enabled: true
-  request_changes_workflow: true
+  request_changes_workflow: false
+  # Review and comment only: no merge blocking, and no commits pushed by
+  # CodeRabbit (autofix once bumped every package version to 1.0.0 in #145).
+  finishing_touches:
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    unit_tests:
+      enabled: false
+    docstrings:
+      enabled: false
+    simplify:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
   high_level_summary: true
   poem: false
   review_status: true
