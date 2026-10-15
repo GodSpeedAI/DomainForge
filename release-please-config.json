@@ -34,6 +34,11 @@
         },
         {
           "type": "toml",
+          "path": "Cargo.lock",
+          "jsonpath": "$.package[?(@.name.value==='domainforge-core')].version"
+        },
+        {
+          "type": "toml",
           "path": "domainforge-python/pyproject.toml",
           "jsonpath": "$.project.version"
         },
