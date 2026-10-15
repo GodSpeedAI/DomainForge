@@ -98,7 +98,7 @@ jobs:
         run: pip install maturin==1.10.1
 
       - name: Build and publish wheels (native)
-        if: matrix.manylinux == 
+        if: matrix.manylinux == ''
         shell: bash
         working-directory: domainforge-python
         run: |
