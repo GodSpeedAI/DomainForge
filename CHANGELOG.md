@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.2](https://github.com/GodSpeedAI/DomainForge/compare/v0.21.1...v0.21.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* **projection:** add OpenShell 0.1.3 supervisor baseline read paths ([#162](https://github.com/GodSpeedAI/DomainForge/issues/162)) ([dd505b1](https://github.com/GodSpeedAI/DomainForge/commit/dd505b10826b1b4c1898db145673e7f2f2d6130f))
+* **release:** build aarch64 Linux wheels in maturin's manylinux container ([#151](https://github.com/GodSpeedAI/DomainForge/issues/151)) ([d674802](https://github.com/GodSpeedAI/DomainForge/commit/d6748027791d1a879c33df9aaa056a3cb54327bd))
+* **release:** restore the missing operand in release-pypi's native-build condition ([#153](https://github.com/GodSpeedAI/DomainForge/issues/153)) ([6e941ff](https://github.com/GodSpeedAI/DomainForge/commit/6e941ff6fa20c6a6fd4e1b88868105f132d59fa1))
+
 ## [0.21.1](https://github.com/GodSpeedAI/DomainForge/compare/v0.21.0...v0.21.1) (2026-10-15)
 
 
