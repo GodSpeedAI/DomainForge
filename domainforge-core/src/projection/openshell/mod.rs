@@ -56,7 +56,17 @@ const WORKDIR: &str = "/sandbox";
 
 /// Paths a process needs to start at all. Read-only, and not derived from the
 /// Cell: recorded as `baseline` in the mapping report.
-const BASELINE_READ_ONLY: [&str; 9] = [
+///
+/// OpenShell's supervisor adds its own baseline to every proxy-mode policy
+/// (`enrich_proto_baseline_paths`, OpenShell v0.1.3
+/// `crates/openshell-supervisor/src/lib.rs`): read-only `/usr`, `/lib`, `/etc`,
+/// `/app`, `/var/log`, `/proc`, `/dev/urandom`, each one that exists in the
+/// guest. The gateway's effective policy therefore includes `/app` and
+/// `/var/log`, and this list must be a superset of that set so the projected
+/// Cell boundary contains the enforced policy. Re-check on every OpenShell
+/// bump; the superset test in `tests/openshell_projection_tests.rs` pins it.
+const BASELINE_READ_ONLY: [&str; 11] = [
+    "/app",
     "/bin",
     "/dev/urandom",
     "/etc",
@@ -66,6 +76,7 @@ const BASELINE_READ_ONLY: [&str; 9] = [
     "/sandbox",
     "/sbin",
     "/usr",
+    "/var/log",
 ];
 
 /// Scratch space inside the sandbox; never host state.

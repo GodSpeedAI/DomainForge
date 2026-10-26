@@ -57,6 +57,51 @@ fn projection_is_deterministic() {
     assert_eq!(repair_agent(), repair_agent());
 }
 
+/// Read-only paths OpenShell's supervisor 0.1.3 adds to every proxy-mode policy
+/// (`enrich_proto_baseline_paths`, `crates/openshell-supervisor/src/lib.rs`).
+/// The gateway enforces them, so the projected Cell boundary must contain them.
+const OPENSHELL_0_1_3_SUPERVISOR_BASELINE_READ_ONLY: [&str; 7] = [
+    "/usr",
+    "/lib",
+    "/etc",
+    "/app",
+    "/var/log",
+    "/proc",
+    "/dev/urandom",
+];
+
+#[test]
+fn projected_read_only_is_a_superset_of_the_openshell_supervisor_baseline() {
+    let files = repair_agent();
+    let policy: Value = serde_saphyr::from_str(&files[POLICY_FILE]).unwrap();
+    let read_only: Vec<&str> = policy["filesystem_policy"]["read_only"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p.as_str().unwrap())
+        .collect();
+    for path in OPENSHELL_0_1_3_SUPERVISOR_BASELINE_READ_ONLY {
+        assert!(
+            read_only.contains(&path),
+            "projected read_only omits OpenShell 0.1.3 supervisor baseline path {path}"
+        );
+    }
+
+    // Each supervisor-baseline path is recorded as a `baseline` mapping, like
+    // the rest of the profile baseline.
+    let report: Value = serde_json::from_str(&files[MAPPING_FILE]).unwrap();
+    let mappings = report["rules"].as_array().unwrap();
+    for path in ["/app", "/var/log"] {
+        let target = format!("policy.yaml#/filesystem_policy/read_only/{path}");
+        assert!(
+            mappings
+                .iter()
+                .any(|m| m["target"] == json!(target) && m["class"] == json!("baseline")),
+            "mapping report lacks a baseline entry for {target}"
+        );
+    }
+}
+
 #[test]
 fn repair_agent_policy_is_default_deny_and_enforcing() {
     let files = repair_agent();
