@@ -14,11 +14,6 @@ name: Package Native CLI
 on:
   workflow_call:
     inputs:
-      ref:
-        description: "Git ref to build, e.g. a release tag. Empty builds the caller's commit."
-        type: string
-        required: false
-        default: ""
       version:
         description: "Version to package, with or without a leading v. Empty reads version.txt."
         type: string
@@ -37,11 +32,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: package-${{ github.ref }}-${{ inputs.ref || 'direct' }}
+  group: package-${{ github.ref }}
   cancel-in-progress: ${{ !inputs.upload }}
-
-env:
-  CACHE_VERSION: v4
 
 jobs:
   linux:
@@ -62,7 +54,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve and validate version
@@ -85,18 +76,6 @@ jobs:
         uses: dtolnay/rust-toolchain@1.99.0
         with:
           toolchain: 1.99.0
-
-      - name: Cache cargo
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-
 
       - name: Install packaging tools
         run: |
@@ -202,7 +181,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve and validate version
@@ -225,18 +203,6 @@ jobs:
         with:
           toolchain: 1.99.0
           targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - name: Cache cargo
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-
 
       - name: Build arm64 slice
         env:
@@ -368,7 +334,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve and validate version
@@ -467,7 +432,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve and validate version
@@ -489,18 +453,6 @@ jobs:
         uses: dtolnay/rust-toolchain@1.99.0
         with:
           toolchain: 1.99.0
-
-      - name: Cache cargo
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-
 
       - name: Build release CLI
         shell: bash

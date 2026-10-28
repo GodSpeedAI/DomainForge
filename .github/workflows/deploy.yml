@@ -90,7 +90,6 @@ jobs:
     needs: validate
     uses: ./.github/workflows/package.yml
     with:
-      ref: ${{ github.ref_name }}
       version: ${{ needs.validate.outputs.version }}
       upload: true
     permissions:
