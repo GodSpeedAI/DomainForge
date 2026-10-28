@@ -2,10 +2,10 @@
 
 ## Native CLI distribution (2026-10-28, branch feat/native-cli-distribution)
 
-1. Commit the packaging scripts/workflows/docs and push `feat/native-cli-distribution`; confirm the push-triggered `Package Native CLI` run passes `package-linux`, `package-linux arm64`, `macos`, and `windows`. Expected outcome: four `pkg-*` artifacts plus checksums.
-2. Download `pkg-linux-arm64`; verify `domainforge_0.21.2_arm64.deb` and the aarch64 tarball SHA-256 against `SHA256SUMS-linux-arm64`; install on the Jetson (Ubuntu 22.04, aarch64) and run `packaging/smoke.sh`. Expected outcome: `smoke: PASS` and `domainforge --version` = `domainforge 0.21.2`.
-3. Open the PR. After merge, cut the next unified release; `deploy.yml` attaches the native assets only if all four platforms pass and all `built-from` files match the tag commit. Expected outcome: release assets plus `SHA256SUMS`, with provenance attestations on public-repo runs.
-4. Before claiming signed installers, add Apple Developer ID + notarization and an Authenticode certificate (currently intentionally unsigned; see `docs/distribution/native-cli.md`).
+1. [x] Committed `1180ed1`, pushed `feat/native-cli-distribution`, opened PR #164. `Package Native CLI` run 40687663700 passed linux amd64/arm64, macOS universal, and Windows; PR CI run 40689541396 is fully green including `package-linux`.
+2. [ ] Copy `pkg-linux-arm64/domainforge_0.21.2_arm64.deb` (SHA-256 `aaa26ab3827092d5d641d21de28a739f24749e2c5fe2459915e25042a29f0ddc`) to the Jetson, install with `sudo apt-get install ./domainforge_0.21.2_arm64.deb`, and run `packaging/smoke.sh /usr/bin/domainforge ... 0.21.2`. Expected outcome: `smoke: PASS`.
+3. [ ] Merge PR #164, then cut the next unified release; `deploy.yml` attaches the native assets only if all four platforms pass and all `built-from` files match the tag commit. Expected outcome: release assets plus `SHA256SUMS`, with provenance attestations on public-repo runs.
+4. [ ] Before claiming signed installers, add Apple Developer ID + notarization and an Authenticode certificate (currently intentionally unsigned; see `docs/distribution/native-cli.md`).
 
 ## Rego and OpenShell projection follow-up (2026-10-12)
 

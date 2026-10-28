@@ -7,8 +7,11 @@
 - [x] `ci.yml` `package-linux` job is a PR merge gate: build, ABI check, .deb/tarball, install + smoke + uninstall, clean Ubuntu 22.04/Debian 12 container install, checksums.
 - [x] Documentation: `docs/distribution/native-cli.md` (matrix, install/uninstall, Jetson arm64, signing status, verification, limitations); `.github/workflows/README.md` describes the packaging and publish path; `just native-package-linux`, `native-smoke`, `native-check`.
 - [x] Local evidence: `sh packaging/version.sh` -> `0.21.2`; `packaging/smoke.sh` against `target/release/domainforge` PASS; `packaging/deb/build.sh` and `build-tarball.sh` exercised with a glibc-2.34 test ELF (contents/metadata/reproducible layout verified); all shell scripts pass `sh -n`; actionlint 1.7.12 (CI-pinned checksum) passes on all three workflows; repository release/security/gate lints pass.
-- [ ] Not committed/pushed yet. Local host glibc is 2.43, so `check-linux-binary.sh` correctly rejects the locally built binary (requires GLIBC_2.39); the 22.04 CI runner is the authoritative ABI build. macOS signing/notarization and Windows Authenticode remain unsigned by design.
-- [ ] After push: watch `package.yml` on the branch, then download the Linux arm64 `.deb`/tarball for the Jetson and record hashes/run URL.
+- [x] Committed `1180ed1` and pushed `feat/native-cli-distribution`; PR #164 opened. Branch `Package Native CLI` run 40687663700 passed all four jobs (macOS universal produced, Intel fallback correctly skipped). Artifacts downloaded and all per-platform `SHA256SUMS-*` verify.
+- [x] CI run 40689541396 on PR #164 is fully green, including `package-linux`: ELF amd64 max GLIBC_2.34, `.deb` `Depends: libc6 (>= 2.34), libgcc-s1 (>= 4.2)`, smoke PASS, install/uninstall clean, and clean `ubuntu:22.04` + `debian:12` container installs both report `domainforge 0.21.2`.
+- [x] Downloaded arm64 `.deb` inspection: ELF64 AArch64 PIE, interpreter `/lib/ld-linux-aarch64.so.1`, max `GLIBC_2.34`; amd64 tarball re-run on the local host: `smoke: PASS`.
+- [x] Artifact hashes: amd64 deb `eeba5b56...`, arm64 deb `aaa26ab3...`, x86_64 tar `cfe1defc...`, aarch64 tar `0266d663...`, macOS universal pkg `4c9a8dc8...`, dmg `de0e6128...`, Windows zip `3c5bd7b0...`, setup `66850910...` (full values in PR #164 and run artifacts).
+- [ ] Not merged/released. macOS/Windows packages remain unsigned; attaching to a GitHub Release happens only on the next `vX.Y.Z` deploy run.
 
 # Current State: Rego and OpenShell projection targets (2026-10-12, branch feat/rego-projection)
 
