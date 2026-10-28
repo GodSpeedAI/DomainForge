@@ -1,3 +1,15 @@
+# Current State: Native CLI distribution (2026-10-28, branch feat/native-cli-distribution)
+
+- [x] New reusable `.github/workflows/package.yml` builds the standalone CLI on Ubuntu 22.04 amd64/arm64, macOS (universal, with native Intel fallback), and Windows x86_64; every job installs its own package and runs the functional smoke before uploading `pkg-*` artifacts.
+- [x] `deploy.yml` now calls `package.yml` at the release tag, then `publish-native` requires all four platform `built-from-*.txt` files to equal the tag commit, generates and verifies a global `SHA256SUMS`, optionally attests provenance, and attaches assets to the GitHub Release. It fails closed on any missing/short artifact set.
+- [x] Linux packaging: `packaging/version.sh` (drift gate), `packaging/check-linux-binary.sh` (ELF64, glibc ≤ 2.35, loader, RPATH, Nix, NEEDED whitelist), `packaging/deb/build.sh` (`dpkg-shlibdeps`), `packaging/linux/build-tarball.sh` (reproducible tar.gz), `packaging/smoke.sh`.
+- [x] macOS `packaging/macos/build.sh` (lipo, ad-hoc codesign, pkgbuild, DMG with same payload) and Windows `packaging/windows/build.ps1` + `domainforge.iss` (per-user Inno Setup, user PATH add/remove) + `smoke.ps1`.
+- [x] `ci.yml` `package-linux` job is a PR merge gate: build, ABI check, .deb/tarball, install + smoke + uninstall, clean Ubuntu 22.04/Debian 12 container install, checksums.
+- [x] Documentation: `docs/distribution/native-cli.md` (matrix, install/uninstall, Jetson arm64, signing status, verification, limitations); `.github/workflows/README.md` describes the packaging and publish path; `just native-package-linux`, `native-smoke`, `native-check`.
+- [x] Local evidence: `sh packaging/version.sh` -> `0.21.2`; `packaging/smoke.sh` against `target/release/domainforge` PASS; `packaging/deb/build.sh` and `build-tarball.sh` exercised with a glibc-2.34 test ELF (contents/metadata/reproducible layout verified); all shell scripts pass `sh -n`; actionlint 1.7.12 (CI-pinned checksum) passes on all three workflows; repository release/security/gate lints pass.
+- [ ] Not committed/pushed yet. Local host glibc is 2.43, so `check-linux-binary.sh` correctly rejects the locally built binary (requires GLIBC_2.39); the 22.04 CI runner is the authoritative ABI build. macOS signing/notarization and Windows Authenticode remain unsigned by design.
+- [ ] After push: watch `package.yml` on the branch, then download the Linux arm64 `.deb`/tarball for the Jetson and record hashes/run URL.
+
 # Current State: Rego and OpenShell projection targets (2026-10-12, branch feat/rego-projection)
 
 - [x] Two projection targets on `feat/rego-projection`, not merged and not released: `--format rego` (OPA/Rego bundle with a `domainforge.rego.decision/v1` contract, differential-tested against real OPA 1.21.1) and `--format openshell` (OpenShell v0.1.3 `policy.yaml` plus sandbox contracts, boundary-checked by `openshell-prover` 0.1.3). Source: `domainforge-core/src/projection/{rego,openshell}/`; tests: `rego_projection_tests.rs` (9), `openshell_projection_tests.rs` (10).

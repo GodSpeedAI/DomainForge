@@ -228,3 +228,27 @@ fixed and why.*
 - **Impact:** the pre-commit clippy hook (`lefthook.yml`) and the `--all-features` CI lint job fail on main-line code, not on this change.
 - **Next move:** fix the two lints in a separate change, and bump roxmltree and spin.
 - **Also:** `Cargo.lock` header moved from version 3 to version 4 when cargo resolved the new crate. The CLI-binary test expects `<repo>/target/debug/domainforge`, so it fails when `CARGO_TARGET_DIR` is shared; a symlink was used locally.
+
+## D-native-1. macOS and Windows packages are unsigned
+
+- **Where:** `packaging/macos/build.sh` (ad-hoc `codesign --sign -`, no Developer ID, no notarization), `packaging/windows/build.ps1` / `domainforge.iss` (no Authenticode).
+- **Impact:** Gatekeeper and SmartScreen may warn or block. The docs state this explicitly; no signature claim is made.
+- **Smallest fix:** Add Apple Developer ID signing + `notarytool` and a Windows code-signing certificate in CI, then verify with `codesign --verify --deep --strict`, `spctl -a -vv`, and `Get-AuthenticodeSignature`. Requires credentials the repository does not hold.
+
+## D-native-2. Windows ARM64 is not built
+
+- **Where:** `.github/workflows/package.yml` `windows` job is x86_64 only.
+- **Impact:** Windows-on-ARM users cannot use a native package.
+- **Smallest fix:** Add a `windows-11-arm` matrix entry with the `aarch64-pc-windows-msvc` target, plus an arm64 Inno Setup architecture entry, once that runner is available to the repository.
+
+## D-native-3. macOS universal is best-effort; Intel fallback is a separate artifact set
+
+- **Where:** `package.yml` `macos`/`macos-intel`.
+- **Impact:** If the x86_64 slice cross-build fails, the release carries arm64 and x86_64 packages instead of one universal package. The publish gate accepts either shape and rejects a mislabeled universal artifact.
+- **Smallest fix:** None required; re-evaluate once `macos-latest` cross-builds are reliable, or always build both slices natively and lipo them in the Intel job.
+
+## D-native-4. package.yml also runs on every push to main
+
+- **Where:** `package.yml` `on.push.branches`.
+- **Impact:** Adds four platform builds per main merge (release candidates are downloadable from the run). The release path is unaffected.
+- **Smallest fix:** Remove `main` from the push trigger if cost outweighs the convenience; `workflow_dispatch` and `workflow_call` remain.

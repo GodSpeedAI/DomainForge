@@ -1,9 +1,14 @@
 name: Deploy
 
 # A DomainForge release is one repository version. Release Please creates a
-# single vX.Y.Z tag, and that tag publishes every supported distribution.
-# There is intentionally no GitHub Environment gate such as "prod": CI on
-# main is the merge gate and the version tag is the release signal.
+# single vX.Y.Z tag, and that tag publishes every supported distribution:
+# crates.io, PyPI, npm, and the native CLI packages attached to the GitHub
+# Release. There is intentionally no GitHub Environment gate such as "prod":
+# CI on main is the merge gate and the version tag is the release signal.
+#
+# Native packages are built and install-tested on their own runners first.
+# The publish job refuses to attach assets unless every platform succeeded,
+# every asset came from this tag's commit, and the checksums verify.
 on:
   push:
     tags:
@@ -79,3 +84,151 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
+  deploy-binaries:
+    name: Build and install-test native CLI packages
+    needs: validate
+    uses: ./.github/workflows/package.yml
+    with:
+      ref: ${{ github.ref_name }}
+      version: ${{ needs.validate.outputs.version }}
+      upload: true
+    permissions:
+      contents: read
+
+  publish-native:
+    name: Attach native CLI packages to the GitHub Release
+    needs: [validate, deploy-binaries]
+    # Fail closed: no assets are attached unless every platform built,
+    # install-tested, and recorded the same source commit.
+    if: needs.deploy-binaries.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+          # Keep the write credential out of the checkout.
+          persist-credentials: false
+
+      - name: Download every native package
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pkg-*
+          path: dist
+          merge-multiple: true
+
+      - name: Every package was built from the release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_commit="$(git rev-parse HEAD)"
+          for os in linux-amd64 linux-arm64 macos windows; do
+            file="dist/built-from-${os}.txt"
+            test -f "$file" || { echo "::error::missing $file"; exit 1; }
+            built="$(cat "$file")"
+            test "$built" = "$tag_commit" || {
+              echo "::error::${os} packages built from ${built}, tag ${RELEASE_TAG} is ${tag_commit}"
+              exit 1
+            }
+          done
+
+      - name: Every required artifact is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          for pattern in \
+            "domainforge_${VERSION}_amd64.deb" \
+            "domainforge_${VERSION}_arm64.deb" \
+            "domainforge-${VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            "domainforge-${VERSION}-aarch64-unknown-linux-gnu.tar.gz" \
+            "domainforge-${VERSION}-x86_64-pc-windows-msvc.zip" \
+            "domainforge-${VERSION}-x86_64-pc-windows-msvc-setup.exe"; do
+            compgen -G "$pattern" >/dev/null || {
+              echo "::error::missing asset matching ${pattern}"
+              exit 1
+            }
+          done
+          if compgen -G "domainforge-${VERSION}-macos-universal.pkg" >/dev/null; then
+            compgen -G "domainforge-${VERSION}-macos-universal.dmg" >/dev/null || {
+              echo "::error::universal .pkg present without its .dmg"
+              exit 1
+            }
+          else
+            for arch in arm64 x86_64; do
+              for ext in pkg dmg; do
+                compgen -G "domainforge-${VERSION}-macos-${arch}.${ext}" >/dev/null || {
+                  echo "::error::missing macOS ${arch} .${ext} (no universal package was produced)"
+                  exit 1
+                }
+              done
+            done
+          fi
+
+      - name: Generate and verify SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          rm -f SHA256SUMS-* built-from-*.txt
+          sha256sum $(ls -1 | LC_ALL=C sort) > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Compare the built commit with the run commit
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          built="$(git rev-parse HEAD)"
+          if [ "$built" = "$GITHUB_SHA" ]; then
+            echo "attest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "attest=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Built ${built} for ${RELEASE_TAG} but this run is for ${GITHUB_SHA}; no provenance attestation is attached because it would name the wrong commit."
+          fi
+
+      - name: Attest build provenance
+        if: steps.source.outputs.attest == 'true'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
+
+      - name: Wait for the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "release ${RELEASE_TAG} is available"
+              exit 0
+            fi
+            echo "waiting for release ${RELEASE_TAG} (${attempt}/30)"
+            sleep 10
+          done
+          echo "::error::release ${RELEASE_TAG} was not created in time"
+          exit 1
+
+      - name: Attach packages to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Report a partial release on failure
+        if: failure()
+        run: |
+          echo "::error::Native binaries were not attached for ${RELEASE_TAG}."
+          echo "The GitHub Release may lack packages or carry a SHA256SUMS that does not match them."
+          echo "Recovery: rerun deploy.yml for the same tag after fixing packaging; the upload step replaces assets with --clobber."
