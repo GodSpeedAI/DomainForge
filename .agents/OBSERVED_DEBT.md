@@ -252,3 +252,21 @@ fixed and why.*
 - **Where:** `package.yml` `on.push.branches`.
 - **Impact:** Adds four platform builds per main merge (release candidates are downloadable from the run). The release path is unaffected.
 - **Smallest fix:** Remove `main` from the push trigger if cost outweighs the convenience; `workflow_dispatch` and `workflow_call` remain.
+
+## D-doc-egm-1. `println!` debug statement left in the flow-annotation parse path
+
+- **Date:** 2026-10-30
+- **Location:** `domainforge-core/src/parser/ast.rs:1283`
+- **Debt:** `println!("debug insert annotation {} = {:?}", key, value)` runs on every flow annotation parsed in release builds. It pollutes stdout for library consumers (the Python/TypeScript/WASM bindings and any caller that parses into a `Graph`) and can corrupt machine-readable output such as `domainforge parse --format json`, since the debug line is interleaved with the intended payload.
+- **Evidence:** Code reading while documenting `domainforge-core/src/parser`. The statement sits inside `parse_annotation`'s flow-annotation arm, immediately before `annotations.insert(key, value)`, with no `cfg(test)` or `log::debug!` guard. Not executed to reproduce.
+- **Confidence:** medium
+- **Closure:** Delete the line or convert it to `log::debug!`. File touched: `domainforge-core/src/parser/ast.rs`. Size S.
+
+## D-doc-egm-2. `domainforge test` subcommand is a registered stub
+
+- **Date:** 2026-10-30
+- **Location:** `domainforge-core/src/cli/test.rs:9` (`run`); surface declared at `domainforge-core/src/cli/mod.rs:34` (`Commands::Test`)
+- **Debt:** `Commands::Test` is part of the public CLI subcommand enum and is documented in `--help`, but `test::run` only prints `"Test runner not yet implemented. Pattern: {}"` and returns `Ok(())` — exit code 0. A script or CI step invoking `domainforge test <pattern>` therefore reports success while testing nothing.
+- **Evidence:** Code reading while documenting `domainforge-core/src/cli`. `run` body is a single `println!` followed by `Ok(())`. Not executed.
+- **Confidence:** medium
+- **Closure:** Either implement the runner, or make the stub fail non-zero (or hide the subcommand behind `#[command(hide = true)]`) so it cannot be mistaken for a passing gate. Files: `domainforge-core/src/cli/test.rs`, possibly `domainforge-core/src/cli/mod.rs`. Size S to M depending on chosen direction.
