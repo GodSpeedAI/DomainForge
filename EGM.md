@@ -90,9 +90,17 @@ Invariants that hold across the root:
 
 Directories excluded from this bootstrap as non-source: `docs/` (Markdown),
 `fixtures/`, `examples/`, `evidence/`, `secrets/`, `graft/`, `target/`, `dist/`,
-`pkg/`, `node_modules/`, and the gitignored `docs/archive/`. The 26 `.sea` DSL
-samples and 24 `.json` schemas under `fixtures/` and `schemas/` are data, not
+`pkg/`, `node_modules/`, and the gitignored `docs/archive/`. The `.sea` DSL
+samples under `fixtures/` and the `.json` schemas under `schemas/` are data, not
 source code, so they carry no contracts beyond `schemas/EGM.md`.
+
+A note on target counts: this blueprint's "22 target ecosystems" counts the
+directories under `domainforge-core/src/projection/`. The user-facing count is
+higher — `ProjectFormat` in `domainforge-core/src/cli/project.rs` declares 31
+variants, which exposes 29 distinct CLI format names (the `Proto` alias and the
+legacy `Kg` form account for the difference), and several formats
+(`ai-llm`, `ai-graph-ml`, `cep-eval`, `ai-learning`, `kg`, `calm`) live outside
+those 22 directories. Prefer the CLI enum when stating a user-visible number.
 
 ## Global Invariants
 
