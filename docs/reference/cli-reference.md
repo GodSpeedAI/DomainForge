@@ -71,13 +71,21 @@ domainforge project [OPTIONS] --format <FORMAT> <INPUT> <OUTPUT>
   - `asyncapi`: AsyncAPI 3.0 YAML specification
   - `cloudevents`: CloudEvents 1.0 JSONL stream
   - `cedar`: Cedar authorization schema and policies
+  - `rego`: OPA/Rego policy bundle with differential-tested decision contract
+  - `openshell`: OpenShell v0.1.3 sandbox policy (`policy.yaml`)
+  - `gauge`: Gauge specification Markdown suite
+  - `alloy`: Alloy relational logic specification
   - `devbox`: Devbox hermetic manifest
   - `dagger`: Dagger Python CI module
-  - `cell`: Cell environment (`cell.lock`, Devbox, Mise)
+  - `cell`: Cell environment (`cell.lock`, Devbox, Mise, authority, network)
   - `domain-python`: Python DDD/CQRS package
   - `domain-typescript`: TypeScript DDD/CQRS package
   - `domain-rust`: Rust DDD/CQRS zero-dep crate
-  - `protobuf`: Protocol Buffers `.proto` schemas
+  - `protobuf`, `proto`: Protocol Buffers `.proto` schemas with optional gRPC services
+  - `ai-llm`: LLM JSONL dataset with deterministic splits
+  - `ai-graph-ml`: Graph-ML topological training dataset
+  - `cep-eval`: Canonical Evaluation Protocol evaluation dataset
+  - `ai-learning`: All enabled AI datasets via recipe
 - `--created-at <TIMESTAMP>`: Pin timestamp (ISO 8601 UTC) for byte-identical determinism.
 
 ---

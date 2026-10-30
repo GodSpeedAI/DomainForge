@@ -224,14 +224,14 @@ DomainForge treats those representations as projections from the same semantic s
 | Share contracts between services     | `protobuf`, `asyncapi`, `cloudevents`               | Schemas and event definitions                                             |
 | Review architecture and process      | `calm`, `archimate`, `bpmn`, `cmmn`                 | Architecture and process representations                                  |
 | Check behavior more formally         | `tla`, `alloy`, `lean`                              | Formal specifications and proof-oriented artifacts                        |
-| Express access rules                 | `cedar`                                             | Cedar schema and policy output                                            |
+| Express access rules                 | `cedar`, `rego`, `openshell`                        | Cedar schemas, OPA/Rego bundles, and OpenShell policies                   |
 | Give telemetry stable domain names   | `otel-semconv`                                      | OpenTelemetry semantic-convention registries                              |
 | Query the domain as a graph          | `rdf`, `kg`                                         | RDF/OWL, Turtle, JSON-LD, and graph forms                                 |
 | Build AI-facing artifacts            | `baml`, `dspy`, `zenml`, `ai-*`                     | Typed AI and dataset-oriented projections                                 |
 | Derive behavioral scenarios          | `gauge`                                             | Given/When/Then scenarios                                                 |
-| Define a bounded agent environment   | `cell`                                              | Environment, dependency, authority, network, evidence, and lock artifacts |
+| Define a bounded agent environment   | `cell`, `devbox`, `dagger`                          | Environment, dependency, authority, network, evidence, and lock artifacts |
 
-Projection maturity differs by target. See [projection target status](docs/projection-target-implementation-status.md) and [PROOFS.md](PROOFS.md) before treating a target as a production guarantee.
+Projection maturity differs by target. See [projection target status](docs/projection-target-implementation-status.md) and [PROOFS.md](PROOFS.md) before treating a target as a production guarantee. Explore the compiler pipeline and three-valued logic interactively in the [Interactive Explainers](docs/explainers/index.md).
 
 The architectural rule is simple:
 
