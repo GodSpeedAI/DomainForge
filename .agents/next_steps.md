@@ -1,5 +1,12 @@
 # Next Steps
 
+## Native CLI distribution (2026-10-28, branch feat/native-cli-distribution)
+
+1. [x] Committed `1180ed1`, pushed `feat/native-cli-distribution`, opened PR #164. `Package Native CLI` run 40687663700 passed linux amd64/arm64, macOS universal, and Windows; PR CI run 40689541396 is fully green including `package-linux`.
+2. [ ] Copy `pkg-linux-arm64/domainforge_0.21.2_arm64.deb` (SHA-256 `aaa26ab3827092d5d641d21de28a739f24749e2c5fe2459915e25042a29f0ddc`) to the Jetson, install with `sudo apt-get install ./domainforge_0.21.2_arm64.deb`, and run `packaging/smoke.sh /usr/bin/domainforge ... 0.21.2`. Expected outcome: `smoke: PASS`.
+3. [ ] Merge PR #164, then cut the next unified release; `deploy.yml` attaches the native assets only if all four platforms pass and all `built-from` files match the tag commit. Expected outcome: release assets plus `SHA256SUMS`, with provenance attestations on public-repo runs.
+4. [ ] Before claiming signed installers, add Apple Developer ID + notarization and an Authenticode certificate (currently intentionally unsigned; see `docs/distribution/native-cli.md`).
+
 ## Rego and OpenShell projection follow-up (2026-10-12)
 
 1. `regorus` 0.12.0 was evaluated on 2026-10-12 and cannot evaluate the emitted bundle (0/605 corpus inputs; nested-comprehension and statement-scheduling errors). Re-evaluate on a later `regorus` release before considering embedded evaluation; OPA 1.21.1 stays the reference evaluator.

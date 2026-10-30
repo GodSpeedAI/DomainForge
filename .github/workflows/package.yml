@@ -1,0 +1,557 @@
+name: Package Native CLI
+
+# Build the standalone domainforge CLI for every supported platform and
+# install-test the resulting package on the runner that built it:
+#
+#   Linux amd64/arm64  .deb and .tar.gz (Ubuntu 22.04 / glibc 2.35 baseline)
+#   macOS              universal .pkg/.dmg (arm64 fallback only if needed)
+#   Windows x86_64     .zip and per-user Inno Setup .exe
+#
+# Reusable from deploy.yml at a release tag, and runnable on push or from the
+# Actions UI for release-candidate validation. Packages are UNSIGNED: no Apple
+# Developer ID and no Authenticode certificate is used.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to package, with or without a leading v. Empty reads version.txt."
+        type: string
+        required: false
+        default: ""
+      upload:
+        description: "True for release publication runs; disables cancellation of in-flight builds."
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+  push:
+    branches: [main, feat/native-cli-distribution]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: ${{ !inputs.upload }}
+
+jobs:
+  linux:
+    name: package (linux ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: amd64
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          version=$(sh packaging/version.sh)
+          requested="${REQUESTED#v}"
+          if [ -n "$requested" ] && [ "$requested" != "$version" ]; then
+            echo "::error::requested version ${requested} differs from version.txt ${version}"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building DomainForge $version from $(git rev-parse HEAD)"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          toolchain: 1.99.0
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dpkg-dev
+
+      - name: Build release CLI
+        run: cargo build --release --locked -p domainforge-core --bin domainforge --features cli
+
+      - name: Verify version and Linux ABI baseline
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(target/release/domainforge --version)" = "domainforge ${VERSION}"
+          sh packaging/check-linux-binary.sh target/release/domainforge "${{ matrix.arch }}"
+
+      - name: Build .deb and tarball
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          sh packaging/deb/build.sh "$VERSION" "$ARCH" target/release dist
+          sh packaging/linux/build-tarball.sh "$VERSION" "$TARGET" target/release dist
+          ls -l dist
+
+      - name: Install and functionally test the .deb
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          deb="dist/domainforge_${VERSION}_${ARCH}.deb"
+          sudo apt-get install -y "./$deb"
+          test "$(domainforge --version)" = "domainforge $VERSION"
+          sh packaging/smoke.sh /usr/bin/domainforge \
+            domainforge-core/examples/basic.sea \
+            fixtures/projection_cell/invalid/01_syntax_broken.sea \
+            "$VERSION"
+          dpkg -L domainforge | grep -q '^/usr/bin/domainforge$'
+          dpkg -s domainforge | sed -n '1,12p'
+          sudo apt-get remove -y domainforge
+          ! command -v domainforge
+          test ! -e /usr/bin/domainforge
+          echo "install test: .deb installed, exercised, and removed cleanly"
+
+      - name: Install and test inside clean Ubuntu 22.04 / Debian 12
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "::warning::docker is unavailable; the runner itself is Ubuntu 22.04 and the apt install test above already proves the ABI baseline"
+            exit 0
+          fi
+          for image in ubuntu:22.04 debian:12; do
+            docker run --rm -e V="$VERSION" -v "$PWD:/work:ro" -w /work "$image" sh -ec '
+              apt-get update -qq >/dev/null
+              apt-get install -y -qq ./dist/domainforge_"$V"_*.deb >/dev/null
+              test "$(domainforge --version)" = "domainforge $V"
+              domainforge validate --format human --no-color domainforge-core/examples/basic.sea
+              domainforge parse --ast --format json domainforge-core/examples/basic.sea >/dev/null
+              domainforge project --format domain-python domainforge-core/examples/basic.sea /tmp/out >/dev/null
+              test -f /tmp/out/src/auth_domain/domain/entities.py
+              echo "clean '"$image"': $(domainforge --version)"
+            '
+          done
+
+      - name: Checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum ./*.deb ./*.tar.gz > "SHA256SUMS-linux-${{ matrix.arch }}"
+          sha256sum -c "SHA256SUMS-linux-${{ matrix.arch }}"
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > "dist/built-from-linux-${{ matrix.arch }}.txt"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-linux-${{ matrix.arch }}
+          path: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/SHA256SUMS-linux-${{ matrix.arch }}
+            dist/built-from-linux-${{ matrix.arch }}.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    name: package (macos universal)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    outputs:
+      label: ${{ steps.variant.outputs.label }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          version=$(sh packaging/version.sh)
+          requested="${REQUESTED#v}"
+          if [ -n "$requested" ] && [ "$requested" != "$version" ]; then
+            echo "::error::requested version ${requested} differs from version.txt ${version}"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          toolchain: 1.99.0
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Build arm64 slice
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cargo build --release --locked --target aarch64-apple-darwin \
+            -p domainforge-core --bin domainforge --features cli
+          test "$(target/aarch64-apple-darwin/release/domainforge --version)" = "domainforge $VERSION"
+
+      - name: Build x86_64 slice (best effort)
+        id: x86
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          cargo build --release --locked --target x86_64-apple-darwin \
+            -p domainforge-core --bin domainforge --features cli
+
+      - name: Choose package variant
+        id: variant
+        shell: bash
+        env:
+          X86_OUTCOME: ${{ steps.x86.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "$X86_OUTCOME" = "success" ]; then
+            echo "label=universal" >> "$GITHUB_OUTPUT"
+            echo "expect=arm64 x86_64" >> "$GITHUB_OUTPUT"
+            echo "x86dir=target/x86_64-apple-darwin/release" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::x86_64 slice outcome was ${X86_OUTCOME}; shipping arm64-only and building native Intel packages in a fallback job"
+            echo "label=arm64" >> "$GITHUB_OUTPUT"
+            echo "expect=arm64" >> "$GITHUB_OUTPUT"
+            echo "x86dir=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build .pkg and .dmg
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          LABEL: ${{ steps.variant.outputs.label }}
+          X86DIR: ${{ steps.variant.outputs.x86dir }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          sh packaging/macos/build.sh "$VERSION" "$LABEL" \
+            target/aarch64-apple-darwin/release "$X86DIR" dist
+          ls -l dist
+
+      - name: Install and functionally test the .pkg
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          LABEL: ${{ steps.variant.outputs.label }}
+          EXPECT: ${{ steps.variant.outputs.expect }}
+        run: |
+          set -euo pipefail
+          pkg="dist/domainforge-${VERSION}-macos-${LABEL}.pkg"
+          sudo installer -pkg "$pkg" -target /
+          test "$(/usr/local/bin/domainforge --version)" = "domainforge $VERSION"
+          archs=$(lipo -archs /usr/local/bin/domainforge)
+          echo "install test: lipo -archs -> $archs"
+          for want in $EXPECT; do
+            case " $archs " in
+              *" $want "*) ;;
+              *) echo "::error::installed binary lacks $want (got $archs)"; exit 1 ;;
+            esac
+          done
+          sh packaging/smoke.sh /usr/local/bin/domainforge \
+            domainforge-core/examples/basic.sea \
+            fixtures/projection_cell/invalid/01_syntax_broken.sea \
+            "$VERSION"
+          pkgutil --pkg-info ai.godspeed.domainforge
+          sudo rm -f /usr/local/bin/domainforge
+          sudo rm -rf /usr/local/share/doc/domainforge
+          sudo pkgutil --forget ai.godspeed.domainforge >/dev/null
+          test ! -e /usr/local/bin/domainforge
+          echo "install test: .pkg installed, exercised, and removed cleanly"
+
+      - name: Verify the .dmg carries the same .pkg payload
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          LABEL: ${{ steps.variant.outputs.label }}
+        run: |
+          set -euo pipefail
+          pkg="dist/domainforge-${VERSION}-macos-${LABEL}.pkg"
+          dmg="dist/domainforge-${VERSION}-macos-${LABEL}.dmg"
+          built=$(shasum -a 256 "$pkg" | cut -d' ' -f1)
+          mnt=$(mktemp -d /tmp/dfdmg.XXXXXX)
+          hdiutil attach -nobrowse -readonly -noverify -noautoopen -mountpoint "$mnt" "$dmg" >/dev/null
+          inside=$(shasum -a 256 "$mnt/$(basename "$pkg")" | cut -d' ' -f1)
+          ls "$mnt"
+          hdiutil detach "$mnt" >/dev/null
+          rmdir "$mnt" 2>/dev/null || true
+          test "$built" = "$inside"
+          echo "install test: dmg payload pkg matches the built pkg"
+
+      - name: Checksums
+        shell: bash
+        env:
+          LABEL: ${{ steps.variant.outputs.label }}
+        run: |
+          set -euo pipefail
+          cd dist
+          shasum -a 256 ./*.pkg ./*.dmg > "SHA256SUMS-macos"
+          shasum -a 256 -c "SHA256SUMS-macos"
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-macos.txt
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-macos
+          path: |
+            dist/*.pkg
+            dist/*.dmg
+            dist/SHA256SUMS-macos
+            dist/built-from-macos.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  macos-intel:
+    name: package (macos x86_64 fallback)
+    needs: macos
+    if: needs.macos.outputs.label != 'universal'
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          version=$(sh packaging/version.sh)
+          requested="${REQUESTED#v}"
+          if [ -n "$requested" ] && [ "$requested" != "$version" ]; then
+            echo "::error::requested version ${requested} differs from version.txt ${version}"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          toolchain: 1.99.0
+
+      - name: Build release CLI
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cargo build --release --locked -p domainforge-core --bin domainforge --features cli
+          test "$(target/release/domainforge --version)" = "domainforge $VERSION"
+          file target/release/domainforge
+
+      - name: Build .pkg and .dmg
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          sh packaging/macos/build.sh "$VERSION" x86_64 "" target/release dist
+          ls -l dist
+
+      - name: Install and functionally test the .pkg
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg="dist/domainforge-${VERSION}-macos-x86_64.pkg"
+          sudo installer -pkg "$pkg" -target /
+          test "$(/usr/local/bin/domainforge --version)" = "domainforge $VERSION"
+          archs=$(lipo -archs /usr/local/bin/domainforge)
+          echo "install test: lipo -archs -> $archs"
+          case " $archs " in
+            *" x86_64 "*) ;;
+            *) echo "::error::installed binary is not x86_64 (got $archs)"; exit 1 ;;
+          esac
+          sh packaging/smoke.sh /usr/local/bin/domainforge \
+            domainforge-core/examples/basic.sea \
+            fixtures/projection_cell/invalid/01_syntax_broken.sea \
+            "$VERSION"
+          sudo rm -f /usr/local/bin/domainforge
+          sudo rm -rf /usr/local/share/doc/domainforge
+          sudo pkgutil --forget ai.godspeed.domainforge >/dev/null
+          test ! -e /usr/local/bin/domainforge
+
+      - name: Checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          shasum -a 256 ./*.pkg ./*.dmg > "SHA256SUMS-macos-intel"
+          shasum -a 256 -c "SHA256SUMS-macos-intel"
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-macos.txt
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-macos-intel
+          path: |
+            dist/*.pkg
+            dist/*.dmg
+            dist/SHA256SUMS-macos-intel
+            dist/built-from-macos.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  windows:
+    name: package (windows x86_64)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CARGO_TERM_COLOR: never
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          version=$(sh packaging/version.sh)
+          requested="${REQUESTED#v}"
+          if [ -n "$requested" ] && [ "$requested" != "$version" ]; then
+            echo "::error::requested version ${requested} differs from version.txt ${version}"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          toolchain: 1.99.0
+
+      - name: Build release CLI
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cargo build --release --locked -p domainforge-core --bin domainforge --features cli
+          test "$(target/release/domainforge.exe --version)" = "domainforge $VERSION"
+
+      - name: Ensure Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
+          if (-not $iscc -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Build .zip and setup.exe
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          & "$PWD\packaging\windows\build.ps1" $env:VERSION "$PWD\target\release" "$PWD\dist"
+          if ($LASTEXITCODE -ne 0) { throw "build.ps1 failed" }
+
+      - name: Install and functionally test the per-user installer
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = "domainforge-$($env:VERSION)-x86_64-pc-windows-msvc"
+          $setup = Join-Path $PWD "dist\$base-setup.exe"
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\DomainForge'
+          $log = Join-Path $env:RUNNER_TEMP 'install.log'
+          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/CURRENTUSER', "/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            if (Test-Path $log) { Get-Content $log | Select-Object -Last 40 }
+            throw "setup.exe exited $($p.ExitCode)"
+          }
+          foreach ($f in 'domainforge.exe', 'LICENSE', 'examples\basic.sea') {
+            if (-not (Test-Path (Join-Path $app $f))) { throw "missing $f in $app" }
+          }
+          Write-Host "installed to $app"
+
+          # Fresh process: rebuild PATH from the registry, not from this shell.
+          $check = Join-Path $env:RUNNER_TEMP 'check-path.ps1'
+          @'
+          $ErrorActionPreference = 'Stop'
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          $cmd = Get-Command domainforge.exe
+          Write-Output "resolved: $($cmd.Source)"
+          $out = (& domainforge.exe --version) | Out-String
+          Write-Output "version output: $($out.Trim())"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($out.Trim() -ne "domainforge $($env:VERSION)") { exit 1 }
+          exit 0
+          '@ | Set-Content -Path $check -Encoding ASCII
+          & pwsh -NoProfile -File $check
+          if ($LASTEXITCODE -ne 0) { throw "PATH/version check failed in a new process" }
+
+          & pwsh -NoProfile -File "$PWD\packaging\windows\smoke.ps1" "$app\domainforge.exe" `
+            "$PWD\domainforge-core\examples\basic.sea" `
+            "$PWD\fixtures\projection_cell\invalid\01_syntax_broken.sea" `
+            $env:VERSION
+          if ($LASTEXITCODE -ne 0) { throw "functional smoke failed" }
+
+          $unins = Get-ChildItem -Path $app -Filter 'unins*.exe' | Select-Object -First 1
+          if (-not $unins) { throw 'uninstaller not found' }
+          $u = Start-Process -FilePath $unins.FullName -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES') -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "uninstaller exited $($u.ExitCode)" }
+          if (Test-Path (Join-Path $app 'domainforge.exe')) { throw 'domainforge.exe still present after uninstall' }
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if (($userPath -split ';') -contains $app) { throw 'user PATH still contains the install dir' }
+          Write-Host 'uninstall: binaries removed and user PATH entry removed'
+
+      - name: Checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum ./*.zip ./*-setup.exe > SHA256SUMS-windows
+          sha256sum -c SHA256SUMS-windows
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-windows.txt
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-windows
+          path: |
+            dist/*.zip
+            dist/*-setup.exe
+            dist/SHA256SUMS-windows
+            dist/built-from-windows.txt
+          if-no-files-found: error
+          retention-days: 30

@@ -152,6 +152,96 @@ jobs:
       - name: Check CLI binary size
         run: just ci-check-binary-size "${{ env.CLI_BIN }}" "${{ env.CLI_MAX_BYTES }}"
 
+  package-linux:
+    name: Package Linux (amd64, install-test)
+    needs: lint
+    runs-on: ubuntu-22.04  # oldest supported glibc (2.35) widens the .deb audience
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          toolchain: 1.99.0
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dpkg-dev
+
+      - name: Resolve and validate version
+        id: version
+        run: echo "version=$(sh packaging/version.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Build release CLI
+        run: cargo build --release --locked -p domainforge-core --bin domainforge --features cli
+
+      - name: Validate version and ELF/glibc baseline
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          test "$(target/release/domainforge --version)" = "domainforge $VERSION"
+          sh packaging/check-linux-binary.sh target/release/domainforge amd64
+
+      - name: Build .deb and tarball
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          sh packaging/deb/build.sh "$VERSION" amd64 target/release dist
+          sh packaging/linux/build-tarball.sh "$VERSION" x86_64-unknown-linux-gnu target/release dist
+          cd dist
+          sha256sum ./*.deb ./*.tar.gz > SHA256SUMS
+          sha256sum -c SHA256SUMS
+
+      - name: Install, functionally test, and remove the .deb
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sudo apt-get install -y "./dist/domainforge_${VERSION}_amd64.deb"
+          test "$(domainforge --version)" = "domainforge $VERSION"
+          sh packaging/smoke.sh /usr/bin/domainforge \
+            domainforge-core/examples/basic.sea \
+            fixtures/projection_cell/invalid/01_syntax_broken.sea \
+            "$VERSION"
+          sudo apt-get remove -y domainforge
+          ! command -v domainforge
+          test ! -e /usr/bin/domainforge
+
+      - name: Install and test inside clean Ubuntu 22.04 and Debian 12
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "::warning::docker is unavailable; the runner itself is Ubuntu 22.04 and the apt install test above already proves the ABI baseline"
+            exit 0
+          fi
+          for image in ubuntu:22.04 debian:12; do
+            docker run --rm -e V="$VERSION" -v "$PWD:/work:ro" -w /work "$image" sh -ec '
+              apt-get update -qq >/dev/null
+              apt-get install -y -qq ./dist/domainforge_"$V"_*.deb >/dev/null
+              test "$(domainforge --version)" = "domainforge $V"
+              domainforge validate --format human --no-color domainforge-core/examples/basic.sea
+              domainforge parse --ast --format json domainforge-core/examples/basic.sea >/dev/null
+              domainforge project --format domain-python domainforge-core/examples/basic.sea /tmp/out >/dev/null
+              test -f /tmp/out/src/auth_domain/domain/entities.py
+              echo "clean '"$image"': $(domainforge --version)"
+            '
+          done
+
   msrv:
     name: MSRV (1.89)
     runs-on: ubuntu-latest

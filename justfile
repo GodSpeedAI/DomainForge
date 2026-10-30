@@ -260,3 +260,43 @@ ci-verify-package ARCHIVE_PATH BINARY_NAME="domainforge":
 ci-check-package-size ARCHIVE_PATH MAX_BYTES="73400320":
     @echo "Checking package size: {{ARCHIVE_PATH}}"
     python3 scripts/ci_tasks.py check-size --file "{{ARCHIVE_PATH}}" --max-bytes {{MAX_BYTES}} --label "Packaged artifact"
+
+# ============================================================================
+# Native CLI distribution (see docs/distribution/native-cli.md)
+# ============================================================================
+
+# Build the Linux .deb and tarball for this host architecture.
+native-package-linux:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    version=$(sh packaging/version.sh)
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64) deb_arch=amd64; target=x86_64-unknown-linux-gnu ;;
+        aarch64 | arm64) deb_arch=arm64; target=aarch64-unknown-linux-gnu ;;
+        *) echo "unsupported host architecture: $arch" >&2; exit 1 ;;
+    esac
+    cargo build --release --locked -p domainforge-core --bin domainforge --features cli
+    sh packaging/check-linux-binary.sh target/release/domainforge "$deb_arch"
+    sh packaging/deb/build.sh "$version" "$deb_arch" target/release dist
+    sh packaging/linux/build-tarball.sh "$version" "$target" target/release dist
+    ls -l dist
+
+# Functional acceptance test against a built or installed binary.
+native-smoke BINARY="target/release/domainforge":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    sh packaging/smoke.sh "{{BINARY}}" \
+        domainforge-core/examples/basic.sea \
+        fixtures/projection_cell/invalid/01_syntax_broken.sea \
+        "$(sh packaging/version.sh)"
+
+# Validate the unified version and every packaging script's syntax.
+native-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    sh packaging/version.sh
+    for script in packaging/*.sh packaging/*/*.sh; do
+        sh -n "$script"
+    done
+    echo "native packaging checks passed"
