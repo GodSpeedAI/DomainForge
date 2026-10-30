@@ -1,6 +1,6 @@
 # Subsystem: Projections Engine & Operator Families
 
-The Projections Engine compiles the canonical in-memory semantic graph into external formats across 17+ ecosystems following the **Operator Family Pattern** ([ADR-011](../specs/ADR-011-operator-backed-projection-families.md)).
+The Projections Engine compiles the canonical in-memory semantic graph into external formats across 29 distinct target formats and 9 operator families following the **Operator Family Pattern** ([ADR-011](../specs/ADR-011-operator-backed-projection-families.md)).
 
 ---
 
@@ -64,7 +64,7 @@ The engine categorizes projections into three groups:
 | **Learning Loop** | ZenML pipeline (Python) | `--format zenml` | [ZenML Projections](../zenml-projections.md) | `py_compile` syntax check |
 | **Formal Verification** | Lean 4 Lake package | `--format lean` | [Lean Projections](../lean-projections.md) | Lean 4 syntax check |
 
-### Group B: Event, Authority & Verification Targets
+### Group B: Event, Authority, Activation & Verification Targets
 
 | Operator Family | Target Output | CLI Format | Native Toolchain Verification |
 |---|---|---|---|
@@ -73,7 +73,9 @@ The engine categorizes projections into three groups:
 | **Formal Model** | TLA+ (`.tla` + `.cfg`) | `--format tla` | **Native SANY parse + TLC model-checker** (CI) |
 | **Relational Model** | Alloy (`.als`) | `--format alloy` | Structural fact/flow check |
 | **Specification** | Gauge Markdown specs | `--format gauge` | Scenario count and sanitization check |
-| **Authority** | Cedar schema + policies | `--format cedar` | Strict Cedar JSON schema parse |
+| **Authority** | Cedar schema + policies | `--format cedar` | Strict Cedar JSON schema parse (permissive baseline) |
+| **Authority** | OPA / Rego bundle | `--format rego` | Real OPA 1.21.1 check + differential tests |
+| **Activation** | OpenShell policy (`policy.yaml`) | `--format openshell` | `openshell-prover 0.1.3 --boundary` verification |
 | **Dev Environment** | Devbox manifest (`devbox.json`) | `--format devbox` | JSONC parse check |
 | **Activation** | Dagger Python module | `--format dagger` | `python3 -m py_compile` |
 | **Hermetic Cell** | Cell Env (`cell.lock`, Devbox, Mise) | `--format cell` | Byte-determinism + structural JSON check |
@@ -84,6 +86,17 @@ The code projections generate complete, production-grade domain packages up to t
 - `--format domain-python`: Python package verified by `compileall` + `mypy --strict` + `unittest`.
 - `--format domain-typescript`: TypeScript package with zero runtime dependencies verified by `tsc --noEmit` (strict).
 - `--format domain-rust`: Zero-dependency Rust crate verified by `cargo check` and `cargo test`.
+
+### Group D: Architecture, Interface & Dataset Targets
+
+Foundational and dataset projections supporting enterprise architecture and machine learning pipelines:
+- `--format calm`: FINOS Common Architecture Language Model JSON.
+- `--format protobuf` / `proto`: Protocol Buffers schema with optional gRPC service generation.
+- `--format kg`: Knowledge Graph (Turtle/RDF-XML single-file export).
+- `--format ai-llm`: LLM instruction dataset (JSONL) with deterministic train/val/test splits.
+- `--format ai-graph-ml`: Graph-ML topological training dataset.
+- `--format cep-eval`: Canonical Evaluation Protocol benchmark evaluation dataset.
+- `--format ai-learning`: Unified recipe-driven bundle of all enabled AI learning datasets.
 
 ---
 

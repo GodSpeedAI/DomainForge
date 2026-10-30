@@ -1,6 +1,6 @@
 # DomainForge Technical Knowledge System
 
-Welcome to the **DomainForge** technical documentation system. DomainForge is a deterministic intermediate representation (IR) compiler and semantic reasoning engine for enterprise systems architecture. It captures organizational meaning—actors, flows, resources, operational contracts, and business rules—in a human-readable domain-specific language (SEA DSL) and projects that meaning into 17+ external operational ecosystems.
+Welcome to the **DomainForge** technical documentation system. DomainForge is a deterministic intermediate representation (IR) compiler and semantic reasoning engine for enterprise systems architecture. It captures organizational meaning—actors, flows, resources, operational contracts, and business rules—in a human-readable domain-specific language (SEA DSL) and projects that meaning into 29 external operational targets across 9 operator families.
 
 ---
 
@@ -11,6 +11,7 @@ Choose the entry point that matches your current goal:
 | I want to... | Recommended Path | Key Resource |
 |---|---|---|
 | **Understand what this is in 5 minutes** | Fast orientation, initial mental model, and first journey. | [Orientation](orientation.md) |
+| **Explore system behavior interactively** | Steppers, projection workbench, and 3VL policy simulator. | [Interactive Explainers](explainers/index.md) |
 | **Learn the conceptual foundations** | Deep mental model, domain vocabulary, and core abstractions. | [Mental Model](mental-model.md) |
 | **Explore the technical architecture** | Subsystems, runtime topology, data transformations, and invariants. | [System Architecture](architecture.md) |
 | **Find where something is implemented** | Complete map of symbols, files, and crate locations. | [Source Map](source-map.md) |
@@ -66,6 +67,7 @@ docs/
 ├── source-map.md                    # Symbol-level code traceability catalog
 ├── troubleshooting.md               # Operational failure diagnosis and fixes
 │
+├── explainers/                      # Interactive HTML explainers and simulations
 ├── subsystems/                      # Deep architectural subsystem guides
 ├── workflows/                       # Dynamic end-to-end execution traces
 ├── explanations/                    # Architectural decisions, rationale, and invariants

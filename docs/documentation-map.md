@@ -10,6 +10,7 @@ This document catalogs every page in the DomainForge documentation system. It pr
 |---|---|---|---|---|
 | **[Documentation Portal](index.md)** | Orientation / Hub | "Where do I start?" Overview of the knowledge system. | None | [Orientation](orientation.md), [Mental Model](mental-model.md) |
 | **[Orientation](orientation.md)** | Orientation | Fast 5-minute mental orientation, first journey, and reading tracks. | None | [Mental Model](mental-model.md), [First SEA Model](tutorials/01-first-sea-model.md) |
+| **[Interactive Explainers](explainers/index.md)** | Interactive Simulation | Visual steppers, projection workbench, and 3VL policy simulator. | [Orientation](orientation.md) | [Architecture](architecture.md), [Policy Engine](subsystems/policy-engine.md) |
 | **[Mental Model](mental-model.md)** | Mental Model | Understand core abstractions (Entity, Resource, Flow, Policy) without code clutter. | [Orientation](orientation.md) | [Architecture](architecture.md), [Graph Store](subsystems/graph-store.md) |
 | **[System Architecture](architecture.md)** | Architecture Overview | Understand logical, runtime, dependency, and data architecture across components. | [Mental Model](mental-model.md) | [Subsystems](subsystems/parser-grammar.md), [Source Map](source-map.md) |
 | **[Source Map](source-map.md)** | Source Map / Traceability | Find where concepts, types, and capabilities live in the repository codebase. | None | [Architecture](architecture.md), [Subsystems](subsystems/parser-grammar.md) |

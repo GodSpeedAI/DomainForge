@@ -76,7 +76,8 @@ graph TB
         Sink --> OutCode["Domain Code: Python, TypeScript, Rust DDD"]
         Sink --> OutEvent["Events: AsyncAPI 3.0 / CloudEvents 1.0"]
         Sink --> OutFormal["Formal Verif: TLA+ / Alloy / Lean 4"]
-        Sink --> OutAI["AI Learning: BAML / DSPy / ZenML"]
+        Sink --> OutAI["AI Learning: BAML / DSPy / ZenML / Datasets"]
+        Sink --> OutAuth["Authority & Activation: Cedar / Rego / OpenShell / Cell / Dagger / Devbox"]
     end
 
     subgraph "Layer 5: Host Interfaces & CLI"
@@ -138,7 +139,7 @@ sequenceDiagram
 The workspace is organized as a Cargo workspace with language-specific wrappers:
 
 ```text
-c:\Users\sprim\projects\domainforge/
+domainforge/
 ├── Cargo.toml                       # Workspace root manifest
 ├── justfile                         # Task runner (tests, enterprise verify, proofs)
 ├── PROOFS.md                        # Self-proving claims ledger & verified evidence
@@ -157,7 +158,7 @@ c:\Users\sprim\projects\domainforge/
 │   │   ├── semantic_pack/           # Pack schema, builder, signing, diff
 │   │   ├── authority/               # Authority resolution & evidence trace
 │   │   ├── application/             # ADR-013 operations, records, contracts
-│   │   ├── projection/              # 17+ operator family projection renderers
+│   │   ├── projection/              # 29 operator family projection renderers
 │   │   ├── calm/                    # FINOS CALM export/import
 │   │   ├── kg.rs, kg_import.rs      # Knowledge Graph RDF/Turtle export/import
 │   │   ├── cli/                     # CLI subcommand implementations

@@ -13,7 +13,7 @@ In traditional software development, enterprise business rules and architecture 
 DomainForge replaces this folklore with an executable, single source of truth:
 1. You write your domain—actors, resources, flows, operational contracts, and business policies—in a concise, readable language called **SEA (Semantic Enterprise Architecture)**.
 2. The DomainForge engine parses and validates your model with mathematical determinism.
-3. It deterministically projects your model into 17+ external operational formats: Python/TypeScript/Rust domain code, BPMN 2.0 diagrams, FINOS CALM architecture models, RDF knowledge graphs, AsyncAPI specifications, and TLA+ formal verification proofs.
+3. It deterministically projects your model into 29 external operational targets across 9 operator families: Python/TypeScript/Rust domain code, BPMN 2.0 diagrams, FINOS CALM architecture models, RDF knowledge graphs, AsyncAPI specifications, TLA+ formal verification proofs, OPA/Rego bundles, and OpenShell sandbox policies.
 
 ---
 
@@ -27,6 +27,7 @@ graph LR
     B --> E["RDF / OWL / CALM<br>Knowledge Graphs"]
     B --> F["TLA+ / Lean 4<br>Formal Verification"]
     B --> G["AsyncAPI / CloudEvents<br>Event Contracts"]
+    B --> H["Cedar / Rego / OpenShell<br>Authority & Sandbox"]
 ```
 
 ---
@@ -91,6 +92,8 @@ Now your enterprise architects and business analysts can open `process.bpmn` in 
 
 Choose your next destination based on your role:
 
+- **"I want to explore the compiler and policy engine interactively"**<br>
+  👉 Launch the [Interactive Explainers](explainers/index.md) (Projection Workbench & 3VL Simulator).
 - **"I want to explore the conceptual architecture deeper"**<br>
   👉 Continue to the [Mental Model](mental-model.md).
 - **"I want to write and run code right now"**<br>

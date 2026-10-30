@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DomainForge — Kleene Three-Valued Logic & Policy Simulator</title>
+  <style>
+    :root {
+      --bg: #0b1118;
+      --surface: #131c26;
+      --surface-raised: #1a2634;
+      --surface-border: #27384a;
+      --text: #e6edf3;
+      --text-muted: #8b9bb0;
+      --text-dim: #5c6f84;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --ok: #34d399;
+      --ok-soft: rgba(52, 211, 153, 0.12);
+      --warn: #fbbf24;
+      --warn-soft: rgba(251, 191, 36, 0.12);
+      --risk: #f87171;
+      --risk-soft: rgba(248, 113, 113, 0.12);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --r-1: 6px;
+      --r-2: 12px;
+      --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 32px 20px 80px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header.top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: var(--r-1);
+      background: var(--warn-soft);
+      color: var(--warn);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .tagline {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 760px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .nav-links a {
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--r-1);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover {
+      background: var(--surface-raised);
+      border-color: var(--accent);
+    }
+
+    /* Primary Figure: 3VL Triad Spine */
+    figure.viewport-spine {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 24px;
+      margin-bottom: 36px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    figure.viewport-spine figcaption {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .triad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .triad-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .triad-card.card-true { border-color: rgba(52, 211, 153, 0.4); }
+    .triad-card.card-false { border-color: rgba(248, 113, 113, 0.4); }
+    .triad-card.card-null { border-color: rgba(251, 191, 36, 0.4); }
+
+    .triad-val {
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .card-true .triad-val { color: var(--ok); }
+    .card-false .triad-val { color: var(--risk); }
+    .card-null .triad-val { color: var(--warn); }
+
+    .triad-meaning {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Interactive Truth Table Operator */
+    .calc-row {
+      background: var(--bg);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .input-selector-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .selector-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .selector-label {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      width: 24px;
+    }
+
+    .val-btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .val-btn {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: var(--r-1);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .val-btn:hover { border-color: var(--text); color: #fff; }
+
+    .val-btn.active.true { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); font-weight: 700; }
+    .val-btn.active.false { background: var(--risk-soft); border-color: var(--risk); color: var(--risk); font-weight: 700; }
+    .val-btn.active.null { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); font-weight: 700; }
+
+    .results-display-matrix {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .op-box {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    .op-box .op-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .op-box .op-out {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .op-box .op-rationale {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.25;
+    }
+
+    /* Section: Quantifier Collection Stepper */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .quantifier-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .collection-panel {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .rule-selector-box {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 12px 14px;
+    }
+
+    .rule-selector-box label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    select.rule-select {
+      width: 100%;
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 8px 10px;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      outline: none;
+    }
+
+    .items-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: var(--transition);
+    }
+
+    .item-card.highlight {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .item-card.item-pass {
+      border-left: 4px solid var(--ok);
+    }
+    .item-card.item-fail {
+      border-left: 4px solid var(--risk);
+    }
+    .item-card.item-null {
+      border-left: 4px solid var(--warn);
+    }
+
+    .item-info {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .item-toggle-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Stepper Execution Panel */
+    .execution-panel {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .state-accumulator-box {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .acc-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .acc-val-display {
+      font-family: var(--mono);
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .acc-trace-log {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-top: 10px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .stepper-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button.step-btn {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: var(--r-1);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      flex: 1;
+    }
+
+    button.step-btn:hover {
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent-soft);
+    }
+
+    button.step-btn.primary {
+      background: var(--accent);
+      color: #0b1118;
+      border-color: var(--accent);
+    }
+    button.step-btn.primary:hover {
+      background: #7dd3fc;
+    }
+
+    /* Section: Expression Normalization */
+    .norm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .norm-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 24px;
+    }
+
+    .norm-card h3 {
+      font-size: 17px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .norm-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .rewrite-rule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rule-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .rule-card:hover {
+      border-color: var(--accent);
+    }
+
+    .rule-card.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .rule-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .rule-formula {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .ast-display {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: #38bdf8;
+      min-height: 180px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+
+    /* CLI Flag Switch */
+    .cli-switch-panel {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 48px;
+    }
+
+    .switch-info h4 {
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .switch-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .flag-toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .exit-code-badge {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: var(--r-1);
+      font-weight: 700;
+    }
+
+    .exit-code-badge.exit-0 {
+      background: var(--ok-soft);
+      color: var(--ok);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .exit-code-badge.exit-1 {
+      background: var(--risk-soft);
+      color: var(--risk);
+      border: 1px solid rgba(248, 113, 113, 0.4);
+    }
+
+    footer.bottom-bar {
+      border-top: 1px solid var(--surface-border);
+      padding-top: 24px;
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .triad-grid { grid-template-columns: 1fr; }
+      .calc-row { grid-template-columns: 1fr; }
+      .results-display-matrix { grid-template-columns: repeat(2, 1fr); }
+      .quantifier-layout { grid-template-columns: 1fr; }
+      .norm-grid { grid-template-columns: 1fr; }
+      .cli-switch-panel { flex-direction: column; align-items: flex-start; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="top-bar">
+      <div>
+        <div class="badge">Kleene 3VL Logic Laboratory</div>
+        <h1>Three-Valued Policy & Quantifier Simulator</h1>
+        <p class="tagline">
+          Explore why DomainForge uses Kleene three-valued logic (True, False, Null) to evaluate organizational policies. Observe how collections fold, short-circuit, and normalize without generating false-positive authorization grants.
+        </p>
+      </div>
+      <div class="nav-links">
+        <a href="projection-compiler-explorer.html">&larr; Projection Explorer</a>
+        <a href="../subsystems/policy-engine.html">Policy Engine Guide</a>
+        <a href="index.html">Explainer Index</a>
+      </div>
+    </header>
+
+    <!-- FIGURE 1: 3VL Triad Spine -->
+    <figure class="viewport-spine">
+      <figcaption>
+        <div><strong>Figure 1: The Three-Valued Logic Truth Triad & Algebraic Calculator</strong> — Distinguishing explicit failure from missing information.</div>
+        <span class="badge" style="background: var(--accent-soft); color: var(--accent); border-color: rgba(56, 189, 248, 0.3);">Kleene 3VL Algebra</span>
+      </figcaption>
+
+      <!-- Triad Cards -->
+      <div class="triad-grid">
+        <div class="triad-card card-true">
+          <div class="triad-val">TRUE</div>
+          <div class="triad-meaning">The condition is definitively verified by current graph state and instances. Obligation is satisfied.</div>
+        </div>
+        <div class="triad-card card-false">
+          <div class="triad-val">FALSE</div>
+          <div class="triad-meaning">The condition is explicitly refuted. Creates a policy Violation and triggers compile/CI failure.</div>
+        </div>
+        <div class="triad-card card-null">
+          <div class="triad-val">NULL (Unknown)</div>
+          <div class="triad-meaning">An attribute or referenced instance is missing. Suspends judgment instead of silently assuming false.</div>
+        </div>
+      </div>
+
+      <!-- Live 3VL Calculator -->
+      <div class="calc-row">
+        <div class="input-selector-group">
+          <div class="selector-line">
+            <span class="selector-label">A:</span>
+            <div class="val-btn-group" id="btn-group-a">
+              <button class="val-btn active true" onclick="setOperand('A', 'True')">True</button>
+              <button class="val-btn" onclick="setOperand('A', 'False')">False</button>
+              <button class="val-btn" onclick="setOperand('A', 'Null')">Null</button>
+            </div>
+          </div>
+          <div class="selector-line">
+            <span class="selector-label">B:</span>
+            <div class="val-btn-group" id="btn-group-b">
+              <button class="val-btn" onclick="setOperand('B', 'True')">True</button>
+              <button class="val-btn" onclick="setOperand('B', 'False')">False</button>
+              <button class="val-btn active null" onclick="setOperand('B', 'Null')">Null</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="results-display-matrix">
+          <div class="op-box">
+            <div class="op-label">A and B</div>
+            <div class="op-out" id="out-and" style="color: var(--warn);">Null</div>
+            <div class="op-rationale" id="rat-and">Requires both True</div>
+          </div>
+          <div class="op-box">
+            <div class="op-label">A or B</div>
+            <div class="op-out" id="out-or" style="color: var(--ok);">True</div>
+            <div class="op-rationale" id="rat-or">Short-circuits on True</div>
+          </div>
+          <div class="op-box">
+            <div class="op-label">not A</div>
+            <div class="op-out" id="out-not-a" style="color: var(--risk);">False</div>
+            <div class="op-rationale" id="rat-not-a">Negates True &rarr; False</div>
+          </div>
+          <div class="op-box">
+            <div class="op-label">A implies B</div>
+            <div class="op-out" id="out-implies" style="color: var(--warn);">Null</div>
+            <div class="op-rationale" id="rat-implies">(!A).or(B)</div>
+          </div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- SECTION: Quantifier Collection Stepper -->
+    <section>
+      <h2 class="section-title">Collection Quantifier Stepper (<code>forall</code> / <code>exists</code>)</h2>
+      <p class="section-desc">
+        Quantifiers iterate across collections (entities, flows, instances) and fold conditions using Kleene algebra. Notice how a single <code>False</code> short-circuits <code>forall</code> immediately, while <code>Null</code> propagates into the final verdict unless overridden.
+      </p>
+
+      <div class="quantifier-layout">
+        <!-- Collection & Rule Config -->
+        <div class="collection-panel">
+          <div class="rule-selector-box">
+            <label for="quant-rule-select">Select Policy Expression</label>
+            <select class="rule-select" id="quant-rule-select" onchange="resetStepper()">
+              <option value="forall-limit">forall f in flows: f.quantity <= 10000</option>
+              <option value="forall-approved">forall f in flows: f.quantity <= 10000 and f.approved = true</option>
+              <option value="exists-large">exists f in flows: f.quantity > 10000</option>
+              <option value="exists-unique">exists_unique f in flows: f.approved = true</option>
+            </select>
+          </div>
+
+          <div style="font-size: 13px; font-weight: 600; color: #fff;">Flow Instances in Graph:</div>
+          <div class="items-container" id="items-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Stepper Visualizer Panel -->
+        <div class="execution-panel">
+          <div>
+            <div class="state-accumulator-box">
+              <div class="acc-header">
+                <span>Rust <code>fold_and</code> Accumulator</span>
+                <span id="step-pointer">Item 0 of 4</span>
+              </div>
+              <div class="acc-val-display" id="acc-val">Initial: True</div>
+              <div class="acc-trace-log" id="acc-log">
+                [0] Ready. Click 'Step Next' to begin evaluating collection.
+              </div>
+            </div>
+
+            <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+              <strong style="color: var(--text);">Kleene Invariant:</strong> In <code>forall</code>, once <code>False</code> is seen, iteration stops immediately. If any item evaluated to <code>Null</code> and none to <code>False</code>, the entire quantifier returns <code>Null</code>.
+            </div>
+          </div>
+
+          <div class="stepper-actions">
+            <button class="step-btn primary" onclick="stepEvaluation()">Step Next Item &rarr;</button>
+            <button class="step-btn" onclick="resetStepper()">Reset Stepper</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: Expression Normalization Engine -->
+    <section>
+      <h2 class="section-title">Algebraic Normalization Engine (<code>normalize.rs</code>)</h2>
+      <p class="section-desc">
+        Before evaluating policy trees, DomainForge simplifies logical expressions into canonical representations using algebraic laws (De Morgan, double negation, annihilation, and identity).
+      </p>
+
+      <div class="norm-grid">
+        <div class="norm-card">
+          <h3>Normalization Rewrite Rules</h3>
+          <p>Click a rule to observe how DomainForge transforms raw expressions into optimized ASTs:</p>
+
+          <div class="rewrite-rule-list">
+            <div class="rule-card active" onclick="setRewrite('double_neg', this)">
+              <div>
+                <div class="rule-name">Double Negation Elimination</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Removes redundant inversion</div>
+              </div>
+              <div class="rule-formula">not (not A) &rarr; A</div>
+            </div>
+            <div class="rule-card" onclick="setRewrite('demorgan_and', this)">
+              <div>
+                <div class="rule-name">De Morgan (Conjunction)</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Pushes negation inward</div>
+              </div>
+              <div class="rule-formula">not (A and B) &rarr; (not A) or (not B)</div>
+            </div>
+            <div class="rule-card" onclick="setRewrite('annihilate_false', this)">
+              <div>
+                <div class="rule-name">Annihilation Law (And)</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Immediate short-circuit</div>
+              </div>
+              <div class="rule-formula">A and false &rarr; false</div>
+            </div>
+            <div class="rule-card" onclick="setRewrite('identity_true', this)">
+              <div>
+                <div class="rule-name">Identity Law (And)</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Strips redundant identity</div>
+              </div>
+              <div class="rule-formula">A and true &rarr; A</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="norm-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3>AST Normalization Trace</h3>
+            <span class="badge" style="background: var(--purple-soft); color: var(--purple); border-color: rgba(192, 132, 252, 0.3);">AST Rewrite</span>
+          </div>
+          <div class="ast-display" id="ast-output">
+// RAW EXPRESSION:
+Expression::Unary(
+    Op::Not,
+    Expression::Unary(
+        Op::Not,
+        Expression::Binary(Op::Gt, var("quantity"), lit(500))
+    )
+)
+
+// NORMALIZED EXPRESSION (domainforge normalize):
+Expression::Binary(
+    Op::Gt,
+    var("quantity"),
+    lit(500)
+)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: CLI Flag Switch -->
+    <div class="cli-switch-panel">
+      <div class="switch-info">
+        <h4>CLI Validation Behavior: <code>--allow-unknown</code></h4>
+        <p>Control whether a <code>Null</code> outcome blocks CI with exit code 1 or passes as tolerable ambiguity with exit code 0.</p>
+      </div>
+      <div class="flag-toggle-wrapper">
+        <button class="step-btn" id="toggle-allow-unknown" onclick="toggleUnknownFlag()">Mode: Strict (Reject Unknown)</button>
+        <div class="exit-code-badge exit-1" id="exit-badge">EXIT CODE: 1 (Error)</div>
+      </div>
+    </div>
+
+    <footer class="bottom-bar">
+      <div>DomainForge Technical Knowledge System &bull; Cognitive Interface</div>
+      <div>Canonical Policy Evaluator: <code>src/policy/three_valued.rs</code></div>
+    </footer>
+  </div>
+
+  <script>
+    // --- 3VL Truth Table Logic ---
+    let opA = 'True';
+    let opB = 'Null';
+
+    function setOperand(op, val) {
+      if (op === 'A') opA = val;
+      if (op === 'B') opB = val;
+
+      updateButtons('a', opA);
+      updateButtons('b', opB);
+      recalc3VL();
+    }
+
+    function updateButtons(opLetter, val) {
+      const container = document.getElementById(`btn-group-${opLetter}`);
+      const btns = container.querySelectorAll('.val-btn');
+      btns.forEach(btn => {
+        btn.className = 'val-btn';
+        if (btn.innerText.toLowerCase() === val.toLowerCase()) {
+          btn.classList.add('active', val.toLowerCase());
+        }
+      });
+    }
+
+    function tvlAnd(a, b) {
+      if (a === 'False' || b === 'False') return 'False';
+      if (a === 'True' && b === 'True') return 'True';
+      return 'Null';
+    }
+
+    function tvlOr(a, b) {
+      if (a === 'True' || b === 'True') return 'True';
+      if (a === 'False' && b === 'False') return 'False';
+      return 'Null';
+    }
+
+    function tvlNot(a) {
+      if (a === 'True') return 'False';
+      if (a === 'False') return 'True';
+      return 'Null';
+    }
+
+    function recalc3VL() {
+      const andRes = tvlAnd(opA, opB);
+      const orRes = tvlOr(opA, opB);
+      const notARes = tvlNot(opA);
+      const impliesRes = tvlOr(tvlNot(opA), opB);
+
+      displayResult('out-and', andRes);
+      displayResult('out-or', orRes);
+      displayResult('out-not-a', notARes);
+      displayResult('out-implies', impliesRes);
+
+      // Rationales
+      document.getElementById('rat-and').innerText =
+        andRes === 'False' ? 'Short-circuits on False' : (andRes === 'True' ? 'Both True' : 'Incomplete (Null)');
+      document.getElementById('rat-or').innerText =
+        orRes === 'True' ? 'Short-circuits on True' : (orRes === 'False' ? 'Both False' : 'Incomplete (Null)');
+      document.getElementById('rat-not-a').innerText = `Negates ${opA} &rarr; ${notARes}`;
+      document.getElementById('rat-implies').innerText = `(!${opA}).or(${opB})`;
+    }
+
+    function displayResult(elementId, val) {
+      const el = document.getElementById(elementId);
+      el.innerText = val;
+      if (val === 'True') el.style.color = 'var(--ok)';
+      else if (val === 'False') el.style.color = 'var(--risk)';
+      else el.style.color = 'var(--warn)';
+    }
+
+    // --- Quantifier Collection Stepper ---
+    let items = [
+      { id: "flow_1", quantity: 500, approved: true },
+      { id: "flow_2", quantity: 15000, approved: false },
+      { id: "flow_3", quantity: 2000, approved: null },
+      { id: "flow_4", quantity: 4500, approved: true }
+    ];
+
+    let currentStep = 0;
+    let accumulator = 'True';
+    let seenNull = false;
+    let traceHistory = [];
+
+    function renderItems() {
+      const list = document.getElementById('items-list');
+      list.innerHTML = '';
+      items.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.id = `item-card-${idx}`;
+
+        const approvedText = item.approved === null ? '<span style="color:var(--warn);">NULL</span>' : (item.approved ? '<span style="color:var(--ok);">true</span>' : '<span style="color:var(--risk);">false</span>');
+        card.innerHTML = `
+          <div class="item-info">
+            <strong>${item.id}</strong>: quantity=${item.quantity}, approved=${approvedText}
+          </div>
+          <button class="item-toggle-btn" onclick="toggleItemApproved(${idx})">Toggle Null/Val</button>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function toggleItemApproved(idx) {
+      if (items[idx].approved === true) items[idx].approved = false;
+      else if (items[idx].approved === false) items[idx].approved = null;
+      else items[idx].approved = true;
+      renderItems();
+      resetStepper();
+    }
+
+    function resetStepper() {
+      currentStep = 0;
+      seenNull = false;
+      const rule = document.getElementById('quant-rule-select').value;
+      accumulator = (rule === 'exists-large') ? 'False' : 'True';
+      traceHistory = [`[0] Reset accumulator to: ${accumulator}`];
+      updateStepperDisplay();
+      document.querySelectorAll('.item-card').forEach(c => {
+        c.className = 'item-card';
+      });
+    }
+
+    function stepEvaluation() {
+      if (currentStep >= items.length) {
+        traceHistory.push("[DONE] Reached end of collection. Final verdict reached.");
+        updateStepperDisplay();
+        return;
+      }
+
+      const rule = document.getElementById('quant-rule-select').value;
+      const item = items[currentStep];
+      let itemVerdict = 'True';
+
+      if (rule === 'forall-limit') {
+        itemVerdict = item.quantity <= 10000 ? 'True' : 'False';
+      } else if (rule === 'forall-approved') {
+        const qtyOk = item.quantity <= 10000;
+        if (!qtyOk) {
+          itemVerdict = 'False';
+        } else if (item.approved === null) {
+          itemVerdict = 'Null';
+        } else {
+          itemVerdict = item.approved ? 'True' : 'False';
+        }
+      } else if (rule === 'exists-large') {
+        itemVerdict = item.quantity > 10000 ? 'True' : 'False';
+      } else if (rule === 'exists-unique') {
+        itemVerdict = item.approved === true ? 'True' : (item.approved === null ? 'Null' : 'False');
+      }
+
+      // Highlight item
+      const card = document.getElementById(`item-card-${currentStep}`);
+      if (card) {
+        card.classList.add('highlight');
+        if (itemVerdict === 'True') card.classList.add('item-pass');
+        else if (itemVerdict === 'False') card.classList.add('item-fail');
+        else card.classList.add('item-null');
+      }
+
+      // Update accumulator
+      if (rule.startsWith('forall')) {
+        if (itemVerdict === 'False') {
+          accumulator = 'False';
+          traceHistory.push(`[${currentStep + 1}] ${item.id} &rarr; FALSE. Short-circuited fold_and!`);
+          currentStep = items.length; // Short-circuit
+        } else if (itemVerdict === 'Null') {
+          seenNull = true;
+          traceHistory.push(`[${currentStep + 1}] ${item.id} &rarr; NULL. seen_null flag set to true.`);
+          currentStep++;
+          if (currentStep === items.length && accumulator !== 'False') accumulator = 'Null';
+        } else {
+          traceHistory.push(`[${currentStep + 1}] ${item.id} &rarr; TRUE. Accumulator holds.`);
+          currentStep++;
+          if (currentStep === items.length && seenNull) accumulator = 'Null';
+        }
+      } else if (rule === 'exists-large') {
+        if (itemVerdict === 'True') {
+          accumulator = 'True';
+          traceHistory.push(`[${currentStep + 1}] ${item.id} &rarr; TRUE. Short-circuited fold_or!`);
+          currentStep = items.length; // Short-circuit
+        } else {
+          traceHistory.push(`[${currentStep + 1}] ${item.id} &rarr; FALSE. Checking next.`);
+          currentStep++;
+        }
+      } else {
+        traceHistory.push(`[${currentStep + 1}] Evaluated ${item.id} &rarr; ${itemVerdict}`);
+        currentStep++;
+      }
+
+      updateStepperDisplay();
+    }
+
+    function updateStepperDisplay() {
+      document.getElementById('step-pointer').innerText = `Item ${currentStep} of ${items.length}`;
+      const accEl = document.getElementById('acc-val');
+      accEl.innerText = `Verdict: ${accumulator}`;
+      if (accumulator === 'True') accEl.style.color = 'var(--ok)';
+      else if (accumulator === 'False') accEl.style.color = 'var(--risk)';
+      else accEl.style.color = 'var(--warn)';
+
+      const log = document.getElementById('acc-log');
+      log.innerHTML = traceHistory.join('<br>');
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // --- Expression Normalization Data ---
+    const rewrites = {
+      double_neg: `// RAW EXPRESSION:\nExpression::Unary(\n    Op::Not,\n    Expression::Unary(\n        Op::Not,\n        Expression::Binary(Op::Gt, var("quantity"), lit(500))\n    )\n)\n\n// NORMALIZED EXPRESSION (domainforge normalize):\nExpression::Binary(\n    Op::Gt,\n    var("quantity"),\n    lit(500)\n)`,
+      demorgan_and: `// RAW EXPRESSION:\nnot (quantity > 1000 and status == "approved")\n\n// NORMALIZED EXPRESSION (De Morgan rewrite):\n(not (quantity > 1000)) or (not (status == "approved"))`,
+      annihilate_false: `// RAW EXPRESSION:\nExpression::Binary(Op::And, var("is_valid"), lit(false))\n\n// NORMALIZED EXPRESSION (Annihilation):\nExpression::Literal(false)`,
+      identity_true: `// RAW EXPRESSION:\nExpression::Binary(Op::And, var("is_valid"), lit(true))\n\n// NORMALIZED EXPRESSION (Identity):\nvar("is_valid")`
+    };
+
+    function setRewrite(type, cardEl) {
+      document.querySelectorAll('.rule-card').forEach(c => c.classList.remove('active'));
+      cardEl.classList.add('active');
+      document.getElementById('ast-output').innerText = rewrites[type];
+    }
+
+    // --- CLI Flag Switch ---
+    let allowUnknown = false;
+    function toggleUnknownFlag() {
+      allowUnknown = !allowUnknown;
+      const btn = document.getElementById('toggle-allow-unknown');
+      const badge = document.getElementById('exit-badge');
+
+      if (allowUnknown) {
+        btn.innerText = "Mode: --allow-unknown (Tolerate Unknown)";
+        btn.style.borderColor = "var(--ok)";
+        badge.className = "exit-code-badge exit-0";
+        badge.innerText = "EXIT CODE: 0 (Pass with Warning)";
+      } else {
+        btn.innerText = "Mode: Strict (Reject Unknown)";
+        btn.style.borderColor = "var(--surface-border)";
+        badge.className = "exit-code-badge exit-1";
+        badge.innerText = "EXIT CODE: 1 (Error)";
+      }
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      recalc3VL();
+      renderItems();
+      resetStepper();
+    });
+  </script>
+</body>
+</html>
