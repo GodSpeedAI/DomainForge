@@ -270,3 +270,12 @@ fixed and why.*
 - **Evidence:** Code reading while documenting `domainforge-core/src/cli`. `run` body is a single `println!` followed by `Ok(())`. Not executed.
 - **Confidence:** medium
 - **Closure:** Either implement the runner, or make the stub fail non-zero (or hide the subcommand behind `#[command(hide = true)]`) so it cannot be mistaken for a passing gate. Files: `domainforge-core/src/cli/test.rs`, possibly `domainforge-core/src/cli/mod.rs`. Size S to M depending on chosen direction.
+
+## D-doc-egm-3. `to_graph` doc comment points at a file that does not exist
+
+- **Date:** 2026-10-30
+- **Location:** `domainforge-core/src/kg.rs:1087` (inside the `to_graph` doc comment)
+- **Debt:** The comment tells readers to use the Canonical Semantic Envelope and cites `.sea/interaction/README.md` "Known Toolchain Boundaries" as the place to learn why. Neither `.sea/` nor `.sea/interaction/README.md` exists in the repository, so the documented escape hatch for a real functional gap is unreachable. The gap itself is real: `to_graph` reconstructs `Entity`/`Resource`/`Flow`/`Relation` but silently drops the `sea:EntityInstance` and `sea:Policy` triples that `to_turtle` emits.
+- **Evidence:** `rg -n 'sea/interaction' domainforge-core/src/kg.rs` returns only line 1087. `ls -d .sea` reports no such directory; the only root `.sea*` entry is `.sea-registry.toml`. `git ls-files | grep -i interaction` lists fixtures and `.agents/` plans but no `.sea/interaction/`.
+- **Confidence:** high (the referenced path was checked directly and is absent)
+- **Closure:** Either create `.sea/interaction/README.md` with a "Known Toolchain Boundaries" section, or re-point the comment at an existing document such as `docs/subsystems/graph-store.md`. Files: `domainforge-core/src/kg.rs` (and possibly the new doc). Size S.
