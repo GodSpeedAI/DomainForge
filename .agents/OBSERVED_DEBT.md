@@ -324,3 +324,13 @@ fixed and why.*
 - **Status:** [RESOLVED e9347fe] `docs/specs/ADR-018-observed-debt-no-language-change.md`
   records that no language change was made and why the policy criteria do not
   apply. The gate's required inputs (ADR plus test file) are now in the diff.
+
+## D-doc-egm-3. `to_graph` doc comment points at a file that does not exist
+
+- **Date:** 2026-10-30
+- **Status:** PARTIAL. The dead `.sea/interaction/README.md` reference was removed from the `to_graph` doc comment (verified: no `sea/interaction` reference remains under `domainforge-core/src`). The functional gap below is still open.
+- **Location:** `domainforge-core/src/kg.rs` (`to_graph` doc comment and reconstruction)
+- **Debt:** `to_graph` reconstructs `Entity`/`Resource`/`Flow`/`Relation` but silently drops the `sea:EntityInstance` and `sea:Policy` triples that `to_turtle` emits, so a round trip loses them without warning.
+- **Evidence:** `git grep 'sea/interaction' origin/main -- domainforge-core/src` returns nothing; `.sea/` does not exist in the repository.
+- **Confidence:** high for the dead reference (checked directly), high for the dropped triples (from the reconstruction code path, not yet covered by a test).
+- **Closure:** Either reconstruct the instance and policy triples in `to_graph`, or document the omission explicitly in the doc comment. Size S to M.
