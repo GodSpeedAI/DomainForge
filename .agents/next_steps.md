@@ -1,5 +1,16 @@
 # Next Steps
 
+## EGM documentation bootstrap (2026-10-30)
+
+1. [x] Ran `egm-bootstrap` across the repository with `target_filename=EGM.md`, producing 61 contract files (60 directory contracts + 1 root blueprint). No `README.md` was touched; no source code was modified.
+2. [x] Final correctness pass: 1,612 `[file:symbol]` citations all resolve to real files containing the cited symbol (`checked=1612 ok=1612 bad=0`); zero broken relative `EGM.md` links; 0 failed test suites (`cargo test -p domainforge-core --features cli` → 1,294 passed, 0 failed).
+3. [ ] Review the 61 generated `EGM.md` files and decide whether to commit them, or to run the `egm-drift-report` skill against them first. Nothing was staged or committed.
+4. [ ] Decide the long-term home for these contracts. `EGM.md` was used specifically so human-maintained `README.md` files stay authoritative; if the contracts should become `README.md`, the Correction Policy merge path must be run deliberately, not by overwrite.
+5. [ ] `python/sea_dsl/` is empty and `python/domainforge/` holds only gitignored `.so` artifacts, so both got no contract. Either commit real Python sources there or delete the directories.
+6. [x] Ran the `egm-drift-report` skill over the 61 contracts; report at `.agents/reports/2026-10-30-egm-drift-report.md`. It found and fixed 4 contract defects (invented `.sea`/`.json` counts and an unqualified target count in the root blueprint, plus 2 mis-citations) and reports 5 residual drifts for triage.
+7. [ ] Triage the residual drifts in that report. Highest value first: the `to_graph` doc comment at `domainforge-core/src/kg.rs:1087` points at `.sea/interaction/README.md`, which does not exist — create the file or re-point the comment at `docs/subsystems/graph-store.md`.
+8. [ ] Decide whether `docs/` should carry its own contract. It was pruned as non-source, but the projection contracts cite ADR-011 §2 and nothing in the contract tree says where that ADR lives.
+
 ## Native CLI distribution (2026-10-28, branch feat/native-cli-distribution)
 
 1. [x] Committed `1180ed1`, pushed `feat/native-cli-distribution`, opened PR #164. `Package Native CLI` run 40687663700 passed linux amd64/arm64, macOS universal, and Windows; PR CI run 40689541396 is fully green including `package-linux`.

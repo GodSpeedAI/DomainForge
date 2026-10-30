@@ -1,3 +1,23 @@
+# Current State: EGM documentation bootstrap (2026-10-30)
+
+- [x] Ran the `egm-bootstrap` skill over the whole repository with `target_filename=EGM.md` (chosen so the 12 existing human-maintained `README.md` files, including the 23 KB root README, stay untouched — verified: no `README.md` appears as a new/modified file from this task).
+- [x] Scope after BFS discovery + bottom-up pruning: **60 code-bearing directories**. Docs-only, test-only, build-output, and gitignored trees were excluded (`docs/`, `typescript-tests/`, `tests/`, `node_modules/`, `target/`, `dist/`, `pkg/`, `fixtures/`, `evidence/`, `secrets/`, `graft/`, `docs/archive/`). The discovery count (60) exceeded the skill's 15-directory safety gate, so explicit user approval was obtained before any worker ran.
+- [x] Four parallel sub-orchestrator workers partitioned the tree (Adaptive Depth Partitioning), producing 60 directory contracts, plus 1 root `EGM.md` blueprint written by the root orchestrator = **61 files**.
+- [x] Classification: 58 Peanuts (direct source files) and 3 Hays (`domainforge-python`, `schemas`, and the root blueprint). Verified against direct-file counts, not recursive counts.
+- [x] **Grounding verified mechanically**: a checker script resolved every backtick `[file:symbol]` citation against the filesystem — `checked=1612 ok=1612 bad=0`. Two defects were found and fixed during this pass: `scripts/verify/EGM.md` cited a non-existent `:elif` symbol (the script uses `if/else`), and `domainforge-core/src/cli/EGM.md` cited `[lib.rs]` from a subdirectory (now `[../lib.rs]`).
+- [x] **Link verification**: zero broken relative `EGM.md` links across all 61 files (both markdown-link and backticked-path forms checked).
+- [x] **No test/behaviour claim was weakened**: documentation-only task, so no assertions were touched. `cargo test -p domainforge-core --features cli` → **1,294 passed, 0 failed, 0 failed suites**. No `.rs`, `.py`, `.ts`, `.js`, `.sh`, `.pest`, `.toml`, or `.json` file was modified.
+- [x] Deliberate non-contracts recorded as gaps rather than invented: `python/sea_dsl/` is genuinely empty and `python/domainforge/` holds only gitignored `.so` artifacts, so neither got a contract. `packaging/windows/` (only `.ps1`/`.iss`) and `schemas/{archimate,asyncapi,bpmn,cep_eval,cmmn,otel}` (vendored XSD/JSON, no source) are documented as unlinked bullets in their parents.
+- [ ] **Not staged and not committed** (skill VCS-isolation constraint). The pre-existing staged changes to `README.md` and `docs/**` were present before this task and were not authored by it.
+- [ ] Optional follow-up not yet run: the `egm-drift-report` skill against the 61 contracts.
+
+## Observed debt recorded during this task
+
+Two entries were appended to `.agents/OBSERVED_DEBT.md` while reading `domainforge-core/src`; both were independently verified against source by the root orchestrator:
+
+- `D-doc-egm-1` — `println!("debug insert annotation ...")` at `domainforge-core/src/parser/ast.rs:1283` runs in release builds and can corrupt `domainforge parse --format json` output. Confirmed by reading the exact line.
+- `D-doc-egm-2` — `domainforge test` is a registered stub returning `Ok(())` (exit 0) at `domainforge-core/src/cli/test.rs:9`. Confirmed by reading the whole 11-line file.
+
 # Current State: Native CLI distribution (2026-10-28, branch feat/native-cli-distribution)
 
 - [x] New reusable `.github/workflows/package.yml` builds the standalone CLI on Ubuntu 22.04 amd64/arm64, macOS (universal, with native Intel fallback), and Windows x86_64; every job installs its own package and runs the functional smoke before uploading `pkg-*` artifacts.

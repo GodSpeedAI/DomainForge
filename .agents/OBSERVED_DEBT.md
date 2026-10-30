@@ -252,3 +252,30 @@ fixed and why.*
 - **Where:** `package.yml` `on.push.branches`.
 - **Impact:** Adds four platform builds per main merge (release candidates are downloadable from the run). The release path is unaffected.
 - **Smallest fix:** Remove `main` from the push trigger if cost outweighs the convenience; `workflow_dispatch` and `workflow_call` remain.
+
+## D-doc-egm-1. `println!` debug statement left in the flow-annotation parse path
+
+- **Date:** 2026-10-30
+- **Location:** `domainforge-core/src/parser/ast.rs:1283`
+- **Debt:** `println!("debug insert annotation {} = {:?}", key, value)` runs on every flow annotation parsed in release builds. It pollutes stdout for library consumers (the Python/TypeScript/WASM bindings and any caller that parses into a `Graph`) and can corrupt machine-readable output such as `domainforge parse --format json`, since the debug line is interleaved with the intended payload.
+- **Evidence:** Code reading while documenting `domainforge-core/src/parser`. The statement sits inside `parse_annotation`'s flow-annotation arm, immediately before `annotations.insert(key, value)`, with no `cfg(test)` or `log::debug!` guard. Not executed to reproduce.
+- **Confidence:** medium
+- **Closure:** Delete the line or convert it to `log::debug!`. File touched: `domainforge-core/src/parser/ast.rs`. Size S.
+
+## D-doc-egm-2. `domainforge test` subcommand is a registered stub
+
+- **Date:** 2026-10-30
+- **Location:** `domainforge-core/src/cli/test.rs:9` (`run`); surface declared at `domainforge-core/src/cli/mod.rs:34` (`Commands::Test`)
+- **Debt:** `Commands::Test` is part of the public CLI subcommand enum and is documented in `--help`, but `test::run` only prints `"Test runner not yet implemented. Pattern: {}"` and returns `Ok(())` — exit code 0. A script or CI step invoking `domainforge test <pattern>` therefore reports success while testing nothing.
+- **Evidence:** Code reading while documenting `domainforge-core/src/cli`. `run` body is a single `println!` followed by `Ok(())`. Not executed.
+- **Confidence:** medium
+- **Closure:** Either implement the runner, or make the stub fail non-zero (or hide the subcommand behind `#[command(hide = true)]`) so it cannot be mistaken for a passing gate. Files: `domainforge-core/src/cli/test.rs`, possibly `domainforge-core/src/cli/mod.rs`. Size S to M depending on chosen direction.
+
+## D-doc-egm-3. `to_graph` doc comment points at a file that does not exist
+
+- **Date:** 2026-10-30
+- **Location:** `domainforge-core/src/kg.rs:1087` (inside the `to_graph` doc comment)
+- **Debt:** The comment tells readers to use the Canonical Semantic Envelope and cites `.sea/interaction/README.md` "Known Toolchain Boundaries" as the place to learn why. Neither `.sea/` nor `.sea/interaction/README.md` exists in the repository, so the documented escape hatch for a real functional gap is unreachable. The gap itself is real: `to_graph` reconstructs `Entity`/`Resource`/`Flow`/`Relation` but silently drops the `sea:EntityInstance` and `sea:Policy` triples that `to_turtle` emits.
+- **Evidence:** `rg -n 'sea/interaction' domainforge-core/src/kg.rs` returns only line 1087. `ls -d .sea` reports no such directory; the only root `.sea*` entry is `.sea-registry.toml`. `git ls-files | grep -i interaction` lists fixtures and `.agents/` plans but no `.sea/interaction/`.
+- **Confidence:** high (the referenced path was checked directly and is absent)
+- **Closure:** Either create `.sea/interaction/README.md` with a "Known Toolchain Boundaries" section, or re-point the comment at an existing document such as `docs/subsystems/graph-store.md`. Files: `domainforge-core/src/kg.rs` (and possibly the new doc). Size S.

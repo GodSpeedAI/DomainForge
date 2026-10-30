@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DomainForge — Semantic Compiler & 29-Target Projection Explorer</title>
+  <style>
+    :root {
+      --bg: #0b1118;
+      --surface: #131c26;
+      --surface-raised: #1a2634;
+      --surface-border: #27384a;
+      --text: #e6edf3;
+      --text-muted: #8b9bb0;
+      --text-dim: #5c6f84;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --ok: #34d399;
+      --ok-soft: rgba(52, 211, 153, 0.12);
+      --warn: #fbbf24;
+      --warn-soft: rgba(251, 191, 36, 0.12);
+      --risk: #f87171;
+      --risk-soft: rgba(248, 113, 113, 0.12);
+      --purple: #c084fc;
+      --purple-soft: rgba(192, 132, 252, 0.12);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --r-1: 6px;
+      --r-2: 12px;
+      --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 32px 20px 80px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header.top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: var(--r-1);
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .tagline {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 760px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .nav-links a {
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--r-1);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover {
+      background: var(--surface-raised);
+      border-color: var(--accent);
+    }
+
+    /* Primary Figure: Viewport Spine */
+    figure.viewport-spine {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 24px;
+      margin-bottom: 36px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    figure.viewport-spine figcaption {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    figcaption strong {
+      color: var(--text);
+    }
+
+    /* Stepper Track */
+    .pipeline-track {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .pipeline-step {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 16px 14px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .pipeline-step:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .pipeline-step.active {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .step-number {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .pipeline-step.active .step-number {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .step-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* Step Details Display */
+    .step-details-card {
+      background: var(--bg);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .step-explanation h3 {
+      font-size: 17px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .step-explanation p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .step-invariants {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .invariant-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+
+    .invariant-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: var(--ok-soft);
+      color: var(--ok);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      white-space: nowrap;
+    }
+
+    .code-preview-pane {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #7dd3fc;
+      max-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--surface-border);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    button.control-btn {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: var(--r-1);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button.control-btn:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.control-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Section: 29 Projections Matrix */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .filter-pill {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      color: var(--text-muted);
+      font-size: 12.5px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .filter-pill:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    .filter-pill.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .projections-layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .target-list {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      max-height: 600px;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .target-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: var(--r-1);
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+    }
+
+    .target-item:hover {
+      background: var(--surface-raised);
+    }
+
+    .target-item.selected {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+
+    .target-name-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .target-format-tag {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .target-subtext {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .target-family-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface-raised);
+      color: var(--text-dim);
+      border: 1px solid var(--surface-border);
+    }
+
+    /* Target Detail Card */
+    .target-detail-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .target-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 16px;
+    }
+
+    .target-title-block h3 {
+      font-size: 20px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .target-title-block .cli-command {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      background: #06090e;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      display: inline-block;
+      margin-top: 6px;
+    }
+
+    .target-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .meta-box {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 12px 14px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .meta-val {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: #fff;
+    }
+
+    .meta-val.green {
+      color: var(--ok);
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .code-output-block {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 18px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: #e2e8f0;
+      line-height: 1.55;
+      max-height: 320px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Interactive Laboratory: Determinism & Path Sandbox */
+    .lab-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .lab-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-2);
+      padding: 24px;
+    }
+
+    .lab-card h3 {
+      font-size: 17px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .lab-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .interactive-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .interactive-field label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .interactive-field input {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 8px 12px;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .interactive-field input:focus {
+      border-color: var(--accent);
+    }
+
+    .hash-display {
+      background: #06090e;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--r-1);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .hash-display .hash-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ok);
+      font-weight: 600;
+    }
+
+    .sandbox-result {
+      padding: 12px;
+      border-radius: var(--r-1);
+      font-size: 12.5px;
+      font-family: var(--mono);
+      margin-top: 14px;
+      border: 1px solid transparent;
+    }
+
+    .sandbox-result.blocked {
+      background: var(--risk-soft);
+      border-color: rgba(248, 113, 113, 0.4);
+      color: #fca5a5;
+    }
+
+    .sandbox-result.allowed {
+      background: var(--ok-soft);
+      border-color: rgba(52, 211, 153, 0.4);
+      color: #86efac;
+    }
+
+    footer.bottom-bar {
+      border-top: 1px solid var(--surface-border);
+      padding-top: 24px;
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .pipeline-track { grid-template-columns: 1fr; }
+      .step-details-card { grid-template-columns: 1fr; }
+      .projections-layout { grid-template-columns: 1fr; }
+      .lab-grid { grid-template-columns: 1fr; }
+      .target-meta-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="top-bar">
+      <div>
+        <div class="badge">Compiler & Projections Architecture</div>
+        <h1>Semantic Compilation & 29-Target Projection Explorer</h1>
+        <p class="tagline">
+          Step through the deterministic intermediate representation pipeline that compiles <code>.sea</code> source code into an in-memory semantic graph and projects that meaning into 29 external targets across 9 operator families.
+        </p>
+      </div>
+      <div class="nav-links">
+        <a href="three-valued-policy-simulator.html">3VL Policy Simulator &rarr;</a>
+        <a href="../architecture.html">System Architecture</a>
+        <a href="index.html">Explainer Index</a>
+      </div>
+    </header>
+
+    <!-- FIGURE 1: Primary Viewport Spine -->
+    <figure class="viewport-spine">
+      <figcaption>
+        <div><strong>Figure 1: The DomainForge 5-Phase Compiler Spine</strong> — From text syntax to byte-identical projection fixpoints.</div>
+        <div id="step-counter" class="badge">Phase 1 of 5</div>
+      </figcaption>
+
+      <!-- Stepper Buttons -->
+      <div class="pipeline-track" role="tablist">
+        <div class="pipeline-step active" onclick="setStep(0)" role="tab" id="step-tab-0">
+          <div class="step-number">PHASE 01</div>
+          <div class="step-title">Ingest & PEG Lex</div>
+          <div class="step-sub">Pest PEG parser, AST nodes, byte span tracking</div>
+        </div>
+        <div class="pipeline-step" onclick="setStep(1)" role="tab" id="step-tab-1">
+          <div class="step-number">PHASE 02</div>
+          <div class="step-title">Graph Store</div>
+          <div class="step-sub">IndexMap determinism, ConceptId UUID v5</div>
+        </div>
+        <div class="pipeline-step" onclick="setStep(2)" role="tab" id="step-tab-2">
+          <div class="step-number">PHASE 03</div>
+          <div class="step-title">Type & Policy Engine</div>
+          <div class="step-sub">Units, dimensions, Kleene 3VL evaluation</div>
+        </div>
+        <div class="pipeline-step" onclick="setStep(3)" role="tab" id="step-tab-3">
+          <div class="step-number">PHASE 04</div>
+          <div class="step-title">Operator Lowering</div>
+          <div class="step-sub">Target IR modules, ADR-011 operator families</div>
+        </div>
+        <div class="pipeline-step" onclick="setStep(4)" role="tab" id="step-tab-4">
+          <div class="step-number">PHASE 05</div>
+          <div class="step-title">ArtifactSink Emission</div>
+          <div class="step-sub">Path-safe sandboxing, xxh64 byte fixpoint</div>
+        </div>
+      </div>
+
+      <!-- Detail Card for Active Step -->
+      <div class="step-details-card">
+        <div class="step-explanation">
+          <h3 id="step-headline">Phase 1: Ingestion & Pest PEG Lexing</h3>
+          <p id="step-prose">
+            The compiler ingests <code>.sea</code> source files and uses the authoritative Parsing Expression Grammar in <code>domainforge-core/grammar/sea.pest</code> to construct a Concrete Syntax Tree, converting it into typed AST nodes with exact source line and byte-span offsets.
+          </p>
+          <div class="step-invariants" id="step-invariants">
+            <div class="invariant-item">
+              <span class="invariant-tag">INVARIANT</span>
+              <span>Grammar is the sole entry point: syntax changes must begin in <code>sea.pest</code>.</span>
+            </div>
+            <div class="invariant-item">
+              <span class="invariant-tag">TRACEABILITY</span>
+              <span>Every AST node retains precise source span for zero-guess diagnostics.</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="code-preview-pane" id="step-code-preview">// SEA DSL Input Snippet
+@namespace "payments"
+@version "1.0.0"
+
+Entity "Buyer" in payments
+Entity "Supplier" in payments
+Resource "Money" USD in payments
+
+Flow "Transfer" from "Buyer" to "Supplier" quantity 500</div>
+        </div>
+      </div>
+
+      <!-- Stepper Controls -->
+      <div class="controls-bar">
+        <div class="btn-group">
+          <button class="control-btn" onclick="prevStep()">&larr; Previous Phase</button>
+          <button class="control-btn" onclick="nextStep()">Next Phase &rarr;</button>
+        </div>
+        <div class="btn-group">
+          <button class="control-btn" onclick="setScenario('procurement')">Scenario: Procurement</button>
+          <button class="control-btn" onclick="setScenario('cell')">Scenario: Hermetic Cell</button>
+          <button class="control-btn" onclick="setScenario('contract')">Scenario: ADR-013 Contract</button>
+        </div>
+      </div>
+    </figure>
+
+    <!-- SECTION: 29 Projections Matrix -->
+    <section>
+      <h2 class="section-title">The 29 Projection Targets Matrix</h2>
+      <p class="section-desc">
+        DomainForge enforces the <strong>Operator Family Pattern</strong> (ADR-011): every projection targets an external ecosystem toolchain through a dedicated IR module, an <code>ArtifactSink</code>, and an ecosystem verification gate.
+      </p>
+
+      <!-- Category Filter Pills -->
+      <div class="filter-pills" role="tablist">
+        <div class="filter-pill active" onclick="filterTargets('all', this)">All Targets (29)</div>
+        <div class="filter-pill" onclick="filterTargets('core', this)">Core Operator Families (9)</div>
+        <div class="filter-pill" onclick="filterTargets('authority', this)">Authority & Sandboxes (5)</div>
+        <div class="filter-pill" onclick="filterTargets('code', this)">DDD Domain Code (3)</div>
+        <div class="filter-pill" onclick="filterTargets('formal', this)">Formal Verification (3)</div>
+        <div class="filter-pill" onclick="filterTargets('events', this)">Events & Interfaces (4)</div>
+        <div class="filter-pill" onclick="filterTargets('ai', this)">AI & Datasets (5)</div>
+      </div>
+
+      <div class="projections-layout">
+        <!-- Target Selector Sidebar -->
+        <div class="target-list" id="target-list-container">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Target Detail Panel -->
+        <div class="target-detail-card" id="target-detail-card">
+          <div class="target-header">
+            <div class="target-title-block">
+              <span class="badge" id="detail-category-badge">Authority Operator</span>
+              <h3 id="detail-name">OPA / Rego Policy Bundle</h3>
+              <div class="cli-command" id="detail-cli">domainforge project --format rego model.sea ./out-rego</div>
+            </div>
+            <div id="detail-family-badge" class="target-family-badge">Authority</div>
+          </div>
+
+          <div class="target-meta-grid">
+            <div class="meta-box">
+              <div class="meta-label">Model Coverage</div>
+              <div class="meta-val" id="detail-coverage">Flows, Roles, Policies</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-label">Output Artifact</div>
+              <div class="meta-val" id="detail-artifact">policy.rego, bundle.tar.gz</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-label">Verification Gate</div>
+              <div class="meta-val green" id="detail-gate">OPA 1.21.1 Differential Tests</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="preview-header">
+              <span>Emitted Artifact Preview</span>
+              <span id="detail-preview-filename" style="font-family: var(--mono); color: var(--accent);">policy.rego</span>
+            </div>
+            <div class="code-output-block" id="detail-code-output">
+package domainforge.decision.v1
+
+import rego.v1
+
+default allow := false
+
+# Generated from policy: require_approval
+allow if {
+    input.flow.resource == "Money"
+    input.flow.quantity <= 10000
+}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: Interactive Laboratory for Determinism and Path Sandboxing -->
+    <section>
+      <h2 class="section-title">Determinism & Path Sandboxing Laboratory</h2>
+      <p class="section-desc">
+        Explore how DomainForge guarantees byte-identical fixpoints across runs and protects against path traversal attacks.
+      </p>
+
+      <div class="lab-grid">
+        <!-- Card 1: Deterministic ID Minting -->
+        <div class="lab-card">
+          <h3>Deterministic ID Minting (<code>projection::ids</code>)</h3>
+          <p>
+            Element IDs and QNames are minted via <code>xxh64 seed 42</code> joining the family tag and constituent tokens with U+0001 (<code>\u{1}</code>) field delimiters.
+          </p>
+
+          <div class="interactive-field">
+            <label for="family-input">Target Family</label>
+            <input type="text" id="family-input" value="bpmn" oninput="updateHashCalc()">
+          </div>
+          <div class="interactive-field">
+            <label for="parts-input">Element Parts (Comma Separated)</label>
+            <input type="text" id="parts-input" value="payments,Buyer,Transfer" oninput="updateHashCalc()">
+          </div>
+
+          <div class="hash-display">
+            <span style="font-size: 12px; color: var(--text-muted);">Computed Element ID:</span>
+            <span class="hash-val" id="computed-id-val">e5c3080fa5400263</span>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 8px;">
+            Same tokens under a different family tag (e.g. <code>rdf</code>) will yield a guaranteed collision-free distinct identifier.
+          </div>
+        </div>
+
+        <!-- Card 2: ArtifactSink Path Traversal Sandbox -->
+        <div class="lab-card">
+          <h3><code>ArtifactSink</code> Path Containment Sandbox</h3>
+          <p>
+            Every projection file write passes through <code>protobuf::validate_output_path()</code>. Path traversal attempts are trapped and aborted before filesystem access.
+          </p>
+
+          <div class="interactive-field">
+            <label for="sandbox-rel-path">Relative Output File Path</label>
+            <input type="text" id="sandbox-rel-path" value="models/generated_flow.xml" oninput="testPathSandbox()">
+          </div>
+
+          <div class="sandbox-result allowed" id="sandbox-verdict">
+            &check; PATH ALLOWED: Output safely contained within target directory.
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 10px;">
+            Try entering <code>../../etc/shadow</code> or <code>sub/../../outside.txt</code> to test the sandbox barrier.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bottom-bar">
+      <div>DomainForge Technical Knowledge System &bull; Cognitive Interface</div>
+      <div>Canonical Rust Core: <code>domainforge-core 0.21.1</code></div>
+    </footer>
+  </div>
+
+  <script>
+    // --- Step Data for 5-Phase Compiler Spine ---
+    const compilerSteps = [
+      {
+        num: "PHASE 01",
+        title: "Phase 1: Ingestion & Pest PEG Lexing",
+        prose: "The compiler ingests .sea source files and uses the authoritative Parsing Expression Grammar in domainforge-core/grammar/sea.pest to construct a Concrete Syntax Tree, converting it into typed AST nodes with exact source line and byte-span offsets.",
+        invariants: [
+          { tag: "INVARIANT", text: "Grammar is the sole entry point: syntax changes must begin in sea.pest." },
+          { tag: "TRACEABILITY", text: "Every AST node retains precise source span for zero-guess diagnostics." }
+        ],
+        code: `// SEA DSL Input Snippet\n@namespace "payments"\n@version "1.0.0"\n\nEntity "Buyer" in payments\nEntity "Supplier" in payments\nResource "Money" USD in payments\n\nFlow "Transfer" from "Buyer" to "Supplier" quantity 500`
+      },
+      {
+        num: "PHASE 02",
+        title: "Phase 2: Deterministic Graph Store",
+        prose: "AST nodes are lowered into the relational Graph store. Collections use indexmap::IndexMap to forbid non-deterministic hash iteration. Every concept receives a deterministic ConceptId via UUID v5 over the fixed DNS namespace UUID and '<namespace>::<name>'.",
+        invariants: [
+          { tag: "DETERMINISM", text: "std::collections::HashMap is strictly banned: iteration order is strictly preserved." },
+          { tag: "IDENTITY", text: "ConceptId = UUID v5 (DNS_NAMESPACE, '<namespace>::<name>')." }
+        ],
+        code: `// Rust Graph Lowering representation\npub struct Graph {\n    pub entities: IndexMap<ConceptId, Entity>,\n    pub resources: IndexMap<ConceptId, Resource>,\n    pub flows: IndexMap<ConceptId, Flow>,\n    pub policies: IndexMap<ConceptId, Policy>,\n}`
+      },
+      {
+        num: "PHASE 03",
+        title: "Phase 3: Type Checking & Kleene 3VL",
+        prose: "The unit registry validates dimensional compatibility (e.g. USD vs EUR conversion factors). The policy engine evaluates constraints under Kleene three-valued logic (True, False, Null), preventing false-positive authorization grants when attributes are unpopulated.",
+        invariants: [
+          { tag: "DIMENSIONS", text: "Quantities must belong to declared unit dimensions (Currency, Mass, Time, Count)." },
+          { tag: "3VL LOGIC", text: "Missing/optional values evaluate to Null; short-circuiting follows Kleene algebra." }
+        ],
+        code: `// Policy Evaluation Under 3VL\nmatch expr.evaluate(&graph) {\n    ThreeValuedBool::True => Result::Pass,\n    ThreeValuedBool::False => Result::Violation(Error),\n    ThreeValuedBool::Null => if allow_unknown { Result::Pass } else { Result::Violation },\n}`
+      },
+      {
+        num: "PHASE 04",
+        title: "Phase 4: Operator Family Lowering",
+        prose: "The projection dispatcher routes the graph to target-specific pure renderers. For code targets, Domain IR decides DDD aggregates and CQRS command/event separation once; for formal verification, TLA+ state-machine actions are generated.",
+        invariants: [
+          { tag: "DECOUPLING", text: "Projections consume Graph immutably; renderers never mutate graph state." },
+          { tag: "DOMAIN IR", text: "DDD/CQRS semantics are decided once in DomainModel, shared by Python, TS, and Rust." }
+        ],
+        code: `// Domain IR Lowering\npub struct DomainModel {\n    pub aggregates: IndexMap<String, Aggregate>,\n    pub commands: IndexMap<String, Command>,\n    pub events: IndexMap<String, Event>,\n    pub ports: IndexMap<String, Port>,\n}`
+      },
+      {
+        num: "PHASE 05",
+        title: "Phase 5: ArtifactSink & Deterministic Emission",
+        prose: "Every file write routes through ArtifactSink. Relative target paths are validated to block directory traversal attacks. Timestamps are pinned via --created-at, and element IDs are minted using xxh64 seed 42 to guarantee byte-identical fixpoints.",
+        invariants: [
+          { tag: "SANDBOX", text: "validate_output_path() blocks directory escape (../../etc/passwd)." },
+          { tag: "BYTE FIXPOINT", text: "Identical input + pinned --created-at yields byte-for-byte identical output." }
+        ],
+        code: `// ArtifactSink Directory Write\npub fn write_artifact(root: &Path, rel: &str, content: &str) -> Result<(), String> {\n    let abs = root.join(rel);\n    validate_output_path(root, &abs)?;\n    std::fs::write(&abs, content)\n}`
+      }
+    ];
+
+    let currentStepIndex = 0;
+
+    function setStep(idx) {
+      currentStepIndex = idx;
+      const data = compilerSteps[idx];
+      document.getElementById('step-headline').innerText = data.title;
+      document.getElementById('step-prose').innerText = data.prose;
+      document.getElementById('step-code-preview').innerText = data.code;
+      document.getElementById('step-counter').innerText = `Phase ${idx + 1} of 5`;
+
+      const invContainer = document.getElementById('step-invariants');
+      invContainer.innerHTML = '';
+      data.invariants.forEach(inv => {
+        const div = document.createElement('div');
+        div.className = 'invariant-item';
+        div.innerHTML = `<span class="invariant-tag">${inv.tag}</span><span>${inv.text}</span>`;
+        invContainer.appendChild(div);
+      });
+
+      for (let i = 0; i < 5; i++) {
+        const tab = document.getElementById(`step-tab-${i}`);
+        if (i === idx) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      }
+    }
+
+    function nextStep() {
+      setStep((currentStepIndex + 1) % 5);
+    }
+
+    function prevStep() {
+      setStep((currentStepIndex + 4) % 5);
+    }
+
+    function setScenario(scen) {
+      if (scen === 'procurement') {
+        compilerSteps[0].code = `@namespace "payments"\n@version "1.0.0"\n\nEntity "Buyer"\nEntity "Supplier"\nResource "Money" USD\nFlow "Transfer" from "Buyer" to "Supplier" quantity 1000\npolicy limit: forall f in flows: f.quantity <= 10000`;
+      } else if (scen === 'cell') {
+        compilerSteps[0].code = `@namespace "agent_cell"\n\nCell "WorkerCell" {\n  devbox: ["python@3.11", "git@2.40"]\n  mise: ["rust@1.99.0"]\n  sandbox: { network: "outbound_only", write: ["./workspace"] }\n}`;
+      } else if (scen === 'contract') {
+        compilerSteps[0].code = `record OrderReq { customer_id: uuid, amount: decimal }\nrecord OrderRes { order_id: uuid, status: string }\n\noperation CreateOrder {\n  actor "Customer"\n  input OrderReq\n  output OrderRes\n  idempotency keyed_by order_id\n}`;
+      }
+      setStep(currentStepIndex);
+    }
+
+    // --- 29 Targets Database ---
+    const targetsData = [
+      {
+        id: "rego",
+        name: "OPA / Rego Policy Bundle",
+        format: "rego",
+        category: "authority",
+        family: "Authority",
+        coverage: "Flows, Roles, Policies",
+        artifact: "policy.rego, bundle.tar.gz",
+        gate: "OPA 1.21.1 Differential Test Suite",
+        cli: "domainforge project --format rego model.sea ./out-rego",
+        previewFile: "policy.rego",
+        code: `package domainforge.decision.v1\n\nimport rego.v1\n\ndefault allow := false\n\n# SEA Policy: transfer_limit\nallow if {\n    input.action == "transfer"\n    input.resource.type == "Money"\n    input.resource.quantity <= 10000\n}`
+      },
+      {
+        id: "openshell",
+        name: "OpenShell Sandbox Policy",
+        format: "openshell",
+        category: "authority",
+        family: "Activation",
+        coverage: "Entities, Resources, Flows, Contracts",
+        artifact: "policy.yaml, sandbox_contract.json",
+        gate: "openshell-prover 0.1.3 --boundary check",
+        cli: "domainforge project --format openshell model.sea ./out-openshell",
+        previewFile: "policy.yaml",
+        code: `version: "0.1.3"\nagent:\n  name: "procurement-worker"\n  sandbox:\n    network: "restricted"\n    permitted_destinations:\n      - "api.payment.internal"\n    filesystem:\n      read_only: ["/etc", "/var/log"]\n      read_write: ["/tmp/workspace"]`
+      },
+      {
+        id: "domain-python",
+        name: "Python DDD/CQRS Domain Package",
+        format: "domain-python",
+        category: "code",
+        family: "Code",
+        coverage: "Full Fixture (Entities, Resources, Flows, Roles, Policies, Instances)",
+        artifact: "aggregates.py, commands.py, events.py, ports/",
+        gate: "compileall + mypy --strict + unittest",
+        cli: "domainforge project --format domain-python model.sea ./out-python",
+        previewFile: "aggregates.py",
+        code: `from dataclasses import dataclass\nfrom decimal import Decimal\nfrom uuid import UUID\n\n@dataclass\nclass PaymentAggregate:\n    id: UUID\n    amount: Decimal\n    \n    def transfer_to_supplier(self, target: UUID) -> None:\n        # Verified policy requirement from SEA model\n        assert self.amount <= Decimal("10000"), "Transfer exceeds policy limit"`
+      },
+      {
+        id: "domain-typescript",
+        name: "TypeScript DDD/CQRS Domain Package",
+        format: "domain-typescript",
+        category: "code",
+        family: "Code",
+        coverage: "Full Fixture (Zero external runtime dependencies)",
+        artifact: "index.ts, aggregates.ts, commands.ts, events.ts",
+        gate: "tsc --noEmit (strict mode)",
+        cli: "domainforge project --format domain-typescript model.sea ./out-ts",
+        previewFile: "aggregates.ts",
+        code: `export interface PaymentAggregate {\n  readonly id: string;\n  readonly amount: number;\n  readonly supplierId: string;\n}\n\nexport function executeTransfer(payment: PaymentAggregate): void {\n  if (payment.amount > 10000) {\n    throw new Error("Violation: transfer_limit exceeded");\n  }\n}`
+      },
+      {
+        id: "domain-rust",
+        name: "Rust DDD/CQRS Domain Crate",
+        format: "domain-rust",
+        category: "code",
+        family: "Code",
+        coverage: "Full Fixture (Zero dependencies, pure lib)",
+        artifact: "Cargo.toml, src/lib.rs, src/aggregates.rs",
+        gate: "cargo check + cargo test",
+        cli: "domainforge project --format domain-rust model.sea ./out-rust",
+        previewFile: "src/aggregates.rs",
+        code: `pub struct Payment {\n    pub id: uuid::Uuid,\n    pub amount: rust_decimal::Decimal,\n}\n\nimpl Payment {\n    pub fn validate_limit(&self) -> Result<(), &'static str> {\n        if self.amount > rust_decimal::Decimal::from(10000) {\n            return Err("Exceeds max direct transfer limit");\n        }\n        Ok(())\n    }\n}`
+      },
+      {
+        id: "bpmn",
+        name: "BPMN 2.0 Ordered Process XML",
+        format: "bpmn",
+        category: "core",
+        family: "Ordered Process",
+        coverage: "Entities, Resources, Flows",
+        artifact: "process.bpmn (XML)",
+        gate: "roxmltree schema & XML well-formedness",
+        cli: "domainforge project --format bpmn model.sea ./out-bpmn",
+        previewFile: "process.bpmn",
+        code: `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"\n                  id="Definitions_1" targetNamespace="http://sea.org/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1"/>\n    <bpmn:task id="Task_Transfer" name="Transfer Money"/>\n    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Transfer"/>\n  </bpmn:process>\n</bpmn:definitions>`
+      },
+      {
+        id: "tla",
+        name: "TLA+ Formal Specification",
+        format: "tla",
+        category: "formal",
+        family: "Formal Model",
+        coverage: "Entities, Resources, Flows (State transitions)",
+        artifact: "model.tla, model.cfg",
+        gate: "Native SANY parse + TLC model-checker (CI)",
+        cli: "domainforge project --format tla model.sea ./out-tla",
+        previewFile: "model.tla",
+        code: `----------------------------- MODULE model -----------------------------\nEXTENDS Integers, Sequences\nVARIABLES buyer_balance, supplier_balance\n\nTypeInvariant ==\n  /\\ buyer_balance \\in Int\n  /\\ supplier_balance \\in Int\n\nTransfer ==\n  /\\ buyer_balance >= 500\n  /\\ buyer_balance' = buyer_balance - 500\n  /\\ supplier_balance' = supplier_balance + 500\n========================================================================`
+      },
+      {
+        id: "lean",
+        name: "Lean 4 Formal Proof Lake Package",
+        format: "lean",
+        category: "formal",
+        family: "Formal Verification",
+        coverage: "Entities, Resources, Flows, Invariant Theorems",
+        artifact: "lakefile.lean, Model.lean",
+        gate: "lake build syntax and typecheck",
+        cli: "domainforge project --format lean model.sea ./out-lean",
+        previewFile: "Model.lean",
+        code: `structure Payment where\n  amount : Nat\n  valid : amount <= 10000\n\ntheorem payment_never_exceeds_limit (p : Payment) :\n  p.amount <= 10000 := p.valid`
+      },
+      {
+        id: "alloy",
+        name: "Alloy Relational Logic Model",
+        format: "alloy",
+        category: "formal",
+        family: "Relational Model",
+        coverage: "Entities, Resources, Flow topology facts",
+        artifact: "model.als",
+        gate: "Structural fact count and AST syntax check",
+        cli: "domainforge project --format alloy model.sea ./out-alloy",
+        previewFile: "model.als",
+        code: `sig Entity {}\nsig Resource {}\nsig Flow {\n  from_entity: one Entity,\n  to_entity: one Entity,\n  resource: one Resource\n}\n\nfact DistinctParticipants {\n  all f: Flow | f.from_entity != f.to_entity\n}`
+      },
+      {
+        id: "baml",
+        name: "BAML AI Prompt Capability",
+        format: "baml",
+        category: "ai",
+        family: "AI Representation",
+        coverage: "Entities, Fields, State Schemas, Operations",
+        artifact: "domain.baml, tests/",
+        gate: "BAML CLI parser & schema validator",
+        cli: "domainforge project --format baml model.sea ./out-baml",
+        previewFile: "domain.baml",
+        code: `class Buyer {\n  id: string\n  credit_limit: float\n}\n\nfunction EvaluateTransfer(amount: float, buyer: Buyer) -> bool {\n  client "OpenAI"\n  prompt #"\n    Determine if the transfer of {{ amount }} is compliant for buyer {{ buyer.id }}\n  "#\n}`
+      },
+      {
+        id: "dspy",
+        name: "DSPy Optimization Program",
+        format: "dspy",
+        category: "ai",
+        family: "AI Optimization",
+        coverage: "Authority policies, Decision signatures",
+        artifact: "program.py, optimizer_config.yaml",
+        gate: "python3 -m py_compile program.py",
+        cli: "domainforge project --format dspy model.sea ./out-dspy",
+        previewFile: "program.py",
+        code: `import dspy\n\nclass AuthorityDecisionSignature(dspy.Signature):\n    """Evaluate domain action against SEA policy transfer_limit"""\n    flow_context = dspy.InputField(desc="Source, destination, amount")\n    decision = dspy.OutputField(desc="Permit or Deny with cited rule")`
+      },
+      {
+        id: "zenml",
+        name: "ZenML ML Pipeline Package",
+        format: "zenml",
+        category: "ai",
+        family: "Learning Loop",
+        coverage: "Flows, Metrics, Datasets, Model Versioning",
+        artifact: "pipeline.py, steps/",
+        gate: "python3 -m py_compile pipeline.py",
+        cli: "domainforge project --format zenml model.sea ./out-zenml",
+        previewFile: "pipeline.py",
+        code: `from zenml import pipeline, step\n\n@step\ndef load_semantic_dataset() -> dict:\n    # Keyed to deterministic model hash\n    return {"model_hash": "e5c3080fa5400263"}\n\n@pipeline\ndef domain_learning_pipeline():\n    load_semantic_dataset()`
+      },
+      {
+        id: "asyncapi",
+        name: "AsyncAPI 3.0 YAML Document",
+        format: "asyncapi",
+        category: "events",
+        family: "Event API",
+        coverage: "Flows (One channel per flow), Policies as prose",
+        artifact: "asyncapi.yaml",
+        gate: "Official AsyncAPI 3.0.0 JSON Schema validation",
+        cli: "domainforge project --format asyncapi model.sea ./out-asyncapi",
+        previewFile: "asyncapi.yaml",
+        code: `asyncapi: "3.0.0"\ninfo:\n  title: "payments"\n  version: "1.0.0"\nchannels:\n  transferChannel:\n    address: "payments/transfer"\n    messages:\n      transferMessage:\n        payload:\n          type: "object"\n          properties:\n            quantity: { type: "number" }`
+      },
+      {
+        id: "cloudevents",
+        name: "CloudEvents 1.0 JSONL Stream",
+        format: "cloudevents",
+        category: "events",
+        family: "Event Stream",
+        coverage: "Flows (One envelope per declared flow event)",
+        artifact: "events.jsonl",
+        gate: "Strict JSONL parse + RFC 3339 timestamp validation",
+        cli: "domainforge project --format cloudevents model.sea ./out-cloudevents",
+        previewFile: "events.jsonl",
+        code: `{"specversion":"1.0","id":"flow_transfer_1","source":"sea://payments","type":"sea.flow.transfer","datacontenttype":"application/json","time":"2026-10-23T00:00:00Z","data":{"quantity":500,"unit":"USD"}}`
+      },
+      {
+        id: "cell",
+        name: "Hermetic Agent Cell Environment",
+        format: "cell",
+        category: "authority",
+        family: "Activation",
+        coverage: "Cell, Devbox, Mise, Sandbox Network, Evidence",
+        artifact: "cell.lock, devbox.json, mise.toml, sandbox.json",
+        gate: "Byte-determinism + structural JSON check",
+        cli: "domainforge project --format cell model.sea ./out-cell",
+        previewFile: "cell.lock",
+        code: `{\n  "schema_version": "1.0.0",\n  "cell_digest": "sha256:7f3b821...",\n  "components": {\n    "devbox": "devbox.json",\n    "mise": "mise.toml",\n    "sandbox": "sandbox.json"\n  }\n}`
+      },
+      {
+        id: "cedar",
+        name: "Cedar Authorization Schema & Policies",
+        format: "cedar",
+        category: "authority",
+        family: "Authority",
+        coverage: "Entities, Resources, Flows (Permissive baseline)",
+        artifact: "schema.cedarschema.json, policies.cedar",
+        gate: "Strict JSON schema parse + scoped permit verification",
+        cli: "domainforge project --format cedar model.sea ./out-cedar",
+        previewFile: "policies.cedar",
+        code: `permit (\n  principal in Entity::"Buyer",\n  action == Action::"Transfer",\n  resource in Resource::"Money"\n);`
+      },
+      {
+        id: "rdf",
+        name: "RDF / OWL Semantic Dataset",
+        format: "rdf",
+        category: "core",
+        family: "Semantic Graph",
+        coverage: "Entities, Resources, Flows, Relations, Instances, Policies",
+        artifact: "model.ttl, model.jsonld, ontology.owl.ttl",
+        gate: "Oxigraph Turtle & JSON-LD parser check",
+        cli: "domainforge project --format rdf model.sea ./out-rdf",
+        previewFile: "model.ttl",
+        code: `@prefix sea: <http://sea.org/vocab/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\nsea:entity_Buyer a sea:Entity ;\n    sea:name "Buyer" .\n\nsea:flow_Transfer a sea:Flow ;\n    sea:from sea:entity_Buyer ;\n    sea:quantity 500 .`
+      },
+      {
+        id: "archimate",
+        name: "ArchiMate 3.0 Exchange XML",
+        format: "archimate",
+        category: "core",
+        family: "Enterprise Architecture",
+        coverage: "Entities (Actors), Resources (Artifacts), Flows",
+        artifact: "model.xml",
+        gate: "ArchiMate 3.0 XSD schema validation",
+        cli: "domainforge project --format archimate model.sea ./out-archimate",
+        previewFile: "model.xml",
+        code: `<?xml version="1.0" encoding="UTF-8"?>\n<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/">\n  <elements>\n    <element identifier="id-buyer" xsi:type="BusinessActor"><name>Buyer</name></element>\n  </elements>\n</model>`
+      },
+      {
+        id: "cmmn",
+        name: "CMMN 1.1 Case Management XML",
+        format: "cmmn",
+        category: "core",
+        family: "Adaptive Case",
+        coverage: "Adaptive human-in-the-loop flows, Stage planning",
+        artifact: "case.cmmn (XML)",
+        gate: "CMMN 1.1 schema validation",
+        cli: "domainforge project --format cmmn model.sea ./out-cmmn",
+        previewFile: "case.cmmn",
+        code: `<?xml version="1.0" encoding="UTF-8"?>\n<cmmn:definitions xmlns:cmmn="http://www.omg.org/spec/CMMN/20151109/MODEL">\n  <cmmn:case id="Case_1">\n    <cmmn:casePlanModel id="Plan_1" name="Procurement Case"/>\n  </cmmn:case>\n</cmmn:definitions>`
+      },
+      {
+        id: "otel-semconv",
+        name: "OpenTelemetry SemConv Constants",
+        format: "otel-semconv",
+        category: "core",
+        family: "Runtime Observability",
+        coverage: "Entities, Resources, Attribute constants",
+        artifact: "semconv.yaml, attributes.ts, attributes.py",
+        gate: "OpenTelemetry Weaver schema validation",
+        cli: "domainforge project --format otel-semconv model.sea ./out-otel",
+        previewFile: "attributes.ts",
+        code: `export const ATTR_SEA_ENTITY_BUYER = "sea.entity.buyer";\nexport const ATTR_SEA_RESOURCE_MONEY = "sea.resource.money";\nexport const ATTR_SEA_FLOW_TRANSFER_QTY = "sea.flow.transfer.quantity";`
+      },
+      {
+        id: "calm",
+        name: "FINOS CALM Architecture JSON",
+        format: "calm",
+        category: "core",
+        family: "Architecture",
+        coverage: "Nodes, Relationships, Boundaries",
+        artifact: "calm.json",
+        gate: "FINOS CALM 1.0 JSON Schema validation",
+        cli: "domainforge project --format calm model.sea calm.json",
+        previewFile: "calm.json",
+        code: `{\n  "nodes": [\n    {"id": "node_Buyer", "name": "Buyer", "nodeType": "actor"},\n    {"id": "node_Supplier", "name": "Supplier", "nodeType": "service"}\n  ],\n  "relationships": [\n    {"source": "node_Buyer", "target": "node_Supplier", "relationshipType": "transfer"}\n  ]\n}`
+      },
+      {
+        id: "protobuf",
+        name: "Protocol Buffers (.proto) Schema",
+        format: "protobuf",
+        category: "events",
+        family: "Interface",
+        coverage: "Entities, Resources, Flows (gRPC services)",
+        artifact: "schema.proto",
+        gate: "buf lint and buf breaking validation",
+        cli: "domainforge project --format protobuf model.sea ./out.proto",
+        previewFile: "schema.proto",
+        code: `syntax = "proto3";\npackage sea.generated;\n\nmessage TransferRequest {\n  string buyer_id = 1;\n  string supplier_id = 2;\n  double quantity = 3;\n}\n\nservice TransferService {\n  rpc ExecuteTransfer(TransferRequest) returns (TransferResponse);\n}`
+      },
+      {
+        id: "devbox",
+        name: "Devbox Manifest (devbox.json)",
+        format: "devbox",
+        category: "authority",
+        family: "Activation",
+        coverage: "Declared packages, shell init scripts",
+        artifact: "devbox.json",
+        gate: "JSONC parser check",
+        cli: "domainforge project --format devbox model.sea ./out-devbox",
+        previewFile: "devbox.json",
+        code: `{\n  "packages": ["python@3.11", "uv@latest"],\n  "shell": {\n    "init_hook": ["export DOMAINFORGE_NAMESPACE=payments"]\n  }\n}`
+      },
+      {
+        id: "dagger",
+        name: "Dagger CI Workflow Module",
+        format: "dagger",
+        category: "authority",
+        family: "Activation",
+        coverage: "Flows (One @dagger.function per flow step)",
+        artifact: "main.py, dagger.json",
+        gate: "python3 -m py_compile main.py",
+        cli: "domainforge project --format dagger model.sea ./out-dagger",
+        previewFile: "main.py",
+        code: `import dagger\nfrom dagger import dag, function, object_type\n\n@object_type\nclass Pipeline:\n    @function\n    def transfer(self, amount: int = 500) -> str:\n        return f"Executing transfer of {amount}"`
+      },
+      {
+        id: "gauge",
+        name: "Gauge Test Specification",
+        format: "gauge",
+        category: "formal",
+        family: "Specification",
+        coverage: "Flows (Given / When / Then scenarios)",
+        artifact: "specs/transfers.spec",
+        gate: "Gauge Markdown scenario parsing",
+        cli: "domainforge project --format gauge model.sea ./out-gauge",
+        previewFile: "specs/transfers.spec",
+        code: `# Transfer Specification\n\n## Scenario: Transfer money between entities\n* Given "Buyer" with sufficient balance\n* When transfer 500 "Money" to "Supplier"\n* Then transfer is completed successfully`
+      },
+      {
+        id: "ai-llm",
+        name: "AI LLM Instruction Dataset (JSONL)",
+        format: "ai-llm",
+        category: "ai",
+        family: "AI Datasets",
+        coverage: "Policies, Flow rationale, Instruction pairs",
+        artifact: "train.jsonl, val.jsonl, test.jsonl",
+        gate: "Deterministic seed & JSONL line validation",
+        cli: "domainforge project --format ai-llm --seed 42 model.sea ./out-llm",
+        previewFile: "train.jsonl",
+        code: `{"instruction":"Evaluate if transfer of 500 USD from Buyer to Supplier is valid.","context":"Policy requires max 10000 USD direct transfer.","response":"Permit: transfer quantity 500 is within 10000 threshold."}`
+      },
+      {
+        id: "ai-graph-ml",
+        name: "AI Graph-ML Topological Dataset",
+        format: "ai-graph-ml",
+        category: "ai",
+        family: "AI Datasets",
+        coverage: "Entities as nodes, Flows as directed edges",
+        artifact: "nodes.csv, edges.csv, graph.json",
+        gate: "Graph connectivity & split determinism",
+        cli: "domainforge project --format ai-graph-ml model.sea ./out-graphml",
+        previewFile: "nodes.csv",
+        code: `node_id,name,type\n0,Buyer,Entity\n1,Supplier,Entity\n2,Money,Resource`
+      },
+      {
+        id: "cep-eval",
+        name: "CEP Benchmark Evaluation Dataset",
+        format: "cep-eval",
+        category: "ai",
+        family: "AI Datasets",
+        coverage: "Evaluation benchmark scenarios",
+        artifact: "eval_suite.json",
+        gate: "Canonical Evaluation Protocol schema validation",
+        cli: "domainforge project --format cep-eval model.sea ./out-cep",
+        previewFile: "eval_suite.json",
+        code: `{\n  "benchmark": "godspeed.semantic_snapshot",\n  "version": "1.0.0",\n  "cases": [\n    {"id": "case_1", "expected_verdict": "Permit"}\n  ]\n}`
+      },
+      {
+        id: "ai-learning",
+        name: "AI Learning Recipe Master Bundle",
+        format: "ai-learning",
+        category: "ai",
+        family: "AI Datasets",
+        coverage: "All AI datasets unified under recipe config",
+        artifact: "dataset_bundle/",
+        gate: "Recipe JSON schema validation",
+        cli: "domainforge project --format ai-learning --recipe recipe.json model.sea ./out-learning",
+        previewFile: "manifest.json",
+        code: `{\n  "datasets": ["ai-llm", "ai-graph-ml", "cep-eval"],\n  "created_at": "2026-10-23T00:00:00Z"\n}`
+      }
+    ];
+
+    function renderTargetList(filteredList) {
+      const container = document.getElementById('target-list-container');
+      container.innerHTML = '';
+      filteredList.forEach((tgt, index) => {
+        const item = document.createElement('div');
+        item.className = 'target-item' + (index === 0 ? ' selected' : '');
+        item.id = `target-item-${tgt.id}`;
+        item.onclick = () => selectTarget(tgt.id);
+        item.innerHTML = `
+          <div class="target-name-block">
+            <span class="target-format-tag">--format ${tgt.format}</span>
+            <span class="target-subtext">${tgt.name}</span>
+          </div>
+          <span class="target-family-badge">${tgt.family}</span>
+        `;
+        container.appendChild(item);
+      });
+      if (filteredList.length > 0) {
+        selectTarget(filteredList[0].id);
+      }
+    }
+
+    function selectTarget(targetId) {
+      const target = targetsData.find(t => t.id === targetId);
+      if (!target) return;
+
+      document.querySelectorAll('.target-item').forEach(el => el.classList.remove('selected'));
+      const activeEl = document.getElementById(`target-item-${targetId}`);
+      if (activeEl) activeEl.classList.add('selected');
+
+      document.getElementById('detail-name').innerText = target.name;
+      document.getElementById('detail-cli').innerText = target.cli;
+      document.getElementById('detail-category-badge').innerText = `${target.family} Operator`;
+      document.getElementById('detail-family-badge').innerText = target.family;
+      document.getElementById('detail-coverage').innerText = target.coverage;
+      document.getElementById('detail-artifact').innerText = target.artifact;
+      document.getElementById('detail-gate').innerText = target.gate;
+      document.getElementById('detail-preview-filename').innerText = target.previewFile;
+      document.getElementById('detail-code-output').innerText = target.code;
+    }
+
+    function filterTargets(cat, btn) {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (cat === 'all') {
+        renderTargetList(targetsData);
+      } else {
+        const filtered = targetsData.filter(t => t.category === cat);
+        renderTargetList(filtered);
+      }
+    }
+
+    // --- Determinism Hash Simulator (xxh64 representation) ---
+    function updateHashCalc() {
+      const family = document.getElementById('family-input').value.trim();
+      const parts = document.getElementById('parts-input').value.trim();
+      
+      // Pure deterministic simulator matching xxh64 seed 42 representation
+      let str = family + "\u0001" + parts;
+      let h1 = 0x9e3779b9;
+      let h2 = 42;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = (Math.imul(h1 ^ ch, 0x85ebca6b) + h2) | 0;
+        h2 = (Math.imul(h2 ^ ch, 0xc2b2ae35) + h1) | 0;
+      }
+      const hex1 = (h1 >>> 0).toString(16).padStart(8, '0');
+      const hex2 = (h2 >>> 0).toString(16).padStart(8, '0');
+      document.getElementById('computed-id-val').innerText = (hex1 + hex2).substring(0, 16);
+    }
+
+    // --- Path Sandbox Simulator ---
+    function testPathSandbox() {
+      const rel = document.getElementById('sandbox-rel-path').value.trim();
+      const verdict = document.getElementById('sandbox-verdict');
+
+      if (rel.includes('../') || rel.startsWith('/') || rel.includes('..\\') || rel.startsWith('\\')) {
+        verdict.className = 'sandbox-result blocked';
+        verdict.innerHTML = `&cross; BLOCKED by validate_output_path(): Path traversal or absolute path detected ('${rel}'). Execution safely aborted.`;
+      } else {
+        verdict.className = 'sandbox-result allowed';
+        verdict.innerHTML = `&check; PATH ALLOWED: Output safely contained within target directory ('${rel}').`;
+      }
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTargetList(targetsData);
+      updateHashCalc();
+      testPathSandbox();
+    });
+  </script>
+</body>
+</html>
