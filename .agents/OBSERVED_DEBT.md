@@ -302,3 +302,25 @@ fixed and why.*
   map error categories to it in `main`. Must reconcile with `pack.rs` and
   `envelope.rs` before changing codes, since those are existing contracts.
   Policy call: not fixed in this change.
+
+## D-security-1. [RESOLVED e9347fe] DOM XSS sink in the path sandbox explainer
+
+- **Where:** `docs/explainers/projection-compiler-explorer.html`, `testPathSandbox()`
+  (the two `verdict.innerHTML` assignments that embed the user-typed path).
+- **Impact:** A crafted path typed into the explainer's input is parsed as HTML.
+  CodeQL reported it as `js/xss-through-dom` (high) on alerts 69 and 70, which
+  blocked the PR's CodeQL check.
+- **Evidence:** CodeQL check run 124951169390 on PR #167 (2026-11-01).
+- **Status:** [RESOLVED e9347fe] Both sinks now assign `textContent`. The other
+  `innerHTML` uses in the file (invariant tags, projection list) interpolate
+  static data and were left unchanged.
+
+## D-process-1. [RESOLVED e9347fe] Grammar-change gate fires on a non-grammar AST edit
+
+- **Where:** `scripts/check-sea-language-change.sh` (watched path
+  `domainforge-core/src/parser/ast.rs`), CI job `Lint & Format`.
+- **Impact:** A change that removes a debug line and copies a header value onto
+  `Graph` (no grammar or AST shape change) was blocked for lack of an ADR.
+- **Status:** [RESOLVED e9347fe] `docs/specs/ADR-018-observed-debt-no-language-change.md`
+  records that no language change was made and why the policy criteria do not
+  apply. The gate's required inputs (ADR plus test file) are now in the diff.
