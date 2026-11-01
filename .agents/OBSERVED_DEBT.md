@@ -7,7 +7,7 @@ with the commit that did it).
 
 ---
 
-## D1. Model `@version` is parsed into the AST but not carried onto `Graph`
+## D1. [RESOLVED eaa1be5] Model `@version` is parsed into the AST but not carried onto `Graph`
 
 - **Where:** `domainforge-core/src/parser/ast.rs:26` (`metadata.version: Option<String>`,
   populated at `:298`), but `domainforge-core/src/graph/mod.rs:32` (`struct Graph`)
@@ -22,6 +22,9 @@ with the commit that did it).
 - **Scope warning:** Per `AGENTS.md` change workflow, touching `graph/mod.rs` is
   a core change — MUST also update PyO3, napi-rs, WASM bindings + their tests.
   Schedule as its own PR, not folded into a projection target.
+
+**Status (2026-11-01):** Resolved in eaa1be5. Verified by 8 regression tests, including a multi-module case; a mutation that drops the entry-version propagation fails two of them.
+
 
 ## D2. `.agents/` state files drifted from git reality
 
@@ -65,7 +68,7 @@ with the commit that did it).
   access." Decide which is the intended end state first — this is a policy call,
   not a mechanical edit.
 
-## D6. CALM import is not exposed through the `domainforge import` CLI
+## D6. [RESOLVED eaa1be5] CALM import is not exposed through the `domainforge import` CLI
 
 - **Where:** `domainforge-core/src/cli/import.rs:18` — `ImportFormat` has only
   `Sbvr` and `Kg` variants. The library function `calm::import`
@@ -79,6 +82,9 @@ with the commit that did it).
 - **Smallest fix:** Add a `Calm` variant to `ImportFormat` + an arm in
   `import::run` that reads the CALM JSON and calls `crate::calm::import`. Low
   risk; mirrors the existing Sbvr/Kg arms.
+
+**Status (2026-11-01):** Resolved in eaa1be5. `import --format calm` round-trips a `project --format calm` output; bad JSON exits 1.
+
 
 ## D7. [RESOLVED 27660f1] AsyncAPI 2.6→3.0 breaking change — no remaining consumers
 
@@ -222,12 +228,15 @@ fixed and why.*
 - **Status:** Open. Observed on `feat/rego-projection` (2026-10-12); the Rego
   projection is not merged.
 
-## D-serde-saphyr. [2026-10-12] Pre-existing gate failures seen during the serde-saphyr migration
+## D-serde-saphyr. [2026-10-12] Pre-existing gate failures (PARTIALLY RESOLVED; quick-xml open)
 - **Where:** `policy/quantifier.rs:326`, `projection/dagger/mod.rs:191` (`clippy::unnecessary_map_or`, new in Rust 1.92 clippy); `cargo deny check advisories` (roxmltree quadratic duplicate-attribute and namespace allocation advisories; yanked `spin` via `lol_alloc`).
 - **Evidence:** `cargo clippy -p domainforge-core --all-targets --features cli -- -D warnings` exit 101 on untouched files; the same run with `-A clippy::unnecessary_map_or` is clean. `cargo deny check advisories` exit 1; no serde-saphyr or yaml advisory.
 - **Impact:** the pre-commit clippy hook (`lefthook.yml`) and the `--all-features` CI lint job fail on main-line code, not on this change.
 - **Next move:** fix the two lints in a separate change, and bump roxmltree and spin.
 - **Also:** `Cargo.lock` header moved from version 3 to version 4 when cargo resolved the new crate. The CLI-binary test expects `<repo>/target/debug/domainforge`, so it fails when `CARGO_TARGET_DIR` is shared; a symlink was used locally.
+
+**Status (2026-11-01):** Clippy gate is clean on main (`cargo clippy --all-targets --all-features -- -D warnings` exit 0). Lockfile bumped tokio 1.52.3 to 1.54.1 and spin 0.9.8 to 0.9.9 (eaa1be5); tokio unsound and spin yank advisories are cleared. Still failing: quick-xml 0.37.5 (two advisories, fixed in >=0.41.0), pinned by oxigraph 0.5.11 through oxrdfxml and sparesults. A lockfile-only oxigraph update does not move it, so it needs an oxigraph upgrade, which is out of scope here.
+
 
 ## D-native-1. macOS and Windows packages are unsigned
 
@@ -253,7 +262,7 @@ fixed and why.*
 - **Impact:** Adds four platform builds per main merge (release candidates are downloadable from the run). The release path is unaffected.
 - **Smallest fix:** Remove `main` from the push trigger if cost outweighs the convenience; `workflow_dispatch` and `workflow_call` remain.
 
-## D-doc-egm-1. `println!` debug statement left in the flow-annotation parse path
+## D-doc-egm-1. [RESOLVED eaa1be5, impact corrected] `println!` debug statement left in the parse path
 
 - **Date:** 2026-10-30
 - **Location:** `domainforge-core/src/parser/ast.rs:1283`
@@ -262,7 +271,10 @@ fixed and why.*
 - **Confidence:** medium
 - **Closure:** Delete the line or convert it to `log::debug!`. File touched: `domainforge-core/src/parser/ast.rs`. Size S.
 
-## D-doc-egm-2. `domainforge test` subcommand is a registered stub
+**Correction (2026-11-01):** The impact described above is not reproducible. Under the current grammar, flow annotations never reach this arm, so the line never printed on a flow annotation. The arm sits in the entity-annotation path and is reachable only for `replaces`/`changes`, which do not take this branch. The line was removed as dead-code hygiene. The test added for it is a stdout-purity guard, not a regression proof.
+
+
+## D-doc-egm-2. [RESOLVED eaa1be5] `domainforge test` subcommand is a registered stub
 
 - **Date:** 2026-10-30
 - **Location:** `domainforge-core/src/cli/test.rs:9` (`run`); surface declared at `domainforge-core/src/cli/mod.rs:34` (`Commands::Test`)
@@ -270,6 +282,9 @@ fixed and why.*
 - **Evidence:** Code reading while documenting `domainforge-core/src/cli`. `run` body is a single `println!` followed by `Ok(())`. Not executed.
 - **Confidence:** medium
 - **Closure:** Either implement the runner, or make the stub fail non-zero (or hide the subcommand behind `#[command(hide = true)]`) so it cannot be mistaken for a passing gate. Files: `domainforge-core/src/cli/test.rs`, possibly `domainforge-core/src/cli/mod.rs`. Size S to M depending on chosen direction.
+
+**Status (2026-11-01):** Resolved in eaa1be5. `domainforge test x` exits 1 with "is not implemented"; the regression test fails on the prior code.
+
 
 ## D-exit-1. CLI reports one exit code (1) for nearly every failure
 
