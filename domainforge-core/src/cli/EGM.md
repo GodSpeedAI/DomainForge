@@ -23,7 +23,7 @@ is gated behind `#[cfg(feature = "cli")]` in `[../lib.rs]`.
 - `[pack.rs:ApprovalChoice]` (`Candidate`/`Approved`), `[pack.rs:ValidationModeChoice]` (`Off`/`Warn`/`Strict`), `[pack.rs:DeprecatedPolicyChoice]` (`Allow`/`Warn`/`ErrorInStrict`/`ErrorAlways`), `[pack.rs:PackOutputFormat]` (`Human`/`Json`/`Jsonl`) — pack CLI enums.
 - `[contract.rs:ContractArgs]`, `[contract.rs:run]` — resolve and print the Application Contract document.
 - `[envelope.rs:EnvelopeArgs]`, `[envelope.rs:EmitMode]` (`Representation`/`Cep`/`Both`/`VerificationContract`), `[envelope.rs:run]` — resolve and print the Canonical Semantic Envelope; `--capabilities` prints adapter capabilities as JSON instead of resolving.
-- `[import.rs:ImportArgs]`, `[import.rs:ImportFormat]` (`Sbvr`/`Kg`), `[import.rs:run]` — import from SBVR-XMI or knowledge-graph RDF.
+- `[import.rs:ImportArgs]`, `[import.rs:ImportFormat]` (`Sbvr`/`Kg`/`Calm`), `[import.rs:run]` — import from SBVR-XMI or knowledge-graph RDF.
 - `[project.rs:ProjectArgs]`, `[project.rs:ProjectFormat]`, `[project.rs:CliCompatibilityMode]`, `[project.rs:run]` — project a model into an output format (including directory-output formats).
 
 ## Invariants

@@ -192,7 +192,7 @@ pub fn resolve_application_graph(
     enforce_source_map_budget(sources_json)?;
     let sources = SourceMap::parse_json(sources_json)?;
     let set = resolve_source_map(entry_logical_path, &sources)?;
-    build_graph_from_set(&set)
+    build_graph_from_set(&set, entry_logical_path)
 }
 
 #[cfg(feature = "cli")]
@@ -212,11 +212,12 @@ pub(crate) fn resolve_filesystem_graph(
     })?;
     enforce_source_map_budget(&sources_json)?;
     let set = resolve_source_map(&entry_logical_path, &sources)?;
-    build_graph_from_set(&set)
+    build_graph_from_set(&set, &entry_logical_path)
 }
 
 pub(crate) fn build_graph_from_set(
     set: &ResolvedModuleSet,
+    entry_logical_path: &str,
 ) -> Result<crate::graph::Graph, Vec<ApplicationDiagnostic>> {
     // Graph construction owns concrete entity-instance validation, not the
     // application operation contract. Build only the enum/entity slice so an
@@ -244,6 +245,13 @@ pub(crate) fn build_graph_from_set(
             .extend(module.ast.declarations.iter().cloned());
     }
     let mut graph = crate::graph::Graph::new();
+    // The model's @version comes from the entry module; absorb() does not merge it.
+    graph.set_version(
+        set.modules
+            .iter()
+            .find(|module| module.logical_id == entry_logical_path)
+            .and_then(|module| module.ast.metadata.version.clone()),
+    );
     for (_, ast) in groups {
         let converted = crate::parser::ast::ast_to_graph_with_options(
             ast,

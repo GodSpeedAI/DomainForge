@@ -1280,7 +1280,6 @@ fn parse_entity(pair: Pair<Rule>) -> ParseResult<AstNode> {
                             ParseError::GrammarError("Expected annotation value".to_string())
                         })?;
                         let value = parse_annotation_value(value_pair)?;
-                        println!("debug insert annotation {} = {:?}", key, value);
                         annotations.insert(key, value);
                     }
                     _ => {
@@ -3250,6 +3249,7 @@ pub fn ast_to_graph_with_options(mut ast: Ast, options: &ParseOptions) -> ParseR
     }
 
     let mut graph = Graph::new();
+    graph.set_version(ast.metadata.version.clone());
     let mut entity_map: HashMap<(String, String), crate::ConceptId> = HashMap::new();
     let mut role_map: HashMap<(String, String), crate::ConceptId> = HashMap::new();
     let mut resource_map: HashMap<(String, String), crate::ConceptId> = HashMap::new();
