@@ -1408,10 +1408,11 @@ allow if {
 
       if (rel.includes('../') || rel.startsWith('/') || rel.includes('..\\') || rel.startsWith('\\')) {
         verdict.className = 'sandbox-result blocked';
-        verdict.innerHTML = `&cross; BLOCKED by validate_output_path(): Path traversal or absolute path detected ('${rel}'). Execution safely aborted.`;
+        // User-typed path is inserted as text, never parsed as HTML (DOM XSS sink).
+        verdict.textContent = `✗ BLOCKED by validate_output_path(): Path traversal or absolute path detected ('${rel}'). Execution safely aborted.`;
       } else {
         verdict.className = 'sandbox-result allowed';
-        verdict.innerHTML = `&check; PATH ALLOWED: Output safely contained within target directory ('${rel}').`;
+        verdict.textContent = `✓ PATH ALLOWED: Output safely contained within target directory ('${rel}').`;
       }
     }
 
