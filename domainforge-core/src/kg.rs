@@ -1083,9 +1083,7 @@ impl KnowledgeGraph {
     /// declared field type and re-deriving a `Policy`'s `Expression` from
     /// its normalized-text triple, which is real reconstruction work, not a
     /// quick addition; tracked in `.agents/next_steps.md`. Do not rely on
-    /// this method for instance/policy round-tripping — use the Canonical
-    /// Semantic Envelope instead (`.sea/interaction/README.md` "Known
-    /// Toolchain Boundaries").
+    /// this method for instance/policy round-tripping.
     pub fn to_graph(&self) -> Result<crate::graph::Graph, KgError> {
         use crate::graph::Graph;
         use crate::primitives::{Entity, Flow, Resource};

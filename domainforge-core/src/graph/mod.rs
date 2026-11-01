@@ -96,6 +96,10 @@ pub struct Graph {
     operation_bound_policy_names: std::collections::HashSet<ConceptId>,
     #[serde(default)]
     config: GraphConfig,
+    /// Model-level `@version` declared in the source header. `None` when the
+    /// model declares no version. Set only by the parse/resolve entry points.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
 }
 
 impl Graph {
@@ -178,6 +182,15 @@ impl Graph {
 
     pub fn config(&self) -> &GraphConfig {
         &self.config
+    }
+
+    /// The model's declared `@version`, if the source header declares one.
+    pub fn version(&self) -> Option<&str> {
+        self.version.as_deref()
+    }
+
+    pub(crate) fn set_version(&mut self, version: Option<String>) {
+        self.version = version;
     }
 
     pub fn config_mut(&mut self) -> &mut GraphConfig {
@@ -938,6 +951,7 @@ impl Graph {
             enum_contracts,
             operation_bound_policy_names,
             config: _,
+            version: _,
         } = other;
 
         for entity in entities.into_values() {

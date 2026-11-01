@@ -19,6 +19,7 @@ pub struct ImportArgs {
 pub enum ImportFormat {
     Sbvr,
     Kg,
+    Calm,
 }
 
 /// Helper function to print import success message with graph statistics
@@ -47,6 +48,17 @@ pub fn run(args: ImportArgs) -> Result<()> {
             },
             Err(e) => Err(anyhow::anyhow!("Failed to parse SBVR XMI: {}", e)),
         },
+        ImportFormat::Calm => {
+            let value: serde_json::Value = serde_json::from_str(&source)
+                .with_context(|| format!("Failed to parse CALM JSON {}", args.file.display()))?;
+            match crate::calm::import(value) {
+                Ok(graph) => {
+                    print_import_success(&graph, "CALM");
+                    Ok(())
+                }
+                Err(e) => Err(anyhow::anyhow!("Failed to import CALM: {}", e)),
+            }
+        }
         ImportFormat::Kg => {
             let src_trim = source.trim_start();
             // More specific RDF/XML detection: check for XML declaration or RDF namespace

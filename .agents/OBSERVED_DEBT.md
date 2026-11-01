@@ -270,3 +270,20 @@ fixed and why.*
 - **Evidence:** Code reading while documenting `domainforge-core/src/cli`. `run` body is a single `println!` followed by `Ok(())`. Not executed.
 - **Confidence:** medium
 - **Closure:** Either implement the runner, or make the stub fail non-zero (or hide the subcommand behind `#[command(hide = true)]`) so it cannot be mistaken for a passing gate. Files: `domainforge-core/src/cli/test.rs`, possibly `domainforge-core/src/cli/mod.rs`. Size S to M depending on chosen direction.
+
+## D-exit-1. CLI reports one exit code (1) for nearly every failure
+
+- **Where:** `domainforge-core/src/bin/domainforge.rs:7` (`fn main() -> anyhow::Result<()>`)
+  returns every runner error through anyhow, so the process exits 1.
+- **Evidence (2026-11-01, built binary):** `parse` on a syntax error, `parse` on a
+  missing file, `validate` on an invalid model, `import --format calm` on bad input,
+  and `test x` all exit 1. Exceptions: clap usage errors (`bogus-cmd`), `envelope`
+  and `pack verify` on a missing file exit 2 (`cli/envelope.rs`, `cli/pack.rs`).
+  `pack.rs` defines its own scheme (`EXIT_SEMANTIC_FAILED=1`, `EXIT_PARSE_ERROR=2`,
+  `EXIT_SIGNATURE_FAILURE=4`, ...), which conflicts with a generic 2 = parse error.
+- **Impact:** Scripts cannot distinguish a parse failure from a validation failure
+  or an I/O failure without parsing stderr.
+- **Smallest fix:** Pick one documented exit-code table for the top-level CLI and
+  map error categories to it in `main`. Must reconcile with `pack.rs` and
+  `envelope.rs` before changing codes, since those are existing contracts.
+  Policy call: not fixed in this change.
