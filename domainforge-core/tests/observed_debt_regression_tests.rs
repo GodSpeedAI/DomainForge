@@ -5,7 +5,9 @@
 #![cfg(feature = "cli")]
 
 use assert_cmd::Command;
+use domainforge_core::application::resolve_application_graph;
 use domainforge_core::parser::parse_to_graph;
+use serde_json::json;
 use std::fs::write;
 use tempfile::tempdir;
 
@@ -31,6 +33,31 @@ fn d1_graph_exposes_declared_version() {
 #[test]
 fn d1_graph_version_is_none_when_undeclared() {
     let graph = parse_to_graph(UNVERSIONED_MODEL).expect("parse unversioned model");
+    assert_eq!(graph.version(), None);
+}
+
+// D1: on the resolved (multi-module) path, the version comes from the entry module,
+// not from an imported module that also declares one.
+#[test]
+fn d1_resolved_graph_uses_entry_module_version() {
+    let sources = json!({
+        "main.sea": "@namespace \"app\"\n@version \"3.0.0\"\nimport { Lib } from \"./lib.sea\"\n\nentity \"Main\" {\n    key id: uuid\n}\n",
+        "lib.sea": "@namespace \"lib\"\n@version \"1.0.0\"\n\nexport entity \"Lib\" {\n    key id: uuid\n}\n",
+    })
+    .to_string();
+    let graph = resolve_application_graph("main.sea", &sources).expect("resolve multi-module");
+    assert_eq!(graph.version(), Some("3.0.0"));
+}
+
+// D1: an imported module's version must not leak onto an unversioned entry module.
+#[test]
+fn d1_resolved_graph_ignores_imported_version() {
+    let sources = json!({
+        "main.sea": "@namespace \"app\"\nimport { Lib } from \"./lib.sea\"\n\nentity \"Main\" {\n    key id: uuid\n}\n",
+        "lib.sea": "@namespace \"lib\"\n@version \"1.0.0\"\n\nexport entity \"Lib\" {\n    key id: uuid\n}\n",
+    })
+    .to_string();
+    let graph = resolve_application_graph("main.sea", &sources).expect("resolve multi-module");
     assert_eq!(graph.version(), None);
 }
 
@@ -66,7 +93,11 @@ fn d6_cli_calm_round_trip_imports() {
         .arg(&calm)
         .output()
         .expect("run project");
-    assert!(projected.status.success(), "project failed: {:?}", projected);
+    assert!(
+        projected.status.success(),
+        "project failed: {:?}",
+        projected
+    );
 
     let imported = Command::new(assert_cmd::cargo::cargo_bin!("domainforge"))
         .args(["import", "--format", "calm"])
@@ -78,10 +109,12 @@ fn d6_cli_calm_round_trip_imports() {
     assert!(stdout.contains("Imported CALM"), "stdout was: {stdout}");
 }
 
-// D-doc-egm-1: flow-annotation parsing must not write debug text to stdout,
-// so `parse --format json` output stays machine-readable.
+// D-doc-egm-1 (guard, not a regression proof): the debug println was removed. On the
+// original code this test also passes, because the line was not reachable from any
+// input the grammar accepts. It guards that `parse --format json` stdout stays pure
+// JSON when flow annotations are present.
 #[test]
-fn d_doc_egm_1_flow_annotation_keeps_stdout_clean() {
+fn d_doc_egm_1_parse_stdout_stays_pure_json_with_flow_annotations() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("flow.sea");
     write(
@@ -117,8 +150,5 @@ fn d_doc_egm_2_test_subcommand_fails_loudly() {
         "`domainforge test` must exit non-zero while unimplemented"
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("not implemented"),
-        "stderr was: {stderr}"
-    );
+    assert!(stderr.contains("not implemented"), "stderr was: {stderr}");
 }
