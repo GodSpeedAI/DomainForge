@@ -49,7 +49,7 @@ sha2 = "=0.11"
 hex = "0.4"
 ed25519-dalek = { version = "=2.1.0", features = ["pem", "std"], optional = true }
 unicode-normalization = "0.1"
-base64 = "=0.22"
+base64 = "=0.23"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
