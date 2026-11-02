@@ -21,7 +21,7 @@ jobs:
           sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           toolchain: 1.99.0
           components: rustfmt, clippy
