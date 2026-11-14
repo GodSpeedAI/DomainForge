@@ -24,7 +24,8 @@ tri(b) := "true" if {
 # A result therefore carries which regime produced it: a bare string is a
 # reduced literal, a "~" prefix marks an unreduced tree. `exists_unique` and
 # filtered counts only ever count reduced "true", exactly like the
-# evaluator's `is_true_literal`.
+# evaluator's `is_true_literal`; `exists_unique` also reads a reduced
+# "unknown".
 value(r) := trim_prefix(r, "~")
 
 _reduced(a, b) if {
@@ -99,11 +100,16 @@ exists3(rs) := "error" if {
 	"unknown" in _values(rs)
 } else := "~false"
 
-# exists_unique counts only items whose condition reduced to literal true;
-# unknown and unreduced items are not counted, so the result is a literal
-# and never "unknown".
+# exists_unique counts items whose condition reduced to literal true, exactly
+# like the evaluator's `expand`: two or more make it false; otherwise an item
+# that reduced to literal unknown makes it unknown; otherwise it is true only
+# for exactly one. Unreduced items count as neither. The result is a literal.
 exists_unique(rs) := "error" if {
 	"error" in rs
+} else := "false" if {
+	count([1 | some r in rs; r == "true"]) > 1
+} else := "unknown" if {
+	"unknown" in rs
 } else := "true" if {
 	count([1 | some r in rs; r == "true"]) == 1
 } else := "false"
