@@ -169,18 +169,6 @@
           "input_set_id": {
             "type": "string",
             "description": "Operation-bound rows: the input set this row was evaluated for. Absent with reason no_operation_input."
-          },
-          "caveat": {
-            "const": "exists_unique_null_ignored",
-            "description": "result was conservatively downgraded to unknown because the evaluator ignores NULL items in exists_unique."
-          },
-          "evaluator_result": {
-            "enum": [
-              "true",
-              "false",
-              "unknown"
-            ],
-            "description": "Raw evaluator value; present only with caveat."
           }
         }
       }

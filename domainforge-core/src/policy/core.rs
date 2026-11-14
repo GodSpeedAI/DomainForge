@@ -1,4 +1,4 @@
-use super::expression::{BinaryOp, Expression, Quantifier, UnaryOp};
+use super::expression::{BinaryOp, Expression, UnaryOp};
 use super::violation::{Severity, Violation};
 use crate::graph::Graph;
 use crate::policy::ThreeValuedBool;
@@ -73,11 +73,6 @@ pub struct PolicyBindingReport {
     /// expression is not a quantifier. `Some(0)` marks vacuous truth.
     pub support: Option<usize>,
     pub bindings: Vec<BindingResult>,
-    /// Set when `result` was conservatively downgraded to unknown; see
-    /// [`Policy::evaluate_bindings`].
-    pub caveat: Option<&'static str>,
-    /// The evaluator's raw policy result when `caveat` is set.
-    pub evaluator_result: Option<bool>,
 }
 
 impl Policy {
@@ -91,7 +86,6 @@ impl Policy {
     pub fn evaluate_bindings(&self, graph: &Graph) -> Result<PolicyBindingReport, String> {
         let result = self.evaluate(graph)?.is_satisfied_tristate;
         let Expression::Quantifier {
-            quantifier,
             variable,
             collection,
             condition,
@@ -102,8 +96,6 @@ impl Policy {
                 result,
                 support: None,
                 bindings: vec![],
-                caveat: None,
-                evaluator_result: None,
             });
         };
         let items = Expression::get_collection(collection, graph)?;
@@ -134,28 +126,10 @@ impl Policy {
             (a.instance.as_str(), a.instance_id.as_deref())
                 .cmp(&(b.instance.as_str(), b.instance_id.as_deref()))
         });
-        // `exists_unique` is expanded eagerly (`Expression::expand`), which counts
-        // only literal-true items and ignores NULL. With at most one true row and
-        // any unknown row the true count is not certain, so downgrade to unknown
-        // (conservative; the raw value is kept in `evaluator_result`). Two or more
-        // true rows make `false` certain, so the raw value stands.
-        let trues = bindings.iter().filter(|b| b.result == Some(true)).count();
-        let any_unknown = bindings.iter().any(|b| b.result.is_none());
-        let (result, caveat, evaluator_result) = if matches!(quantifier, Quantifier::ExistsUnique)
-            && any_unknown
-            && trues <= 1
-            && result.is_some()
-        {
-            (None, Some("exists_unique_null_ignored"), result)
-        } else {
-            (result, None, None)
-        };
         Ok(PolicyBindingReport {
             result,
             support: Some(support),
             bindings,
-            caveat,
-            evaluator_result,
         })
     }
 

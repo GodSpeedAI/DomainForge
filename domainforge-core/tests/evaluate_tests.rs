@@ -356,11 +356,10 @@ fn unique(items: &[(&str, Option<bool>)]) -> Value {
 }
 
 #[test]
-fn evaluate_exists_unique_true_plus_null_is_unknown_with_caveat() {
+fn evaluate_exists_unique_true_plus_null_is_unknown() {
     let p = unique(&[("a", Some(true)), ("b", None)]);
     assert_eq!(p["result"], "unknown");
-    assert_eq!(p["caveat"], "exists_unique_null_ignored");
-    assert_eq!(p["evaluator_result"], "true");
+    assert!(p.get("caveat").is_none() && p.get("evaluator_result").is_none());
     assert_eq!(
         results(&p, "instance"),
         pairs(&[("a", "true"), ("b", "unknown")])
@@ -368,18 +367,41 @@ fn evaluate_exists_unique_true_plus_null_is_unknown_with_caveat() {
 }
 
 #[test]
-fn evaluate_exists_unique_null_plus_false_is_unknown_with_caveat() {
+fn evaluate_exists_unique_null_plus_false_is_unknown() {
     let p = unique(&[("a", None), ("b", Some(false))]);
     assert_eq!(p["result"], "unknown");
-    assert_eq!(p["caveat"], "exists_unique_null_ignored");
-    assert_eq!(p["evaluator_result"], "false");
 }
 
 #[test]
-fn evaluate_exists_unique_two_trues_plus_null_stays_false_without_caveat() {
+fn evaluate_exists_unique_two_trues_plus_null_is_false() {
     let p = unique(&[("a", Some(true)), ("b", Some(true)), ("c", None)]);
     assert_eq!(p["result"], "false");
-    assert!(p.get("caveat").is_none() && p.get("evaluator_result").is_none());
+}
+
+#[test]
+fn evaluate_exists_unique_null_only_is_unknown() {
+    assert_eq!(unique(&[("a", None)])["result"], "unknown");
+}
+
+const NESTED_POLICY: &str = "\npolicy nested_single per Constraint Obligation priority 3 as: 1 = 1 and exists_unique i in entity_instances of \"Item\": (i.flag = true)\n";
+
+fn nested(items: &[(&str, Option<bool>)]) -> String {
+    let report = probe_report(NESTED_POLICY, items);
+    policy(&report, "nested_single")["result"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+#[test]
+fn evaluate_nested_exists_unique_is_three_valued() {
+    assert_eq!(nested(&[("a", Some(true)), ("b", None)]), "unknown");
+    assert_eq!(
+        nested(&[("a", Some(true)), ("b", Some(true)), ("c", None)]),
+        "false"
+    );
+    assert_eq!(nested(&[("a", Some(true)), ("b", Some(false))]), "true");
+    assert_eq!(nested(&[("a", None)]), "unknown");
 }
 
 #[test]
@@ -632,4 +654,42 @@ fn evaluate_rejects_an_operation_name_declared_in_two_namespaces() {
     );
     assert!(String::from_utf8_lossy(&out.stderr)
         .contains("operation input 'i': ambiguous operation 'close_case'"));
+}
+
+fn enum_run(supplied_symbol: &str) -> std::process::Output {
+    let dir = tempdir().unwrap();
+    let model = std::fs::read_to_string(fixture("model.sea"))
+        .unwrap()
+        .replace(
+            "record CloseCaseInput {\n",
+            "enum KindA { a = \"a\" }\nenum KindB { b = \"b\" }\n\nrecord CloseCaseInput {\n    kind: KindA\n",
+        );
+    let model_path = dir.path().join("model.sea");
+    std::fs::write(&model_path, model).unwrap();
+    let facts_path = dir.path().join("facts.json");
+    std::fs::write(
+        &facts_path,
+        json!({"schema": SCHEMA, "operation_inputs": [
+            {"id": "i", "operation": "close_case", "input": {
+                "case_status": {"kind": "string", "data": "open"},
+                "kind": {"kind": "enum", "data": {"symbol": supplied_symbol, "wire": "a"}}}}]})
+        .to_string(),
+    )
+    .unwrap();
+    run_with(&model_path, &facts_path, &[])
+}
+
+#[test]
+fn evaluate_enum_input_must_carry_the_declared_symbol() {
+    let ok = enum_run("evaluate_fixture.enum.KindA");
+    assert_eq!(
+        ok.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&ok.stderr)
+    );
+    let bad = enum_run("evaluate_fixture.enum.KindB");
+    assert_eq!(bad.status.code(), Some(2));
+    assert!(bad.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("field 'kind'"));
 }
