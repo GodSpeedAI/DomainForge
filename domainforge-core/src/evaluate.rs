@@ -79,9 +79,21 @@ fn kind_matches(declared: &FieldType, value: &TypedValue) -> bool {
                 | (ScalarType::Timestamp, TypedValue::Timestamp(_))
                 | (ScalarType::Uuid, TypedValue::Uuid(_))
         ),
-        (FieldType::Quantity { .. }, TypedValue::Quantity { .. }) => true,
-        (FieldType::EntityRef { .. }, TypedValue::EntityRef { .. }) => true,
-        (FieldType::Enum { .. }, TypedValue::Enum { .. }) => true,
+        (FieldType::Quantity { unit }, TypedValue::Quantity { unit: supplied, .. }) => {
+            unit == supplied
+        }
+        (
+            FieldType::EntityRef { entity },
+            TypedValue::EntityRef {
+                entity: supplied, ..
+            },
+        ) => entity == supplied,
+        (
+            FieldType::Enum { symbol },
+            TypedValue::Enum {
+                symbol: supplied, ..
+            },
+        ) => symbol == supplied,
         (FieldType::List { element }, TypedValue::List(items)) => {
             items.iter().all(|i| kind_matches(element, i))
         }
@@ -188,7 +200,7 @@ pub fn evaluate_model(
             };
             if !kind_matches(&declared.field_type, value) {
                 return Err(format!(
-                    "operation input '{}': field '{}' has the wrong value kind for its declared type {:?}",
+                    "operation input '{}': field '{}' has the wrong value kind, unit, entity or enum symbol for its declared type {:?}",
                     supplied.id, field, declared.field_type
                 ));
             }
@@ -273,13 +285,6 @@ pub fn evaluate_model(
             Ok(report) => {
                 row.insert("result".into(), json!(tri(report.result)));
                 row.insert("support".into(), json!(report.support));
-                if let Some(caveat) = report.caveat {
-                    row.insert("caveat".into(), json!(caveat));
-                    row.insert(
-                        "evaluator_result".into(),
-                        json!(tri(report.evaluator_result)),
-                    );
-                }
                 if report.support.is_some() {
                     row.insert("binding_depth".into(), json!("outermost"));
                 }
