@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.21.2...v0.22.0) (2026-11-14)
+
+
+### Features
+
+* **cli:** evaluate command with per-binding tri-state results ([#171](https://github.com/GodSpeedAI/DomainForge/issues/171)) ([3960326](https://github.com/GodSpeedAI/DomainForge/commit/3960326ade6b38f59ebb8c1b3a52477831908389))
+* **release:** standalone native CLI packages ([#164](https://github.com/GodSpeedAI/DomainForge/issues/164)) ([c135076](https://github.com/GodSpeedAI/DomainForge/commit/c135076ac38c430d75a3899d41f4f41dc18b581a))
+
+
+### Bug Fixes
+
+* **core:** resolve verified observed-debt items D1, D6, D-doc-egm-1..3 ([d0c1d41](https://github.com/GodSpeedAI/DomainForge/commit/d0c1d41c5218c2c49e860a92e310a242e6efe2fd))
+
 ## [0.21.2](https://github.com/GodSpeedAI/DomainForge/compare/v0.21.1...v0.21.2) (2026-10-26)
 
 
