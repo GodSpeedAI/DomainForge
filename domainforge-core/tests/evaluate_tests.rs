@@ -538,3 +538,98 @@ fn evaluate_policy_bound_to_several_operations_yields_a_row_per_operation_and_in
         ]
     );
 }
+
+const REF_MODEL: &str = r#"
+@namespace "evaluate_refs"
+
+entity "Owner" {
+    key owner_id: string (min_length 1)
+}
+
+entity "Pet" {
+    key pet_id: string (min_length 1)
+    owner: ref<Owner> optional
+}
+
+policy always_true per Constraint Obligation priority 1 as: forall p in entity_instances of "Pet": (1 = 1)
+"#;
+
+fn ref_fact(entity: &str, name: &str, owner: Option<&str>) -> Value {
+    let key = if entity == "Owner" {
+        "owner_id"
+    } else {
+        "pet_id"
+    };
+    let mut fields = json!({ key: name });
+    if let Some(owner) = owner {
+        fields["owner"] = json!(owner);
+    }
+    json!({"namespace": "evaluate_refs", "entity": entity, "name": name, "fields": fields})
+}
+
+#[test]
+fn evaluate_facts_are_order_independent_for_entity_references() {
+    let forward = json!({"schema": SCHEMA, "instances": [
+        ref_fact("Pet", "rex", Some("ann")), ref_fact("Owner", "ann", None)]});
+    let reverse = json!({"schema": SCHEMA, "instances": [
+        ref_fact("Owner", "ann", None), ref_fact("Pet", "rex", Some("ann"))]});
+    let a = eval_text(REF_MODEL, forward);
+    let b = eval_text(REF_MODEL, reverse);
+    assert!(a.status.success(), "{}", String::from_utf8_lossy(&a.stderr));
+    assert!(b.status.success(), "{}", String::from_utf8_lossy(&b.stderr));
+    // facts_sha256 hashes the raw file bytes, so compare the evaluated results.
+    let (a, b): (Value, Value) = (
+        serde_json::from_slice(&a.stdout).unwrap(),
+        serde_json::from_slice(&b.stdout).unwrap(),
+    );
+    assert_eq!(a["policies"], b["policies"]);
+    assert_eq!(a["facts_instance_count"], b["facts_instance_count"]);
+}
+
+#[test]
+fn evaluate_dangling_entity_reference_is_still_an_input_error() {
+    let out = eval_text(
+        REF_MODEL,
+        json!({"schema": SCHEMA, "instances": [
+            ref_fact("Owner", "ann", None), ref_fact("Pet", "rex", Some("nobody"))]}),
+    );
+    assert_eq!(out.status.code(), Some(2));
+    assert!(out.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("dangling"));
+}
+
+#[test]
+fn evaluate_rejects_an_operation_name_declared_in_two_namespaces() {
+    let dir = tempdir().unwrap();
+    let base = base_model();
+    // The second module re-declares every operation under a second namespace;
+    // failure codes must stay unique across the closure.
+    let second = base
+        .replace("evaluate_fixture", "evaluate_fixture_two")
+        .replace("case_not_open", "case_not_open_two")
+        .replace("failure conflict for", "failure conflict_two for")
+        .replace("entity \"Case\"", "export entity \"Case\"");
+    let first = base.replacen(
+        "@namespace \"evaluate_fixture\"\n",
+        "@namespace \"evaluate_fixture\"\nimport { Case as OtherCase } from \"./b.sea\"\n",
+        1,
+    );
+    std::fs::write(dir.path().join("a.sea"), first).unwrap();
+    std::fs::write(dir.path().join("b.sea"), second).unwrap();
+    let facts = dir.path().join("f.json");
+    std::fs::write(
+        &facts,
+        json!({"schema": SCHEMA, "operation_inputs": [{"id": "i", "operation": "close_case", "input": {}}]})
+            .to_string(),
+    )
+    .unwrap();
+    let out = run_with(&dir.path().join("a.sea"), &facts, &[]);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stderr)
+        .contains("operation input 'i': ambiguous operation 'close_case'"));
+}

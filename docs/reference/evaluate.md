@@ -29,7 +29,7 @@ Schemas: [`schemas/evaluate-facts.v1.json`](../../schemas/evaluate-facts.v1.json
 }
 ```
 
-Instance names are unique across the model. `input` values are the application layer's typed values (`kind`/`data`). The operation's declared actor is used. A field whose value is null must be omitted, not sent as `null`: omitted optional fields are the unknown (NULL) case. Each typed value's kind must match the record field's declared type, and each `operation_inputs` entry must name a policy-governed operation; otherwise it is an input error.
+Facts are order-independent: all instances are inserted and validated together, so an entity reference may point at a fact later in the file, and a fact set that fails validation is rejected whole. An operation name declared by more than one operation (for example in two namespaces) is ambiguous and an input naming it is rejected. Instance names are unique across the model. `input` values are the application layer's typed values (`kind`/`data`). The operation's declared actor is used. A field whose value is null must be omitted, not sent as `null`: omitted optional fields are the unknown (NULL) case. Each typed value's kind must match the record field's declared type, and each `operation_inputs` entry must name a policy-governed operation; otherwise it is an input error.
 
 ## Exit codes
 

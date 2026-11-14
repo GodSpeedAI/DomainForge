@@ -250,3 +250,67 @@ instance vendor of "Vendor" { arbitrary: "still accepted" }
     assert!(json.get("entity_contracts").is_none());
     assert!(json.get("enum_contracts").is_none());
 }
+
+fn batch_instance(
+    entity: &str,
+    name: &str,
+    fields: serde_json::Value,
+) -> domainforge_core::primitives::Instance {
+    let mut instance =
+        domainforge_core::primitives::Instance::new_with_namespace(name, entity, "interaction");
+    for (key, value) in fields.as_object().unwrap() {
+        instance.set_field(key.clone(), value.clone());
+    }
+    instance
+}
+
+#[test]
+fn batch_insert_accepts_forward_references_in_any_order() {
+    let journey = || {
+        batch_instance(
+            "Journey",
+            "cj01",
+            json!({"journey_id": "cj01", "maturity": "specified", "attempts": 1, "score": 0.5,
+                "enabled": true, "observed_at": "2026-08-03T12:00:00Z",
+                "trace_id": "018f47a6-7b2d-7b62-8a00-000000000001"}),
+        )
+    };
+    let binding = || {
+        batch_instance(
+            "Binding",
+            "b1",
+            json!({"binding_id": "b1", "journey": "cj01"}),
+        )
+    };
+    for order in [vec![binding(), journey()], vec![journey(), binding()]] {
+        let mut graph = resolve(&typed_model("")).unwrap();
+        graph.add_entity_instances(order).unwrap();
+        assert_eq!(graph.entity_instance_count(), 2);
+    }
+}
+
+#[test]
+fn batch_insert_with_dangling_reference_or_duplicate_leaves_graph_unchanged() {
+    let mut graph = resolve(&typed_model("")).unwrap();
+    let ok = batch_instance(
+        "Binding",
+        "b1",
+        json!({"binding_id": "b1", "journey": "gone"}),
+    );
+    assert!(graph.add_entity_instances(vec![ok]).is_err());
+    assert_eq!(graph.entity_instance_count(), 0);
+
+    let a = batch_instance(
+        "Binding",
+        "dup",
+        json!({"binding_id": "x", "journey": "gone"}),
+    );
+    let b = batch_instance(
+        "Binding",
+        "dup",
+        json!({"binding_id": "y", "journey": "gone"}),
+    );
+    let error = graph.add_entity_instances(vec![a, b]).unwrap_err();
+    assert!(error.contains("already exists"), "{error}");
+    assert_eq!(graph.entity_instance_count(), 0);
+}

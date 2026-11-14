@@ -100,19 +100,23 @@ fn tri(value: Option<bool>) -> &'static str {
 /// Add the fact instances to `graph`. Unknown entities, unknown or mistyped
 /// fields and duplicate names are errors, never silently dropped.
 pub fn load_instances(graph: &mut Graph, facts: &Facts) -> Result<(), String> {
-    for fact in &facts.instances {
-        let mut instance = Instance::new_with_namespace(&fact.name, &fact.entity, &fact.namespace);
-        for (key, value) in &fact.fields {
-            instance.set_field(key.clone(), value.clone());
-        }
-        graph.add_entity_instance(instance).map_err(|e| {
-            format!(
-                "facts instance '{}' ({}::{}): {e}",
-                fact.name, fact.namespace, fact.entity
-            )
-        })?;
-    }
-    Ok(())
+    // Insert every fact, then validate once: a fact may reference a fact that
+    // appears later in the file. The batch is all-or-nothing.
+    let instances = facts
+        .instances
+        .iter()
+        .map(|fact| {
+            let mut instance =
+                Instance::new_with_namespace(&fact.name, &fact.entity, &fact.namespace);
+            for (key, value) in &fact.fields {
+                instance.set_field(key.clone(), value.clone());
+            }
+            instance
+        })
+        .collect();
+    graph
+        .add_entity_instances(instances)
+        .map_err(|e| format!("facts instances: {e}"))
 }
 
 fn policy_head(policy: &Policy) -> Map<String, Value> {
@@ -152,15 +156,19 @@ pub fn evaluate_model(
         if !seen_ids.insert(supplied.id.as_str()) {
             return Err(format!("duplicate operation input id '{}'", supplied.id));
         }
-        let operation = operations
-            .iter()
-            .find(|op| op.name == supplied.operation)
-            .ok_or_else(|| {
-                format!(
-                    "operation input '{}': unknown operation '{}'",
-                    supplied.id, supplied.operation
-                )
-            })?;
+        let mut matching = operations.iter().filter(|op| op.name == supplied.operation);
+        let operation = matching.next().ok_or_else(|| {
+            format!(
+                "operation input '{}': unknown operation '{}'",
+                supplied.id, supplied.operation
+            )
+        })?;
+        if matching.next().is_some() {
+            return Err(format!(
+                "operation input '{}': ambiguous operation '{}'",
+                supplied.id, supplied.operation
+            ));
+        }
         let governed = matches!(&operation.access,
             AccessMode::PolicyGoverned { bindings } if !bindings.is_empty());
         if !governed {
