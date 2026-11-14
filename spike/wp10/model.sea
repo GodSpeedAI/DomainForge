@@ -1,0 +1,60 @@
+@namespace "wp10"
+
+entity "Case" {
+    key case_id: uuid
+    status: string default "open"
+}
+
+entity "Step" {
+    key step_id: string (min_length 1)
+    status: string
+}
+
+entity "Approval" {
+    key approval_id: string (min_length 1)
+    step_ref: string
+}
+
+entity "Evidence" {
+    key evidence_id: string (min_length 1)
+    retention_days: int optional
+}
+
+role "Clerk"
+
+resource "Document" units
+
+flow "Document" from "Case" to "Step"
+
+policy executed_steps_have_approval per Constraint Obligation priority 1 as: forall s in entity_instances of "Step": (not (s.status = "executed") or exists a in entity_instances of "Approval": (a.step_ref = s.step_id))
+
+policy evidence_retained_30_days per Constraint Obligation priority 2 as: forall e in entity_instances of "Evidence": (e.retention_days >= 30)
+
+policy case_must_be_open per Constraint Obligation priority 3 as: case_status = "open"
+
+record CloseCaseInput {
+    case_id: uuid
+    case_status: string
+}
+
+record CloseCaseOutput {
+    case_id: uuid
+}
+
+operation close_case {
+    intent "close one open case"
+    direction inbound
+    actor Clerk
+    access policy_governed by case_must_be_open at precondition fails with case_not_open
+    input CloseCaseInput
+    output CloseCaseOutput
+    state Case
+    effect creates Case
+    transaction single_aggregate
+    failure case_not_open for policy "case is not open"
+    failure conflict for idempotency_conflict, concurrency_conflict "duplicate"
+    idempotency keyed_by case_id
+    concurrency unique_key case_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
