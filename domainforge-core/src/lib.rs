@@ -38,6 +38,7 @@ pub mod authority;
 pub mod calm;
 pub mod concept_id;
 pub mod error;
+pub mod evaluate;
 pub mod formatter;
 pub mod graph;
 pub mod kg;

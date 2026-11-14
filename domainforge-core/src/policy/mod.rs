@@ -10,7 +10,10 @@ mod violation;
 #[cfg(test)]
 mod three_valued_microbench;
 
-pub use core::{DeonticModality, EvaluationResult, Policy, PolicyKind, PolicyModality};
+pub use core::{
+    BindingResult, DeonticModality, EvaluationResult, Policy, PolicyBindingReport, PolicyKind,
+    PolicyModality,
+};
 pub use expression::{AggregateFunction, BinaryOp, Expression, Quantifier, UnaryOp, WindowSpec};
 pub use normalize::NormalizedExpression;
 pub use three_valued::ThreeValuedBool;

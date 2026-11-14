@@ -447,7 +447,7 @@ fn render_diagnostic(diagnostic: &ApplicationDiagnostic) -> String {
     format!("{}: {}", diagnostic.code.slug(), diagnostic.message)
 }
 
-fn registry_content_hash(registry: Option<&NamespaceRegistry>) -> Option<String> {
+pub(crate) fn registry_content_hash(registry: Option<&NamespaceRegistry>) -> Option<String> {
     let registry = registry?;
     let mut files: Vec<(String, String)> = match registry.resolve_files() {
         Ok(files) => files

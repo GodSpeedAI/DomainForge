@@ -1,0 +1,4 @@
+{"schema":"domainforge.evaluate-facts.v1","operation_inputs":[
+ {"id":"in_closed","operation":"close_case","input":{"case_status":{"kind":"string","data":"closed"}}},
+ {"id":"in_missing","operation":"close_case","input":{}},
+ {"id":"in_open","operation":"close_case","input":{"case_status":{"kind":"string","data":"open"}}}]}

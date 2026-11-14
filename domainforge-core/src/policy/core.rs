@@ -52,7 +52,87 @@ pub struct EvaluationResult {
     pub violations: Vec<Violation>,
 }
 
+/// One instance the outermost quantifier of a policy ranged over, with the
+/// truth value the existing evaluator assigns to the quantified condition for
+/// that instance (`None` = unknown).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BindingResult {
+    pub entity: Option<String>,
+    pub namespace: Option<String>,
+    pub instance: String,
+    pub instance_id: Option<String>,
+    pub result: Option<bool>,
+}
+
+/// Policy result plus per-instance results of the outermost quantifier.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PolicyBindingReport {
+    /// Same value as `Policy::evaluate(..).is_satisfied_tristate`.
+    pub result: Option<bool>,
+    /// Instances the outermost quantifier ranged over; `None` when the policy
+    /// expression is not a quantifier. `Some(0)` marks vacuous truth.
+    pub support: Option<usize>,
+    pub bindings: Vec<BindingResult>,
+}
+
 impl Policy {
+    /// Evaluate the policy and, when its expression is a quantifier, report
+    /// the per-instance truth value of the outermost quantifier.
+    ///
+    /// The policy-level result is produced by [`Policy::evaluate`] unchanged;
+    /// each binding result is the same evaluator applied to the quantified
+    /// condition with that instance substituted. Nested quantifiers inside the
+    /// condition are folded into the binding's result (outermost binding only).
+    pub fn evaluate_bindings(&self, graph: &Graph) -> Result<PolicyBindingReport, String> {
+        let result = self.evaluate(graph)?.is_satisfied_tristate;
+        let Expression::Quantifier {
+            variable,
+            collection,
+            condition,
+            ..
+        } = &self.expression
+        else {
+            return Ok(PolicyBindingReport {
+                result,
+                support: None,
+                bindings: vec![],
+            });
+        };
+        let items = Expression::get_collection(collection, graph)?;
+        let support = items.len();
+        let mut bindings = Vec::with_capacity(support);
+        for item in items {
+            let expanded = condition.substitute(variable, &item)?.expand(graph)?;
+            let item_result = if graph.use_three_valued_logic() {
+                match self.evaluate_expression_three_valued(&expanded, graph)? {
+                    ThreeValuedBool::True => Some(true),
+                    ThreeValuedBool::False => Some(false),
+                    ThreeValuedBool::Null => None,
+                }
+            } else {
+                Some(self.evaluate_expression_boolean(&expanded, graph)?)
+            };
+            let text = |key: &str| item.get(key).and_then(|v| v.as_str()).map(str::to_string);
+            let id = text("id");
+            bindings.push(BindingResult {
+                entity: text("entity"),
+                namespace: text("namespace"),
+                instance: text("name").or_else(|| id.clone()).unwrap_or_default(),
+                instance_id: id,
+                result: item_result,
+            });
+        }
+        bindings.sort_by(|a, b| {
+            (a.instance.as_str(), a.instance_id.as_deref())
+                .cmp(&(b.instance.as_str(), b.instance_id.as_deref()))
+        });
+        Ok(PolicyBindingReport {
+            result,
+            support: Some(support),
+            bindings,
+        })
+    }
+
     /// Returns the normalized canonical form of this policy's expression.
     ///
     /// Useful for caching, equivalence checking, and deterministic display.

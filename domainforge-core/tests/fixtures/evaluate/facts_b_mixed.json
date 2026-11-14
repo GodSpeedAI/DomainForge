@@ -1,0 +1,5 @@
+{"schema":"domainforge.evaluate-facts.v1","instances":[
+ {"namespace":"evaluate_fixture","entity":"Step","name":"s_ok","fields":{"step_id":"s_ok","status":"executed"}},
+ {"namespace":"evaluate_fixture","entity":"Approval","name":"a_ok","fields":{"approval_id":"a_ok","step_ref":"s_ok"}},
+ {"namespace":"evaluate_fixture","entity":"Step","name":"s_bad","fields":{"step_id":"s_bad","status":"executed"}},
+ {"namespace":"evaluate_fixture","entity":"Step","name":"s_planned","fields":{"step_id":"s_planned","status":"planned"}}]}

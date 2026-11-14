@@ -45,12 +45,31 @@ impl Expression {
                     }
                     Quantifier::ExistsUnique => {
                         let mut count = 0;
+                        let mut saw_unknown = false;
                         for item in items {
                             let substituted = condition.substitute(variable, &item)?;
                             let expanded = substituted.expand(graph)?;
 
                             if Self::is_true_literal(&expanded) {
                                 count += 1;
+                            } else if matches!(&expanded,
+                                Expression::Literal(v) if v.as_bool().is_none())
+                            {
+                                // Unknown (NULL) item, as the three-valued evaluator
+                                // reads it (`from_option_bool(as_bool())`).
+                                saw_unknown = true;
+                            }
+                        }
+                        // Same counts as the three-valued handler in `Policy`:
+                        // 2+ true => false; otherwise any unknown => NULL;
+                        // else exactly one true. Boolean mode keeps the old
+                        // count-only result (its evaluator rejects NULL literals).
+                        if graph.use_three_valued_logic() {
+                            if count > 1 {
+                                return Ok(Expression::literal(false));
+                            }
+                            if saw_unknown {
+                                return Ok(Expression::Literal(serde_json::Value::Null));
                             }
                         }
                         Ok(Expression::literal(count == 1))

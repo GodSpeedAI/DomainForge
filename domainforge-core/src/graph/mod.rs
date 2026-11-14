@@ -597,6 +597,35 @@ impl Graph {
         Ok(())
     }
 
+    /// Insert several entity instances and validate the graph once, after all
+    /// of them are present, so references between the new instances do not
+    /// depend on their order. If any insert or the final validation fails,
+    /// every instance inserted by this call is removed and the graph is
+    /// unchanged. Duplicate ids and names are rejected as in
+    /// [`Graph::add_entity_instance`], including duplicates inside the batch.
+    pub fn add_entity_instances(&mut self, instances: Vec<Instance>) -> Result<(), String> {
+        let mut inserted: Vec<ConceptId> = Vec::with_capacity(instances.len());
+        for instance in instances {
+            let id = instance.id().clone();
+            if let Err(error) = self.insert_entity_instance(instance) {
+                self.rollback_entity_instances(&inserted);
+                return Err(error);
+            }
+            inserted.push(id);
+        }
+        if let Err(errors) = self.validate_entity_instances() {
+            self.rollback_entity_instances(&inserted);
+            return Err(errors.join("; "));
+        }
+        Ok(())
+    }
+
+    fn rollback_entity_instances(&mut self, ids: &[ConceptId]) {
+        for id in ids {
+            self.entity_instances.shift_remove(id);
+        }
+    }
+
     fn insert_entity_instance(&mut self, instance: Instance) -> Result<(), String> {
         let id = instance.id().clone();
         if self.entity_instances.contains_key(&id) {
