@@ -97,6 +97,7 @@ Reference documentation prioritizes precision, completeness, and exact contracts
 |---|---|---|
 | **[DSL Grammar Reference](reference/dsl-grammar-reference.md)** | Exhaustive rule catalog for every keyword, declaration, and expression. | Grammar rules & syntax tables |
 | **[CLI Reference](reference/cli-reference.md)** | All subcommands, options, exit codes, and environment variables. | Command flags & usage tables |
+| **[Evaluate Reference](reference/evaluate.md)** | `domainforge evaluate`: facts file, per-binding tri-state output, exit codes, limits. | Command, schemas & semantics |
 | **[Error Code Catalog](reference/error-code-reference.md)** | Complete listing of `E001`–`E599` and `APP001`–`APP014` error codes. | Code, description, cause, fix |
 | **[Primitives API Reference](reference/primitives-api-reference.md)** | Rust core data types (`Entity`, `Resource`, `Flow`, `Instance`, `Policy`). | Struct fields, methods, types |
 | **[Configuration Reference](reference/configuration-reference.md)** | Manifest specifications (`Cargo.toml`, `.sea-registry.toml`, Devbox). | Schema definitions & keys |

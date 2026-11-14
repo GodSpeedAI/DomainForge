@@ -1,3 +1,8 @@
+# Current State: `domainforge evaluate` (2026-11-13, branch fde/integration)
+
+- [x] Added `domainforge evaluate --model --facts --format json`: per-policy and per-outermost-binding true/false/unknown with `support`; operation-bound policies via `evaluate_precondition`. Library: `Policy::evaluate_bindings` (`policy/core.rs`), `evaluate.rs`; CLI `cli/evaluate.rs`; schemas `schemas/evaluate-*.v1.json`; docs `docs/reference/evaluate.md`; tests `tests/evaluate_tests.rs`.
+- [ ] Python/TypeScript/wasm bindings not built or extended (no existing public API changed). Limits and unverified items are listed in `docs/reference/evaluate.md`.
+
 # Current State: EGM documentation bootstrap (2026-10-30)
 
 - [x] Ran the `egm-bootstrap` skill over the whole repository with `target_filename=EGM.md` (chosen so the 12 existing human-maintained `README.md` files, including the 23 KB root README, stay untouched — verified: no `README.md` appears as a new/modified file from this task).

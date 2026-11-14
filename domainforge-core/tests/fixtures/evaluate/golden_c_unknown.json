@@ -1,0 +1,54 @@
+[
+  {
+    "binding_depth": "outermost",
+    "bindings": [
+      {
+        "entity": "Evidence",
+        "instance": "e_missing",
+        "instance_id": "56655a19-3bca-53a0-8452-984769f04cb1",
+        "namespace": "evaluate_fixture",
+        "result": "unknown"
+      },
+      {
+        "entity": "Evidence",
+        "instance": "e_ok",
+        "instance_id": "888a0db5-08e8-534a-b4f7-3feb657c4e46",
+        "namespace": "evaluate_fixture",
+        "result": "true"
+      }
+    ],
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation_bound": false,
+    "policy": "evidence_retained_30_days",
+    "policy_id": "151257ca-a051-5435-b556-a03ae526916c",
+    "result": "unknown",
+    "support": 2
+  },
+  {
+    "binding_depth": "outermost",
+    "bindings": [],
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation_bound": false,
+    "policy": "executed_steps_have_approval",
+    "policy_id": "362ca1d7-6a4a-5375-a265-f9ee14347313",
+    "result": "true",
+    "support": 0
+  },
+  {
+    "bindings": [],
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation": "close_case",
+    "operation_bound": true,
+    "policy": "case_must_be_open",
+    "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
+    "reason": "no_operation_input",
+    "result": "unknown",
+    "support": 0
+  }
+]

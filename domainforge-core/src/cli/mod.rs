@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 pub mod authority;
 pub mod contract;
 pub mod envelope;
+pub mod evaluate;
 pub mod format;
 pub mod import;
 pub mod normalize;
@@ -60,6 +61,8 @@ pub enum Commands {
     Contract(contract::ContractArgs),
     /// Resolve and print the Canonical Semantic Envelope document
     Envelope(envelope::EnvelopeArgs),
+    /// Evaluate policies against a facts file with per-binding tri-state results
+    Evaluate(evaluate::EvaluateArgs),
 }
 
 #[derive(ValueEnum, Clone, Debug, Copy)]

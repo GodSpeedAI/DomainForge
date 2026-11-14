@@ -1,0 +1,39 @@
+[
+  {
+    "binding_depth": "outermost",
+    "bindings": [],
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation_bound": false,
+    "policy": "evidence_retained_30_days",
+    "policy_id": "151257ca-a051-5435-b556-a03ae526916c",
+    "result": "true",
+    "support": 0
+  },
+  {
+    "binding_depth": "outermost",
+    "bindings": [],
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation_bound": false,
+    "policy": "executed_steps_have_approval",
+    "policy_id": "362ca1d7-6a4a-5375-a265-f9ee14347313",
+    "result": "true",
+    "support": 0
+  },
+  {
+    "bindings": [],
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation": "close_case",
+    "operation_bound": true,
+    "policy": "case_must_be_open",
+    "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
+    "reason": "no_operation_input",
+    "result": "unknown",
+    "support": 0
+  }
+]

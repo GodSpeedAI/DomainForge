@@ -15,6 +15,9 @@ Direct `.json` schema data (no EGM contract — these are data, not source):
   `https://domainforge.dev/schemas/canonical-semantic-envelope-v1.schema.json`,
   title "DomainForge Canonical Semantic Envelope Document"; loaded by path in
   `domainforge-core/tests/application_schema_tests.rs`.
+- `evaluate-facts.v1.json` and `evaluate-output.v1.json` — draft-07 schemas for the
+  `domainforge evaluate` facts input and JSON output; validated against real output in
+  `domainforge-core/tests/evaluate_tests.rs`.
 - `ast-v1.schema.json` — draft-07, title "SEA DSL Abstract Syntax Tree".
 - `ast-v2.schema.json` — draft-07, title "Ast".
 - `ast-v3.schema.json` — draft-07, title "Ast"; the live AST contract, emitted by

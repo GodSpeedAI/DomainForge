@@ -152,6 +152,17 @@ domainforge envelope --capabilities
 
 ---
 
+### `evaluate`
+Evaluate policies against a facts file; report `true`/`false`/`unknown` per policy and per bound instance.
+
+```bash
+domainforge evaluate --model <MODEL.sea> --facts <FACTS.json> --format json [--world-name <NAME>]
+```
+
+Exit `0` when evaluation ran (even if results are false or unknown); `2` on input or usage errors. See [evaluate](evaluate.md).
+
+---
+
 ### `authority`
 Evaluate authority decisions against context facts and emit an audit trace.
 

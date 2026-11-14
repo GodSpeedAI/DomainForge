@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://domainforge.dev/schemas/evaluate-facts.v1.json",
+  "title": "DomainForge Evaluate Facts v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": { "const": "domainforge.evaluate-facts.v1" },
+    "instances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["namespace", "entity", "name"],
+        "properties": {
+          "namespace": { "type": "string", "minLength": 1 },
+          "entity": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1, "description": "Globally unique instance name." },
+          "fields": { "type": "object", "description": "Entity field values as plain JSON. Omitted optional fields are unknown (NULL) to policies." }
+        }
+      }
+    },
+    "operation_inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "operation"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "Input-set id, unique within the file." },
+          "operation": { "type": "string", "minLength": 1 },
+          "input": {
+            "type": "object",
+            "description": "Input field name to typed value, e.g. {\"kind\":\"string\",\"data\":\"open\"}.",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["kind", "data"],
+              "properties": {
+                "kind": { "enum": ["string", "int", "decimal", "bool", "timestamp", "uuid", "quantity", "entity_ref", "enum", "list"] },
+                "data": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

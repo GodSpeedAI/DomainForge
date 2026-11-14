@@ -1,0 +1,3 @@
+{"schema":"domainforge.evaluate-facts.v1","instances":[
+ {"namespace":"evaluate_fixture","entity":"Evidence","name":"e_missing","fields":{"evidence_id":"e_missing"}},
+ {"namespace":"evaluate_fixture","entity":"Evidence","name":"e_bad","fields":{"evidence_id":"e_bad","retention_days":5}}]}
