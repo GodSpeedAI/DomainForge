@@ -24,21 +24,7 @@
     "support": 0
   },
   {
-    "bindings": [
-      {
-        "input_set_id": "in_closed",
-        "result": "false"
-      },
-      {
-        "input_set_id": "in_missing",
-        "reason": "unknown_input",
-        "result": "unknown"
-      },
-      {
-        "input_set_id": "in_open",
-        "result": "true"
-      }
-    ],
+    "input_set_id": "in_closed",
     "kind": "constraint",
     "modality": "obligation",
     "namespace": "evaluate_fixture",
@@ -46,7 +32,29 @@
     "operation_bound": true,
     "policy": "case_must_be_open",
     "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
-    "result": "false",
-    "support": 3
+    "result": "false"
+  },
+  {
+    "input_set_id": "in_missing",
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation": "close_case",
+    "operation_bound": true,
+    "policy": "case_must_be_open",
+    "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
+    "reason": "unknown_input",
+    "result": "unknown"
+  },
+  {
+    "input_set_id": "in_open",
+    "kind": "constraint",
+    "modality": "obligation",
+    "namespace": "evaluate_fixture",
+    "operation": "close_case",
+    "operation_bound": true,
+    "policy": "case_must_be_open",
+    "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
+    "result": "true"
   }
 ]

@@ -125,17 +125,39 @@ fn evaluate_case_c_missing_attribute_is_unknown_and_false_dominates() {
 fn evaluate_case_d_operation_bound_policy_open_closed_missing() {
     let report = evaluate("facts_d_operation.json");
     assert_eq!(report["policies"], golden("golden_d_operation.json"));
-    let p = policy(&report, "case_must_be_open");
+    let p = report["policies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["policy"] == "case_must_be_open" && r["input_set_id"] == "in_open")
+        .unwrap();
     assert_eq!(p["operation_bound"], true);
     assert_eq!(p["operation"], "close_case");
-    assert_eq!(p["result"], "false");
+    assert_eq!(p["result"], "true");
+    let rows: Vec<(String, String)> = report["policies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|r| r["policy"] == "case_must_be_open")
+        .map(|r| {
+            (
+                r["input_set_id"].as_str().unwrap().to_string(),
+                r["result"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect();
     assert_eq!(
-        results(p, "input_set_id"),
+        rows,
         pairs(&[
             ("in_closed", "false"),
             ("in_missing", "unknown"),
             ("in_open", "true")
         ])
+    );
+    assert_eq!(
+        report["policies"].as_array().unwrap().len(),
+        5,
+        "no aggregate row"
     );
 }
 
@@ -287,7 +309,35 @@ fn evaluate_missing_files_are_usage_errors() {
     assert_eq!(out.status.code(), Some(2));
 }
 
-/// Behaviour probes recorded in docs/reference/evaluate.md.
+fn probe_report(model_extra: &str, items: &[(&str, Option<bool>)]) -> Value {
+    let dir = tempdir().unwrap();
+    let model = dir.path().join("probe.sea");
+    std::fs::write(&model, format!("{PROBE_MODEL}{model_extra}")).unwrap();
+    let facts = dir.path().join("facts.json");
+    let instances: Vec<Value> = items
+        .iter()
+        .map(|(name, flag)| {
+            let mut fields = json!({"item_id": name});
+            if let Some(flag) = flag {
+                fields["flag"] = json!(flag);
+            }
+            json!({"namespace": "evaluate_probe", "entity": "Item", "name": name, "fields": fields})
+        })
+        .collect();
+    std::fs::write(
+        &facts,
+        json!({"schema": SCHEMA, "instances": instances}).to_string(),
+    )
+    .unwrap();
+    let out = run_with(&model, &facts, &[]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    serde_json::from_slice(&out.stdout).unwrap()
+}
+
 const PROBE_MODEL: &str = r#"
 @namespace "evaluate_probe"
 
@@ -301,40 +351,190 @@ policy single_flagged per Constraint Obligation priority 1 as: exists_unique i i
 policy always_true per Constraint Obligation priority 2 as: 1 = 1
 "#;
 
+fn unique(items: &[(&str, Option<bool>)]) -> Value {
+    policy(&probe_report("", items), "single_flagged").clone()
+}
+
 #[test]
-fn evaluate_probe_exists_unique_under_null_and_quantifier_free_policy() {
+fn evaluate_exists_unique_true_plus_null_is_unknown_with_caveat() {
+    let p = unique(&[("a", Some(true)), ("b", None)]);
+    assert_eq!(p["result"], "unknown");
+    assert_eq!(p["caveat"], "exists_unique_null_ignored");
+    assert_eq!(p["evaluator_result"], "true");
+    assert_eq!(
+        results(&p, "instance"),
+        pairs(&[("a", "true"), ("b", "unknown")])
+    );
+}
+
+#[test]
+fn evaluate_exists_unique_null_plus_false_is_unknown_with_caveat() {
+    let p = unique(&[("a", None), ("b", Some(false))]);
+    assert_eq!(p["result"], "unknown");
+    assert_eq!(p["caveat"], "exists_unique_null_ignored");
+    assert_eq!(p["evaluator_result"], "false");
+}
+
+#[test]
+fn evaluate_exists_unique_two_trues_plus_null_stays_false_without_caveat() {
+    let p = unique(&[("a", Some(true)), ("b", Some(true)), ("c", None)]);
+    assert_eq!(p["result"], "false");
+    assert!(p.get("caveat").is_none() && p.get("evaluator_result").is_none());
+}
+
+#[test]
+fn evaluate_exists_unique_true_plus_false_is_true() {
+    let p = unique(&[("a", Some(true)), ("b", Some(false))]);
+    assert_eq!(p["result"], "true");
+    assert!(p.get("caveat").is_none());
+}
+
+#[test]
+fn evaluate_quantifier_free_policy_has_no_support_or_bindings() {
+    let report = probe_report("", &[("a", Some(true))]);
+    let q = policy(&report, "always_true");
+    assert_eq!(q["result"], "true");
+    assert!(q["support"].is_null());
+    assert_eq!(q["bindings"], json!([]));
+    assert!(q.get("binding_depth").is_none());
+}
+
+#[test]
+fn evaluate_marks_model_declared_instances_and_counts_sources() {
+    let report = probe_report(
+        "\ninstance declared of \"Item\" {\n    item_id: \"declared\"\n    flag: true\n}\n",
+        &[("from_facts", Some(false))],
+    );
+    assert_eq!(report["model_instance_count"], 1);
+    assert_eq!(report["facts_instance_count"], 1);
+    let p = policy(&report, "single_flagged");
+    let sources: Vec<(String, String)> = p["bindings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| {
+            (
+                b["instance"].as_str().unwrap().to_string(),
+                b["source"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        sources,
+        pairs(&[("declared", "model"), ("from_facts", "facts")])
+    );
+}
+
+fn eval_text(model: &str, facts: Value) -> std::process::Output {
     let dir = tempdir().unwrap();
-    let model = dir.path().join("probe.sea");
-    std::fs::write(&model, PROBE_MODEL).unwrap();
-    let facts = dir.path().join("facts.json");
-    std::fs::write(
-        &facts,
-        json!({"schema": SCHEMA, "instances": [
-            {"namespace": "evaluate_probe", "entity": "Item", "name": "a", "fields": {"item_id": "a", "flag": true}},
-            {"namespace": "evaluate_probe", "entity": "Item", "name": "b", "fields": {"item_id": "b"}}]})
-        .to_string(),
-    )
-    .unwrap();
-    let out = run_with(&model, &facts, &[]);
+    let m = dir.path().join("m.sea");
+    std::fs::write(&m, model).unwrap();
+    let f = dir.path().join("f.json");
+    std::fs::write(&f, facts.to_string()).unwrap();
+    run_with(&m, &f, &[])
+}
+
+fn base_model() -> String {
+    std::fs::read_to_string(fixture("model.sea")).unwrap()
+}
+
+#[test]
+fn evaluate_rejects_inputs_for_operation_without_policy_governance() {
+    let model = base_model().replace(
+        "access policy_governed by case_must_be_open at precondition fails with case_not_open",
+        "access public",
+    );
+    let out = eval_text(
+        &model,
+        json!({"schema": SCHEMA, "operation_inputs": [{"id": "i", "operation": "close_case", "input": {}}]}),
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stderr).contains("close_case"));
+}
+
+#[test]
+fn evaluate_rejects_operation_input_value_of_the_wrong_kind() {
+    let model = base_model();
+    let out = eval_text(
+        &model,
+        json!({"schema": SCHEMA, "operation_inputs": [{"id": "i", "operation": "close_case",
+            "input": {"case_id": {"kind": "string", "data": "5"}}}]}),
+    );
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("case_id"));
+    // string value for the string field is accepted
+    let out = eval_text(
+        &model,
+        json!({"schema": SCHEMA, "operation_inputs": [{"id": "i", "operation": "close_case",
+            "input": {"case_status": {"kind": "string", "data": "5"}}}]}),
+    );
+    assert_eq!(out.status.code(), Some(0));
+}
+
+#[test]
+fn evaluate_rejects_int_field_given_a_string() {
+    let model = base_model().replace(
+        "case_status: string\n}",
+        "case_status: string\n    attempts: int\n}",
+    );
+    let out = eval_text(
+        &model,
+        json!({"schema": SCHEMA, "operation_inputs": [{"id": "i", "operation": "close_case",
+            "input": {"attempts": {"kind": "string", "data": "5"}}}]}),
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stderr).contains("attempts"));
+}
+
+#[test]
+fn evaluate_policy_bound_to_several_operations_yields_a_row_per_operation_and_input() {
+    let base = base_model();
+    let start = base.find("operation close_case {").unwrap();
+    let second = base[start..]
+        .replace("operation close_case {", "operation close_case_b {")
+        .replace("case_not_open", "case_not_open_b")
+        .replace("failure conflict", "failure conflict_b");
+    let model = format!("{base}\n{second}");
+    let input = |id: &str, op: &str, status: &str| json!({"id": id, "operation": op, "input": {"case_status": {"kind": "string", "data": status}}});
+    let out = eval_text(
+        &model,
+        json!({"schema": SCHEMA, "operation_inputs": [
+            input("x1", "close_case", "open"), input("x2", "close_case_b", "closed")]}),
+    );
     assert!(
         out.status.success(),
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
     let report: Value = serde_json::from_slice(&out.stdout).unwrap();
-    let p = policy(&report, "single_flagged");
-    // Observed: the existing evaluator expands exists_unique eagerly and counts
-    // only literal-true items, so one true plus one NULL yields true (a
-    // three-valued reading would be unknown). The policy-level result is the
-    // existing evaluator's, reported as-is; the binding rows show the NULL.
-    assert_eq!(p["result"], "true");
+    let rows: Vec<(String, String, String)> = report["policies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|r| r["policy"] == "case_must_be_open")
+        .map(|r| {
+            (
+                r["operation"].as_str().unwrap().to_string(),
+                r["input_set_id"].as_str().unwrap_or("-").to_string(),
+                r["result"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect();
     assert_eq!(
-        results(p, "instance"),
-        pairs(&[("a", "true"), ("b", "unknown")])
+        rows,
+        vec![
+            ("close_case".into(), "x1".into(), "true".into()),
+            ("close_case_b".into(), "x2".into(), "false".into())
+        ]
     );
-    let q = policy(&report, "always_true");
-    assert_eq!(q["result"], "true");
-    assert!(q["support"].is_null());
-    assert_eq!(q["bindings"], json!([]));
-    assert!(q.get("binding_depth").is_none());
 }

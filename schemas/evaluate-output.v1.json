@@ -4,65 +4,196 @@
   "title": "DomainForge Evaluate Output v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "compiler", "model_sha256", "source_set_hash", "facts_sha256", "world_ref", "policies"],
+  "required": [
+    "schema",
+    "compiler",
+    "model_sha256",
+    "source_set_hash",
+    "facts_sha256",
+    "world_ref",
+    "policies",
+    "model_instance_count",
+    "facts_instance_count"
+  ],
   "definitions": {
-    "result": { "enum": ["true", "false", "unknown"] },
-    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    "result": {
+      "enum": [
+        "true",
+        "false",
+        "unknown"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
   },
   "properties": {
-    "schema": { "const": "domainforge.evaluate-output.v1" },
+    "schema": {
+      "const": "domainforge.evaluate-output.v1"
+    },
     "compiler": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "version"],
-      "properties": { "name": { "type": "string" }, "version": { "type": "string" } }
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
     },
-    "model_sha256": { "$ref": "#/definitions/sha256" },
-    "source_set_hash": { "$ref": "#/definitions/sha256" },
-    "facts_sha256": { "$ref": "#/definitions/sha256" },
-    "world_ref": { "type": ["string", "null"], "description": "world:<name>@sha256:<hex>; null unless --world-name is given." },
+    "model_sha256": {
+      "$ref": "#/definitions/sha256"
+    },
+    "source_set_hash": {
+      "$ref": "#/definitions/sha256"
+    },
+    "facts_sha256": {
+      "$ref": "#/definitions/sha256"
+    },
+    "world_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "world:<name>@sha256:<hex>; null unless --world-name is given."
+    },
     "policies": {
       "type": "array",
       "description": "Ordered by policy_id, then operation name.",
       "items": {
         "type": "object",
-        "required": ["policy_id", "policy", "namespace", "kind", "modality", "operation_bound", "result", "support", "bindings"],
+        "required": [
+          "policy_id",
+          "policy",
+          "namespace",
+          "kind",
+          "modality",
+          "operation_bound",
+          "result"
+        ],
         "properties": {
-          "policy_id": { "type": "string" },
-          "policy": { "type": "string" },
-          "namespace": { "type": "string" },
-          "kind": { "type": "string" },
-          "modality": { "type": "string" },
-          "operation_bound": { "type": "boolean" },
-          "operation": { "type": "string", "description": "Present when operation_bound." },
-          "result": { "$ref": "#/definitions/result" },
-          "support": {
-            "type": ["integer", "null"],
-            "minimum": 0,
-            "description": "Instances the outermost quantifier ranged over (input sets for operation-bound policies); 0 means vacuous; null when the policy has no quantifier."
+          "policy_id": {
+            "type": "string"
           },
-          "binding_depth": { "const": "outermost" },
-          "reason": { "enum": ["no_operation_input", "evaluation_error"] },
-          "error": { "type": "string" },
+          "policy": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "modality": {
+            "type": "string"
+          },
+          "operation_bound": {
+            "type": "boolean"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Present when operation_bound; one row per policy, operation and input set (no aggregate)."
+          },
+          "result": {
+            "$ref": "#/definitions/result"
+          },
+          "support": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "Graph policies only: instances the outermost quantifier ranged over; 0 means vacuous; null when the policy has no quantifier."
+          },
+          "binding_depth": {
+            "const": "outermost"
+          },
+          "reason": {
+            "enum": [
+              "no_operation_input",
+              "unknown_input",
+              "evaluation_error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
           "bindings": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["result"],
+              "required": [
+                "result"
+              ],
               "properties": {
-                "entity": { "type": ["string", "null"] },
-                "namespace": { "type": ["string", "null"] },
-                "instance": { "type": "string" },
-                "instance_id": { "type": ["string", "null"] },
-                "input_set_id": { "type": "string" },
-                "result": { "$ref": "#/definitions/result" },
-                "reason": { "enum": ["unknown_input", "evaluation_error"] },
-                "error": { "type": "string" }
+                "entity": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "namespace": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "instance": {
+                  "type": "string"
+                },
+                "instance_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "result": {
+                  "$ref": "#/definitions/result"
+                },
+                "source": {
+                  "enum": [
+                    "model",
+                    "facts"
+                  ]
+                }
               }
             }
+          },
+          "input_set_id": {
+            "type": "string",
+            "description": "Operation-bound rows: the input set this row was evaluated for. Absent with reason no_operation_input."
+          },
+          "caveat": {
+            "const": "exists_unique_null_ignored",
+            "description": "result was conservatively downgraded to unknown because the evaluator ignores NULL items in exists_unique."
+          },
+          "evaluator_result": {
+            "enum": [
+              "true",
+              "false",
+              "unknown"
+            ],
+            "description": "Raw evaluator value; present only with caveat."
           }
         }
       }
+    },
+    "model_instance_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Instances declared in the model itself."
+    },
+    "facts_instance_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Instances loaded from the facts file."
     }
   }
 }

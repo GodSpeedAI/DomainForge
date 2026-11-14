@@ -9,7 +9,7 @@
 
 use crate::application::{
     evaluate_precondition, AccessMode, ApplicationContractDocument, ApplicationPolicyContext,
-    EvaluationResult as AppResult, TypedValue,
+    EvaluationResult as AppResult, FieldType, ScalarType, TypedValue,
 };
 use crate::graph::Graph;
 use crate::policy::Policy;
@@ -68,6 +68,27 @@ impl Facts {
     }
 }
 
+fn kind_matches(declared: &FieldType, value: &TypedValue) -> bool {
+    match (declared, value) {
+        (FieldType::Scalar { scalar }, v) => matches!(
+            (scalar, v),
+            (ScalarType::String, TypedValue::String(_))
+                | (ScalarType::Int, TypedValue::Int(_))
+                | (ScalarType::Decimal, TypedValue::Decimal(_))
+                | (ScalarType::Bool, TypedValue::Bool(_))
+                | (ScalarType::Timestamp, TypedValue::Timestamp(_))
+                | (ScalarType::Uuid, TypedValue::Uuid(_))
+        ),
+        (FieldType::Quantity { .. }, TypedValue::Quantity { .. }) => true,
+        (FieldType::EntityRef { .. }, TypedValue::EntityRef { .. }) => true,
+        (FieldType::Enum { .. }, TypedValue::Enum { .. }) => true,
+        (FieldType::List { element }, TypedValue::List(items)) => {
+            items.iter().all(|i| kind_matches(element, i))
+        }
+        _ => false,
+    }
+}
+
 fn tri(value: Option<bool>) -> &'static str {
     match value {
         Some(true) => "true",
@@ -118,6 +139,11 @@ pub fn evaluate_model(
     contract: &ApplicationContractDocument,
     facts: &Facts,
 ) -> Result<Vec<Value>, String> {
+    if !graph.use_three_valued_logic() {
+        return Err(
+            "evaluate requires three-valued logic; the graph is in boolean mode".to_string(),
+        );
+    }
     let operations = &contract.contract.operations;
     let records = &contract.contract.records;
 
@@ -135,17 +161,33 @@ pub fn evaluate_model(
                     supplied.id, supplied.operation
                 )
             })?;
+        let governed = matches!(&operation.access,
+            AccessMode::PolicyGoverned { bindings } if !bindings.is_empty());
+        if !governed {
+            return Err(format!(
+                "operation input '{}': operation '{}' is not policy-governed, so no policy would evaluate it",
+                supplied.id, supplied.operation
+            ));
+        }
         let record = records.iter().find(|r| r.id == operation.input);
-        for field in supplied.input.keys() {
-            if !record.is_some_and(|r| r.fields.iter().any(|f| &f.name == field)) {
+        for (field, value) in &supplied.input {
+            let declared = record.and_then(|r| r.fields.iter().find(|f| &f.name == field));
+            let Some(declared) = declared else {
                 return Err(format!(
                     "operation input '{}': unknown input field '{}' for operation '{}'",
                     supplied.id, field, supplied.operation
+                ));
+            };
+            if !kind_matches(&declared.field_type, value) {
+                return Err(format!(
+                    "operation input '{}': field '{}' has the wrong value kind for its declared type {:?}",
+                    supplied.id, field, declared.field_type
                 ));
             }
         }
     }
 
+    let fact_names: HashSet<&str> = facts.instances.iter().map(|i| i.name.as_str()).collect();
     let mut bound_ids = HashSet::new();
     let mut rows: Vec<(String, String, Value)> = Vec::new();
 
@@ -167,8 +209,18 @@ pub fn evaluate_model(
                 .filter(|s| s.operation == operation.name)
                 .collect();
             supplied.sort_by(|a, b| a.id.cmp(&b.id));
-            let mut bindings_out = Vec::new();
-            let mut overall = Some(true);
+            if supplied.is_empty() {
+                let mut row = policy_head(policy);
+                row.insert("operation_bound".into(), json!(true));
+                row.insert("operation".into(), json!(operation.name));
+                row.insert("result".into(), json!("unknown"));
+                row.insert("reason".into(), json!("no_operation_input"));
+                rows.push((
+                    policy.id.to_string(),
+                    format!("{}\u{0}", operation.name),
+                    Value::Object(row),
+                ));
+            }
             for input in &supplied {
                 let context = ApplicationPolicyContext {
                     operation: operation.id.clone(),
@@ -176,7 +228,9 @@ pub fn evaluate_model(
                     input: input.input.clone(),
                     pre_state: None,
                 };
-                let mut row = Map::new();
+                let mut row = policy_head(policy);
+                row.insert("operation_bound".into(), json!(true));
+                row.insert("operation".into(), json!(operation.name));
                 row.insert("input_set_id".into(), json!(input.id));
                 let result = match evaluate_precondition(policy.expression(), &context) {
                     AppResult::True => Some(true),
@@ -192,28 +246,12 @@ pub fn evaluate_model(
                     }
                 };
                 row.insert("result".into(), json!(tri(result)));
-                overall = match (overall, result) {
-                    (Some(false), _) | (_, Some(false)) => Some(false),
-                    (None, _) | (_, None) => None,
-                    _ => Some(true),
-                };
-                bindings_out.push(Value::Object(row));
+                rows.push((
+                    policy.id.to_string(),
+                    format!("{}\u{0}{}", operation.name, input.id),
+                    Value::Object(row),
+                ));
             }
-            let mut row = policy_head(policy);
-            row.insert("operation_bound".into(), json!(true));
-            row.insert("operation".into(), json!(operation.name));
-            row.insert("support".into(), json!(supplied.len()));
-            if supplied.is_empty() {
-                overall = None;
-                row.insert("reason".into(), json!("no_operation_input"));
-            }
-            row.insert("result".into(), json!(tri(overall)));
-            row.insert("bindings".into(), Value::Array(bindings_out));
-            rows.push((
-                policy.id.to_string(),
-                operation.name.clone(),
-                Value::Object(row),
-            ));
         }
     }
 
@@ -227,6 +265,13 @@ pub fn evaluate_model(
             Ok(report) => {
                 row.insert("result".into(), json!(tri(report.result)));
                 row.insert("support".into(), json!(report.support));
+                if let Some(caveat) = report.caveat {
+                    row.insert("caveat".into(), json!(caveat));
+                    row.insert(
+                        "evaluator_result".into(),
+                        json!(tri(report.evaluator_result)),
+                    );
+                }
                 if report.support.is_some() {
                     row.insert("binding_depth".into(), json!("outermost"));
                 }
@@ -234,7 +279,9 @@ pub fn evaluate_model(
                     .bindings
                     .iter()
                     .map(|b| {
+                        let from_facts = fact_names.contains(b.instance.as_str());
                         json!({
+                            "source": if from_facts { "facts" } else { "model" },
                             "entity": b.entity,
                             "namespace": b.namespace,
                             "instance": b.instance,

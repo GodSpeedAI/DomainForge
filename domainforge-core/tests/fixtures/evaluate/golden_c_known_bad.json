@@ -7,14 +7,16 @@
         "instance": "e_bad",
         "instance_id": "5efa3e82-4522-5b93-bfe0-eeae83094a21",
         "namespace": "evaluate_fixture",
-        "result": "false"
+        "result": "false",
+        "source": "facts"
       },
       {
         "entity": "Evidence",
         "instance": "e_missing",
         "instance_id": "56655a19-3bca-53a0-8452-984769f04cb1",
         "namespace": "evaluate_fixture",
-        "result": "unknown"
+        "result": "unknown",
+        "source": "facts"
       }
     ],
     "kind": "constraint",
@@ -39,7 +41,6 @@
     "support": 0
   },
   {
-    "bindings": [],
     "kind": "constraint",
     "modality": "obligation",
     "namespace": "evaluate_fixture",
@@ -48,7 +49,6 @@
     "policy": "case_must_be_open",
     "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
     "reason": "no_operation_input",
-    "result": "unknown",
-    "support": 0
+    "result": "unknown"
   }
 ]

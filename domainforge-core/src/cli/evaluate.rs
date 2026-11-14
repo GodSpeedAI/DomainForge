@@ -104,6 +104,7 @@ pub fn run(args: EvaluateArgs) -> Result<()> {
             render(&d)
         ))
     });
+    let model_instance_count = graph.entity_instance_count();
     load_instances(&mut graph, &facts).unwrap_or_else(|e| fail(e));
     let policies = evaluate_model(&graph, &contract, &facts).unwrap_or_else(|e| fail(e));
 
@@ -131,6 +132,8 @@ pub fn run(args: EvaluateArgs) -> Result<()> {
         "model_sha256": compute_sha256(&model_bytes),
         "source_set_hash": contract.inputs.source_set_hash,
         "facts_sha256": compute_sha256(&facts_bytes),
+        "model_instance_count": model_instance_count,
+        "facts_instance_count": facts.instances.len(),
         "world_ref": world_ref,
         "policies": policies,
     });

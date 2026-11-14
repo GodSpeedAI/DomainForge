@@ -24,7 +24,6 @@
     "support": 0
   },
   {
-    "bindings": [],
     "kind": "constraint",
     "modality": "obligation",
     "namespace": "evaluate_fixture",
@@ -33,7 +32,6 @@
     "policy": "case_must_be_open",
     "policy_id": "5565cfad-c765-57c9-aa8d-54dc9ee7c65e",
     "reason": "no_operation_input",
-    "result": "unknown",
-    "support": 0
+    "result": "unknown"
   }
 ]
