@@ -57,6 +57,7 @@ jobs:
           ls tarballs
           count=$(ls tarballs/godspeedai-domainforge-[a-z]*-*.tgz | wc -l)
           if [ "$count" -ne 5 ]; then echo "::error::expected 5 platform tarballs, found $count"; exit 1; fi
+          # "./" keeps npm from reading "tarballs/<file>" as a GitHub user/repo spec.
           for tgz in tarballs/godspeedai-domainforge-[a-z]*-*.tgz; do
             name=$(tar -xzOf "$tgz" package/package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).name")
             version=$(tar -xzOf "$tgz" package/package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
@@ -64,7 +65,7 @@ jobs:
               echo "$name@$version already published, skipping"
               continue
             fi
-            npm publish "$tgz" --access public --provenance --ignore-scripts
+            npm publish "./$tgz" --access public --provenance --ignore-scripts
           done
 
       - name: Publish main package
@@ -76,7 +77,7 @@ jobs:
             echo "Already published, skipping"
             exit 0
           fi
-          npm publish "$tgz" --access public --provenance --ignore-scripts
+          npm publish "./$tgz" --access public --provenance --ignore-scripts
 
   publish-wasm:
     name: Publish WASM package to npm
