@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.1](https://github.com/GodSpeedAI/DomainForge/compare/v0.22.0...v0.22.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **npm:** publish native platform packages for all targets incl. linux-arm64 ([#173](https://github.com/GodSpeedAI/DomainForge/issues/173)) ([ff87978](https://github.com/GodSpeedAI/DomainForge/commit/ff879787d0e9bfbbf7d20c8243d40a600a78115b))
+
 ## [0.22.0](https://github.com/GodSpeedAI/DomainForge/compare/v0.21.2...v0.22.0) (2026-11-14)
 
 
