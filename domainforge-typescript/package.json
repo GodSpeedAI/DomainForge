@@ -10,6 +10,7 @@
   "scripts": {
     "build": "napi build --platform --release --manifest-path ../domainforge-core/Cargo.toml --output-dir . --features typescript,three_valued_logic && python3 ../scripts/patch_napi_types.py",
     "build:debug": "napi build --platform --manifest-path ../domainforge-core/Cargo.toml --output-dir . --features typescript,three_valued_logic && python3 ../scripts/patch_napi_types.py",
+    "create-npm-dirs": "napi create-npm-dirs",
     "test": "bun vitest run",
     "test:watch": "bun vitest",
     "test:node": "npx vitest run",
@@ -55,6 +56,7 @@
       "x86_64-apple-darwin",
       "x86_64-pc-windows-msvc",
       "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
       "aarch64-apple-darwin"
     ]
   }

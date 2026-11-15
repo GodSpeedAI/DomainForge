@@ -11,14 +11,20 @@ permissions:
   id-token: write
 
 jobs:
+  # Build and smoke-test every platform before anything is published.
+  build:
+    name: Build and smoke-test platform packages
+    uses: ./.github/workflows/npm-platforms.yml
+    permissions:
+      contents: read
+
   publish:
     name: Publish napi bindings to npm
-    runs-on: ubuntu-latest
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -27,49 +33,50 @@ jobs:
       - name: Install OIDC-capable npm
         run: npm install -g npm@^11.15.0
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          bun-version: latest
+          pattern: npm-platform-*
+          path: tarballs
+          merge-multiple: true
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          toolchain: 1.99.0
-          components: rustfmt, clippy
+          name: npm-main
+          path: tarballs
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build napi package
-        working-directory: domainforge-typescript
-        run: npm run build
-
-      - name: Patch generated TypeScript declarations
-        working-directory: domainforge-typescript
-        run: python3 ../scripts/patch_napi_types.py
-
-      - name: Smoke test npm pack
-        working-directory: domainforge-typescript
+      # Platform packages go first so the main package's optionalDependencies
+      # always resolve the moment it appears on the registry.
+      # NPM_TOKEN bootstraps packages that do not exist yet: npm trusted
+      # publishing can only be configured on an existing package. Once a
+      # trusted publisher is set for each platform package this token is unused.
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm pack --dry-run 2>&1 | tee /tmp/npm-pack-output.txt
-          grep -q "index.d.ts" /tmp/npm-pack-output.txt || { echo "ERROR: index.d.ts missing from pack"; exit 1; }
-          grep -q "index.js" /tmp/npm-pack-output.txt || { echo "ERROR: index.js missing from pack"; exit 1; }
-          grep -q "domainforge-core.*.node" /tmp/npm-pack-output.txt || { echo "ERROR: native .node binary missing from pack"; exit 1; }
-          echo "npm pack smoke test passed"
+          set -euo pipefail
+          ls tarballs
+          count=$(ls tarballs/godspeedai-domainforge-[a-z]*-*.tgz | wc -l)
+          if [ "$count" -ne 5 ]; then echo "::error::expected 5 platform tarballs, found $count"; exit 1; fi
+          for tgz in tarballs/godspeedai-domainforge-[a-z]*-*.tgz; do
+            name=$(tar -xzOf "$tgz" package/package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).name")
+            version=$(tar -xzOf "$tgz" package/package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version already published, skipping"
+              continue
+            fi
+            npm publish "$tgz" --access public --provenance --ignore-scripts
+          done
 
-      - name: Check if already published
-        working-directory: domainforge-typescript
+      - name: Publish main package
         run: |
-          if npm view "@godspeedai/domainforge@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+          set -euo pipefail
+          tgz=$(ls tarballs/godspeedai-domainforge-[0-9]*.tgz)
+          version=$(tar -xzOf "$tgz" package/package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+          if npm view "@godspeedai/domainforge@$version" version >/dev/null 2>&1; then
             echo "Already published, skipping"
-            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
+            exit 0
           fi
-
-      - name: Publish to npm with OIDC
-        if: env.SKIP_PUBLISH != '1'
-        working-directory: domainforge-typescript
-        run: npm publish --access public --ignore-scripts
+          npm publish "$tgz" --access public --provenance --ignore-scripts
 
   publish-wasm:
     name: Publish WASM package to npm

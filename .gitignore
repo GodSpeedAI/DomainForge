@@ -111,3 +111,6 @@ coverage/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Generated per-platform npm packages (napi create-npm-dirs); built in CI only
+domainforge-typescript/npm/

@@ -385,6 +385,15 @@ jobs:
       - name: Run TypeScript tests
         run: just ci-test-ts
 
+  # Builds the napi binding natively on every npm platform, packs the platform
+  # and main packages, and smoke-tests each from its tarballs. Never publishes.
+  npm-platforms:
+    name: npm platform packages
+    needs: lint
+    uses: ./.github/workflows/npm-platforms.yml
+    permissions:
+      contents: read
+
   test-integration:
     name: Minimal Integration Check
     needs: [test-rust, test-typescript]
