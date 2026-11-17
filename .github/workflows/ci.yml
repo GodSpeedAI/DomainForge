@@ -102,9 +102,10 @@ jobs:
           "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
 
   test-rust:
+    # No job-level if: a skipped matrix job reports its unexpanded name, which never
+    # satisfies the required contexts. Steps short-circuit on docs-only changes instead.
     name: Test Rust (${{ matrix.os }})
     needs: lint
-    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -119,8 +120,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: needs.lint.outputs.code == 'true'
 
       - name: Install Rust toolchain
+        if: needs.lint.outputs.code == 'true'
         uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
           toolchain: 1.99.0
@@ -128,31 +131,35 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install just
+        if: needs.lint.outputs.code == 'true'
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Cache cargo build
+        if: needs.lint.outputs.code == 'true'
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           # restore everywhere, save only from main (PR caches would evict main's)
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run unit tests
+        if: needs.lint.outputs.code == 'true'
         run: just ci-test-rust
 
       - name: Build release CLI binary (verify)
+        if: needs.lint.outputs.code == 'true'
         run: |
           cd domainforge-core
           cargo build --release --target ${{ matrix.target }} --features cli
 
       - name: Resolve CLI binary path
-        if: matrix.os != 'windows-2025-vs2026'
+        if: (matrix.os != 'windows-2025-vs2026') && needs.lint.outputs.code == 'true'
         run: |
           CLI_BIN=$(python3 scripts/resolve_rust_binary.py --workspace "$(pwd)" --name domainforge --profile release --target-triple ${{ matrix.target }} --require-executable)
           echo "Resolved CLI binary: $CLI_BIN"
           echo "CLI_BIN=$CLI_BIN" >> "$GITHUB_ENV"
 
       - name: Resolve CLI binary path (windows)
-        if: matrix.os == 'windows-2025-vs2026'
+        if: (matrix.os == 'windows-2025-vs2026') && needs.lint.outputs.code == 'true'
         shell: pwsh
         run: |
           $workspace = (Get-Location).Path
@@ -161,9 +168,11 @@ jobs:
           "CLI_BIN=$cliBin" >> $env:GITHUB_ENV
 
       - name: Verify CLI binary executes
+        if: needs.lint.outputs.code == 'true'
         run: just ci-verify-binary "${{ env.CLI_BIN }}"
 
       - name: Check CLI binary size
+        if: needs.lint.outputs.code == 'true'
         run: just ci-check-binary-size "${{ env.CLI_BIN }}" "${{ env.CLI_MAX_BYTES }}"
 
   package-linux:
@@ -282,9 +291,10 @@ jobs:
         run: cargo check -p domainforge-core --locked --features cli
 
   test-python:
+    # No job-level if: a skipped matrix job reports its unexpanded name, which never
+    # satisfies the required contexts. Steps short-circuit on docs-only changes instead.
     name: Test Python (${{ matrix.python-version }})
     needs: lint
-    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -294,31 +304,38 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: needs.lint.outputs.code == 'true'
 
       - name: Set up Python
+        if: needs.lint.outputs.code == 'true'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Rust toolchain
+        if: needs.lint.outputs.code == 'true'
         uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
           toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install just
+        if: needs.lint.outputs.code == 'true'
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Cache cargo build
+        if: needs.lint.outputs.code == 'true'
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           # restore everywhere, save only from main (PR caches would evict main's)
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Setup Python environment
+        if: needs.lint.outputs.code == 'true'
         run: just python-setup
 
       - name: Run Python tests
+        if: needs.lint.outputs.code == 'true'
         run: just ci-test-python
 
   build-wheel-aarch64:
