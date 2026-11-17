@@ -392,14 +392,14 @@ fn documents_satisfy_their_published_json_schemas() {
     .unwrap();
     let envelope = serde_json::to_value(envelope_for(&flagship_sources())).unwrap();
 
-    let compiled = jsonschema::JSONSchema::compile(&contract_schema).unwrap();
+    let compiled = jsonschema::validator_for(&contract_schema).unwrap();
     assert!(compiled.is_valid(&contract), "contract violates its schema");
-    let compiled = jsonschema::JSONSchema::compile(&envelope_schema).unwrap();
+    let compiled = jsonschema::validator_for(&envelope_schema).unwrap();
     assert!(compiled.is_valid(&envelope), "envelope violates its schema");
     // The schemas are strict at the document level.
     let mut bad = contract.clone();
     bad["extra"] = json!(true);
-    let compiled = jsonschema::JSONSchema::compile(&contract_schema).unwrap();
+    let compiled = jsonschema::validator_for(&contract_schema).unwrap();
     assert!(!compiled.is_valid(&bad));
 }
 
@@ -468,7 +468,7 @@ fn strict_schemas_reject_malformed_nested_documents() {
             }),
         ),
     ];
-    let compiled = jsonschema::JSONSchema::compile(&contract_schema).unwrap();
+    let compiled = jsonschema::validator_for(&contract_schema).unwrap();
     assert!(compiled.is_valid(&contract));
     for (label, mutate) in contract_vectors {
         let mut bad = contract.clone();
@@ -524,7 +524,7 @@ fn strict_schemas_reject_malformed_nested_documents() {
             }),
         ),
     ];
-    let compiled = jsonschema::JSONSchema::compile(&envelope_schema).unwrap();
+    let compiled = jsonschema::validator_for(&envelope_schema).unwrap();
     assert!(compiled.is_valid(&envelope));
     for (label, mutate) in envelope_vectors {
         let mut bad = envelope.clone();

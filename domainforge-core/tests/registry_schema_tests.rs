@@ -1,4 +1,4 @@
-use jsonschema::{Draft, JSONSchema};
+use jsonschema::Draft;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -12,9 +12,9 @@ fn registry_schema_validates_sample() {
         .join("sea-registry.schema.json");
     let schema = fs::read_to_string(&schema_path).expect("schema must exist");
     let schema_json: Value = serde_json::from_str(&schema).expect("valid JSON schema");
-    let compiled = JSONSchema::options()
+    let compiled = jsonschema::options()
         .with_draft(Draft::Draft7)
-        .compile(&schema_json)
+        .build(&schema_json)
         .expect("schema compiles");
 
     let sample_toml = r#"

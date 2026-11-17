@@ -2,14 +2,14 @@ use domainforge_core::calm::export;
 use domainforge_core::primitives::{Entity, Flow, Resource, ResourceInstance};
 use domainforge_core::units::unit_from_string;
 use domainforge_core::Graph;
-use jsonschema::JSONSchema;
+use jsonschema::Validator;
 use rust_decimal::Decimal;
 
 const CALM_SCHEMA: &str = include_str!("../schemas/calm-v1.schema.json");
 
-fn compile_calm_schema() -> JSONSchema {
+fn compile_calm_schema() -> Validator {
     let schema = serde_json::from_str(CALM_SCHEMA).expect("Invalid schema JSON");
-    JSONSchema::compile(&schema).expect("Failed to compile schema")
+    jsonschema::validator_for(&schema).expect("Failed to compile schema")
 }
 
 #[test]
@@ -22,12 +22,12 @@ fn test_export_validates_against_schema() {
 
     let calm_json = export(&graph).unwrap();
 
-    let result = compiled_schema.validate(&calm_json);
+    let errors: Vec<_> = compiled_schema.iter_errors(&calm_json).collect();
 
-    if let Err(errors) = result {
+    if !errors.is_empty() {
         for error in errors {
             eprintln!("Validation error: {}", error);
-            eprintln!("Instance path: {}", error.instance_path);
+            eprintln!("Instance path: {}", error.instance_path());
         }
         panic!("CALM export does not validate against schema");
     }
@@ -60,12 +60,12 @@ fn test_complex_export_validates_against_schema() {
 
     let calm_json = export(&graph).unwrap();
 
-    let result = compiled_schema.validate(&calm_json);
+    let errors: Vec<_> = compiled_schema.iter_errors(&calm_json).collect();
 
-    if let Err(errors) = result {
+    if !errors.is_empty() {
         for error in errors {
             eprintln!("Validation error: {}", error);
-            eprintln!("Instance path: {}", error.instance_path);
+            eprintln!("Instance path: {}", error.instance_path());
         }
         panic!("CALM export does not validate against schema");
     }
