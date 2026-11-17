@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.3](https://github.com/GodSpeedAI/DomainForge/compare/v0.22.2...v0.22.3) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** bump rustix to 1.1.6 and ignore unfixable quick-xml advisories ([#182](https://github.com/GodSpeedAI/DomainForge/issues/182)) ([a303954](https://github.com/GodSpeedAI/DomainForge/commit/a303954e439c3431198c0f4b3e33c02b8d85e8c5))
+
 ## [0.22.2](https://github.com/GodSpeedAI/DomainForge/compare/v0.22.1...v0.22.2) (2026-11-15)
 
 
