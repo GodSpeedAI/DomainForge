@@ -179,7 +179,6 @@ jobs:
         uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
           toolchain: 1.99.0
-          toolchain: 1.99.0
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
