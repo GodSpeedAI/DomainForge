@@ -179,7 +179,7 @@ fn evaluate_output_records_hashes_version_and_validates_against_schema() {
 
     let schema: Value =
         serde_json::from_str(include_str!("../../schemas/evaluate-output.v1.json")).unwrap();
-    let compiled = jsonschema::JSONSchema::compile(&schema).unwrap();
+    let compiled = jsonschema::validator_for(&schema).unwrap();
     for facts in [
         "facts_a_empty.json",
         "facts_b_mixed.json",
@@ -187,16 +187,15 @@ fn evaluate_output_records_hashes_version_and_validates_against_schema() {
         "facts_d_operation.json",
     ] {
         let report = evaluate(facts);
-        if let Err(errors) = compiled.validate(&report) {
-            panic!(
-                "{facts}: {:?}",
-                errors.map(|e| e.to_string()).collect::<Vec<_>>()
-            );
-        };
+        let errors: Vec<String> = compiled
+            .iter_errors(&report)
+            .map(|e| e.to_string())
+            .collect();
+        assert!(errors.is_empty(), "{facts}: {errors:?}");
     }
     let facts_schema: Value =
         serde_json::from_str(include_str!("../../schemas/evaluate-facts.v1.json")).unwrap();
-    let compiled = jsonschema::JSONSchema::compile(&facts_schema).unwrap();
+    let compiled = jsonschema::validator_for(&facts_schema).unwrap();
     for facts in [
         "facts_a_empty.json",
         "facts_b_mixed.json",

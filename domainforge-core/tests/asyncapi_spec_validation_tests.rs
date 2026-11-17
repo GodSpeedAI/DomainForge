@@ -5,7 +5,6 @@
 
 use domainforge_core::parser::parse_to_graph;
 use domainforge_core::projection::asyncapi::project_asyncapi_in_memory;
-use jsonschema::JSONSchema;
 use std::fs;
 
 const FIXED_TS: &str = "2026-07-02T00:00:00+00:00";
@@ -22,11 +21,12 @@ fn load_schema() -> serde_json::Value {
 
 fn validate_against_schema(doc: &serde_json::Value) {
     let schema = load_schema();
-    let compiled = JSONSchema::compile(&schema).expect("official AsyncAPI 3.0 schema compiles");
-    let errs: Vec<String> = match compiled.validate(doc) {
-        Ok(()) => Vec::new(),
-        Err(it) => it.map(|e| format!("  - {e}")).collect(),
-    };
+    let compiled =
+        jsonschema::validator_for(&schema).expect("official AsyncAPI 3.0 schema compiles");
+    let errs: Vec<String> = compiled
+        .iter_errors(doc)
+        .map(|e| format!("  - {e}"))
+        .collect();
     if !errs.is_empty() {
         panic!(
             "projected AsyncAPI document failed validation against the official 3.0 schema:\n{}",
