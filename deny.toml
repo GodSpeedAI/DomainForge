@@ -10,7 +10,13 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 unsound = "all"
-ignore = []
+ignore = [
+  # quick-xml 0.37.5 is pinned by oxigraph 0.5.x (oxrdfxml, sparesults); no release with
+  # quick-xml >= 0.41 exists (oxigraph 0.5.13 is the latest). Impact is DoS only, on RDF/XML
+  # and SPARQL XML results parsed by the optional `shacl` feature. Remove once oxigraph bumps.
+  { id = "RUSTSEC-2026-0194", reason = "quick-xml pinned by oxigraph; no fix reachable; DoS only, optional shacl feature" },
+  { id = "RUSTSEC-2026-0195", reason = "quick-xml pinned by oxigraph; no fix reachable; DoS only, optional shacl feature" },
+]
 
 [bans]
 multiple-versions = "warn"
