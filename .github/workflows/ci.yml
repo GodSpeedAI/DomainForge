@@ -2,7 +2,8 @@ name: CI
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # cancel superseded PR runs; let every main push finish so its caches save
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   push:
@@ -27,39 +28,55 @@ jobs:
     name: Lint & Format
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
     steps:
       # fetch-depth: 0 so check-sea-language-change.sh can fetch the base ref
       # and compute the three-dot merge-base diff without running short of
       # history (a shallow checkout can leave no merge base with the PR target).
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
+      # Docs-only pull requests skip the heavy jobs. Pushes to main always run
+      # everything. Nothing here is a required status check, so a skipped job
+      # never blocks a merge.
+      - name: Classify changes
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          code=true
+          if [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags --quiet origin "$BASE_SHA" || true
+            if changed=$(git diff --name-only "$BASE_SHA...$HEAD_SHA") && [ -n "$changed" ]; then
+              if ! printf '%s\n' "$changed" | grep -qvE '^(docs/|\.agents/|.*\.md$|LICENSE|NOTICE)'; then
+                code=false
+              fi
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "code changes: $code"
+
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
-      - name: Cache cargo registry
-        uses: actions/cache@v5
-        with:
-          path: ~/.cargo/registry/index
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-index
-
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run rustfmt
         run: cargo fmt --all --check
 
       - name: Run clippy
+        if: steps.scope.outputs.code == 'true'
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Check SEA grammar-change gate
@@ -87,6 +104,7 @@ jobs:
   test-rust:
     name: Test Rust (${{ matrix.os }})
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -100,27 +118,23 @@ jobs:
             target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run unit tests
         run: just ci-test-rust
@@ -155,27 +169,22 @@ jobs:
   package-linux:
     name: Package Linux (amd64, install-test)
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     runs-on: ubuntu-22.04  # oldest supported glibc (2.35) widens the .deb audience
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
           toolchain: 1.99.0
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_VERSION }}-cli-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install packaging tools
         run: |
@@ -244,6 +253,8 @@ jobs:
 
   msrv:
     name: MSRV (1.89)
+    needs: lint
+    if: needs.lint.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -251,21 +262,18 @@ jobs:
       # RUSTUP_TOOLCHAIN takes precedence over it, so this job builds on 1.89.
       RUSTUP_TOOLCHAIN: "1.89.0"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust 1.89 toolchain
-        uses: dtolnay/rust-toolchain@1.89.0
-
-      - name: Cache dependencies
-        uses: actions/cache@v5
+        uses: dtolnay/rust-toolchain@d92bbbb03544f480ed5c7ba4b54020e4ed2c4f65 # 1.89.0
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-msrv-cargo-
+          toolchain: 1.89.0
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check domainforge-core on MSRV (default features)
         run: cargo check -p domainforge-core --locked
@@ -276,6 +284,7 @@ jobs:
   test-python:
     name: Test Python (${{ matrix.python-version }})
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -284,31 +293,27 @@ jobs:
         python-version: ["3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-${{ hashFiles('**/Cargo.lock', 'requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-py${{ matrix.python-version }}-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Setup Python environment
         run: just python-setup
@@ -319,10 +324,11 @@ jobs:
   build-wheel-aarch64:
     name: Build wheel (aarch64 Linux)
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 45
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       # Build-only twin of release-pypi.yml's aarch64 step, so a broken
       # cross-build shows up here instead of during a release.
@@ -339,39 +345,36 @@ jobs:
   test-typescript:
     name: Test TypeScript
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: latest
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-${{ hashFiles('**/Cargo.lock', 'bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-ts-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -390,6 +393,7 @@ jobs:
   npm-platforms:
     name: npm platform packages
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     uses: ./.github/workflows/npm-platforms.yml
     permissions:
       contents: read
@@ -400,20 +404,21 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: latest
 
@@ -465,30 +470,27 @@ jobs:
   test-wasm:
     name: Test WASM
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-wasm-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
@@ -506,14 +508,16 @@ jobs:
   security:
     name: Security Audit
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install cargo-audit
@@ -530,25 +534,23 @@ jobs:
   verify-lean:
     name: Verify Lean projection proof-checks
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Project the Lean fixture
         run: |
@@ -570,7 +572,7 @@ jobs:
           cd lean_out && lake update
 
       - name: Check proofs with lake build
-        uses: leanprover/lean-action@v1
+        uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee # v1
         with:
           lake-package-directory: lean_out
 
@@ -586,25 +588,23 @@ jobs:
   verify-rdf:
     name: Verify RDF projection validates
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Project the RDF fixture
         run: |
@@ -631,25 +631,23 @@ jobs:
   verify-cell:
     name: Verify Cell environment projection is deterministic
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run scripts/verify/cell.sh
         run: bash scripts/verify/cell.sh
@@ -660,23 +658,22 @@ jobs:
   verify-rego:
     name: Verify Rego projection against pinned OPA 1.21.1
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install OPA 1.21.1
         run: |
@@ -691,23 +688,22 @@ jobs:
   verify-openshell:
     name: Verify OpenShell projection against openshell-prover 0.1.3
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install openshell-prover 0.1.3
         env:
@@ -729,25 +725,23 @@ jobs:
   verify-bpmn:
     name: Verify BPMN projection validates
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install xmllint (BPMN 2.0 XSD validator)
         run: |
@@ -774,25 +768,23 @@ jobs:
   verify-cmmn:
     name: Verify CMMN projection validates
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install xmllint (CMMN 1.1 XSD validator)
         run: |
@@ -819,25 +811,23 @@ jobs:
   verify-archimate:
     name: Verify ArchiMate projection validates
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install xmllint (ArchiMate Model Exchange XSD validator)
         run: |
@@ -864,25 +854,23 @@ jobs:
   verify-otel:
     name: Verify OTel SemConv projection validates
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # NOTE: OpenTelemetry's official `weaver registry check` is intentionally
       # NOT used here. `weaver` is a heavy binary whose registry schema has
@@ -939,25 +927,23 @@ jobs:
   verify-baml:
     name: Verify BAML projection is well-formed
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # NOTE: BAML's official `baml-cli generate` is intentionally NOT used here.
       # The generated project leaves the `client<llm>` block as a documented,
@@ -995,25 +981,23 @@ jobs:
   verify-dspy:
     name: Verify DSPy projection is well-formed
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # NOTE: DSPy's optimizer is intentionally NOT run here. The projection
       # emits program + config only; the baseline-vs-optimized comparison and
@@ -1073,25 +1057,23 @@ jobs:
   verify-zenml:
     name: Verify ZenML projection is well-formed
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # NOTE: a real `pip install zenml` + live pipeline construction is
       # intentionally NOT run here (yet). ZenML's dependency tree is very heavy
@@ -1166,37 +1148,35 @@ jobs:
     # protection.
     name: Verify projection targets (event/authority/verification/activation/code)
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 25
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install Java (for TLA+ SANY/TLC toolchain)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Install Node (for domain-typescript tsc --noEmit)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
@@ -1246,37 +1226,35 @@ jobs:
     # proven natively here, not just structurally. See PROOFS.md.
     name: Prove (self-proving evidence pack)
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.99.0
+        uses: dtolnay/rust-toolchain@92e73e19cbfb3981e63ef478a16f95f415e634d3 # 1.99.0
         with:
+          toolchain: 1.99.0
           components: rustfmt, clippy
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Cache cargo build
-        uses: actions/cache@v5
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_VERSION }}-cargo-
+          # restore everywhere, save only from main (PR caches would evict main's)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install Java (for TLA+ SANY/TLC toolchain)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Install Node (for domain-typescript tsc --noEmit)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
@@ -1321,7 +1299,7 @@ jobs:
 
       - name: Upload evidence pack
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: domainforge-proof-evidence
           path: evidence/latest/
