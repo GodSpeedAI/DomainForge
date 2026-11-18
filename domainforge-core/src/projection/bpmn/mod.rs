@@ -32,7 +32,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timestamp::now_auto_si);
     let process = ProcessIR::from_graph(graph, model_ref);
     // Self-check: never write a structurally broken process (the XSD cannot see
     // QName dangling refs — see ProcessIR::validate_references).

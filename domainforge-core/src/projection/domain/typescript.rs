@@ -15,7 +15,7 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let ir = DomainIr::from_graph(graph)?;
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timestamp::now_auto_si);
     let files: Vec<(String, String)> = vec![
         ("package.json".to_string(), package_json(&ir)),
         ("tsconfig.json".to_string(), tsconfig()),

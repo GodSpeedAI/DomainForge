@@ -1,3 +1,15 @@
+# DomainForge chrono migration checkpoint (2026-11-18)
+
+The isolated fix/replace-chrono branch uses time for generated timestamps in the CLI envelope and projection outputs. The lockfile adds only the required time packages and edge.
+
+- The exact locked Rust suite passed 1,333 tests with 12 ignored.
+- The locked wasm32-unknown-unknown build with the wasm feature passed.
+- Timestamp compatibility tests cover Chrono's fractional precision, explicit UTC suffixes, pre-epoch timestamps, and the fixed microsecond CLI form.
+
+Input parsing and signed temporal arithmetic still use Chrono. Preserving the accepted leap-second representation is an open compatibility decision.
+
+---
+
 # Current State: `domainforge evaluate` (2026-11-13, branch fde/integration)
 
 - [x] Added `domainforge evaluate --model --facts --format json`: per-policy and per-outermost-binding true/false/unknown with `support`; operation-bound policies via `evaluate_precondition`. Library: `Policy::evaluate_bindings` (`policy/core.rs`), `evaluate.rs`; CLI `cli/evaluate.rs`; schemas `schemas/evaluate-*.v1.json`; docs `docs/reference/evaluate.md`; tests `tests/evaluate_tests.rs`.

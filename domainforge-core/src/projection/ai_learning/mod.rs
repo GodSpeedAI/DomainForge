@@ -99,7 +99,7 @@ impl<'a> AiLearningContext<'a> {
             .map_err(|e| format!("failed to serialize recipe for hashing: {e}"))?;
         let recipe_hash = hash_canonical_json(&recipe_value);
         let seed = seed_override.unwrap_or(recipe.seed);
-        let created_at = created_at_override.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+        let created_at = created_at_override.unwrap_or_else(crate::timestamp::now_auto_si);
 
         let (authority_cases, policy_info) = match &authority {
             Some(env) => (

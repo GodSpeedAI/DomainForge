@@ -1,5 +1,11 @@
 # Next Steps
 
+## DomainForge chrono migration (2026-11-18)
+
+1. Resolve how accepted RFC 3339 leap seconds will be represented in the replacement timestamp type.
+2. Preserve canonical JSON and comparison behavior while migrating application, policy, authority, and binding call sites.
+3. Validate Rust, WASM, and the supported binding gates before updating the SEA Forge package edge.
+
 ## EGM documentation bootstrap (2026-10-30)
 
 1. [x] Ran `egm-bootstrap` across the repository with `target_filename=EGM.md`, producing 61 contract files (60 directory contracts + 1 root blueprint). No `README.md` was touched; no source code was modified.

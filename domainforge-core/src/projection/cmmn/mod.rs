@@ -33,7 +33,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timestamp::now_auto_si);
     let case = CaseIR::from_graph(graph, model_ref);
     // Self-check: never write a case with dangling IDREFs (the XSD cannot see
     // definitionRef/sentryRef/performerRef integrity — see validate_references).

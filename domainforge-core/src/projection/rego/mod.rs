@@ -336,7 +336,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, RegoProjectionError> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timestamp::now_auto_si);
     let ir = RegoPolicyIr::build(graph)?;
     let model_hash = model_hash(source)?;
     let identity = identity(&model_hash);

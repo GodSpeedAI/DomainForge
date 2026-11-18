@@ -10,7 +10,6 @@ use crate::module::resolver::source_map_from_filesystem;
 use crate::registry::NamespaceRegistry;
 use crate::semantic_pack::canonical_json::{canonical_json, compute_sha256};
 use anyhow::{Context, Result};
-use chrono::SecondsFormat;
 use clap::{Parser, ValueEnum};
 use serde_json::{json, Value};
 use std::fs;
@@ -149,7 +148,7 @@ pub fn run(args: EnvelopeArgs) -> Result<()> {
             }
         },
     };
-    let created_at = chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true);
+    let created_at = crate::timestamp::now_micros_z();
     let envelope_id = Uuid::now_v7().to_string();
     let inline_threshold_bytes = args.inline_threshold_bytes;
 

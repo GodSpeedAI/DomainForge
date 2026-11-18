@@ -46,7 +46,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timestamp::now_auto_si);
     let ns = model_namespace(graph)?;
 
     let schema = build_schema(graph, &ns)?;

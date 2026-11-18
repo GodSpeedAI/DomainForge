@@ -19,6 +19,7 @@ icu_decimal = { version = "2.3", optional = true }
 icu_locale_core = { version = "2.3", optional = true }
 fixed_decimal = { version = "0.7", optional = true }
 rust_decimal = { version = "1.33", features = ["serde"] }
+time = { version = "=0.3.55", features = ["wasm-bindgen"] }
 chrono = { version = "0.4", default-features = false, features = ["serde", "std", "wasmbind", "clock"] }
 pest = "2.7"
 pest_derive = "2.7"
