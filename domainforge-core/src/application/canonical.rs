@@ -83,10 +83,7 @@ pub fn canonical_typed_value(value: &TypedValue) -> serde_json::Value {
         TypedValue::Int(i) => tagged("int", serde_json::json!(i)),
         TypedValue::Decimal(d) => tagged("decimal", serde_json::json!(canonical_decimal(*d))),
         TypedValue::Bool(b) => tagged("bool", serde_json::json!(b)),
-        TypedValue::Timestamp(t) => tagged(
-            "timestamp",
-            serde_json::json!(t.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)),
-        ),
+        TypedValue::Timestamp(t) => tagged("timestamp", serde_json::json!(t.to_utc_rfc3339())),
         TypedValue::Uuid(u) => tagged("uuid", serde_json::json!(u.to_string())),
         TypedValue::Quantity { base_value, unit } => tagged(
             "quantity",

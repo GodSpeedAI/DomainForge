@@ -102,7 +102,7 @@ pub fn build_semantic_pack(
         source_graph_hash: input.source_graph_hash,
         build_config_hash: canonical_json::compute_sha256(b"{}"),
         review_manifest_hash,
-        created_at: chrono::Utc::now().to_rfc3339(),
+        created_at: crate::timestamp::now_auto_si(),
         generator,
         trust: PackTrust {
             approval_state: input.approval,

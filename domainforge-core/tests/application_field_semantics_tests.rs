@@ -209,3 +209,21 @@ fn scalar_defaults_are_canonically_normalized() {
     };
     assert_eq!(d.to_string(), "1.5");
 }
+
+#[test]
+fn timestamp_defaults_preserve_chrono_wire_and_utc_normalization() {
+    let values = resolve(
+        "",
+        "    when: timestamp default \"2017-01-01T05:29:60.123456789+05:30\"",
+    )
+    .unwrap();
+    assert_eq!(values.len(), 1);
+    let expected = json!({"kind": "timestamp", "data": "2016-12-31T23:59:60.123456789Z"});
+    assert_eq!(serde_json::to_value(&values[0]).unwrap(), expected);
+    assert_eq!(
+        domainforge_core::application::canonical_typed_value(&values[0]),
+        expected
+    );
+    let decoded: TypedValue = serde_json::from_value(expected).unwrap();
+    assert_eq!(decoded, values[0]);
+}

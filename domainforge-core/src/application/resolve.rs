@@ -1997,15 +1997,10 @@ fn resolve_default(
                 scalar: ScalarType::Timestamp,
             },
             serde_json::Value::String(s),
-        ) => TypedValue::Timestamp(
-            chrono::DateTime::parse_from_rfc3339(s)
-                .ok()
-                .map(|t| t.with_timezone(&chrono::Utc))
-                .or_else(|| {
-                    mismatch(diags);
-                    None
-                })?,
-        ),
+        ) => TypedValue::Timestamp(crate::Timestamp::parse(s).or_else(|| {
+            mismatch(diags);
+            None
+        })?),
         (FieldType::Enum { symbol }, serde_json::Value::String(wire)) => {
             let enum_symbol = ctx.set.symbols.get(&symbol.0)?;
             let past::AstNode::Enum(decl) = ctx.decl_node(enum_symbol) else {

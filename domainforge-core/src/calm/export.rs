@@ -254,7 +254,7 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
             .ok()
             .and_then(|epoch| epoch.parse::<i64>().ok())
             .and_then(|epoch| chrono::DateTime::from_timestamp(epoch, 0).map(|dt| dt.to_rfc3339()))
-            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+            .unwrap_or_else(crate::timestamp::now_auto_si),
     );
 
     let registry = ProjectionRegistry::new(graph);

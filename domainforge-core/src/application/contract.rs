@@ -305,7 +305,7 @@ pub enum TypedValue {
     Int(i64),
     Decimal(rust_decimal::Decimal),
     Bool(bool),
-    Timestamp(chrono::DateTime<chrono::Utc>),
+    Timestamp(crate::Timestamp),
     Uuid(uuid::Uuid),
     Quantity {
         base_value: rust_decimal::Decimal,
