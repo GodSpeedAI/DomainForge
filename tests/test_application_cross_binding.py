@@ -20,12 +20,13 @@ import json
 import pathlib
 
 import pytest
+from packaging.version import Version
 
 import domainforge
 
 
 CONTRACT_GOLDEN_SHA256 = (
-    "sha256:1ccdeeb04279e6df42d0280cfc288ed91b839d4487e354f67fbd9c4c2a9e2158"
+    "sha256:929264836419089dcb9e53a523e8b2c22896ba1ddb3651df1b22fe61fa0a2584"
 )
 
 
@@ -50,7 +51,7 @@ def test_cross_binding_contract_bytes_match_rust_golden():
     )
     pkg_version = importlib.metadata.version("domainforge")
     doc = json.loads(raw)
-    assert doc["producer"]["version"] == pkg_version, (
+    assert Version(doc["producer"]["version"]) == Version(pkg_version), (
         "producer.version must stamp the running package version"
     )
     digest = "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()

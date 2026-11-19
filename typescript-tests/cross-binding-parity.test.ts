@@ -18,7 +18,7 @@ import { Graph } from '../index';
  * serialization intentionally changes, regenerate all four in lockstep.
  */
 const CONTRACT_GOLDEN_SHA256 =
-    'sha256:1ccdeeb04279e6df42d0280cfc288ed91b839d4487e354f67fbd9c4c2a9e2158';
+    'sha256:929264836419089dcb9e53a523e8b2c22896ba1ddb3651df1b22fe61fa0a2584';
 
 describe('cross-binding byte parity (ADR-013 M0 gate finding 2)', () => {
     const fixtureRoot = join(__dirname, '..', 'fixtures', 'application_generation', 'flagship');
