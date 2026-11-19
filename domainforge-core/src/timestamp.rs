@@ -64,6 +64,8 @@ pub enum ParseTimestampError {
     Invalid,
     /// Extra characters followed a complete timestamp.
     Trailing,
+    /// The local date and offset fall outside the UTC calendar.
+    Impossible,
 }
 
 impl std::fmt::Display for ParseTimestampError {
@@ -73,6 +75,7 @@ impl std::fmt::Display for ParseTimestampError {
             Self::Incomplete => "premature end of input",
             Self::Invalid => "input contains invalid characters",
             Self::Trailing => "trailing input",
+            Self::Impossible => "no possible date and time matching input",
         };
         f.write_str(reason)
     }
@@ -152,62 +155,36 @@ impl Timestamp {
         Self::parse_rfc3339(input).ok()
     }
 
-    fn from_local(
-        date: time::Date,
-        [hour, minute, second]: [u8; 3],
-        nanos: u32,
-        offset_seconds: i32,
-    ) -> Option<Self> {
-        if second > 60 {
-            return None;
-        }
-        let leap = second == 60;
-        let local = date.with_hms(hour, minute, second.min(59)).ok()?;
-        let offset = time::UtcOffset::from_whole_seconds(offset_seconds).ok()?;
-        Some(Self {
-            utc_anchor: local.assume_offset(offset).to_offset(time::UtcOffset::UTC),
-            nanos,
-            leap,
-            offset_seconds,
-        })
-    }
-
-    fn parse_wire(input: &str) -> Option<Self> {
-        let mut timestamp = Self::parse(input).or_else(|| Self::parse_relaxed_wire(input))?;
-        timestamp.offset_seconds = 0;
-        Some(timestamp)
-    }
-
-    // Chrono's serde path uses its relaxed parser and bounds both the local
-    // date and the resulting UTC date to the Chrono calendar's year range.
-    fn parse_relaxed_wire(input: &str) -> Option<Self> {
-        const WIRE_YEARS: std::ops::RangeInclusive<i32> = -262_143..=262_142;
+    // Persisted timestamps used the relaxed grammar and normalized to UTC.
+    fn parse_wire(input: &str) -> Result<Self, ParseTimestampError> {
+        use ParseTimestampError::OutOfRange;
 
         let input = input.trim_start();
         let sign = usize::from(input.starts_with(['+', '-']));
         let width = if sign == 0 { 4 } else { usize::MAX };
         let (year_digits, rest) = split_digits(&input[sign..], width);
-        if year_digits.is_empty() {
-            return None;
-        }
-        let year = input[..sign + year_digits.len()].parse::<i32>().ok()?;
-        if !WIRE_YEARS.contains(&year) {
-            return None;
-        }
+        wire_separator(&input[sign..], (!year_digits.is_empty()).then_some(rest))?;
+        let year = input[..sign + year_digits.len()]
+            .parse::<i32>()
+            .map_err(|_| OutOfRange)?;
 
-        let (month, rest) = wire_component(rest.trim_start().strip_prefix('-')?)?;
-        let (day, rest) = wire_component(rest.trim_start().strip_prefix('-')?)?;
-        let (hour, rest) = wire_component(rest.strip_prefix(['T', 't', ' '])?)?;
-        let (minute, rest) = wire_component(rest.trim_start().strip_prefix(':')?)?;
-        let (second, rest) = wire_component(rest.trim_start().strip_prefix(':')?)?;
-        let (nanos, zone) = fraction_and_zone(rest)?;
-        let offset = parse_offset(zone, true)?;
-        let date =
-            time::Date::from_calendar_date(year, time::Month::try_from(month).ok()?, day).ok()?;
-        let timestamp = Self::from_local(date, [hour, minute, second], nanos, offset)?;
-        WIRE_YEARS
-            .contains(&timestamp.utc_anchor.year())
-            .then_some(timestamp)
+        let rest = rest.trim_start();
+        let (month, rest) = wire_component(wire_separator(rest, rest.strip_prefix('-'))?)?;
+        let rest = rest.trim_start();
+        let (day, rest) = wire_component(wire_separator(rest, rest.strip_prefix('-'))?)?;
+        let (hour, rest) =
+            wire_component(wire_separator(rest, rest.strip_prefix(['T', 't', ' ']))?)?;
+        let rest = rest.trim_start();
+        let (minute, rest) = wire_component(wire_separator(rest, rest.strip_prefix(':'))?)?;
+        let rest = rest.trim_start();
+        let (second, rest) = wire_component(wire_separator(rest, rest.strip_prefix(':'))?)?;
+        let (nanos, zone) = detailed_fraction_and_zone(rest)?;
+        let offset = detailed_parse_offset(zone, true)?;
+        let date = detailed_calendar_date(year, month, day)?;
+        let (local, fraction) = detailed_local_time(date, [hour, minute, second], nanos)?;
+        let mut timestamp = detailed_from_local(local, fraction, offset)?;
+        timestamp.offset_seconds = 0;
+        Ok(timestamp)
     }
 
     /// Return the input offset in seconds east of UTC.
@@ -401,7 +378,7 @@ fn detailed_from_local(
 ) -> Result<Timestamp, ParseTimestampError> {
     let utc = local.assume_offset(offset).to_offset(time::UtcOffset::UTC);
     if !(-262_143..=262_142).contains(&utc.year()) {
-        return Err(ParseTimestampError::OutOfRange);
+        return Err(ParseTimestampError::Impossible);
     }
     Ok(Timestamp {
         utc_anchor: utc,
@@ -439,8 +416,17 @@ fn detailed_parse_offset(
     use ParseTimestampError::{Incomplete, Invalid, OutOfRange, Trailing};
 
     let input = if relaxed { input.trim() } else { input };
-    if relaxed && input.eq_ignore_ascii_case("UTC") {
-        return Ok(time::UtcOffset::UTC);
+    if relaxed
+        && input
+            .as_bytes()
+            .get(..3)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"UTC"))
+    {
+        return if input.len() == 3 {
+            Ok(time::UtcOffset::UTC)
+        } else {
+            Err(Trailing)
+        };
     }
     if let Some(rest) = input.strip_prefix(['Z', 'z']) {
         return if rest.is_empty() {
@@ -498,47 +484,19 @@ fn split_digits(input: &str, max: usize) -> (&str, &str) {
     input.split_at(len)
 }
 
-fn wire_component(input: &str) -> Option<(u8, &str)> {
-    let (value, rest) = split_digits(input.trim_start(), 2);
-    Some((value.parse().ok()?, rest))
+fn wire_separator<'a>(input: &str, rest: Option<&'a str>) -> Result<&'a str, ParseTimestampError> {
+    rest.ok_or(if input.is_empty() {
+        ParseTimestampError::Incomplete
+    } else {
+        ParseTimestampError::Invalid
+    })
 }
 
-fn fraction_and_zone(input: &str) -> Option<(u32, &str)> {
-    let Some(input) = input.strip_prefix('.') else {
-        return Some((0, input));
-    };
-    let (fraction, rest) = split_digits(input, 9);
-    if fraction.is_empty() {
-        return None;
-    }
-    let nanos = digits(fraction.as_bytes())? * 10_u32.pow((9 - fraction.len()) as u32);
-    Some((nanos, rest.trim_start_matches(|c: char| c.is_ascii_digit())))
-}
-
-fn parse_offset(input: &str, relaxed: bool) -> Option<i32> {
-    let input = if relaxed { input.trim() } else { input };
-    if matches!(input, "Z" | "z") || (relaxed && input.eq_ignore_ascii_case("UTC")) {
-        return Some(0);
-    }
-    let (sign, offset) = if let Some(offset) = input.strip_prefix('+') {
-        (1, offset)
-    } else {
-        (-1, input.strip_prefix(['-', '−'])?)
-    };
-    let hours = digits(offset.as_bytes().get(..2)?)?;
-    let minutes = if relaxed {
-        offset[2..].trim_start_matches(|c: char| c == ':' || c.is_whitespace())
-    } else {
-        offset[2..].strip_prefix(':')?
-    };
-    if minutes.len() != 2 {
-        return None;
-    }
-    let minutes = digits(minutes.as_bytes())?;
-    if hours > 23 || minutes > 59 {
-        return None;
-    }
-    Some(sign * (hours * 3600 + minutes * 60) as i32)
+fn wire_component(input: &str) -> Result<(u8, &str), ParseTimestampError> {
+    let input = input.trim_start();
+    let (value, rest) = split_digits(input, 2);
+    wire_separator(input, (!value.is_empty()).then_some(rest))?;
+    Ok((value.parse().expect("one or two decimal digits"), rest))
 }
 
 impl PartialEq for Timestamp {
@@ -576,7 +534,7 @@ impl<'de> serde::Deserialize<'de> for Timestamp {
             }
 
             fn visit_str<E: serde::de::Error>(self, input: &str) -> Result<Timestamp, E> {
-                Timestamp::parse_wire(input).ok_or_else(|| E::custom("invalid timestamp"))
+                Timestamp::parse_wire(input).map_err(E::custom)
             }
         }
 
@@ -768,6 +726,31 @@ mod tests {
             assert_eq!(
                 serde_json::from_value::<Timestamp>(serde_json::json!(expected)).unwrap(),
                 value
+            );
+        }
+    }
+
+    #[test]
+    fn strict_and_wire_timestamp_diagnostics_match_chrono_0_4_45() {
+        assert_eq!(
+            Timestamp::parse_rfc3339("bad").unwrap_err().to_string(),
+            "premature end of input",
+        );
+        for (input, diagnostic) in [
+            ("bad", "input contains invalid characters"),
+            ("2026-11-19", "premature end of input"),
+            ("2026-02-30T00:00:00Z", "input is out of range"),
+            ("2026-11-19T00:00:00Z junk", "trailing input"),
+            (
+                "-262143-01-01T00:00:00+00:01",
+                "no possible date and time matching input",
+            ),
+        ] {
+            let encoded = serde_json::to_string(input).unwrap();
+            let error = serde_json::from_str::<Timestamp>(&encoded).unwrap_err();
+            assert!(
+                error.to_string().starts_with(diagnostic),
+                "{input}: {error}"
             );
         }
     }
