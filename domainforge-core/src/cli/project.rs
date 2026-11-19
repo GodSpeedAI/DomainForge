@@ -545,7 +545,7 @@ fn run_lean(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
 /// requires to be RFC 3339. Other targets use it for deterministic output.
 fn validate_created_at(args: &ProjectArgs) -> Result<()> {
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timestamp::Timestamp::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
     Ok(())
@@ -1136,10 +1136,7 @@ fn run_rdf(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
              see docs/rdf-projections.md"
         ));
     }
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Directory output, identical to the lean projection.
     if !args.output.exists() {
@@ -1184,10 +1181,7 @@ fn run_bpmn(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
              see docs/bpmn-projections.md"
         ));
     }
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Directory output, identical to the lean and rdf projections.
     if !args.output.exists() {
@@ -1229,10 +1223,7 @@ fn run_cmmn(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
              see docs/cmmn-projections.md"
         ));
     }
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Directory output, identical to the lean, rdf, and bpmn projections.
     if !args.output.exists() {
@@ -1274,10 +1265,7 @@ fn run_archimate(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> 
              see docs/archimate-projections.md"
         ));
     }
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Directory output, identical to the lean, rdf, bpmn, and cmmn projections.
     if !args.output.exists() {
@@ -1321,10 +1309,7 @@ fn run_otel_semconv(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<(
              see docs/otel-projections.md"
         ));
     }
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Directory output, identical to the lean, rdf, bpmn, cmmn, and archimate projections.
     if !args.output.exists() {
@@ -1364,10 +1349,7 @@ fn run_otel_semconv(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<(
 fn run_baml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Recipe supplies the `baml` section and (optionally) the authority config
     // path; it is defaulted when absent, exactly like the other ai-* formats.
@@ -1459,10 +1441,7 @@ fn run_baml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
 fn run_dspy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Recipe supplies the `dspy` section and (optionally) the authority config
     // path; it is defaulted when absent, exactly like the baml format.
@@ -1554,10 +1533,7 @@ fn run_dspy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
 fn run_zenml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Recipe supplies the `zenml` section and (optionally) the authority config
     // path; it is defaulted when absent, exactly like the dspy format.
@@ -1649,10 +1625,7 @@ fn run_zenml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
 fn run_ai_learning(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
-    if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
-            .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
-    }
+    validate_created_at(args)?;
 
     // Load recipe (required for ai-learning; defaulted for single formats).
     let (mut recipe, recipe_ref, recipe_dir) = match &args.recipe {

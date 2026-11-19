@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use crate::timestamp::{Duration, Timestamp};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -96,7 +96,7 @@ pub struct AuthorityRequest {
     pub resource: ResourceRef,
     #[serde(default)]
     pub context: serde_json::Value,
-    pub requested_at: DateTime<Utc>,
+    pub requested_at: Timestamp,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlation_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -164,9 +164,9 @@ pub struct FactEnvelope {
     pub value: serde_json::Value,
     pub source_class: SourceClass,
     pub source_id: String,
-    pub observed_at: DateTime<Utc>,
+    pub observed_at: Timestamp,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<Timestamp>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evidence_ref: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -178,7 +178,7 @@ pub struct FactEnvelope {
 }
 
 impl FactEnvelope {
-    pub fn is_fresh(&self, now: DateTime<Utc>) -> bool {
+    pub fn is_fresh(&self, now: Timestamp) -> bool {
         match self.expires_at {
             Some(exp) => now < exp,
             None => true,
@@ -223,7 +223,7 @@ pub struct FactRequirement {
     #[serde(default)]
     pub allowed_source_ids: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_age: Option<chrono::Duration>,
+    pub max_age: Option<Duration>,
     #[serde(default)]
     pub evidence_ref_required: bool,
     #[serde(default)]
@@ -237,7 +237,7 @@ pub struct FactRequirement {
 }
 
 impl FactRequirement {
-    pub fn is_satisfied_by(&self, envelope: &FactEnvelope, now: &DateTime<Utc>) -> bool {
+    pub fn is_satisfied_by(&self, envelope: &FactEnvelope, now: &Timestamp) -> bool {
         if self.fact_path != envelope.path {
             return false;
         }

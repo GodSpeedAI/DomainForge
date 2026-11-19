@@ -725,15 +725,15 @@ impl Expression {
 
         // Apply window filtering if present
         let items = if let Some(w) = window {
-            let now = chrono::Utc::now();
+            let now = crate::Timestamp::now_utc();
             let duration_span = i64::try_from(w.duration)
                 .map_err(|_| format!("Window duration {} exceeds supported range", w.duration))?;
             let unit_lower = w.unit.to_lowercase();
             let duration = match unit_lower.as_str() {
-                "hour" | "hours" => chrono::Duration::hours(duration_span),
-                "minute" | "minutes" => chrono::Duration::minutes(duration_span),
-                "day" | "days" => chrono::Duration::days(duration_span),
-                "second" | "seconds" => chrono::Duration::seconds(duration_span),
+                "hour" | "hours" => crate::timestamp::Duration::hours(duration_span),
+                "minute" | "minutes" => crate::timestamp::Duration::minutes(duration_span),
+                "day" | "days" => crate::timestamp::Duration::days(duration_span),
+                "second" | "seconds" => crate::timestamp::Duration::seconds(duration_span),
                 _ => {
                     return Err(format!(
                         "Invalid window unit '{}' in aggregation window",
@@ -750,9 +750,8 @@ impl Expression {
                         .or_else(|| item.get("created_at"))
                         .and_then(|v| v.as_str());
                     if let Some(s) = ts_str {
-                        if let Ok(ts) = chrono::DateTime::parse_from_rfc3339(s) {
-                            let ts_utc: chrono::DateTime<chrono::Utc> = ts.into();
-                            return ts_utc >= now - duration;
+                        if let Some(ts) = crate::Timestamp::parse(s) {
+                            return ts >= now - duration;
                         }
                     }
                     // If no timestamp, we can't filter, so maybe exclude? Or include?

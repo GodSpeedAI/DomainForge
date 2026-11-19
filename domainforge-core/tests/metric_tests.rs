@@ -1,6 +1,6 @@
-use chrono::Duration;
 use domainforge_core::parser::parse_to_graph;
 use domainforge_core::primitives::Severity;
+use domainforge_core::Duration;
 
 #[test]
 fn test_metric_parsing() {
@@ -122,9 +122,11 @@ fn metric_serializes_durations_with_serde() {
         .expect("Missing serde_metric")
         .clone();
 
-    let json = serde_json::to_string(&metric).expect("Failed to serialize metric");
+    let json = serde_json::to_value(&metric).expect("Failed to serialize metric");
+    assert_eq!(json["refresh_interval"], serde_json::json!([90, 0]));
+    assert_eq!(json["window"], serde_json::json!([7200, 0]));
     let restored: domainforge_core::primitives::Metric =
-        serde_json::from_str(&json).expect("Failed to deserialize metric");
+        serde_json::from_value(json).expect("Failed to deserialize metric");
 
     assert_eq!(restored.refresh_interval, metric.refresh_interval);
     assert_eq!(restored.window, metric.window);

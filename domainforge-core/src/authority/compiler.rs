@@ -193,21 +193,27 @@ impl PolicyCompiler {
 /// `s` branch and became `"10m"` before parsing, producing a confusing
 /// error instead of 10 milliseconds. Longer suffixes (`ms`) are now matched
 /// before shorter ones (`s`, `m`, `h`, `d`).
-fn parse_duration(s: &str) -> Result<chrono::Duration, AuthorityError> {
+fn parse_duration(s: &str) -> Result<crate::timestamp::Duration, AuthorityError> {
     let s = s.trim();
     let invalid = || AuthorityError::invalid_environment(format!("Invalid duration: '{}'", s));
 
     // Longer suffixes must be checked before shorter ones ("ms" before "s").
     let parsed = if let Some(n) = s.strip_suffix("ms") {
-        n.parse::<i64>().ok().map(chrono::Duration::milliseconds)
+        n.parse::<i64>()
+            .ok()
+            .map(crate::timestamp::Duration::milliseconds)
     } else if let Some(n) = s.strip_suffix('s') {
-        n.parse::<i64>().ok().map(chrono::Duration::seconds)
+        n.parse::<i64>()
+            .ok()
+            .map(crate::timestamp::Duration::seconds)
     } else if let Some(n) = s.strip_suffix('m') {
-        n.parse::<i64>().ok().map(chrono::Duration::minutes)
+        n.parse::<i64>()
+            .ok()
+            .map(crate::timestamp::Duration::minutes)
     } else if let Some(n) = s.strip_suffix('h') {
-        n.parse::<i64>().ok().map(chrono::Duration::hours)
+        n.parse::<i64>().ok().map(crate::timestamp::Duration::hours)
     } else if let Some(n) = s.strip_suffix('d') {
-        n.parse::<i64>().ok().map(chrono::Duration::days)
+        n.parse::<i64>().ok().map(crate::timestamp::Duration::days)
     } else {
         return Err(AuthorityError::invalid_environment(format!(
             "Invalid duration: '{}' — a unit suffix (ms, s, m, h, d) is required",
@@ -216,7 +222,7 @@ fn parse_duration(s: &str) -> Result<chrono::Duration, AuthorityError> {
     };
 
     match parsed {
-        Some(d) if d >= chrono::Duration::zero() => Ok(d),
+        Some(d) if d >= crate::timestamp::Duration::zero() => Ok(d),
         _ => Err(invalid()),
     }
 }

@@ -1023,8 +1023,8 @@ impl ProtobufEngine {
         proto.metadata.generated_at = std::env::var("SOURCE_DATE_EPOCH")
             .ok()
             .and_then(|epoch| epoch.parse::<i64>().ok())
-            .and_then(|epoch| chrono::DateTime::from_timestamp(epoch, 0))
-            .map(|dt| dt.to_rfc3339())
+            .and_then(crate::timestamp::Timestamp::from_unix_seconds)
+            .map(crate::timestamp::Timestamp::to_rfc3339)
             .unwrap_or_default();
 
         // Convert entities to messages

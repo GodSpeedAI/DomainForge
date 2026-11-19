@@ -185,7 +185,7 @@ fn generate_fixture_environment() {
             extra: Default::default(),
         },
         context: serde_json::json!({}),
-        requested_at: chrono::Utc::now(),
+        requested_at: domainforge_core::Timestamp::now_utc(),
         correlation_id: None,
         risk_class: None,
         metadata: Default::default(),

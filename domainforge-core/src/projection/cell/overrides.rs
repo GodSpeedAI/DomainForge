@@ -143,9 +143,9 @@ pub fn validate_unsafe_overrides(
                 .to_string(),
         );
     }
-    let expires = chrono::DateTime::parse_from_rfc3339(&unsafe_overrides.expires_at)
+    let expires = crate::timestamp::Timestamp::parse_rfc3339(&unsafe_overrides.expires_at)
         .map_err(|e| format!("CELL015 [unsafe_overrides].expires_at is not RFC 3339: {e}"))?;
-    let now = chrono::DateTime::parse_from_rfc3339(created_at)
+    let now = crate::timestamp::Timestamp::parse_rfc3339(created_at)
         .map_err(|e| format!("CELL010 --created-at is not RFC 3339: {e}"))?;
     if expires <= now {
         return Err(format!(

@@ -1,6 +1,6 @@
 use crate::policy::Expression;
+use crate::timestamp::Duration;
 use crate::ConceptId;
-use chrono::Duration;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -88,8 +88,8 @@ impl Metric {
     /// as confusing behavior downstream in projection targets:
     /// - `severity` implies a metric is actionable, which requires a
     ///   `threshold` to compare against; nothing enforced that pairing.
-    /// - `refresh_interval`/`window` use signed `chrono::Duration` and
-    ///   nothing rejected a negative one.
+    /// - `refresh_interval` and `window` use signed durations. Metrics
+    ///   require both to be nonnegative.
     ///
     /// `unit` is deliberately *not* checked against the `UnitRegistry` here
     /// (unlike M1's original recommendation): metric units in this codebase

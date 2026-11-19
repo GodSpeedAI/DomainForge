@@ -152,7 +152,7 @@ impl AuthorityEnvironment {
         request.validate()?;
 
         let fact_resolver = FactResolver::new(self.source_registry.clone());
-        let now = chrono::Utc::now();
+        let now = crate::timestamp::Timestamp::now_utc();
         let raw_facts = fact_resolver.wrap_context_as_caller_supplied(&request.context, now);
         let (all_facts, trust_decisions) =
             fact_resolver.resolve_trusted_facts(&raw_facts, provided_facts, now);

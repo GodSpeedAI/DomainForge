@@ -7,9 +7,9 @@ use crate::policy::{
     PolicyModality as CorePolicyModality, Quantifier as PolicyQuantifier, UnaryOp, WindowSpec,
 };
 use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, Role, Severity};
+use crate::timestamp::Duration;
 use crate::units::unit_from_string;
 use crate::SemanticVersion;
-use chrono::Duration;
 use pest::iterators::{Pair, Pairs};
 use pest::{Parser, Span};
 use rust_decimal::prelude::ToPrimitive;
@@ -3932,15 +3932,16 @@ fn parse_duration_with_unit(value: i64, unit: &str, span: Span<'_>) -> ParseResu
         ))
     })?;
 
-    let total_seconds = value.checked_mul(multiplier).ok_or_else(|| {
-        let (line, column) = span.start_pos().line_col();
-        ParseError::GrammarError(format!(
-            "Duration overflow for value {} {} at {}:{}",
-            value, unit, line, column
-        ))
-    })?;
-
-    Ok(Duration::seconds(total_seconds))
+    value
+        .checked_mul(multiplier)
+        .and_then(Duration::try_seconds)
+        .ok_or_else(|| {
+            let (line, column) = span.start_pos().line_col();
+            ParseError::GrammarError(format!(
+                "Duration overflow for value {} {} at {}:{}",
+                value, unit, line, column
+            ))
+        })
 }
 
 fn parse_severity_value(value: &str, span: Span<'_>) -> ParseResult<Severity> {

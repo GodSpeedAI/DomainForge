@@ -420,14 +420,13 @@ impl Policy {
                     let left_str = self.get_string_value(left, graph)?;
                     let right_str = self.get_string_value(right, graph)?;
 
-                    // Parse timestamps using chrono
-                    let left_dt = chrono::DateTime::parse_from_rfc3339(&left_str).map_err(|e| {
+                    // Parse timestamps using the shared compatibility parser
+                    let left_dt = crate::Timestamp::parse_rfc3339(&left_str).map_err(|e| {
                         format!("Failed to parse left timestamp '{}': {}", left_str, e)
                     })?;
-                    let right_dt =
-                        chrono::DateTime::parse_from_rfc3339(&right_str).map_err(|e| {
-                            format!("Failed to parse right timestamp '{}': {}", right_str, e)
-                        })?;
+                    let right_dt = crate::Timestamp::parse_rfc3339(&right_str).map_err(|e| {
+                        format!("Failed to parse right timestamp '{}': {}", right_str, e)
+                    })?;
 
                     let result = match op {
                         BinaryOp::Before => left_dt < right_dt,
@@ -662,14 +661,14 @@ impl Policy {
                             if lv.is_null() || rv.is_null() {
                                 Ok(T::Null)
                             } else if let (Some(ls), Some(rs)) = (lv.as_str(), rv.as_str()) {
-                                // Parse timestamps using chrono
-                                let left_dt = match chrono::DateTime::parse_from_rfc3339(ls) {
-                                    Ok(dt) => dt,
-                                    Err(_) => return Ok(T::Null), // Invalid timestamp -> Null
+                                // Parse timestamps using the shared compatibility parser
+                                let left_dt = match crate::Timestamp::parse(ls) {
+                                    Some(dt) => dt,
+                                    None => return Ok(T::Null), // Invalid timestamp -> Null
                                 };
-                                let right_dt = match chrono::DateTime::parse_from_rfc3339(rs) {
-                                    Ok(dt) => dt,
-                                    Err(_) => return Ok(T::Null), // Invalid timestamp -> Null
+                                let right_dt = match crate::Timestamp::parse(rs) {
+                                    Some(dt) => dt,
+                                    None => return Ok(T::Null), // Invalid timestamp -> Null
                                 };
 
                                 let result = match op {

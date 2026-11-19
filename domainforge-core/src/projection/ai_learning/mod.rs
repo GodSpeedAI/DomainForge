@@ -310,7 +310,7 @@ fn enumerate_authority_cases(
                         extra: Default::default(),
                     },
                     context: serde_json::json!({}),
-                    requested_at: chrono::Utc::now(),
+                    requested_at: crate::timestamp::Timestamp::now_utc(),
                     correlation_id: None,
                     risk_class: None,
                     metadata: Default::default(),

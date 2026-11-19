@@ -199,7 +199,7 @@ impl AuthorityPolicy {
     pub fn check_fact_requirements(
         &self,
         facts: &[FactEnvelope],
-        now: &chrono::DateTime<chrono::Utc>,
+        now: &crate::timestamp::Timestamp,
     ) -> Vec<(FactRequirement, bool, Option<FactEnvelope>)> {
         self.requires_fact
             .iter()

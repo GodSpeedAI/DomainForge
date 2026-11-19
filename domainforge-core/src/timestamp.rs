@@ -53,29 +53,103 @@ pub struct Timestamp {
     offset_seconds: i32,
 }
 
+/// The timestamp did not match the RFC 3339 syntax accepted by stored records.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ParseTimestampError {
+    /// A date, time or offset component was outside its allowed range.
+    OutOfRange,
+    /// The input ended before the timestamp was complete.
+    Incomplete,
+    /// Unexpected characters appeared in the timestamp.
+    Invalid,
+    /// Extra characters followed a complete timestamp.
+    Trailing,
+}
+
+impl std::fmt::Display for ParseTimestampError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let reason = match self {
+            Self::OutOfRange => "input is out of range",
+            Self::Incomplete => "premature end of input",
+            Self::Invalid => "input contains invalid characters",
+            Self::Trailing => "trailing input",
+        };
+        f.write_str(reason)
+    }
+}
+
+impl std::error::Error for ParseTimestampError {}
+
 impl Timestamp {
-    /// Parse the RFC 3339 forms accepted by Chrono's RFC 3339 parser.
-    pub fn parse(input: &str) -> Option<Self> {
-        let b = input.as_bytes();
-        if b.len() < 20
-            || b.get(4) != Some(&b'-')
-            || b.get(7) != Some(&b'-')
-            || !matches!(b.get(10), Some(b'T' | b't' | b' '))
-            || b.get(13) != Some(&b':')
-            || b.get(16) != Some(&b':')
-        {
+    /// Current UTC timestamp.
+    pub fn now_utc() -> Self {
+        let now = OffsetDateTime::now_utc();
+        Self {
+            utc_anchor: now.replace_nanosecond(0).expect("valid nanoseconds"),
+            nanos: now.nanosecond(),
+            leap: false,
+            offset_seconds: 0,
+        }
+    }
+
+    /// Construct an instant within Chrono's historical calendar range.
+    pub fn from_unix_seconds(seconds: i64) -> Option<Self> {
+        let utc_anchor = OffsetDateTime::from_unix_timestamp(seconds).ok()?;
+        if !(-262_143..=262_142).contains(&utc_anchor.year()) {
             return None;
         }
-        let year = digits(&b[0..4])? as i32;
-        let month = time::Month::try_from(digits(&b[5..7])? as u8).ok()?;
-        let day = digits(&b[8..10])? as u8;
-        let hour = digits(&b[11..13])? as u8;
-        let minute = digits(&b[14..16])? as u8;
-        let second = digits(&b[17..19])? as u8;
-        let (nanos, zone) = fraction_and_zone(&input[19..])?;
-        let offset = parse_offset(zone, false)?;
-        let date = time::Date::from_calendar_date(year, month, day).ok()?;
-        Self::from_local(date, [hour, minute, second], nanos, offset)
+        Some(Self {
+            utc_anchor,
+            nanos: 0,
+            leap: false,
+            offset_seconds: 0,
+        })
+    }
+
+    /// Add a signed duration, retaining Chrono's leap-second arithmetic.
+    pub fn checked_add(self, duration: Duration) -> Option<Self> {
+        let mut secs = self.utc_anchor.unix_timestamp() as i128;
+        let mut frac = self.nanos as i128 + if self.leap { 1_000_000_000 } else { 0 };
+        let ds = duration.0 / 1_000_000_000;
+        let dn = duration.0 % 1_000_000_000;
+        if self.leap {
+            if ds > 0 || (dn > 0 && frac + dn >= 2_000_000_000) {
+                frac -= 1_000_000_000;
+            } else if ds < 0 {
+                frac -= 1_000_000_000;
+                secs += 1;
+            } else {
+                frac += dn;
+                let leap = frac >= 1_000_000_000;
+                return Some(Self {
+                    utc_anchor: self.utc_anchor,
+                    nanos: (frac % 1_000_000_000) as u32,
+                    leap,
+                    offset_seconds: 0,
+                });
+            }
+        }
+        secs += ds;
+        frac += dn;
+        secs += frac.div_euclid(1_000_000_000);
+        frac = frac.rem_euclid(1_000_000_000);
+        let mut result = Self::from_unix_seconds(i64::try_from(secs).ok()?)?;
+        result.nanos = frac as u32;
+        Some(result)
+    }
+
+    /// Subtract a signed duration.
+    pub fn checked_sub(self, duration: Duration) -> Option<Self> {
+        self.checked_add(-duration)
+    }
+    /// Parse the strict RFC 3339 grammar and report the historical diagnostic.
+    pub fn parse_rfc3339(input: &str) -> Result<Self, ParseTimestampError> {
+        detailed_parse_rfc3339(input)
+    }
+
+    /// Parse the RFC 3339 forms accepted by Chrono's RFC 3339 parser.
+    pub fn parse(input: &str) -> Option<Self> {
+        Self::parse_rfc3339(input).ok()
     }
 
     fn from_local(
@@ -185,6 +259,227 @@ impl Timestamp {
     }
 }
 
+/// Signed nanosecond duration with Chrono's representable range and wire format.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Duration(i128);
+
+impl Duration {
+    const LIMIT: i128 = i64::MAX as i128 * 1_000_000;
+    pub const fn zero() -> Self {
+        Self(0)
+    }
+    pub fn try_seconds(value: i64) -> Option<Self> {
+        Self::from_nanos(value as i128 * 1_000_000_000)
+    }
+    pub fn seconds(value: i64) -> Self {
+        Self::try_seconds(value).expect("duration out of bounds")
+    }
+    pub fn milliseconds(value: i64) -> Self {
+        Self::from_nanos(value as i128 * 1_000_000).expect("duration out of bounds")
+    }
+    pub fn minutes(value: i64) -> Self {
+        Self::from_nanos(value as i128 * 60 * 1_000_000_000).expect("duration out of bounds")
+    }
+    pub fn hours(value: i64) -> Self {
+        Self::from_nanos(value as i128 * 3600 * 1_000_000_000).expect("duration out of bounds")
+    }
+    pub fn days(value: i64) -> Self {
+        Self::from_nanos(value as i128 * 86400 * 1_000_000_000).expect("duration out of bounds")
+    }
+    pub fn num_seconds(self) -> i64 {
+        (self.0 / 1_000_000_000) as i64
+    }
+    pub fn num_milliseconds(self) -> i64 {
+        (self.0 / 1_000_000) as i64
+    }
+    fn from_nanos(value: i128) -> Option<Self> {
+        (-Self::LIMIT..=Self::LIMIT)
+            .contains(&value)
+            .then_some(Self(value))
+    }
+}
+impl std::ops::Neg for Duration {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self(-self.0)
+    }
+}
+impl serde::Serialize for Duration {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(
+            &(
+                (self.0.div_euclid(1_000_000_000)) as i64,
+                self.0.rem_euclid(1_000_000_000) as i32,
+            ),
+            serializer,
+        )
+    }
+}
+impl<'de> serde::Deserialize<'de> for Duration {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let (seconds, nanos) = <(i64, i32) as serde::Deserialize>::deserialize(deserializer)?;
+        if !(0..1_000_000_000).contains(&nanos) {
+            return Err(serde::de::Error::custom("TimeDelta out of bounds"));
+        }
+        Self::from_nanos(seconds as i128 * 1_000_000_000 + nanos as i128)
+            .ok_or_else(|| serde::de::Error::custom("TimeDelta out of bounds"))
+    }
+}
+impl std::ops::Add<Duration> for Timestamp {
+    type Output = Self;
+    fn add(self, rhs: Duration) -> Self {
+        self.checked_add(rhs).expect("timestamp out of bounds")
+    }
+}
+impl std::ops::Sub<Duration> for Timestamp {
+    type Output = Self;
+    fn sub(self, rhs: Duration) -> Self {
+        self.checked_sub(rhs).expect("timestamp out of bounds")
+    }
+}
+
+fn detailed_parse_rfc3339(input: &str) -> Result<Timestamp, ParseTimestampError> {
+    use ParseTimestampError::{Incomplete, Invalid};
+
+    let bytes = input.as_bytes();
+    if bytes.len() < 19 {
+        return Err(Incomplete);
+    }
+    if bytes[4] != b'-' || bytes[7] != b'-' {
+        return Err(Invalid);
+    }
+    let year = digits(&bytes[0..4]).ok_or(Invalid)? as i32;
+    let month = digits(&bytes[5..7]).ok_or(Invalid)? as u8;
+    let day = digits(&bytes[8..10]).ok_or(Invalid)? as u8;
+    let date = detailed_calendar_date(year, month, day)?;
+    if !matches!(bytes[10], b'T' | b't' | b' ') || bytes[13] != b':' || bytes[16] != b':' {
+        return Err(Invalid);
+    }
+    let hour = digits(&bytes[11..13]).ok_or(Invalid)? as u8;
+    let minute = digits(&bytes[14..16]).ok_or(Invalid)? as u8;
+    let second = digits(&bytes[17..19]).ok_or(Invalid)? as u8;
+    let (fraction, zone) = detailed_fraction_and_zone(&input[19..])?;
+    let (local, fraction) = detailed_local_time(date, [hour, minute, second], fraction)?;
+    let offset = detailed_parse_offset(zone, false)?;
+    detailed_from_local(local, fraction, offset)
+}
+
+fn detailed_calendar_date(
+    year: i32,
+    month: u8,
+    day: u8,
+) -> Result<time::Date, ParseTimestampError> {
+    use ParseTimestampError::OutOfRange;
+
+    if !(-262_143..=262_142).contains(&year) {
+        return Err(OutOfRange);
+    }
+    let month = time::Month::try_from(month).map_err(|_| OutOfRange)?;
+    time::Date::from_calendar_date(year, month, day).map_err(|_| OutOfRange)
+}
+
+fn detailed_local_time(
+    date: time::Date,
+    [hour, minute, second]: [u8; 3],
+    fraction: u32,
+) -> Result<(time::PrimitiveDateTime, u32), ParseTimestampError> {
+    use ParseTimestampError::OutOfRange;
+
+    if second > 60 {
+        return Err(OutOfRange);
+    }
+    let local = date
+        .with_hms(hour, minute, second.min(59))
+        .map_err(|_| OutOfRange)?;
+    Ok((local, fraction + u32::from(second == 60) * 1_000_000_000))
+}
+
+fn detailed_from_local(
+    local: time::PrimitiveDateTime,
+    fraction: u32,
+    offset: time::UtcOffset,
+) -> Result<Timestamp, ParseTimestampError> {
+    let utc = local.assume_offset(offset).to_offset(time::UtcOffset::UTC);
+    if !(-262_143..=262_142).contains(&utc.year()) {
+        return Err(ParseTimestampError::OutOfRange);
+    }
+    Ok(Timestamp {
+        utc_anchor: utc,
+        nanos: fraction % 1_000_000_000,
+        leap: fraction >= 1_000_000_000,
+        offset_seconds: offset.whole_seconds(),
+    })
+}
+
+fn detailed_fraction_and_zone(input: &str) -> Result<(u32, &str), ParseTimestampError> {
+    let Some(input) = input.strip_prefix('.') else {
+        return Ok((0, input));
+    };
+    let (numeral, rest) = split_digits(input, 9);
+    if numeral.is_empty() {
+        return Err(if input.is_empty() {
+            ParseTimestampError::Incomplete
+        } else {
+            ParseTimestampError::Invalid
+        });
+    }
+    let precision = numeral.len();
+    let fraction =
+        digits(numeral.as_bytes()).expect("ASCII digits") * 10_u32.pow((9 - precision) as u32);
+    Ok((
+        fraction,
+        rest.trim_start_matches(|c: char| c.is_ascii_digit()),
+    ))
+}
+
+fn detailed_parse_offset(
+    input: &str,
+    relaxed: bool,
+) -> Result<time::UtcOffset, ParseTimestampError> {
+    use ParseTimestampError::{Incomplete, Invalid, OutOfRange, Trailing};
+
+    let input = if relaxed { input.trim() } else { input };
+    if relaxed && input.eq_ignore_ascii_case("UTC") {
+        return Ok(time::UtcOffset::UTC);
+    }
+    if let Some(rest) = input.strip_prefix(['Z', 'z']) {
+        return if rest.is_empty() {
+            Ok(time::UtcOffset::UTC)
+        } else {
+            Err(Trailing)
+        };
+    }
+    let (sign, offset) = match input.chars().next() {
+        Some('+') => (1, &input[1..]),
+        Some('-') => (-1, &input[1..]),
+        Some('−') => (-1, &input['−'.len_utf8()..]),
+        Some(_) => return Err(Invalid),
+        None => return Err(Incomplete),
+    };
+    let hour = digits(offset.as_bytes().get(..2).ok_or(Incomplete)?).ok_or(Invalid)? as i8;
+    let remainder = &offset[2..];
+    let minutes = if relaxed {
+        remainder.trim_start_matches(|c: char| c == ':' || c.is_whitespace())
+    } else {
+        remainder.strip_prefix(':').ok_or(if remainder.is_empty() {
+            Incomplete
+        } else {
+            Invalid
+        })?
+    };
+    let minute = digits(minutes.as_bytes().get(..2).ok_or(Incomplete)?).ok_or(Invalid)? as i8;
+    if minute > 59 {
+        return Err(OutOfRange);
+    }
+    if minutes.len() > 2 {
+        return Err(Trailing);
+    }
+    if hour > 23 {
+        return Err(OutOfRange);
+    }
+    time::UtcOffset::from_hms(sign * hour, sign * minute, 0).map_err(|_| OutOfRange)
+}
+
 // Only used for bounded slices of at most nine ASCII digits.
 fn digits(bytes: &[u8]) -> Option<u32> {
     bytes.iter().try_fold(0, |value, digit| {
@@ -292,56 +587,126 @@ impl<'de> serde::Deserialize<'de> for Timestamp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::SecondsFormat;
 
     #[test]
-    fn adapter_matches_chrono_parsing_values_and_order() {
-        let inputs = [
-            "1969-12-31T23:59:59.999999999Z",
-            "1970-01-01T01:30:00+01:30",
-            "2000-02-29t23:59:59.000001z",
-            "2024-01-15 12:34:60.123456789987−05:30",
-            "2024-01-15T18:04:60.123456789Z",
-            "2016-12-31T23:59:59.999999999Z",
-            "2016-12-31T23:59:60Z",
-            "2017-01-01T05:29:60.123456789+05:30",
-            "2017-01-01T00:00:00Z",
-            "0000-01-01T00:00:00+23:59",
-            "9999-12-31T23:59:59-23:59",
+    fn strict_diagnostics_keep_the_historical_messages() {
+        for (input, message) in [
+            ("", "premature end of input"),
+            ("2024-01-01X00:00:00Z", "input contains invalid characters"),
+            ("2024-02-30T00:00:00Z", "input is out of range"),
+            ("2024-01-01T00:00:00Zextra", "trailing input"),
+        ] {
+            assert_eq!(
+                Timestamp::parse_rfc3339(input).unwrap_err().to_string(),
+                message
+            );
+            assert!(Timestamp::parse(input).is_none());
+        }
+    }
+
+    #[test]
+    fn signed_duration_wire_and_bounds() {
+        for wire in [
+            "[0,0]",
+            "[1,250000000]",
+            "[-2,750000000]",
+            "[9223372036854775,807000000]",
+            "[-9223372036854776,193000000]",
+        ] {
+            let value: Duration = serde_json::from_str(wire).unwrap();
+            assert_eq!(serde_json::to_string(&value).unwrap(), wire);
+        }
+        for wire in [
+            "[9223372036854775,807000001]",
+            "[-9223372036854776,192999999]",
+            "[0,-1]",
+            "[0,1000000000]",
+        ] {
+            assert!(serde_json::from_str::<Duration>(wire).is_err());
+        }
+    }
+
+    #[test]
+    fn leap_second_arithmetic_preserves_chrono_edges() {
+        let leap = Timestamp::parse("2016-12-31T23:59:60.5Z").unwrap();
+        assert_eq!(
+            (leap - Duration::seconds(1)).to_utc_rfc3339(),
+            "2016-12-31T23:59:59.500Z"
+        );
+        assert_eq!(
+            (leap + Duration::seconds(1)).to_utc_rfc3339(),
+            "2017-01-01T00:00:00.500Z"
+        );
+        assert_eq!(
+            (leap - Duration::milliseconds(750)).to_utc_rfc3339(),
+            "2016-12-31T23:59:59.750Z"
+        );
+        assert_eq!(
+            (leap + Duration::milliseconds(500)).to_utc_rfc3339(),
+            "2017-01-01T00:00:00Z"
+        );
+        assert_eq!(
+            Timestamp::from_unix_seconds(0).unwrap().to_utc_rfc3339(),
+            "1970-01-01T00:00:00Z"
+        );
+        assert!(Timestamp::from_unix_seconds(i64::MAX).is_none());
+    }
+
+    #[test]
+    fn timestamp_strict_baseline_values_and_order() {
+        let cases = [
+            (
+                "1969-12-31T23:59:59.999999999Z",
+                0,
+                "1969-12-31T23:59:59.999999999Z",
+            ),
+            ("1970-01-01T01:30:00+01:30", 5400, "1970-01-01T00:00:00Z"),
+            (
+                "2000-02-29t23:59:59.000001z",
+                0,
+                "2000-02-29T23:59:59.000001Z",
+            ),
+            (
+                "2024-01-15 12:34:60.123456789987−05:30",
+                -19800,
+                "2024-01-15T18:04:60.123456789Z",
+            ),
+            (
+                "2024-01-15T18:04:60.123456789Z",
+                0,
+                "2024-01-15T18:04:60.123456789Z",
+            ),
+            (
+                "2016-12-31T23:59:59.999999999Z",
+                0,
+                "2016-12-31T23:59:59.999999999Z",
+            ),
+            ("2016-12-31T23:59:60Z", 0, "2016-12-31T23:59:60Z"),
+            (
+                "2017-01-01T05:29:60.123456789+05:30",
+                19800,
+                "2016-12-31T23:59:60.123456789Z",
+            ),
+            ("2017-01-01T00:00:00Z", 0, "2017-01-01T00:00:00Z"),
+            ("0000-01-01T00:00:00+23:59", 86340, "-0001-12-31T00:01:00Z"),
+            (
+                "9999-12-31T23:59:59-23:59",
+                -86340,
+                "+10000-01-01T23:58:59Z",
+            ),
         ];
-        let mut values = Vec::new();
-        for input in inputs {
-            let expected = chrono::DateTime::parse_from_rfc3339(input).unwrap();
-            let actual = Timestamp::parse(input).unwrap();
-            assert_eq!(
-                actual.offset_seconds(),
-                expected.offset().local_minus_utc(),
-                "{input}"
-            );
-            assert_eq!(
-                actual.utc_anchor.unix_timestamp(),
-                expected.timestamp(),
-                "{input}"
-            );
-            assert_eq!(
-                actual.nanos + if actual.leap { 1_000_000_000 } else { 0 },
-                expected.timestamp_subsec_nanos(),
-                "{input}"
-            );
-            assert_eq!(
-                actual.to_utc_rfc3339(),
-                expected
-                    .with_timezone(&chrono::Utc)
-                    .to_rfc3339_opts(SecondsFormat::AutoSi, true),
-                "{input}"
-            );
-            values.push((actual, expected));
+        for (input, offset, expected) in cases {
+            let value = Timestamp::parse(input).unwrap();
+            assert_eq!(value.offset_seconds(), offset, "{input}");
+            assert_eq!(value.to_utc_rfc3339(), expected, "{input}");
         }
-        for (actual_a, expected_a) in &values {
-            for (actual_b, expected_b) in &values {
-                assert_eq!(actual_a.cmp(actual_b), expected_a.cmp(expected_b));
-            }
-        }
+        let t = |s| Timestamp::parse(s).unwrap();
+        assert!(t("2016-12-31T23:59:59.999999999Z") < t("2016-12-31T23:59:60Z"));
+        assert!(t("2016-12-31T23:59:60Z") < t("2017-01-01T00:00:00Z"));
+        assert_eq!(
+            t("2024-01-15 12:34:60.123456789987−05:30"),
+            t("2024-01-15T18:04:60.123456789Z")
+        );
     }
 
     #[test]
@@ -357,73 +722,52 @@ mod tests {
             "2024-01-01T00:00:00+00:60",
             "2024-01-01T00:00:00Zextra",
         ] {
-            assert_eq!(
-                Timestamp::parse(input).is_some(),
-                chrono::DateTime::parse_from_rfc3339(input).is_ok(),
-                "{input}"
-            );
+            assert!(Timestamp::parse(input).is_none(), "{input}");
         }
     }
 
     #[test]
-    fn timestamp_serde_matches_chrono_utc_wire_format() {
-        let relaxed = [
-            "+10000-01-01T00:00:00Z",
-            "-0001-12-31T00:01:00Z",
-            " \u{2003}+82701 - 5 - 6t 15 : 9 : 60.898989898989 \u{2003}uTc\t",
-            "1-2-3  4:5:6z",
-            "+000000000000000000000000000001-2-3T4:5:6 UTC",
-            "-0-2-29T4:5:6Z",
-            "2024-1-2T3:4:5+0130",
-            "2024-1-2T3:4:60.1−01 :\u{2003}: 30",
-            "2024-01-01T00:00:00z\u{2003}",
-            "-262143-01-01T00:00:00Z",
-            "-262143-01-01T23:59:60+23:59",
-            "+262142-12-31T23:59:60.999999999Z",
+    fn timestamp_serde_baseline_wire_values() {
+        let cases = [
+            (
+                "2017-01-01T05:29:60.123456789+05:30",
+                "2016-12-31T23:59:60.123456789Z",
+            ),
+            ("1969-12-31T23:59:59.001Z", "1969-12-31T23:59:59.001Z"),
+            ("0000-01-01T00:00:00+23:59", "-0001-12-31T00:01:00Z"),
+            ("9999-12-31T23:59:59-23:59", "+10000-01-01T23:58:59Z"),
+            ("+10000-01-01T00:00:00Z", "+10000-01-01T00:00:00Z"),
+            ("-0001-12-31T00:01:00Z", "-0001-12-31T00:01:00Z"),
+            (
+                " \u{2003}+82701 - 5 - 6t 15 : 9 : 60.898989898989 \u{2003}uTc\t",
+                "+82701-05-06T15:09:60.898989898Z",
+            ),
+            ("1-2-3  4:5:6z", "0001-02-03T04:05:06Z"),
+            (
+                "+000000000000000000000000000001-2-3T4:5:6 UTC",
+                "0001-02-03T04:05:06Z",
+            ),
+            ("-0-2-29T4:5:6Z", "0000-02-29T04:05:06Z"),
+            ("2024-1-2T3:4:5+0130", "2024-01-02T01:34:05Z"),
+            (
+                "2024-1-2T3:4:60.1−01 :\u{2003}: 30",
+                "2024-01-02T04:34:60.100Z",
+            ),
+            ("2024-01-01T00:00:00z\u{2003}", "2024-01-01T00:00:00Z"),
+            ("-262143-01-01T00:00:00Z", "-262143-01-01T00:00:00Z"),
+            ("-262143-01-01T23:59:60+23:59", "-262143-01-01T00:00:60Z"),
+            (
+                "+262142-12-31T23:59:60.999999999Z",
+                "+262142-12-31T23:59:60.999999999Z",
+            ),
         ];
-        for input in relaxed {
-            assert!(
-                Timestamp::parse(input).is_none(),
-                "strict parser: {input:?}"
-            );
-        }
-        for input in [
-            "2017-01-01T05:29:60.123456789+05:30",
-            "1969-12-31T23:59:59.001Z",
-            "0000-01-01T00:00:00+23:59",
-            "9999-12-31T23:59:59-23:59",
-        ]
-        .into_iter()
-        .chain(relaxed)
-        {
-            let wire = serde_json::to_string(input).unwrap();
-            let expected: chrono::DateTime<chrono::Utc> = serde_json::from_str(&wire).unwrap();
-            let actual: Timestamp = serde_json::from_str(&wire).unwrap();
-            assert_eq!(actual.offset_seconds(), 0, "{input:?}");
+        for (input, expected) in cases {
+            let value: Timestamp = serde_json::from_value(serde_json::json!(input)).unwrap();
+            assert_eq!(value.offset_seconds(), 0, "{input}");
+            assert_eq!(serde_json::to_value(value).unwrap(), expected, "{input}");
             assert_eq!(
-                actual.utc_anchor.unix_timestamp(),
-                expected.timestamp(),
-                "{input:?}"
-            );
-            assert_eq!(
-                actual.nanos + u32::from(actual.leap) * 1_000_000_000,
-                expected.timestamp_subsec_nanos(),
-                "{input:?}"
-            );
-            let serialized = serde_json::to_string(&actual).unwrap();
-            assert_eq!(
-                serialized,
-                serde_json::to_string(&expected).unwrap(),
-                "{input:?}"
-            );
-            assert_eq!(actual.to_rfc3339(), expected.to_rfc3339(), "{input:?}");
-            assert_eq!(
-                serde_json::from_str::<Timestamp>(&serialized).unwrap(),
-                actual
-            );
-            assert_eq!(
-                serde_json::from_str::<chrono::DateTime<chrono::Utc>>(&serialized).unwrap(),
-                expected
+                serde_json::from_value::<Timestamp>(serde_json::json!(expected)).unwrap(),
+                value
             );
         }
     }
@@ -457,42 +801,41 @@ mod tests {
         ] {
             let wire = serde_json::to_string(input).unwrap();
             assert!(
-                serde_json::from_str::<chrono::DateTime<chrono::Utc>>(&wire).is_err(),
-                "{input:?}"
-            );
-            assert!(
                 serde_json::from_str::<Timestamp>(&wire).is_err(),
                 "{input:?}"
             );
         }
         for wire in ["123", "null", "[]"] {
-            assert!(serde_json::from_str::<chrono::DateTime<chrono::Utc>>(wire).is_err());
             assert!(serde_json::from_str::<Timestamp>(wire).is_err());
         }
     }
 
     #[test]
-    fn matches_chrono_for_fractional_precision_and_pre_epoch() {
-        for seconds in [-1, 0, 1, 1_700_000_000] {
-            for nanos in [
-                0,
-                1,
-                1_000,
-                1_000_000,
-                123_000_000,
-                123_456_000,
-                123_456_789,
-                999_999_999,
+    fn formatting_fractional_precision_and_pre_epoch_baselines() {
+        for (seconds, date) in [
+            (-1, "1969-12-31T23:59:59"),
+            (0, "1970-01-01T00:00:00"),
+            (1, "1970-01-01T00:00:01"),
+            (1_700_000_000, "2023-11-14T22:13:20"),
+        ] {
+            for (nanos, fraction) in [
+                (0, ""),
+                (1, ".000000001"),
+                (1_000, ".000001"),
+                (1_000_000, ".001"),
+                (123_000_000, ".123"),
+                (123_456_000, ".123456"),
+                (123_456_789, ".123456789"),
+                (999_999_999, ".999999999"),
             ] {
-                let time = OffsetDateTime::from_unix_timestamp(seconds)
+                let value = OffsetDateTime::from_unix_timestamp(seconds)
                     .unwrap()
                     .replace_nanosecond(nanos)
                     .unwrap();
-                let chrono = chrono::DateTime::from_timestamp(seconds, nanos).unwrap();
-                assert_eq!(format_utc(time, false), chrono.to_rfc3339());
+                assert_eq!(format_utc(value, false), format!("{date}{fraction}+00:00"));
                 assert_eq!(
-                    format_utc(time, true),
-                    chrono.to_rfc3339_opts(SecondsFormat::Micros, true)
+                    format_utc(value, true),
+                    format!("{date}.{:06}Z", nanos / 1000)
                 );
             }
         }

@@ -571,7 +571,7 @@ pub struct ApplicationPolicyContext {
 
 pub enum TypedValue {
     String(String), Int(i64), Decimal(rust_decimal::Decimal), Bool(bool),
-    Timestamp(chrono::DateTime<chrono::Utc>), Uuid(uuid::Uuid),
+    Timestamp(domainforge_core::Timestamp), Uuid(uuid::Uuid),
     Quantity { base_value: rust_decimal::Decimal, unit: ConceptId },
     EntityRef { entity: ConceptId, key: Box<TypedValue> },
     Enum { symbol: ApplicationSymbolId, wire: String },

@@ -1,4 +1,4 @@
-use chrono::Utc;
+use crate::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -171,7 +171,7 @@ impl AuthorityTraceEmitter {
             final_decision: output.final_decision,
             claim_level: ClaimLevel::AuditBacked,
             validation_suite_ref: None,
-            created_at: Utc::now().to_rfc3339(),
+            created_at: Timestamp::now_utc().to_rfc3339(),
             obligations: output.obligations.clone(),
         };
 

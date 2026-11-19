@@ -54,7 +54,7 @@ pub mod sbvr;
 pub mod semantic_pack;
 pub mod semantic_version;
 mod timestamp;
-pub use timestamp::Timestamp;
+pub use timestamp::{Duration, ParseTimestampError, Timestamp};
 pub mod units;
 pub mod uuid_module;
 pub mod validation_error;
