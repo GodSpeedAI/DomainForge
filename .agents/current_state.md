@@ -309,3 +309,7 @@ reviewed milestone.
 - [x] Authored .devin/blueprint.yaml for Rust 1.99.0, Python 3.12, Node 24, Bun and just; the maintenance phase fetches locked Cargo, Bun and Python dependencies. Existing AGENTS.md, specs, Rust core, CI and proof definitions remain untouched.
 - [ ] Devin-side generation of the Low/free DeepWiki and Git-backed environment snapshot has not been observed. Running the local Dockerless build and complete CI matrix is outside this documentation-only change.
 - Evidence: GitHub PR for chore/devin-free-onboarding and the committed .devin/ files; only static validation and GitHub CI (when completed) can be claimed, not live Devin execution.
+
+## GodSpeed glossary consolidation (2026-11-20)
+
+Reconciled `GLOSSARY.md` against its owner contracts and source. Cross-checked glossary targets, source links and the eleven semantic scenarios. Runtime and proof behavior are outside this change.
