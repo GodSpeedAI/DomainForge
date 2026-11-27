@@ -60,3 +60,7 @@ Policies currently project as individuals carrying their normalized expression; 
 1. After .devin/ merges to main, index/regenerate the public DomainForge repository in Devin at Low/free DeepWiki effort; check page coverage of the 30 declared topics. Expected outcome: actual sourced wiki pages and diagrams, not just configuration presence.
 2. Devin Settings > Environment > Blueprints: sync the Git-backed .devin/blueprint.yaml and build an environment snapshot; inspect logs. Expected outcome: successful Rust/Bun/Python dependency installation with no paid providers, secrets or heavyweight external proof engines.
 3. Run a focused Rust proof and branch CI as appropriate; preserve existing production/release gates. Expected outcome: separate verified proof for the specific change, without overclaiming full binding or OPA/OpenShell settlement.
+
+## GodSpeed glossary consolidation (2026-11-20)
+
+Reconciled `GLOSSARY.md` against its owner contracts and source. Cross-checked glossary targets, source links and the eleven semantic scenarios. Runtime and proof behavior are outside this change.
