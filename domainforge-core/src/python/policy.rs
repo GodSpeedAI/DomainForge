@@ -3,7 +3,6 @@ use crate::policy::{
     Expression as RustExpression, NormalizedExpression as RustNormalizedExpression,
     Quantifier as RustQuantifier, UnaryOp as RustUnaryOp, WindowSpec as RustWindowSpec,
 };
-use chrono::DateTime;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rust_decimal::Decimal;
@@ -294,7 +293,7 @@ impl Expression {
     /// Create a time literal expression (ISO 8601 timestamp).
     #[staticmethod]
     fn time(timestamp: &str) -> PyResult<Self> {
-        DateTime::parse_from_rfc3339(timestamp)
+        crate::timefmt::parse_rfc3339(timestamp)
             .map_err(|e| PyValueError::new_err(format!("Invalid timestamp: {}", e)))?;
         Ok(Self {
             inner: RustExpression::TimeLiteral(timestamp.to_string()),
@@ -304,9 +303,9 @@ impl Expression {
     /// Create an interval literal expression.
     #[staticmethod]
     fn interval(start: &str, end: &str) -> PyResult<Self> {
-        let start_dt = DateTime::parse_from_rfc3339(start)
+        let start_dt = crate::timefmt::parse_rfc3339(start)
             .map_err(|e| PyValueError::new_err(format!("Invalid start timestamp: {}", e)))?;
-        let end_dt = DateTime::parse_from_rfc3339(end)
+        let end_dt = crate::timefmt::parse_rfc3339(end)
             .map_err(|e| PyValueError::new_err(format!("Invalid end timestamp: {}", e)))?;
 
         if start_dt > end_dt {

@@ -305,7 +305,13 @@ pub enum TypedValue {
     Int(i64),
     Decimal(rust_decimal::Decimal),
     Bool(bool),
-    Timestamp(chrono::DateTime<chrono::Utc>),
+    Timestamp(
+        #[serde(
+            serialize_with = "crate::timefmt::serde_ts::serialize",
+            deserialize_with = "crate::timefmt::serde_ts::deserialize"
+        )]
+        time::OffsetDateTime,
+    ),
     Uuid(uuid::Uuid),
     Quantity {
         base_value: rust_decimal::Decimal,

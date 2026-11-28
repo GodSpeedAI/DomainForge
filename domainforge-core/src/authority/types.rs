@@ -1,8 +1,8 @@
-use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use time::OffsetDateTime;
 
 use crate::authority::error::AuthorityError;
 
@@ -96,7 +96,8 @@ pub struct AuthorityRequest {
     pub resource: ResourceRef,
     #[serde(default)]
     pub context: serde_json::Value,
-    pub requested_at: DateTime<Utc>,
+    #[serde(with = "crate::timefmt::serde_ts")]
+    pub requested_at: OffsetDateTime,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlation_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -164,9 +165,14 @@ pub struct FactEnvelope {
     pub value: serde_json::Value,
     pub source_class: SourceClass,
     pub source_id: String,
-    pub observed_at: DateTime<Utc>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<DateTime<Utc>>,
+    #[serde(with = "crate::timefmt::serde_ts")]
+    pub observed_at: OffsetDateTime,
+    #[serde(
+        default,
+        with = "crate::timefmt::serde_ts_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub expires_at: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evidence_ref: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -178,7 +184,7 @@ pub struct FactEnvelope {
 }
 
 impl FactEnvelope {
-    pub fn is_fresh(&self, now: DateTime<Utc>) -> bool {
+    pub fn is_fresh(&self, now: OffsetDateTime) -> bool {
         match self.expires_at {
             Some(exp) => now < exp,
             None => true,
@@ -222,8 +228,12 @@ pub struct FactRequirement {
     pub allowed_source_classes: Vec<SourceClass>,
     #[serde(default)]
     pub allowed_source_ids: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_age: Option<chrono::Duration>,
+    #[serde(
+        default,
+        with = "crate::timefmt::serde_duration_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_age: Option<time::Duration>,
     #[serde(default)]
     pub evidence_ref_required: bool,
     #[serde(default)]
@@ -237,7 +247,7 @@ pub struct FactRequirement {
 }
 
 impl FactRequirement {
-    pub fn is_satisfied_by(&self, envelope: &FactEnvelope, now: &DateTime<Utc>) -> bool {
+    pub fn is_satisfied_by(&self, envelope: &FactEnvelope, now: &OffsetDateTime) -> bool {
         if self.fact_path != envelope.path {
             return false;
         }

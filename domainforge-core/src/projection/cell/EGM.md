@@ -49,7 +49,7 @@ Projects a `.sea` model into a Cell IR and then into the per-component artifacts
 
 ## Side Effects
 - `[mod.rs:emit]` — writes every artifact through `ArtifactSink::write` (filesystem write under the output root, or in-memory map insertion).
-- `[mod.rs:emit]` — canonicalizes the `.sea` source for `cell.lock` hashing and substitutes `chrono::Utc::now().to_rfc3339()` when `created_at` is `None`.
+- `[mod.rs:emit]` — canonicalizes the `.sea` source for `cell.lock` hashing and substitutes `timefmt::now_rfc3339()` when `created_at` is `None`.
 - `[deps.rs:render]` — reads the referenced lockfile from disk when `source_dir` is `Some` (bounded at 16 MiB).
 - `[lock.rs:build]` — hashes each emitted file's bytes into the lock document.
 

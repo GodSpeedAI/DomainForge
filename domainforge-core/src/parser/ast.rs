@@ -9,7 +9,6 @@ use crate::policy::{
 use crate::primitives::{ConceptChange, Entity, Flow, RelationType, Resource, Role, Severity};
 use crate::units::unit_from_string;
 use crate::SemanticVersion;
-use chrono::Duration;
 use pest::iterators::{Pair, Pairs};
 use pest::{Parser, Span};
 use rust_decimal::prelude::ToPrimitive;
@@ -18,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
+use time::Duration;
 
 /// File-level metadata from header annotations
 #[derive(Debug, Clone, PartialEq, Default)]

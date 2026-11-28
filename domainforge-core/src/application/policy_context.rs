@@ -170,7 +170,7 @@ fn typed_to_val(value: &TypedValue) -> Result<Val, String> {
         TypedValue::Decimal(d) => Val::Num(*d),
         TypedValue::Bool(b) => Val::Truth(Some(*b)),
         TypedValue::Uuid(u) => Val::Uuid(*u),
-        TypedValue::Timestamp(t) => Val::Str(t.to_rfc3339()),
+        TypedValue::Timestamp(t) => Val::Str(crate::timefmt::to_rfc3339(*t)),
         TypedValue::Quantity { base_value, unit } => Val::Qty(*base_value, unit.clone()),
         TypedValue::Enum { wire, .. } => Val::Str(wire.clone()),
         TypedValue::EntityRef { .. } | TypedValue::List(_) => {

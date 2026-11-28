@@ -129,7 +129,10 @@ fn export_metric(metric: &Metric) -> CalmNode {
     metadata.insert("sea:metric_type".to_string(), json!("Metric"));
 
     if let Some(ri) = &metric.refresh_interval {
-        metadata.insert("sea:refresh_interval".to_string(), json!(ri.num_seconds()));
+        metadata.insert(
+            "sea:refresh_interval".to_string(),
+            json!(ri.whole_seconds()),
+        );
     }
     if let Some(u) = &metric.unit {
         metadata.insert("sea:unit".to_string(), json!(u));
@@ -144,7 +147,7 @@ fn export_metric(metric: &Metric) -> CalmNode {
         metadata.insert("sea:target".to_string(), json!(t.to_string()));
     }
     if let Some(w) = &metric.window {
-        metadata.insert("sea:window".to_string(), json!(w.num_seconds()));
+        metadata.insert("sea:window".to_string(), json!(w.whole_seconds()));
     }
 
     CalmNode {
@@ -253,8 +256,10 @@ pub fn export(graph: &Graph) -> Result<Value, String> {
         std::env::var("SOURCE_DATE_EPOCH")
             .ok()
             .and_then(|epoch| epoch.parse::<i64>().ok())
-            .and_then(|epoch| chrono::DateTime::from_timestamp(epoch, 0).map(|dt| dt.to_rfc3339()))
-            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+            .and_then(|epoch| {
+                crate::timefmt::from_unix_timestamp(epoch).map(crate::timefmt::to_rfc3339)
+            })
+            .unwrap_or_else(crate::timefmt::now_rfc3339),
     );
 
     let registry = ProjectionRegistry::new(graph);

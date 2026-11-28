@@ -99,12 +99,12 @@ impl From<&ast::MetricMetadata> for schema::MetricMetadata {
         schema::MetricMetadata {
             refresh_interval: m
                 .refresh_interval
-                .map(|d| format!("PT{}S", d.num_seconds())),
+                .map(|d| format!("PT{}S", d.whole_seconds())),
             unit: m.unit.clone(),
             threshold: m.threshold.map(|d| d.to_string()),
             severity: m.severity.as_ref().map(|s| s.into()),
             target: m.target.map(|d| d.to_string()),
-            window: m.window.map(|d| format!("PT{}S", d.num_seconds())),
+            window: m.window.map(|d| format!("PT{}S", d.whole_seconds())),
         }
     }
 }

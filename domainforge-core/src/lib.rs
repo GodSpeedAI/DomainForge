@@ -53,6 +53,7 @@ pub mod registry;
 pub mod sbvr;
 pub mod semantic_pack;
 pub mod semantic_version;
+pub mod timefmt;
 pub mod units;
 pub mod uuid_module;
 pub mod validation_error;

@@ -98,7 +98,7 @@ pub fn emit(
     opts: &RdfOptions,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let base = opts.base();
 
     let mut kg =

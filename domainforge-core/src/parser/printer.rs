@@ -655,7 +655,7 @@ impl PrettyPrinter {
             lines.push(format!(
                 "{}@refresh_interval {} \"seconds\"",
                 self.indent(1),
-                refresh.num_seconds()
+                refresh.whole_seconds()
             ));
         }
         if let Some(unit) = &metadata.unit {
@@ -678,7 +678,7 @@ impl PrettyPrinter {
             lines.push(format!(
                 "{}@window {} \"seconds\"",
                 self.indent(1),
-                window.num_seconds()
+                window.whole_seconds()
             ));
         }
 

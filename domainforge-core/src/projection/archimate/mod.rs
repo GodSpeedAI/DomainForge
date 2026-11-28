@@ -38,7 +38,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let model = ArchitectureIR::from_graph(graph, model_ref)?;
     // Self-check: never write a model with dangling IDREFs or an illegal relation
     // (the XSD resolves neither reliably — see validate_references).

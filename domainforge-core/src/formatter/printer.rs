@@ -699,7 +699,7 @@ impl Formatter {
                     self.newline();
                     self.write_indent();
                     self.write("@refresh_interval ");
-                    self.write(&interval.num_seconds().to_string());
+                    self.write(&interval.whole_seconds().to_string());
                     self.write(" \"seconds\"");
                 }
                 if let Some(ref unit) = metadata.unit {
@@ -730,7 +730,7 @@ impl Formatter {
                     self.newline();
                     self.write_indent();
                     self.write("@window ");
-                    self.write(&window.num_seconds().to_string());
+                    self.write(&window.whole_seconds().to_string());
                     self.write(" \"seconds\"");
                 }
                 self.dedent();

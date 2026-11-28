@@ -193,7 +193,7 @@ fn validate_scalar(scalar: ScalarType, value: &Value) -> Result<(), String> {
         ScalarType::Bool => value.is_boolean(),
         ScalarType::Timestamp => value
             .as_str()
-            .is_some_and(|text| chrono::DateTime::parse_from_rfc3339(text).is_ok()),
+            .is_some_and(|text| crate::timefmt::parse_rfc3339(text).is_ok()),
         ScalarType::Uuid => value
             .as_str()
             .is_some_and(|text| uuid::Uuid::parse_str(text).is_ok()),

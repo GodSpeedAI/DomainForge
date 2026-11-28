@@ -115,7 +115,7 @@ impl DerivedFactEngine {
                 value: output_value,
                 source_class: SourceClass::Derived,
                 source_id: format!("{}@{}", transform.id, transform.version),
-                observed_at: chrono::Utc::now(),
+                observed_at: crate::timefmt::now(),
                 expires_at: input_values.iter().filter_map(|f| f.expires_at).min(),
                 evidence_ref: None,
                 signature: None,

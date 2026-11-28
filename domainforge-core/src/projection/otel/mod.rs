@@ -38,7 +38,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let telemetry = TelemetryIR::from_graph(graph, model_ref)?;
 
     let yaml_header = header('#', model_ref, &created_at);

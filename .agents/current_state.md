@@ -1,3 +1,12 @@
+# Current State: chrono to time migration (2026-11-27, branch fix/chrono-to-time)
+
+- [x] Removed `chrono` (RUSTSEC-2026-0543, unmaintained) in favour of `time` 0.3 (already in the SEA lockfile). Breaking: every public `chrono::DateTime<Utc>` is now `time::OffsetDateTime` and `chrono::Duration` is `time::Duration` (authority types, fact resolver, policy, `TypedValue::Timestamp`, `Metric`). Ships as a breaking minor via a `feat!:` commit (Release Please owns the version).
+- [x] All formatting and parsing goes through `domainforge-core/src/timefmt.rs`; reference in `docs/reference/timestamps.md`.
+- [x] Byte parity: golden tests `tests/timestamp_golden_tests.rs` (13) and corpora `tests/fixtures/timestamp_golden/` were committed first and recorded from chrono; they pass unedited after the swap. `tests/timefmt_tests.rs` checks `timefmt` against the same corpora (2117 parse inputs, 121 formatted instants).
+- [x] Documented behaviour change: leap seconds (`:60`) are accepted and folded into the next second for comparisons, and rejected for stored/serialized values.
+- [x] `cargo tree -i chrono` reports no matching package; Cargo.lock has no chrono.
+- Evidence for gates (test counts, clippy, wasm, bindings, deny/audit) is in the PR description.
+
 # Current State: `domainforge evaluate` (2026-11-13, branch fde/integration)
 
 - [x] Added `domainforge evaluate --model --facts --format json`: per-policy and per-outermost-binding true/false/unknown with `support`; operation-bound policies via `evaluate_precondition`. Library: `Policy::evaluate_bindings` (`policy/core.rs`), `evaluate.rs`; CLI `cli/evaluate.rs`; schemas `schemas/evaluate-*.v1.json`; docs `docs/reference/evaluate.md`; tests `tests/evaluate_tests.rs`.

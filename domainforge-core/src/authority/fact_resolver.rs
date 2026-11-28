@@ -1,6 +1,6 @@
-use chrono::Utc;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 use super::error::AuthorityError;
 use super::types::*;
@@ -85,7 +85,7 @@ impl FactResolver {
     pub fn wrap_context_as_caller_supplied(
         &self,
         context: &serde_json::Value,
-        observed_at: chrono::DateTime<Utc>,
+        observed_at: OffsetDateTime,
     ) -> Vec<FactEnvelope> {
         let mut envelopes = Vec::new();
         if let Some(obj) = context.as_object() {
@@ -97,7 +97,7 @@ impl FactResolver {
     fn flatten_context(
         obj: &serde_json::Map<String, serde_json::Value>,
         prefix: &str,
-        observed_at: chrono::DateTime<Utc>,
+        observed_at: OffsetDateTime,
         envelopes: &mut Vec<FactEnvelope>,
     ) {
         for (key, value) in obj {
@@ -132,7 +132,7 @@ impl FactResolver {
         &self,
         raw_facts: &[FactEnvelope],
         provided_trusted: &[FactEnvelope],
-        now: chrono::DateTime<Utc>,
+        now: OffsetDateTime,
     ) -> (TrustedFacts, Vec<FactTrustDecision>) {
         let mut resolved = raw_facts.to_vec();
         let mut trust_decisions = Vec::new();

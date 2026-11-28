@@ -74,7 +74,7 @@ impl AuthorityResolver {
 
         let mut evaluations = Vec::new();
         for policy in &candidates {
-            let fact_checks = policy.check_fact_requirements(facts, &chrono::Utc::now());
+            let fact_checks = policy.check_fact_requirements(facts, &crate::timefmt::now());
             let all_facts_satisfied = fact_checks.iter().all(|(_, satisfied, _)| *satisfied);
 
             let condition_result = if !all_facts_satisfied {

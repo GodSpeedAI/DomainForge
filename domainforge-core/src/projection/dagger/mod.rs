@@ -38,7 +38,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let ns = model_namespace(graph)?;
     let class_name = pascal_case(&ns);
 

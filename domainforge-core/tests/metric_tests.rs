@@ -1,6 +1,6 @@
-use chrono::Duration;
 use domainforge_core::parser::parse_to_graph;
 use domainforge_core::primitives::Severity;
+use time::Duration;
 
 #[test]
 fn test_metric_parsing() {
