@@ -1,5 +1,10 @@
 # Next Steps
 
+## chrono to time migration (2026-11-28)
+
+1. [ ] Merge the PR; Release Please then proposes the breaking minor (the `feat!:` commit).
+2. [ ] After the release, SEA pins the new DomainForge version (RealityTrace and SEA migrate in their own repos).
+
 ## EGM documentation bootstrap (2026-10-30)
 
 1. [x] Ran `egm-bootstrap` across the repository with `target_filename=EGM.md`, producing 61 contract files (60 directory contracts + 1 root blueprint). No `README.md` was touched; no source code was modified.

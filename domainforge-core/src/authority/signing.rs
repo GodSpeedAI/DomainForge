@@ -17,7 +17,7 @@ pub fn build_signing_payload(envelope: &FactEnvelope) -> Vec<u8> {
         envelope.path,
         serde_json::to_string(&envelope.value).unwrap_or_default(),
         envelope.source_id,
-        envelope.observed_at.to_rfc3339(),
+        crate::timefmt::to_rfc3339(envelope.observed_at),
     )
     .into_bytes()
 }

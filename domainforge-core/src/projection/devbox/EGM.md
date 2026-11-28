@@ -19,7 +19,7 @@ Projects a SEA model into a `devbox.json` that pre-loads the domain manifest (na
 
 ## Side Effects
 - `[mod.rs:emit]` — writes through `ArtifactSink::write` (filesystem write under the output root, or in-memory map insertion).
-- `[mod.rs:emit]` — substitutes `chrono::Utc::now().to_rfc3339()` when `created_at` is `None`; the timestamp is not carried into `build_spec`.
+- `[mod.rs:emit]` — substitutes `timefmt::now_rfc3339()` when `created_at` is `None`; the timestamp is not carried into `build_spec`.
 
 ## Verification
 - Run: `cargo test -p domainforge-core --features cli`

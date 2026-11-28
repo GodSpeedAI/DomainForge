@@ -32,7 +32,7 @@ pub fn emit(
     created_at: Option<String>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let spec = build_spec(graph, model_ref, &created_at)?;
     let mut body = format!(
         "// devbox.json projected by DomainForge from {model_ref} at {created_at}.\n\

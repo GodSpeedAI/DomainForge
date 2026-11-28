@@ -26,7 +26,7 @@ Projects the Cell IR into an NVIDIA OpenShell sandbox policy plus the parameters
 
 ## Side Effects
 - `[mod.rs:emit]` — writes four artifacts through `ArtifactSink::write` (filesystem write under the output root, or in-memory map insertion).
-- `[mod.rs:emit]` — substitutes `chrono::Utc::now().to_rfc3339()` when `created_at` is `None`.
+- `[mod.rs:emit]` — substitutes `timefmt::now_rfc3339()` when `created_at` is `None`.
 - `[mod.rs:project_openshell_in_memory]` — parses the `.sea` source and the optional overrides document before projecting.
 
 ## Verification

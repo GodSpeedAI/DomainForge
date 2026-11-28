@@ -18,7 +18,7 @@ Projects a SEA `Graph` into a single AsyncAPI 3.0 YAML document describing the e
 
 ## Side Effects
 - `[mod.rs:emit]` — writes through `ArtifactSink::write`: filesystem write under the output root, or insertion into an in-memory map.
-- `[mod.rs:emit]` — substitutes `chrono::Utc::now().to_rfc3339()` when `created_at` is `None`.
+- `[mod.rs:emit]` — substitutes `timefmt::now_rfc3339()` when `created_at` is `None`.
 
 ## Verification
 - Run: `cargo test -p domainforge-core --features cli`

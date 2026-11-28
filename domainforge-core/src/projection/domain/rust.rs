@@ -15,7 +15,7 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let ir = DomainIr::from_graph(graph)?;
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let files: Vec<(String, String)> = vec![
         ("Cargo.toml".to_string(), cargo_toml(&ir)),
         ("README.md".to_string(), readme(&ir, model_ref, &created_at)),

@@ -1,8 +1,8 @@
 use crate::policy::Expression;
 use crate::ConceptId;
-use chrono::Duration;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metric {
@@ -10,6 +10,7 @@ pub struct Metric {
     pub name: String,
     pub namespace: String,
     pub expression: Expression,
+    #[serde(default, with = "crate::timefmt::serde_duration_option")]
     pub refresh_interval: Option<Duration>,
     pub unit: Option<String>,
     /// Breach condition: the metric is considered in violation when its
@@ -22,6 +23,7 @@ pub struct Metric {
     pub threshold: Option<Decimal>,
     pub severity: Option<Severity>,
     pub target: Option<Decimal>,
+    #[serde(default, with = "crate::timefmt::serde_duration_option")]
     pub window: Option<Duration>,
 }
 
@@ -88,7 +90,7 @@ impl Metric {
     /// as confusing behavior downstream in projection targets:
     /// - `severity` implies a metric is actionable, which requires a
     ///   `threshold` to compare against; nothing enforced that pairing.
-    /// - `refresh_interval`/`window` use signed `chrono::Duration` and
+    /// - `refresh_interval`/`window` use signed `time::Duration` and
     ///   nothing rejected a negative one.
     ///
     /// `unit` is deliberately *not* checked against the `UnitRegistry` here
@@ -115,13 +117,13 @@ impl Metric {
                 self.name
             ));
         }
-        if self.refresh_interval.is_some_and(|d| d < Duration::zero()) {
+        if self.refresh_interval.is_some_and(|d| d < Duration::ZERO) {
             return Err(format!(
                 "Metric '{}': refresh_interval must not be negative.",
                 self.name
             ));
         }
-        if self.window.is_some_and(|d| d < Duration::zero()) {
+        if self.window.is_some_and(|d| d < Duration::ZERO) {
             return Err(format!(
                 "Metric '{}': window must not be negative.",
                 self.name

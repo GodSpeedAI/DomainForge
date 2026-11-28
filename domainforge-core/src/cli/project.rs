@@ -545,7 +545,7 @@ fn run_lean(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
 /// requires to be RFC 3339. Other targets use it for deterministic output.
 fn validate_created_at(args: &ProjectArgs) -> Result<()> {
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
     Ok(())
@@ -1137,7 +1137,7 @@ fn run_rdf(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
         ));
     }
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1185,7 +1185,7 @@ fn run_bpmn(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
         ));
     }
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1230,7 +1230,7 @@ fn run_cmmn(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
         ));
     }
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1275,7 +1275,7 @@ fn run_archimate(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> 
         ));
     }
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1322,7 +1322,7 @@ fn run_otel_semconv(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<(
         ));
     }
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1365,7 +1365,7 @@ fn run_baml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1460,7 +1460,7 @@ fn run_dspy(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1555,7 +1555,7 @@ fn run_zenml(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()> {
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 
@@ -1650,7 +1650,7 @@ fn run_ai_learning(args: &ProjectArgs, graph: &crate::graph::Graph) -> Result<()
     use crate::projection::ai_learning::{self, recipe::Recipe};
 
     if let Some(ref ts) = args.created_at {
-        chrono::DateTime::parse_from_rfc3339(ts)
+        crate::timefmt::parse_rfc3339(ts)
             .map_err(|e| anyhow::anyhow!("--created-at must be RFC3339: {e}"))?;
     }
 

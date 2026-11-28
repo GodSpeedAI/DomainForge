@@ -1998,9 +1998,9 @@ fn resolve_default(
             },
             serde_json::Value::String(s),
         ) => TypedValue::Timestamp(
-            chrono::DateTime::parse_from_rfc3339(s)
+            crate::timefmt::parse_rfc3339_exact(s)
                 .ok()
-                .map(|t| t.with_timezone(&chrono::Utc))
+                .map(|t| t.to_offset(time::UtcOffset::UTC))
                 .or_else(|| {
                     mismatch(diags);
                     None

@@ -102,7 +102,7 @@ pub fn emit(
     components: &CellComponents,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let ir = CellIr::build(ast, model_ref, &created_at, overrides)?;
 
     let canonical_source = format_source(source, FormatConfig::default())

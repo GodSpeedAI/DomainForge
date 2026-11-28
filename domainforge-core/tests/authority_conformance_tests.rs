@@ -1,5 +1,5 @@
-use chrono::Utc;
 use domainforge_core::authority::*;
+use time::OffsetDateTime;
 
 fn make_request(
     operation: &str,
@@ -23,7 +23,7 @@ fn make_request(
             extra: Default::default(),
         },
         context: serde_json::json!({}),
-        requested_at: Utc::now(),
+        requested_at: OffsetDateTime::now_utc(),
         correlation_id: None,
         risk_class: None,
         metadata: Default::default(),
@@ -36,8 +36,8 @@ fn make_trusted_fact(path: &str, value: serde_json::Value) -> FactEnvelope {
         value,
         source_class: SourceClass::SystemOfRecord,
         source_id: "credit-service".to_string(),
-        observed_at: Utc::now(),
-        expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
+        observed_at: OffsetDateTime::now_utc(),
+        expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
         evidence_ref: Some("ref-1".to_string()),
         signature: None,
         confidence: None,
@@ -51,7 +51,7 @@ fn make_caller_fact(path: &str, value: serde_json::Value) -> FactEnvelope {
         value,
         source_class: SourceClass::CallerSupplied,
         source_id: "caller".to_string(),
-        observed_at: Utc::now(),
+        observed_at: OffsetDateTime::now_utc(),
         expires_at: None,
         evidence_ref: None,
         signature: None,
@@ -342,6 +342,25 @@ fn test_authority_decision_produced() {
 }
 
 #[test]
+fn test_trace_created_at_is_rfc3339_with_plus00_offset() {
+    // Wall-clock shape pinned from the chrono implementation: `to_rfc3339()`
+    // writes `+00:00` and a 0, 3, 6 or 9 digit fraction.
+    let pack = make_prohibition_pack();
+    let config = make_env_config(vec![serde_json::to_value(&pack).unwrap()]);
+    let mut env = AuthorityEnvironment::new(config).unwrap();
+    env.validate().unwrap();
+    let request = make_request("ShipOrder", "user-1", Some("WarehouseOperator"), "Order");
+    let facts = vec![make_trusted_fact(
+        "customer.credit_status",
+        serde_json::json!("Hold"),
+    )];
+    let (trace, _) = env.evaluate(&request, &facts).unwrap();
+    let re = regex::Regex::new(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.(\d{3}|\d{6}|\d{9}))?\+00:00$")
+        .unwrap();
+    assert!(re.is_match(&trace.created_at), "{}", trace.created_at);
+}
+
+#[test]
 fn test_trace_completeness() {
     let pack = make_prohibition_pack();
     let config = make_env_config(vec![serde_json::to_value(&pack).unwrap()]);
@@ -390,7 +409,7 @@ fn test_missing_actor_rejected() {
             extra: Default::default(),
         },
         context: serde_json::json!({}),
-        requested_at: Utc::now(),
+        requested_at: OffsetDateTime::now_utc(),
         correlation_id: None,
         risk_class: None,
         metadata: Default::default(),
@@ -478,7 +497,7 @@ fn test_no_applicable_policy() {
 #[test]
 fn test_raw_context_defaults_to_caller_supplied() {
     let resolver = FactResolver::new(FactSourceRegistry::new());
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let context = serde_json::json!({
         "customer": {
             "credit_status": "Clear"
@@ -507,7 +526,7 @@ fn test_fact_requirement_satisfaction() {
     };
 
     let trusted = make_trusted_fact("customer.credit_status", serde_json::json!("Hold"));
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     assert!(req.is_satisfied_by(&trusted, &now));
 
     let caller = make_caller_fact("customer.credit_status", serde_json::json!("Hold"));
@@ -522,15 +541,15 @@ fn test_fact_requirement_satisfaction() {
 
 #[test]
 fn test_fact_envelope_freshness() {
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let fresh = FactEnvelope {
-        expires_at: Some(now + chrono::Duration::hours(1)),
+        expires_at: Some(now + time::Duration::hours(1)),
         ..make_trusted_fact("test", serde_json::json!(true))
     };
     assert!(fresh.is_fresh(now));
 
     let stale = FactEnvelope {
-        expires_at: Some(now - chrono::Duration::hours(1)),
+        expires_at: Some(now - time::Duration::hours(1)),
         ..make_trusted_fact("test", serde_json::json!(true))
     };
     assert!(!stale.is_fresh(now));
@@ -733,7 +752,7 @@ fn test_derived_fact_no_trust_upgrade() {
         value: serde_json::json!("Clear"),
         source_class: SourceClass::Derived,
         source_id: "test_transform@1.0.0".to_string(),
-        observed_at: Utc::now(),
+        observed_at: OffsetDateTime::now_utc(),
         expires_at: None,
         evidence_ref: None,
         signature: None,
@@ -753,7 +772,7 @@ fn test_derived_fact_no_trust_upgrade() {
         derived_from_source: None,
     };
 
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     assert!(!req.is_satisfied_by(&derived, &now));
 }
 
@@ -833,7 +852,7 @@ fn test_context_wrapping_nested() {
             "total": 500
         }
     });
-    let envelopes = resolver.wrap_context_as_caller_supplied(&context, Utc::now());
+    let envelopes = resolver.wrap_context_as_caller_supplied(&context, OffsetDateTime::now_utc());
     assert!(envelopes.iter().any(|e| e.path == "customer.credit_status"));
     assert!(envelopes.iter().any(|e| e.path == "customer.id"));
     assert!(envelopes.iter().any(|e| e.path == "order.total"));
@@ -883,8 +902,8 @@ fn test_trusted_system_of_record_override_accepted() {
             value: serde_json::json!("Approved"),
             source_class: SourceClass::ManualApproval,
             source_id: "approval-service".to_string(),
-            observed_at: Utc::now(),
-            expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
+            observed_at: OffsetDateTime::now_utc(),
+            expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             evidence_ref: Some("approval-1".to_string()),
             signature: None,
             confidence: None,
@@ -895,8 +914,8 @@ fn test_trusted_system_of_record_override_accepted() {
             value: serde_json::json!("approval-1"),
             source_class: SourceClass::ManualApproval,
             source_id: "approval-service".to_string(),
-            observed_at: Utc::now(),
-            expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
+            observed_at: OffsetDateTime::now_utc(),
+            expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             evidence_ref: Some("approval-1".to_string()),
             signature: None,
             confidence: None,
@@ -907,8 +926,8 @@ fn test_trusted_system_of_record_override_accepted() {
             value: serde_json::json!("ShippingHold"),
             source_class: SourceClass::ManualApproval,
             source_id: "approval-service".to_string(),
-            observed_at: Utc::now(),
-            expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
+            observed_at: OffsetDateTime::now_utc(),
+            expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             evidence_ref: Some("approval-1".to_string()),
             signature: None,
             confidence: None,
@@ -963,7 +982,7 @@ fn test_derived_fact_lineage_in_trace() {
         value: serde_json::json!("Hold"),
         source_class: SourceClass::SystemOfRecord,
         source_id: "raw-credit-service".to_string(),
-        observed_at: Utc::now(),
+        observed_at: OffsetDateTime::now_utc(),
         expires_at: None,
         evidence_ref: None,
         signature: None,
@@ -1050,7 +1069,7 @@ fn test_source_class_mismatch_rejected() {
         value: serde_json::json!("Clear"),
         source_class: SourceClass::CallerSupplied, // Wrong class!
         source_id: "credit-service".to_string(),   // Registered as SystemOfRecord
-        observed_at: Utc::now(),
+        observed_at: OffsetDateTime::now_utc(),
         expires_at: None,
         evidence_ref: Some("ref".to_string()),
         signature: None,
@@ -1059,7 +1078,7 @@ fn test_source_class_mismatch_rejected() {
     };
 
     let (_, trust_decisions) =
-        resolver.resolve_trusted_facts(&raw_facts, &[fake_fact], chrono::Utc::now());
+        resolver.resolve_trusted_facts(&raw_facts, &[fake_fact], OffsetDateTime::now_utc());
     assert_eq!(trust_decisions.len(), 1);
     assert!(!trust_decisions[0].trusted);
     assert_eq!(trust_decisions[0].reason, "source_class_mismatch");
@@ -1084,7 +1103,7 @@ fn test_minimum_trust_returns_least_trusted() {
         value: serde_json::json!("Clear"),
         source_class: SourceClass::Derived,
         source_id: "transform@1.0".to_string(),
-        observed_at: Utc::now(),
+        observed_at: OffsetDateTime::now_utc(),
         expires_at: None,
         evidence_ref: None,
         signature: None,
@@ -1115,7 +1134,7 @@ fn test_minimum_trust_returns_least_trusted() {
 
     // Should NOT be satisfied: effective_trust is CallerSupplied (from lineage),
     // which is in allowed_source_classes, but derived_from_source requires SystemOfRecord parents
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     assert!(!req.is_satisfied_by(&caller_derived, &now));
 }
 

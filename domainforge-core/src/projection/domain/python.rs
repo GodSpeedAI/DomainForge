@@ -18,7 +18,7 @@ pub fn emit(
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, String> {
     let ir = DomainIr::from_graph(graph)?;
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let pkg = &ir.package_slug;
     let pkg_dir = format!("src/{pkg}_domain");
     let files: Vec<(String, String)> = vec![

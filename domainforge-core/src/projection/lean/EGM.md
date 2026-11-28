@@ -24,7 +24,7 @@ Emits a self-contained, zero-dependency Lake package from a SEA graph under a tw
 
 ## Side Effects
 - `[mod.rs:emit]` — writes nine artifacts through `ArtifactSink::write` (filesystem write under the output root, or in-memory map insertion).
-- `[mod.rs:emit]` — substitutes `chrono::Utc::now().to_rfc3339()` when `created_at` is `None`.
+- `[mod.rs:emit]` — substitutes `timefmt::now_rfc3339()` when `created_at` is `None`.
 
 ## Verification
 - Run: `cargo test -p domainforge-core --features cli`

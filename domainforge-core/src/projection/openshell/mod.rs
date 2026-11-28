@@ -589,7 +589,7 @@ pub fn emit(
     overrides_source: Option<&str>,
     sink: &mut ArtifactSink,
 ) -> Result<Vec<String>, OpenShellProjectionError> {
-    let created_at = created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let created_at = created_at.unwrap_or_else(crate::timefmt::now_rfc3339);
     let ir = CellIr::build(ast, model_ref, &created_at, overrides)
         .map_err(OpenShellProjectionError::Cell)?;
     let projection = project(&ir)?;
