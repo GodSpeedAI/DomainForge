@@ -164,9 +164,9 @@ fn format_utc(dt: OffsetDateTime, fraction: Fraction, zulu: bool) -> String {
     match fraction {
         Fraction::Auto => {
             if nanos == 0 {
-            } else if nanos % 1_000_000 == 0 {
+            } else if nanos.is_multiple_of(1_000_000) {
                 out.push_str(&format!(".{:03}", nanos / 1_000_000));
-            } else if nanos % 1_000 == 0 {
+            } else if nanos.is_multiple_of(1_000) {
                 out.push_str(&format!(".{:06}", nanos / 1_000));
             } else {
                 out.push_str(&format!(".{nanos:09}"));

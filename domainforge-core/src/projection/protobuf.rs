@@ -1023,7 +1023,7 @@ impl ProtobufEngine {
         proto.metadata.generated_at = std::env::var("SOURCE_DATE_EPOCH")
             .ok()
             .and_then(|epoch| epoch.parse::<i64>().ok())
-            .and_then(|epoch| crate::timefmt::from_unix_timestamp(epoch))
+            .and_then(crate::timefmt::from_unix_timestamp)
             .map(crate::timefmt::to_rfc3339)
             .unwrap_or_default();
 
