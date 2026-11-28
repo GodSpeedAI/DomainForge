@@ -1,4 +1,4 @@
-# Current State: chrono to time migration (2026-11-27, branch fix/chrono-to-time)
+# Current State: chrono to time migration (2026-11-28, branch fix/chrono-to-time)
 
 - [x] Removed `chrono` (RUSTSEC-2026-0543, unmaintained) in favour of `time` 0.3 (already in the SEA lockfile). Breaking: every public `chrono::DateTime<Utc>` is now `time::OffsetDateTime` and `chrono::Duration` is `time::Duration` (authority types, fact resolver, policy, `TypedValue::Timestamp`, `Metric`). Ships as a breaking minor via a `feat!:` commit (Release Please owns the version).
 - [x] All formatting and parsing goes through `domainforge-core/src/timefmt.rs`; reference in `docs/reference/timestamps.md`.
